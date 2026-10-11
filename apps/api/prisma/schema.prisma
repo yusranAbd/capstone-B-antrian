@@ -145,12 +145,17 @@ model PenugasanPetugas {
 }
 
 model TiketAntrean {
-  id                   String      @id @default(uuid()) @db.Uuid
-  penggunaId           String      @map("pengguna_id") @db.Uuid
-  layananId            String      @map("layanan_id") @db.Uuid
-  loketId              String?     @map("loket_id") @db.Uuid
-  tanggalAntrean       DateTime    @map("tanggal_antrean") @db.Date
-  nomorUrut            Int         @map("nomor_urut")
+  id             String   @id @default(uuid()) @db.Uuid
+  penggunaId     String   @map("pengguna_id") @db.Uuid
+  layananId      String   @map("layanan_id") @db.Uuid
+  loketId        String?  @map("loket_id") @db.Uuid
+  tanggalAntrean DateTime @map("tanggal_antrean") @db.Date
+  nomorUrut      Int      @map("nomor_urut")
+
+  // Urutan operasional FIFO, terpisah dari nomor tiket permanen.
+  urutanMasukAntrean Int?      @map("urutan_masuk_antrean")
+  masukAntreanPada   DateTime? @map("masuk_antrean_pada") @db.Timestamptz(6)
+
   kodeTiket            String      @unique @map("kode_tiket") @db.VarChar(30)
   status               StatusTiket @default(DIPESAN)
   tokenQrHash          String?     @unique @map("token_qr_hash") @db.VarChar(255)
@@ -169,20 +174,26 @@ model TiketAntrean {
   peristiwaAntrean PeristiwaAntrean[]
   notifikasi       Notifikasi[]
 
+  // Nomor tiket tetap unik per layanan dan tanggal.
   @@unique([layananId, tanggalAntrean, nomorUrut])
+  // Urutan FIFO harus unik, tetapi boleh NULL sebelum masuk antrean.
+  @@unique([layananId, tanggalAntrean, urutanMasukAntrean], map: "uq_tiket_urutan_masuk")
   @@index([penggunaId])
   @@index([layananId])
   @@index([loketId])
   @@index([tanggalAntrean, status])
+  @@index([layananId, tanggalAntrean, status, urutanMasukAntrean], map: "idx_tiket_fifo")
   @@map("tiket_antrean")
 }
 
 model UrutanAntreanHarian {
-  id             String   @id @default(uuid()) @db.Uuid
-  layananId      String   @map("layanan_id") @db.Uuid
-  tanggal        DateTime @db.Date
-  nomorTerakhir  Int      @default(0) @map("nomor_terakhir")
-  diperbaruiPada DateTime @updatedAt @map("diperbarui_pada") @db.Timestamptz(6)
+  id                  String   @id @default(uuid()) @db.Uuid
+  layananId           String   @map("layanan_id") @db.Uuid
+  tanggal             DateTime @db.Date
+  nomorTerakhir       Int      @default(0) @map("nomor_terakhir")
+  // Counter FIFO naik saat masuk antrean atau antre ulang.
+  urutanMasukTerakhir Int      @default(0) @map("urutan_masuk_terakhir")
+  diperbaruiPada      DateTime @updatedAt @map("diperbarui_pada") @db.Timestamptz(6)
 
   layanan Layanan @relation(fields: [layananId], references: [id])
 
