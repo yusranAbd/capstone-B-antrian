@@ -1418,6 +1418,247 @@ export class QueueService {
   }
 
   // ==========================================
+  // MULAI PELAYANAN TIKET YANG DIPANGGIL (START)
+  // DIPANGGIL -> DILAYANI
+  // ==========================================
+
+  async mulaiPelayanan(tiketId: string, petugasId: string, loketId: string) {
+    const maksimalPercobaan = 3;
+
+    for (let percobaan = 1; percobaan <= maksimalPercobaan; percobaan++) {
+      const sekarang = new Date();
+      const konteks = this.dapatkanTanggalPelayanan(sekarang);
+
+      try {
+        return await this.prisma.$transaction(
+          async (tx) => {
+            // 1. Validasi PETUGAS aktif.
+            const petugas = await tx.pengguna.findUnique({
+              where: { id: petugasId },
+              select: { id: true, peran: true, aktif: true },
+            });
+
+            if (
+              !petugas ||
+              !petugas.aktif ||
+              petugas.peran !== PeranPengguna.PETUGAS
+            ) {
+              throw new ForbiddenException('Pengguna bukan PETUGAS aktif');
+            }
+
+            // 2. Tiket harus DIPANGGIL pada loket yang sama.
+            const tiket = await tx.tiketAntrean.findUnique({
+              where: { id: tiketId },
+              select: {
+                id: true,
+                layananId: true,
+                tanggalAntrean: true,
+                loketId: true,
+                nomorUrut: true,
+                status: true,
+                versi: true,
+                urutanMasukAntrean: true,
+                dipanggilPada: true,
+                pelayananDimulaiPada: true,
+                pelayananSelesaiPada: true,
+                layanan: {
+                  select: { aktif: true, prefixAntrean: true },
+                },
+              },
+            });
+
+            if (!tiket) {
+              throw new NotFoundException('Tiket antrean tidak ditemukan');
+            }
+
+            if (
+              !bolehTransisiAntrean(
+                tiket.status,
+                AKSI_ANTREAN.MULAI_PELAYANAN,
+              )
+            ) {
+              throw new ConflictException(
+                `Tiket berstatus ${tiket.status} tidak dapat memulai pelayanan`,
+              );
+            }
+
+            if (tiket.loketId !== loketId) {
+              throw new ForbiddenException(
+                'Tiket tidak sedang dipanggil pada loket petugas',
+              );
+            }
+
+            if (!tiket.dipanggilPada || tiket.urutanMasukAntrean === null) {
+              throw new ConflictException(
+                'Tiket belum memiliki riwayat CALL dan urutan FIFO yang lengkap',
+              );
+            }
+
+            if (tiket.pelayananDimulaiPada || tiket.pelayananSelesaiPada) {
+              throw new ConflictException(
+                'Tiket sudah memiliki catatan waktu pelayanan',
+              );
+            }
+
+            if (
+              tiket.tanggalAntrean.toISOString().slice(0, 10) !==
+              konteks.tanggal
+            ) {
+              throw new ConflictException(
+                'Tanggal tiket tidak sesuai hari pelayanan',
+              );
+            }
+
+            if (!tiket.layanan.aktif) {
+              throw new ConflictException('Layanan tidak aktif');
+            }
+
+            // 3. PETUGAS harus ditugaskan pada loket dan layanan tiket.
+            const penugasan = await tx.penugasanPetugas.findFirst({
+              where: {
+                petugasId,
+                loketId,
+                aktif: true,
+                tanggalMulai: { lte: konteks.tanggalDb },
+                OR: [
+                  { tanggalSelesai: null },
+                  { tanggalSelesai: { gte: konteks.tanggalDb } },
+                ],
+              },
+              select: {
+                id: true,
+                loket: {
+                  select: {
+                    kode: true,
+                    aktif: true,
+                    layananId: true,
+                    layanan: { select: { aktif: true } },
+                  },
+                },
+              },
+            });
+
+            if (
+              !penugasan ||
+              !penugasan.loket.aktif ||
+              !penugasan.loket.layanan.aktif ||
+              penugasan.loket.layananId !== tiket.layananId
+            ) {
+              throw new ForbiddenException(
+                'Petugas tidak memiliki penugasan aktif pada loket tiket ini',
+              );
+            }
+
+            // 4. Jadwal layanan hari ini harus aktif.
+            const jadwal = await tx.jadwalLayanan.findUnique({
+              where: {
+                layananId_hari: {
+                  layananId: tiket.layananId,
+                  hari: konteks.hari,
+                },
+              },
+              select: { aktif: true },
+            });
+
+            if (!jadwal?.aktif) {
+              throw new ConflictException('Jadwal layanan hari ini tidak aktif');
+            }
+
+            // 5. Transisi dan update atomik memakai status dan versi.
+            const transisi = jalankanTransisiAntrean(
+              tiket.status,
+              AKSI_ANTREAN.MULAI_PELAYANAN,
+            );
+
+            const perubahan = await tx.tiketAntrean.updateMany({
+              where: {
+                id: tiket.id,
+                layananId: tiket.layananId,
+                loketId,
+                tanggalAntrean: konteks.tanggalDb,
+                status: StatusTiket.DIPANGGIL,
+                versi: tiket.versi,
+                dipanggilPada: { not: null },
+                pelayananDimulaiPada: null,
+                pelayananSelesaiPada: null,
+              },
+              data: {
+                status: transisi.statusSesudah,
+                pelayananDimulaiPada: sekarang,
+                versi: { increment: 1 },
+              },
+            });
+
+            if (perubahan.count !== 1) {
+              throw new ConflictException(
+                'Tiket sedang diproses oleh petugas lain',
+              );
+            }
+
+            // 6. Audit START_SERVICE dalam transaksi yang sama.
+            await tx.peristiwaAntrean.create({
+              data: {
+                tiketAntreanId: tiket.id,
+                aktorId: petugasId,
+                tipe: transisi.tipePeristiwa,
+                statusSebelum: transisi.statusSebelum,
+                statusSesudah: transisi.statusSesudah,
+                dataTambahan: {
+                  metode: 'QUEUE_START_SERVICE',
+                  loketId,
+                  kodeLoket: penugasan.loket.kode,
+                  penugasanId: penugasan.id,
+                  urutanMasukAntrean: tiket.urutanMasukAntrean,
+                  dipanggilPada: tiket.dipanggilPada.toISOString(),
+                },
+              },
+            });
+
+            return {
+              tiketId: tiket.id,
+              layananId: tiket.layananId,
+              loketId,
+              kodeLoket: penugasan.loket.kode,
+              nomorAntrean:
+                `${tiket.layanan.prefixAntrean.trim()}-` +
+                String(tiket.nomorUrut).padStart(3, '0'),
+              status: transisi.statusSesudah,
+              urutanMasukAntrean: tiket.urutanMasukAntrean,
+              dipanggilPada: tiket.dipanggilPada.toISOString(),
+              pelayananDimulaiPada: sekarang.toISOString(),
+              versi: tiket.versi + 1,
+            };
+          },
+          {
+            isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+            maxWait: 10000,
+            timeout: 15000,
+          },
+        );
+      } catch (error: unknown) {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2034'
+        ) {
+          if (percobaan < maksimalPercobaan) {
+            continue;
+          }
+
+          throw new ConflictException(
+            'Mulai pelayanan sedang diproses, silakan coba kembali',
+          );
+        }
+
+        throw error;
+      }
+    }
+
+    throw new ConflictException(
+      'Mulai pelayanan gagal setelah beberapa percobaan',
+    );
+  }
+
+  // ==========================================
   // KONTEKS TANGGAL PELAYANAN
   // ==========================================
 

@@ -176,6 +176,28 @@ export class QueueController {
   }
 
   // ========================================
+  // POST /api/v1/queue/:tiketId/mulai-pelayanan
+  // START: DIPANGGIL -> DILAYANI
+  // ========================================
+
+  @Post(':tiketId/mulai-pelayanan')
+  @HttpCode(HttpStatus.OK)
+  async mulaiPelayanan(
+    @Param('tiketId', new ParseUUIDPipe({ version: '4' }))
+    tiketId: string,
+
+    @Body()
+    dto: PanggilBerikutnyaDto,
+
+    @Req()
+    request: RequestTerautentikasi,
+  ) {
+    const petugasId = this.ambilPetugasId(request);
+
+    return this.queueService.mulaiPelayanan(tiketId, petugasId, dto.loketId);
+  }
+
+  // ========================================
   // POST /api/v1/queue/panggil
   // PANGGIL TIKET FIFO BERIKUTNYA
   // ========================================

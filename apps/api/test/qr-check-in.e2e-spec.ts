@@ -2743,5 +2743,268 @@ describe('QR Check-In API (e2e)', () => {
       }, 30000);
     });
 
+    // ========================================
+    // 01G-D.3-E — START PELAYANAN (E2E)
+    // ========================================
+    describe('START Pelayanan (e2e)', () => {
+      function mulaiPelayanan(
+        token: string = petugasA.token,
+        idTiket: string = tiketId,
+        idLoket: string = loketId,
+      ) {
+        return request(server())
+          .post(`/api/v1/queue/${idTiket}/mulai-pelayanan`)
+          .set('Authorization', `Bearer ${token}`)
+          .send({ loketId: idLoket });
+      }
+
+      async function siapkanTiketDipanggil() {
+        await siapkanTiketCheckIn();
+        await masukAntrean().expect(200);
+        await panggilAntrean().expect(200);
+      }
+
+      it('START mengubah DIPANGGIL menjadi DILAYANI, mencatat waktu dan audit', async () => {
+        await siapkanTiketDipanggil();
+        const sebelum = await db().tiketAntrean.findUniqueOrThrow({
+          where: { id: tiketId },
+        });
+        expect(sebelum.status).toBe(StatusTiket.DIPANGGIL);
+        expect(sebelum.pelayananDimulaiPada).toBeNull();
+
+        const respons = await mulaiPelayanan().expect(200);
+        const hasil = respons.body as {
+          tiketId: string;
+          layananId: string;
+          loketId: string;
+          kodeLoket: string;
+          nomorAntrean: string;
+          status: StatusTiket;
+          urutanMasukAntrean: number;
+          dipanggilPada: string;
+          pelayananDimulaiPada: string;
+          versi: number;
+        };
+        expect(hasil).toMatchObject({
+          tiketId,
+          layananId,
+          loketId,
+          status: StatusTiket.DILAYANI,
+          urutanMasukAntrean: sebelum.urutanMasukAntrean,
+          versi: sebelum.versi + 1,
+          nomorAntrean: `Q-${String(nomorUrut).padStart(3, '0')}`,
+          dipanggilPada: sebelum.dipanggilPada?.toISOString(),
+        });
+        expect(new Date(hasil.pelayananDimulaiPada).getTime()).not.toBeNaN();
+
+        const sesudah = await db().tiketAntrean.findUniqueOrThrow({
+          where: { id: tiketId },
+        });
+        expect(sesudah.status).toBe(StatusTiket.DILAYANI);
+        expect(sesudah.pelayananDimulaiPada?.toISOString()).toBe(
+          hasil.pelayananDimulaiPada,
+        );
+        expect(sesudah.pelayananSelesaiPada).toBeNull();
+        expect(sesudah.versi).toBe(sebelum.versi + 1);
+        expect(sesudah.nomorUrut).toBe(sebelum.nomorUrut);
+        expect(sesudah.kodeTiket).toBe(sebelum.kodeTiket);
+        expect(sesudah.urutanMasukAntrean).toBe(sebelum.urutanMasukAntrean);
+        expect(sesudah.dipanggilPada).toEqual(sebelum.dipanggilPada);
+        expect(sesudah.loketId).toBe(loketId);
+
+        const audit = await db().peristiwaAntrean.findMany({
+          where: { tiketAntreanId: tiketId, tipe: 'START_SERVICE' },
+        });
+        expect(audit).toHaveLength(1);
+        expect(audit[0]).toMatchObject({
+          aktorId: petugasA.id,
+          statusSebelum: StatusTiket.DIPANGGIL,
+          statusSesudah: StatusTiket.DILAYANI,
+          dataTambahan: {
+            metode: 'QUEUE_START_SERVICE',
+            loketId,
+            urutanMasukAntrean: sebelum.urutanMasukAntrean,
+          },
+        });
+      }, 30000);
+
+      it('menolak START tanpa JWT dan dari akun USER', async () => {
+        await request(server())
+          .post(`/api/v1/queue/${tiketId}/mulai-pelayanan`)
+          .send({ loketId })
+          .expect(401);
+        await mulaiPelayanan(userA.token).expect(403);
+      });
+
+      it('menolak START ketika tiket masih MENUNGGU', async () => {
+        await siapkanTiketCheckIn();
+        await masukAntrean().expect(200);
+        await mulaiPelayanan().expect(409);
+        const tiket = await db().tiketAntrean.findUniqueOrThrow({
+          where: { id: tiketId },
+        });
+        expect(tiket.status).toBe(StatusTiket.MENUNGGU);
+        expect(tiket.pelayananDimulaiPada).toBeNull();
+        expect(await db().peristiwaAntrean.count({
+          where: { tiketAntreanId: tiketId, tipe: 'START_SERVICE' },
+        })).toBe(0);
+      }, 30000);
+
+      it('menolak START melalui loket berbeda tanpa mengubah tiket', async () => {
+        await siapkanTiketDipanggil();
+        const sebelum = await db().tiketAntrean.findUniqueOrThrow({
+          where: { id: tiketId },
+        });
+        await mulaiPelayanan(petugasA.token, tiketId, randomUUID()).expect(403);
+        const sesudah = await db().tiketAntrean.findUniqueOrThrow({
+          where: { id: tiketId },
+        });
+        expect(sesudah.status).toBe(StatusTiket.DIPANGGIL);
+        expect(sesudah.versi).toBe(sebelum.versi);
+        expect(sesudah.pelayananDimulaiPada).toBeNull();
+      }, 30000);
+
+      it('menolak START jika penugasan PETUGAS tidak aktif', async () => {
+        await siapkanTiketDipanggil();
+        const where = { petugasId: petugasA.id, loketId };
+        await db().penugasanPetugas.updateMany({
+          where,
+          data: { aktif: false },
+        });
+        try {
+          await mulaiPelayanan().expect(403);
+        } finally {
+          await db().penugasanPetugas.updateMany({
+            where,
+            data: { aktif: true },
+          });
+        }
+        const tiket = await db().tiketAntrean.findUniqueOrThrow({
+          where: { id: tiketId },
+        });
+        expect(tiket.status).toBe(StatusTiket.DIPANGGIL);
+        expect(tiket.pelayananDimulaiPada).toBeNull();
+      }, 30000);
+
+      it('menolak START kedua tanpa membuat audit atau versi ganda', async () => {
+        await siapkanTiketDipanggil();
+        const sebelum = await db().tiketAntrean.findUniqueOrThrow({
+          where: { id: tiketId },
+        });
+        await mulaiPelayanan().expect(200);
+        await mulaiPelayanan().expect(409);
+        const sesudah = await db().tiketAntrean.findUniqueOrThrow({
+          where: { id: tiketId },
+        });
+        expect(sesudah.status).toBe(StatusTiket.DILAYANI);
+        expect(sesudah.versi).toBe(sebelum.versi + 1);
+        expect(await db().peristiwaAntrean.count({
+          where: { tiketAntreanId: tiketId, tipe: 'START_SERVICE' },
+        })).toBe(1);
+      }, 30000);
+
+      it('dua START bersamaan hanya dapat berhasil sekali', async () => {
+        await siapkanTiketDipanggil();
+        const sebelum = await db().tiketAntrean.findUniqueOrThrow({
+          where: { id: tiketId },
+        });
+        const [responsA, responsB] = await Promise.all([
+          mulaiPelayanan(petugasA.token),
+          mulaiPelayanan(petugasB.token),
+        ]);
+        const status = [responsA.status, responsB.status].sort((a, b) => a - b);
+        expect(status).toEqual([200, 409]);
+        const sesudah = await db().tiketAntrean.findUniqueOrThrow({
+          where: { id: tiketId },
+        });
+        expect(sesudah.status).toBe(StatusTiket.DILAYANI);
+        expect(sesudah.versi).toBe(sebelum.versi + 1);
+        const audit = await db().peristiwaAntrean.findMany({
+          where: { tiketAntreanId: tiketId, tipe: 'START_SERVICE' },
+        });
+        expect(audit).toHaveLength(1);
+        const pemenang = responsA.status === 200 ? petugasA.id : petugasB.id;
+        expect(audit[0].aktorId).toBe(pemenang);
+      }, 30000);
+
+      it('menolak CALL berikutnya ketika loket sedang melayani tiket DILAYANI', async () => {
+        await siapkanTiketDipanggil();
+        await mulaiPelayanan().expect(200);
+        await panggilAntrean().expect(409);
+        const tiket = await db().tiketAntrean.findUniqueOrThrow({
+          where: { id: tiketId },
+        });
+        expect(tiket.status).toBe(StatusTiket.DILAYANI);
+        expect(await db().peristiwaAntrean.count({
+          where: { tiketAntreanId: tiketId, tipe: 'CALL' },
+        })).toBe(1);
+      }, 30000);
+
+      it('rollback START mengembalikan status, waktu dan versi ketika audit gagal', async () => {
+        await siapkanTiketDipanggil();
+        const databaseUrl = process.env.DATABASE_URL;
+        if (!databaseUrl) {
+          throw new Error('DATABASE_URL testing tidak ada');
+        }
+        const url = new URL(databaseUrl);
+        if (
+          url.pathname !== '/capstone_antrean_test' ||
+          !['localhost', '127.0.0.1'].includes(url.hostname) ||
+          url.port !== '5433'
+        ) {
+          throw new Error('Rollback START hanya boleh pada PostgreSQL testing lokal');
+        }
+        const database = await db().$queryRaw<
+          Array<{ namaDatabase: string }>
+        >`SELECT current_database() AS "namaDatabase"`;
+        expect(database[0]?.namaDatabase).toBe('capstone_antrean_test');
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tiketId)) {
+          throw new Error('UUID pengujian START tidak valid');
+        }
+
+        const sebelum = await db().tiketAntrean.findUniqueOrThrow({
+          where: { id: tiketId },
+        });
+        expect(sebelum.status).toBe(StatusTiket.DIPANGGIL);
+        const namaConstraint = `e2e_start_rollback_${randomBytes(6).toString('hex')}`;
+        let terpasang = false;
+        try {
+          await db().$executeRawUnsafe(
+            `ALTER TABLE "public"."peristiwa_antrean"
+             ADD CONSTRAINT "${namaConstraint}"
+             CHECK (NOT (
+               "tiket_antrean_id" = '${tiketId}'::uuid
+               AND "tipe" = 'START_SERVICE'
+             ))`,
+          );
+          terpasang = true;
+          await mulaiPelayanan().expect(500);
+        } finally {
+          if (terpasang) {
+            await db().$executeRawUnsafe(
+              `ALTER TABLE "public"."peristiwa_antrean"
+               DROP CONSTRAINT IF EXISTS "${namaConstraint}"`,
+            );
+          }
+        }
+
+        const sesudah = await db().tiketAntrean.findUniqueOrThrow({
+          where: { id: tiketId },
+        });
+        expect(sesudah.status).toBe(StatusTiket.DIPANGGIL);
+        expect(sesudah.versi).toBe(sebelum.versi);
+        expect(sesudah.pelayananDimulaiPada).toEqual(sebelum.pelayananDimulaiPada);
+        expect(sesudah.pelayananSelesaiPada).toEqual(sebelum.pelayananSelesaiPada);
+        expect(sesudah.loketId).toBe(sebelum.loketId);
+        expect(sesudah.dipanggilPada).toEqual(sebelum.dipanggilPada);
+        expect(sesudah.urutanMasukAntrean).toBe(sebelum.urutanMasukAntrean);
+        expect(sesudah.nomorUrut).toBe(sebelum.nomorUrut);
+        expect(sesudah.kodeTiket).toBe(sebelum.kodeTiket);
+        expect(await db().peristiwaAntrean.count({
+          where: { tiketAntreanId: tiketId, tipe: 'START_SERVICE' },
+        })).toBe(0);
+      }, 30000);
+    });
+
   });
 });
