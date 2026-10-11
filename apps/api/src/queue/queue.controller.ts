@@ -154,6 +154,28 @@ export class QueueController {
   }
 
   // ========================================
+  // POST /api/v1/queue/:tiketId/antre-ulang
+  // REQUEUE TIKET DILEWATI KE AKHIR FIFO
+  // ========================================
+
+  @Post(':tiketId/antre-ulang')
+  @HttpCode(HttpStatus.OK)
+  async antreUlang(
+    @Param('tiketId', new ParseUUIDPipe({ version: '4' }))
+    tiketId: string,
+
+    @Body()
+    dto: PanggilBerikutnyaDto,
+
+    @Req()
+    request: RequestTerautentikasi,
+  ) {
+    const petugasId = this.ambilPetugasId(request);
+
+    return this.queueService.antreUlang(tiketId, petugasId, dto.loketId);
+  }
+
+  // ========================================
   // POST /api/v1/queue/panggil
   // PANGGIL TIKET FIFO BERIKUTNYA
   // ========================================
