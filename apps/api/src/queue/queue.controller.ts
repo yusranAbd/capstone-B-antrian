@@ -198,6 +198,28 @@ export class QueueController {
   }
 
   // ========================================
+  // POST /api/v1/queue/:tiketId/selesaikan-pelayanan
+  // COMPLETE: DILAYANI -> SELESAI
+  // ========================================
+
+  @Post(':tiketId/selesaikan-pelayanan')
+  @HttpCode(HttpStatus.OK)
+  async selesaikanPelayanan(
+    @Param('tiketId', new ParseUUIDPipe({ version: '4' }))
+    tiketId: string,
+
+    @Body()
+    dto: PanggilBerikutnyaDto,
+
+    @Req()
+    request: RequestTerautentikasi,
+  ) {
+    const petugasId = this.ambilPetugasId(request);
+
+    return this.queueService.selesaikanPelayanan(tiketId, petugasId, dto.loketId);
+  }
+
+  // ========================================
   // POST /api/v1/queue/panggil
   // PANGGIL TIKET FIFO BERIKUTNYA
   // ========================================
