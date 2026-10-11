@@ -13,6 +13,7 @@ import { ReservasiModule } from './reservasi/reservasi.module';
 import { TiketModule } from './tiket/tiket.module';
 import { QrModule } from './qr/qr.module';
 import { CheckInModule } from './check-in/check-in.module';
+import { QueueModule } from './queue/queue.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -38,6 +39,7 @@ import { CheckInModule } from './check-in/check-in.module';
     TiketModule,
     QrModule,
     CheckInModule,
+    QueueModule,
   ],
 })
 export class AppModule {}
