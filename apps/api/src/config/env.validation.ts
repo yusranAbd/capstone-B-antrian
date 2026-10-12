@@ -87,6 +87,52 @@ export function validateEnvironment(
   }
 
   // =========================
+  // CORS ALLOWED ORIGINS (BROWSER REST API)
+  // =========================
+  const rawOrigins = config.CORS_ALLOWED_ORIGINS;
+  if (rawOrigins !== undefined && typeof rawOrigins !== 'string') {
+    throw new Error('CORS_ALLOWED_ORIGINS harus berisi daftar origin dipisahkan koma');
+  }
+
+  const production = config.NODE_ENV === 'production';
+  const origins = rawOrigins === undefined
+    ? production
+      ? []
+      : ['http://localhost:3000', 'http://localhost:5173']
+    : rawOrigins.split(',').map((origin) => origin.trim());
+
+  if (origins.length === 0 || origins.some((origin) => !origin)) {
+    throw new Error('CORS_ALLOWED_ORIGINS wajib diisi dengan origin yang valid');
+  }
+
+  for (const origin of origins) {
+    try {
+      const url = new URL(origin);
+      if (
+        (url.protocol !== 'http:' && url.protocol !== 'https:') ||
+        url.origin !== origin
+      ) {
+        throw new Error();
+      }
+    } catch {
+      throw new Error(`CORS_ALLOWED_ORIGINS berisi origin tidak valid: ${origin}`);
+    }
+  }
+
+  // =========================
+  // TIME ZONE LAYANAN
+  // =========================
+  const serviceTimeZone = config.SERVICE_TIME_ZONE ?? 'Asia/Jakarta';
+  if (typeof serviceTimeZone !== 'string' || !serviceTimeZone.trim()) {
+    throw new Error('SERVICE_TIME_ZONE harus berupa nama timezone IANA');
+  }
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: serviceTimeZone });
+  } catch {
+    throw new Error('SERVICE_TIME_ZONE harus berupa nama timezone IANA yang valid');
+  }
+
+  // =========================
   // FINAL CONFIG
   // =========================
   return {
@@ -100,5 +146,7 @@ export function validateEnvironment(
 
     JWT_ACCESS_EXPIRES_IN: jwtAccessExpiresIn,
     JWT_REFRESH_EXPIRES_IN: jwtRefreshExpiresIn,
+    CORS_ALLOWED_ORIGINS: [...new Set(origins)],
+    SERVICE_TIME_ZONE: serviceTimeZone,
   };
 }
