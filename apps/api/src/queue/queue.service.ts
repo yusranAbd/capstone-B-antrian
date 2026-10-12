@@ -16,6 +16,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { RealtimeBroadcastService } from '../realtime/realtime-broadcast.service';
 import type { JenisPerubahanAntrean } from '../realtime/realtime-events.types';
+import type { SnapshotAntrean, SnapshotTiketAktif } from './queue-snapshot.types';
 
 import {
   AKSI_ANTREAN,
@@ -497,6 +498,194 @@ export class QueueService {
       urutanMasukAntrean: tiket.urutanMasukAntrean,
       masukAntreanPada: tiket.masukAntreanPada?.toISOString() ?? null,
     }));
+  }
+
+  // ==========================================
+  // SNAPSHOT ANTREAN OPERASIONAL (MVP)
+  // ==========================================
+
+  /**
+   * Sumber data sinkronisasi dashboard sesudah join room / reconnect.
+   * Hanya PETUGAS yang aktif dan masih ditugaskan pada loket ini.
+   * Query menunggu, total, dan tiket aktif dibaca dari satu snapshot DB.
+   */
+  async snapshotAntrean(petugasId: string, loketId: string): Promise<SnapshotAntrean> {
+    const tanggal = this.dapatkanTanggalPelayanan(new Date());
+
+    const snapshot = await this.prisma.$transaction(
+      async (tx) => {
+        const petugas = await tx.pengguna.findUnique({
+          where: { id: petugasId },
+          select: { id: true, aktif: true, peran: true },
+        });
+
+        if (
+          !petugas ||
+          !petugas.aktif ||
+          petugas.peran !== PeranPengguna.PETUGAS
+        ) {
+          throw new ForbiddenException('Pengguna bukan PETUGAS aktif');
+        }
+
+        const penugasan = await tx.penugasanPetugas.findFirst({
+          where: {
+            petugasId,
+            loketId,
+            aktif: true,
+            tanggalMulai: { lte: tanggal.tanggalDb },
+            OR: [
+              { tanggalSelesai: null },
+              { tanggalSelesai: { gte: tanggal.tanggalDb } },
+            ],
+            loket: {
+              aktif: true,
+              layanan: { aktif: true },
+            },
+          },
+          select: {
+            loket: {
+              select: {
+                id: true,
+                kode: true,
+                nama: true,
+                layananId: true,
+                layanan: {
+                  select: {
+                    id: true,
+                    kode: true,
+                    nama: true,
+                    prefixAntrean: true,
+                  },
+                },
+              },
+            },
+          },
+        });
+
+        if (!penugasan) {
+          throw new ForbiddenException(
+            'Petugas tidak memiliki penugasan aktif pada loket layanan ini',
+          );
+        }
+
+        const layanan = penugasan.loket.layanan;
+        const layananId = penugasan.loket.layananId;
+        const whereHariIni = {
+          layananId,
+          tanggalAntrean: tanggal.tanggalDb,
+        };
+
+        const [loketLayanan, tiketMenunggu, totalMenunggu, tiketAktif] =
+          await Promise.all([
+            tx.loket.findMany({
+              where: { layananId, aktif: true },
+              select: { id: true, kode: true, nama: true },
+              orderBy: [{ kode: 'asc' }, { id: 'asc' }],
+            }),
+            tx.tiketAntrean.findMany({
+              where: {
+                ...whereHariIni,
+                status: StatusTiket.MENUNGGU,
+                urutanMasukAntrean: { not: null },
+              },
+              select: {
+                id: true,
+                nomorUrut: true,
+                status: true,
+                versi: true,
+                urutanMasukAntrean: true,
+                masukAntreanPada: true,
+              },
+              orderBy: [
+                { urutanMasukAntrean: 'asc' },
+                { id: 'asc' },
+              ],
+              take: 100,
+            }),
+            tx.tiketAntrean.count({
+              where: {
+                ...whereHariIni,
+                status: StatusTiket.MENUNGGU,
+                urutanMasukAntrean: { not: null },
+              },
+            }),
+            tx.tiketAntrean.findMany({
+              where: {
+                ...whereHariIni,
+                status: {
+                  in: [StatusTiket.DIPANGGIL, StatusTiket.DILAYANI],
+                },
+                loketId: { not: null },
+              },
+              select: {
+                id: true,
+                loketId: true,
+                nomorUrut: true,
+                status: true,
+                versi: true,
+                urutanMasukAntrean: true,
+                dipanggilPada: true,
+                pelayananDimulaiPada: true,
+              },
+              orderBy: [{ dipanggilPada: 'asc' }, { id: 'asc' }],
+            }),
+          ]);
+
+        const nomorAntrean = (nomorUrut: number): string =>
+          `${layanan.prefixAntrean.trim()}-${String(nomorUrut).padStart(3, '0')}`;
+
+        const aktifPerLoket = new Map<string, SnapshotTiketAktif[]>();
+        for (const tiket of tiketAktif) {
+          if (!tiket.loketId) continue;
+          const daftar = aktifPerLoket.get(tiket.loketId) ?? [];
+          daftar.push({
+            tiketId: tiket.id,
+            nomorAntrean: nomorAntrean(tiket.nomorUrut),
+            status:
+              tiket.status === StatusTiket.DILAYANI
+                ? StatusTiket.DILAYANI
+                : StatusTiket.DIPANGGIL,
+            urutanMasukAntrean: tiket.urutanMasukAntrean,
+            versi: tiket.versi,
+            dipanggilPada: tiket.dipanggilPada?.toISOString() ?? null,
+            pelayananDimulaiPada:
+              tiket.pelayananDimulaiPada?.toISOString() ?? null,
+          });
+          aktifPerLoket.set(tiket.loketId, daftar);
+        }
+
+        return {
+          versiSkema: 1 as const,
+          tanggalPelayanan: tanggal.tanggal,
+          layanan: { id: layanan.id, kode: layanan.kode, nama: layanan.nama },
+          loketPeminta: {
+            id: penugasan.loket.id,
+            kode: penugasan.loket.kode,
+            nama: penugasan.loket.nama,
+          },
+          menunggu: {
+            total: totalMenunggu,
+            ditampilkan: tiketMenunggu.length,
+            tiket: tiketMenunggu.map((tiket) => ({
+              tiketId: tiket.id,
+              nomorAntrean: nomorAntrean(tiket.nomorUrut),
+              status: StatusTiket.MENUNGGU,
+              urutanMasukAntrean: tiket.urutanMasukAntrean,
+              masukAntreanPada:
+                tiket.masukAntreanPada?.toISOString() ?? null,
+              versi: tiket.versi,
+            })),
+          },
+          loket: loketLayanan.map((loket) => ({
+            ...loket,
+            tiketAktif: aktifPerLoket.get(loket.id) ?? [],
+          })),
+        };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
+
+    return { ...snapshot, diperolehPada: new Date().toISOString() };
   }
 
   // ==========================================

@@ -110,6 +110,23 @@ export class QueueController {
   }
 
   // ========================================
+  // GET /api/v1/queue/snapshot?loketId=<uuid>
+  // KONDISI TERKINI UNTUK DASHBOARD / RECONNECT
+  // ========================================
+
+  @Get('snapshot')
+  async snapshotAntrean(
+    @Query('loketId', new ParseUUIDPipe({ version: '4' }))
+    loketId: string,
+
+    @Req()
+    request: RequestTerautentikasi,
+  ) {
+    const petugasId = this.ambilPetugasId(request);
+    return this.queueService.snapshotAntrean(petugasId, loketId);
+  }
+
+  // ========================================
   // POST /api/v1/queue/:tiketId/panggil-ulang
   // RECALL TIKET DIPANGGIL
   // ========================================
