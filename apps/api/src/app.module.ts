@@ -14,6 +14,8 @@ import { TiketModule } from './tiket/tiket.module';
 import { QrModule } from './qr/qr.module';
 import { CheckInModule } from './check-in/check-in.module';
 import { QueueModule } from './queue/queue.module';
+import { RealtimeModule } from './realtime/realtime.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -40,6 +42,7 @@ import { QueueModule } from './queue/queue.module';
     QrModule,
     CheckInModule,
     QueueModule,
+    RealtimeModule,
   ],
 })
 export class AppModule {}
