@@ -94,6 +94,13 @@ export class AuthController {
 
   @Post('logout')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(ThrottlerGuard)
+  @Throttle({
+    default: {
+      limit: 30,
+      ttl: 60_000,
+    },
+  })
   logout(@Body() dto: RefreshTokenDto) {
     return this.authService.logout(dto);
   }

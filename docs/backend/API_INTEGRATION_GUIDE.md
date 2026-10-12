@@ -1,0 +1,1281 @@
+# QueueB | Panduan Integrasi REST API, Socket.IO, dan Public Display
+
+**Lokasi repository:** `docs/backend/API_INTEGRATION_GUIDE.md`
+**Versi dokumen:** 1.0 — baseline kontrak integrasi frontend (Web ADMIN/PETUGAS, Public Display, Flutter USER); diverifikasi menggunakan controller, service, DTO, tipe data, dan strategi autentikasi yang tersedia
+**Tanggal penelaahan:** 12 Oktober 2026
+**Status:** Baseline dokumentasi integrasi frontend v1.0. Kontrak Authentication (termasuk `/auth/me` dan peran default), Reservasi, Tiket/QR/Check-In, Queue, Realtime, Display, dan 20 endpoint Administrasi sudah dipetakan terhadap sumber tersedia. **Ini bukan persetujuan deployment produksi atau bukti semua endpoint sudah diuji ulang**; catatan keterbatasan dan risiko keamanan berada pada Bagian 14–15.
+**Basis:** `QueueController`, `QueueService` terbaru dan dua DTO Queue; source Display/Socket.IO; Authentication; Reservasi; Tiket/QR/Check-In; serta empat controller Administrasi, delapan DTO, dan empat service. Isi branch/commit terbaru tetap merupakan sumber kebenaran jika ada perbedaan.
+
+## 1. Ruang lingkup dan batas dokumentasi
+
+Dokumen ini menjelaskan endpoint yang benar-benar tampak pada `QueueController`, `DisplayController`, `AuthController`, `ReservasiController`, `TiketController`, `QrController`, `CheckInController`, serta empat controller Administrasi; bentuk `SnapshotAntrean`, `DisplaySnapshot`, `QueueUpdatedEvent`, dan `DisplayUpdatedEvent`; serta alur autentikasi dan sinkronisasi frontend.
+
+Berkas `MasukAntreanDto`, `PanggilBerikutnyaDto`, dan `QueueService` versi unggahan 12 Oktober 2026 **sudah ditinjau**; bentuk request dan respons mutasi Queue didokumentasikan berdasarkan implementasi. Dokumentasi Tiket Digital, penerbitan QR, Check-In, Reservasi, dan administrasi dari v0.6 tetap dipertahankan. Tambahan verifikasi `auth.types.ts`, `jwt.strategy.ts`, `current-user.decorator.ts`, dan `users.service.ts` memastikan respons `GET /auth/me`, pemeriksaan sesi, dan peran registrasi. Verifikasi constraint Prisma/infrastruktur tetap pekerjaan terpisah sebelum produksi.
+
+Contoh UUID, nomor tiket, tanggal, dan nama layanan di bawah merupakan **data ilustratif** yang mengikuti struktur tipe, bukan rekaman respons server.
+
+## 2. Konvensi dasar
+
+| Aspek                            | Kontrak yang diketahui                                                        |
+| -------------------------------- | ----------------------------------------------------------------------------- |
+| Basis REST lokal                 | `http://localhost:3000/api/v1` bila `API_PORT` memakai nilai default          |
+| Global prefix                    | `/api/v1`                                                                     |
+| Konten request operasi           | JSON dengan `Content-Type: application/json`                                  |
+| Endpoint antrean PETUGAS         | Access token JWT pada `Authorization: Bearer <access_token>`                  |
+| Endpoint Public Display          | Token perangkat pada `x-display-token: <token_perangkat>`                     |
+| Namespace Socket.IO operasional  | `/queue`                                                                      |
+| Namespace Socket.IO monitor      | `/display`                                                                    |
+| Skema snapshot dan event         | `versiSkema: 1`                                                               |
+| Format waktu pada contoh payload | ISO 8601; tanggal pelayanan dipisahkan sebagai `YYYY-MM-DD`                   |
+| Model update realtime            | Event menandakan perubahan; baca ulang snapshot REST sebagai sumber kebenaran |
+
+**Keamanan:** jangan menulis JWT atau token perangkat ke URL, log aplikasi, sistem analitik, atau berkas repository. Konfigurasi origin yang diizinkan harus disesuaikan untuk Web dan kiosk. CORS bukan autentikasi.
+
+## 3. Matriks akses yang didukung sumber
+
+| Kanal/operasi                                                                         | PETUGAS                                            | ADMIN                   | USER                                | Perangkat Display                    |
+| ------------------------------------------------------------------------------------- | -------------------------------------------------- | ----------------------- | ----------------------------------- | ------------------------------------ |
+| `GET /queue/snapshot`, `GET /queue/menunggu`, dan seluruh mutasi di `QueueController` | Diizinkan sesuai penugasan dan pemeriksaan service | Ditolak controller      | Ditolak controller                  | Tidak dipakai                        |
+| Socket.IO `/queue`                                                                    | JWT valid dan izin room                            | JWT valid dan izin room | Ditolak                             | Tidak dipakai                        |
+| `GET /display/:layananId/snapshot`                                                    | Bukan jalur akun                                   | Bukan jalur akun        | Bukan jalur akun                    | Token perangkat + status/layanan sah |
+| Socket.IO `/display`                                                                  | Bukan jalur akun                                   | Bukan jalur akun        | Bukan jalur akun                    | Token perangkat + `layananId` sah    |
+| Reservasi `POST/GET`                                                                  | Ditolak                                            | Ditolak                 | JWT dan scope milik sendiri         | Tidak dipakai                        |
+| Tiket `GET`, penerbitan QR `POST`                                                     | Ditolak                                            | Ditolak                 | JWT dan tiket milik sendiri         | Tidak dipakai                        |
+| `POST /check-in`                                                                      | JWT, QR, jadwal, dan penugasan valid               | Ditolak                 | Ditolak                             | Tidak dipakai                        |
+| `GET /layanan`, `/loket`, `/jadwal-layanan` (daftar/detail)                           | Aktif saja (termasuk layanan induk)                | Semua termasuk nonaktif | Aktif saja (termasuk layanan induk) | Tidak dipakai                        |
+| `POST/PATCH/DELETE /layanan`, `/loket`, `/jadwal-layanan`                             | Ditolak                                            | Diizinkan               | Ditolak                             | Tidak dipakai                        |
+| `GET /penugasan-petugas` (daftar/detail)                                              | Hanya milik sendiri (termasuk nonaktif)            | Semua penugasan         | Ditolak                             | Tidak dipakai                        |
+| `POST/PATCH/DELETE /penugasan-petugas`                                                | Ditolak                                            | Diizinkan               | Ditolak                             | Tidak dipakai                        |
+
+Pemeriksaan hak akses pada guard tidak menggantikan validasi domain di service. Data penugasan dari GET bisa meliputi periode lampau atau nonaktif, sehingga izin operasional harus divalidasi kembali oleh backend ketika tindakan dilakukan.
+
+## 4. REST: operasi antrean petugas (diverifikasi sampai service dan DTO)
+
+Seluruh route pada tabel memakai prefix `/api/v1`. `QueueController` menggunakan `AuthGuard('jwt')`, memeriksa peran **PETUGAS**, dan menyerahkan pemeriksaan penugasan dan status domain kepada `QueueService`. Semua operasi `POST` menetapkan HTTP **200 OK** pada keberhasilan; `GET` mengembalikan HTTP 200. `tiketId` di path dan `loketId` di query menggunakan `ParseUUIDPipe({ version: '4' })`; dua DTO body di bawah menggunakan `@IsUUID('4')`.
+
+| Method | Path                                   | Aksi                             | Input                                           |
+| ------ | -------------------------------------- | -------------------------------- | ----------------------------------------------- |
+| `POST` | `/queue/:tiketId/masuk`                | ENQUEUE `CHECK_IN → MENUNGGU`    | Path `tiketId` UUID v4 + body `loketId` UUID v4 |
+| `GET`  | `/queue/menunggu?loketId=<uuid-v4>`    | FIFO menunggu pada layanan loket | Query `loketId` UUID v4                         |
+| `GET`  | `/queue/snapshot?loketId=<uuid-v4>`    | Snapshot dashboard/reconnect     | Query `loketId` UUID v4                         |
+| `POST` | `/queue/panggil`                       | CALL FIFO berikutnya             | Body `loketId` UUID v4                          |
+| `POST` | `/queue/:tiketId/panggil-ulang`        | RECALL tiket yang dipanggil      | Path `tiketId` + body `loketId`                 |
+| `POST` | `/queue/:tiketId/lewati`               | SKIP tiket yang dipanggil        | Path `tiketId` + body `loketId`                 |
+| `POST` | `/queue/:tiketId/antre-ulang`          | REQUEUE ke akhir FIFO            | Path `tiketId` + body `loketId`                 |
+| `POST` | `/queue/:tiketId/mulai-pelayanan`      | START pelayanan                  | Path `tiketId` + body `loketId`                 |
+| `POST` | `/queue/:tiketId/selesaikan-pelayanan` | COMPLETE pelayanan               | Path `tiketId` + body `loketId`                 |
+
+### 4.1 DTO request Queue
+
+Kedua DTO, `MasukAntreanDto` dan `PanggilBerikutnyaDto`, mempunyai **satu field wajib dengan tipe dan validasi identik**, yaitu `loketId: string` berformat UUID v4. Dengan `ValidationPipe` aplikasi (`whitelist`, `forbidNonWhitelisted`, `transform`), field tak dikenal tidak dapat ditambahkan ke body yang sah.
+
+```http
+POST /api/v1/queue/33333333-3333-4333-8333-333333333333/masuk HTTP/1.1
+Authorization: Bearer <access_token_petugas>
+Content-Type: application/json
+
+{"loketId":"11111111-1111-4111-8111-111111111111"}
+```
+
+Contoh yang sama berlaku untuk operasi `panggil`, `panggil-ulang`, `lewati`, `antre-ulang`, `mulai-pelayanan`, dan `selesaikan-pelayanan`; hanya path yang berubah. Tidak ada body `tiketId` untuk operasi yang menggunakannya di URL. Validasi `loketId` milik petugas tetap dilakukan di service—UUID sah belum berarti petugas berhak atas loket.
+
+### 4.2 Contoh permintaan snapshot PETUGAS
+
+```http
+GET /api/v1/queue/snapshot?loketId=11111111-1111-4111-8111-111111111111 HTTP/1.1
+Authorization: Bearer <access_token>
+```
+
+### 4.3 Kontrak JSON `SnapshotAntrean`
+
+```json
+{
+  "versiSkema": 1,
+  "diperolehPada": "2026-10-12T08:10:00.000Z",
+  "tanggalPelayanan": "2026-10-12",
+  "layanan": {
+    "id": "22222222-2222-4222-8222-222222222222",
+    "kode": "LAY-A",
+    "nama": "Layanan A"
+  },
+  "loketPeminta": {
+    "id": "11111111-1111-4111-8111-111111111111",
+    "kode": "01",
+    "nama": "Loket 01"
+  },
+  "menunggu": {
+    "total": 1,
+    "ditampilkan": 1,
+    "tiket": [
+      {
+        "tiketId": "33333333-3333-4333-8333-333333333333",
+        "nomorAntrean": "A-025",
+        "status": "MENUNGGU",
+        "urutanMasukAntrean": 25,
+        "masukAntreanPada": "2026-10-12T08:05:00.000Z",
+        "versi": 1
+      }
+    ]
+  },
+  "loket": [
+    {
+      "id": "11111111-1111-4111-8111-111111111111",
+      "kode": "01",
+      "nama": "Loket 01",
+      "tiketAktif": [
+        {
+          "tiketId": "44444444-4444-4444-8444-444444444444",
+          "nomorAntrean": "A-024",
+          "status": "DIPANGGIL",
+          "urutanMasukAntrean": 24,
+          "versi": 2,
+          "dipanggilPada": "2026-10-12T08:09:00.000Z",
+          "pelayananDimulaiPada": null
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Aturan rendering:**
+
+- `menunggu.total` dapat lebih besar daripada jumlah elemen `menunggu.tiket`, karena daftar ditampilkan dapat dibatasi oleh service. Gunakan `menunggu.ditampilkan` untuk jumlah elemen yang dikirim.
+- `loket[].tiketAktif` adalah array, bukan objek tunggal. Frontend harus tetap dapat menampilkan beberapa tiket aktif jika kondisi database memilikinya.
+- `versi` pada tiket dapat dipakai untuk mengenali state yang lebih baru pada tiket sama; jangan disamakan dengan `versiSkema`.
+- `masukAntreanPada`, `dipanggilPada`, `pelayananDimulaiPada`, dan `urutanMasukAntrean` dapat `null` sebagaimana tipe resminya.
+- Snapshot operasional tidak menyertakan data pribadi dalam tipe responsnya.
+
+### 4.4 `GET /queue/menunggu`: daftar FIFO ringkas
+
+Service mengembalikan **array**, bukan objek terbungkus. Semua entri berasal dari tiket `MENUNGGU` untuk **layanan yang terkait dengan loket petugas**, pada tanggal pelayanan saat ini, diurutkan berdasarkan `urutanMasukAntrean ASC` kemudian `id ASC`, dengan batas **100 entri**. Ini bukan pagination dan tidak mencakup `total` keseluruhan; gunakan `/queue/snapshot` jika dashboard membutuhkan `menunggu.total`.
+
+```json
+[
+  {
+    "tiketId": "33333333-3333-4333-8333-333333333333",
+    "nomorAntrean": "A-025",
+    "status": "MENUNGGU",
+    "urutanMasukAntrean": 25,
+    "masukAntreanPada": "2026-10-12T08:05:00.000Z"
+  }
+]
+```
+
+`masukAntreanPada` dapat `null` pada tipe data yang dibaca, meski alur ENQUEUE normal mengisinya. Daftar ini **tidak** mengembalikan `versi`, berbeda dengan snapshot.
+
+### 4.5 Matriks transisi dan kontrak respons POST
+
+| Aksi     | Status awal → akhir     | Detail response spesifik; semua juga memuat `tiketId`, `layananId`, `nomorAntrean`, `status`                                                           |
+| -------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| ENQUEUE  | `CHECK_IN → MENUNGGU`   | `urutanMasukAntrean`, `masukAntreanPada`. **Tidak ada** `versi`/`loketId` pada hasil langsung                                                          |
+| CALL     | `MENUNGGU → DIPANGGIL`  | `loketId`, `kodeLoket`, `urutanMasukAntrean`, `dipanggilPada`, `versi`                                                                                 |
+| RECALL   | `DIPANGGIL → DIPANGGIL` | `loketId`, `kodeLoket`, `urutanMasukAntrean`, `dipanggilPada` (CALL pertama), `dipanggilUlangPada`, `versi`                                            |
+| SKIP     | `DIPANGGIL → DILEWATI`  | `loketId`, `kodeLoket`, `urutanMasukAntrean`, `dipanggilPada` (CALL pertama), `dilewatiPada`, `versi`                                                  |
+| REQUEUE  | `DILEWATI → MENUNGGU`   | `loketId: null`, `loketSebelumnya`, `urutanMasukSebelumnya`, `urutanMasukAntrean` (baru), `masukAntreanPada`, `dipanggilPada: null`, `versi`           |
+| START    | `DIPANGGIL → DILAYANI`  | `loketId`, `kodeLoket`, `urutanMasukAntrean`, `dipanggilPada`, `pelayananDimulaiPada`, `versi`                                                         |
+| COMPLETE | `DILAYANI → SELESAI`    | `loketId`, `kodeLoket`, `urutanMasukAntrean`, `pelayananDimulaiPada`, `pelayananSelesaiPada`, `versi`; `dipanggilPada` **tidak** ada di hasil langsung |
+
+Semua timestamp dihasilkan sebagai string ISO 8601 oleh service. `versi` pada operasi selain ENQUEUE adalah nilai versi tiket **setelah kenaikan 1**. `nomorAntrean` dibentuk dari prefix layanan + nomor reservasi ber-padding minimal tiga angka. `urutanMasukAntrean` adalah urutan FIFO terpisah; jangan mengurutkan berdasarkan `nomorAntrean`.
+
+**Contoh respons ENQUEUE** — `POST /queue/:tiketId/masuk` (200):
+
+```json
+{
+  "tiketId": "33333333-3333-4333-8333-333333333333",
+  "layananId": "22222222-2222-4222-8222-222222222222",
+  "nomorAntrean": "A-025",
+  "status": "MENUNGGU",
+  "urutanMasukAntrean": 25,
+  "masukAntreanPada": "2026-10-12T08:05:00.000Z"
+}
+```
+
+**Contoh respons CALL** — `POST /queue/panggil` (200):
+
+```json
+{
+  "tiketId": "33333333-3333-4333-8333-333333333333",
+  "layananId": "22222222-2222-4222-8222-222222222222",
+  "loketId": "11111111-1111-4111-8111-111111111111",
+  "kodeLoket": "01",
+  "nomorAntrean": "A-025",
+  "status": "DIPANGGIL",
+  "urutanMasukAntrean": 25,
+  "dipanggilPada": "2026-10-12T08:10:00.000Z",
+  "versi": 4
+}
+```
+
+**Contoh respons RECALL** — `POST /queue/:tiketId/panggil-ulang` (200):
+
+```json
+{
+  "tiketId": "33333333-3333-4333-8333-333333333333",
+  "layananId": "22222222-2222-4222-8222-222222222222",
+  "loketId": "11111111-1111-4111-8111-111111111111",
+  "kodeLoket": "01",
+  "nomorAntrean": "A-025",
+  "status": "DIPANGGIL",
+  "urutanMasukAntrean": 25,
+  "dipanggilPada": "2026-10-12T08:10:00.000Z",
+  "dipanggilUlangPada": "2026-10-12T08:11:00.000Z",
+  "versi": 5
+}
+```
+
+**Contoh respons SKIP** — `POST /queue/:tiketId/lewati` (200):
+
+```json
+{
+  "tiketId": "33333333-3333-4333-8333-333333333333",
+  "layananId": "22222222-2222-4222-8222-222222222222",
+  "loketId": "11111111-1111-4111-8111-111111111111",
+  "kodeLoket": "01",
+  "nomorAntrean": "A-025",
+  "status": "DILEWATI",
+  "urutanMasukAntrean": 25,
+  "dipanggilPada": "2026-10-12T08:10:00.000Z",
+  "dilewatiPada": "2026-10-12T08:12:00.000Z",
+  "versi": 6
+}
+```
+
+**Contoh respons REQUEUE** — `POST /queue/:tiketId/antre-ulang` (200):
+
+```json
+{
+  "tiketId": "33333333-3333-4333-8333-333333333333",
+  "layananId": "22222222-2222-4222-8222-222222222222",
+  "nomorAntrean": "A-025",
+  "status": "MENUNGGU",
+  "loketId": null,
+  "loketSebelumnya": "11111111-1111-4111-8111-111111111111",
+  "urutanMasukSebelumnya": 25,
+  "urutanMasukAntrean": 31,
+  "masukAntreanPada": "2026-10-12T08:13:00.000Z",
+  "dipanggilPada": null,
+  "versi": 7
+}
+```
+
+**Contoh respons START** — `POST /queue/:tiketId/mulai-pelayanan` (200), ilustrasi alur normal tiket lain:
+
+```json
+{
+  "tiketId": "44444444-4444-4444-8444-444444444444",
+  "layananId": "22222222-2222-4222-8222-222222222222",
+  "loketId": "11111111-1111-4111-8111-111111111111",
+  "kodeLoket": "01",
+  "nomorAntrean": "A-026",
+  "status": "DILAYANI",
+  "urutanMasukAntrean": 26,
+  "dipanggilPada": "2026-10-12T08:14:00.000Z",
+  "pelayananDimulaiPada": "2026-10-12T08:15:00.000Z",
+  "versi": 5
+}
+```
+
+**Contoh respons COMPLETE** — `POST /queue/:tiketId/selesaikan-pelayanan` (200):
+
+```json
+{
+  "tiketId": "44444444-4444-4444-8444-444444444444",
+  "layananId": "22222222-2222-4222-8222-222222222222",
+  "loketId": "11111111-1111-4111-8111-111111111111",
+  "kodeLoket": "01",
+  "nomorAntrean": "A-026",
+  "status": "SELESAI",
+  "urutanMasukAntrean": 26,
+  "pelayananDimulaiPada": "2026-10-12T08:15:00.000Z",
+  "pelayananSelesaiPada": "2026-10-12T08:20:00.000Z",
+  "versi": 6
+}
+```
+
+**Catatan:** seluruh ID, nomor urut, waktu, dan nilai versi di atas hanya ilustrasi. Field dan status berasal dari objek `return` dalam metode `QueueService`, bukan hasil panggilan HTTP live.
+
+### 4.6 Aturan FIFO, penugasan, dan transaksi
+
+1. **ENQUEUE:** tiket harus `CHECK_IN`, memiliki `checkInPada`, belum mempunyai `urutanMasukAntrean`, berasal dari tanggal pelayanan hari ini, dan memiliki layanan serta jadwal aktif. PETUGAS harus aktif dan ditugaskan pada loket yang berada dalam layanan tiket. Service menggunakan counter `urutanMasukTerakhir` untuk mengalokasikan FIFO secara atomik. `CHECK_IN` dan `ENQUEUE` adalah **dua request dan dua transaksi berbeda**.
+2. **CALL:** memilih satu tiket `MENUNGGU` dengan urutan paling kecil **untuk layanan**, tidak terbatas pada loket tempat check-in. Loket tidak boleh memiliki tiket `DIPANGGIL` atau `DILAYANI` pada tanggal hari ini. Tidak ada tiket menunggu menghasilkan `404`, bukan respons kosong. Service memeriksa jadwal **aktif pada hari tersebut**, tetapi **tidak membandingkan jam saat ini dengan jamBuka/jamTutup** pada metode Queue; validasi jam ada di QR Check-In.
+3. **RECALL:** hanya dari status `DIPANGGIL` dan loket asal yang sama; status tetap, versi naik, waktu CALL pertama tidak diganti. `dipanggilUlangPada` berasal dari waktu request ini dan audit `RECALL`, bukan kolom waktu CALL pertama.
+4. **SKIP:** dari `DIPANGGIL` menjadi `DILEWATI` pada loket yang sama. Tiket tidak kembali ke FIFO tanpa REQUEUE. `dipanggilPada` dipertahankan dalam database.
+5. **REQUEUE:** hanya tiket `DILEWATI` di loket asal oleh petugas yang berwenang; **nomor antrean tidak berubah**, tetapi mendapat urutan FIFO terbaru; status kembali `MENUNGGU`, `loketId` dan `dipanggilPada` direset menjadi `null`.
+6. **START:** dari `DIPANGGIL` menjadi `DILAYANI`, mencatat `pelayananDimulaiPada`. Tidak boleh memiliki waktu pelayanan sebelumnya.
+7. **COMPLETE:** dari `DILAYANI` menjadi `SELESAI`, mencatat `pelayananSelesaiPada`, sehingga loket dapat memanggil tiket berikutnya.
+
+Mutasi berlangsung dalam Prisma `$transaction` dengan isolation `Serializable`; perubahan status/versi dan catatan audit dilakukan dalam transaksi yang sama. Permintaan bersamaan dikendalikan melalui update kondisional status dan `versi`. Untuk `P2034`, service melakukan **hingga tiga percobaan**, lalu mengembalikan konflik (`409`) bila tetap gagal. Broadcast Socket.IO dilakukan **setelah commit**, bersifat _best effort_, dan kegagalannya tidak membatalkan perubahan database. Karena itu frontend harus menyinkronkan kembali melalui REST Snapshot.
+
+### 4.7 Error Queue dan penanganan frontend
+
+| Kondisi                                                                                   | HTTP yang berasal dari controller/service | Perilaku UI                                                     |
+| ----------------------------------------------------------------------------------------- | ----------------------------------------- | --------------------------------------------------------------- |
+| JWT hilang/tidak valid, identitas tak lengkap                                             | `401`                                     | Re-auth / refresh sekali secara aman                            |
+| Pengguna bukan PETUGAS, penugasan loket tidak sesuai                                      | `403`                                     | Hentikan operasi; arahkan pemilihan loket sesuai hak akses      |
+| `tiketId` / `loketId` bukan UUID v4                                                       | `400`                                     | Validasi input dan jangan retry otomatis                        |
+| Tiket tidak ditemukan, CALL tanpa tiket MENUNGGU                                          | `404`                                     | Sinkronkan snapshot dan tampilkan antrean kosong                |
+| Status tidak sesuai transisi, jadwal tidak aktif, loket sibuk, konflik update/serialisasi | `409`                                     | Muat snapshot terbaru dan evaluasi ulang tindakan sebelum retry |
+
+**Jangan melakukan blind retry** terhadap mutasi akibat timeout jaringan. Jawaban HTTP mungkin hilang sesudah transaksi berhasil. Ambil snapshot terlebih dahulu dan gunakan `tiketId`, `status`, `versi`, `urutanMasukAntrean`, dan loket terkait untuk menentukan apakah perubahan sudah terjadi. Tidak ada `idempotencyKey` pada kedua DTO Queue yang telah diperiksa. Data yang tidak terlihat di snapshot terbatas 100 entri memerlukan pemeriksaan lain yang sah; jangan menyimpulkan tiket tak ada hanya karena tidak masuk daftar pertama.
+
+### 4.8 Pedoman Dashboard PETUGAS dan realtime
+
+- Setelah koneksi `/queue` diterima dan `queue:join` berhasil, lakukan `GET /queue/snapshot?loketId=...`. Pada setiap `queue:updated` atau reconnect, lakukan refresh snapshot. Event `queue:updated` bukan respons operasi dan tidak menjamin semua field respons REST tersedia.
+- Tombol **Panggil** hanya aktif ketika tidak ada tiket `DIPANGGIL`/`DILAYANI` pada loket dan antrean layanan masih menunggu. Jika ada konflik tetap percayai server.
+- Tombol **Panggil Ulang / Lewati / Mulai Pelayanan / Selesaikan** mengikuti status tiket aktif loket. Tiket dilewati tidak tersedia dalam `snapshot.loket[].tiketAktif` (snapshot memuat hanya `DIPANGGIL`/`DILAYANI`), sehingga aksi **Antre Ulang** pada tiket `DILEWATI` memerlukan rujukan tiket yang berwenang dari hasil SKIP atau data sumber lain; jangan mengarang endpoint daftar DILEWATI.
+- Saat RECALL, TTS perlu memperhatikan event `RECALL` walaupun status tetap `DIPANGGIL`; Public Display memakai sinyal pembaruan dan identitas peristiwa pengumuman untuk menghindari duplikasi.
+
+## 5. REST: Public Display
+
+### 5.1 Endpoint
+
+```http
+GET /api/v1/display/:layananId/snapshot HTTP/1.1
+x-display-token: <token_perangkat>
+```
+
+- `layananId`: UUID v4.
+- Token perangkat harus berbentuk 64 karakter heksadesimal. Service membandingkan hash SHA-256 token terhadap perangkat yang terdaftar, memeriksa bahwa perangkat aktif, layanan aktif, dan keduanya cocok.
+- Controller mengatur `Cache-Control: no-store` untuk snapshot.
+- Token kosong atau salah menyebabkan penolakan autentikasi; perangkat yang tidak berwenang untuk layanan ditolak.
+
+### 5.2 Kontrak JSON `DisplaySnapshot`
+
+```json
+{
+  "versiSkema": 1,
+  "tanggalPelayanan": "2026-10-12",
+  "diperolehPada": "2026-10-12T08:10:10.000Z",
+  "layanan": { "kode": "LAY-A", "nama": "Layanan A" },
+  "totalMenunggu": 3,
+  "loket": [
+    {
+      "kode": "01",
+      "nama": "Loket 01",
+      "tiketAktif": [
+        {
+          "nomorAntrean": "A-025",
+          "status": "DIPANGGIL",
+          "dipanggilPada": "2026-10-12T08:10:00.000Z"
+        }
+      ]
+    }
+  ],
+  "pengumumanTerakhir": {
+    "peristiwaId": "55555555-5555-4555-8555-555555555555",
+    "aksi": "CALL",
+    "terjadiPada": "2026-10-12T08:10:00.000Z",
+    "nomorAntrean": "A-025",
+    "kodeLoket": "01",
+    "teks": "Nomor antrean A-025, silakan menuju loket 01.",
+    "bahasa": "id-ID"
+  }
+}
+```
+
+`pengumumanTerakhir` dapat bernilai `null`. Dalam implementasi service yang ditinjau, pemilihan pengumuman menggunakan peristiwa audit CALL/RECALL terkait tiket yang **masih DIPANGGIL** dan loket aktif pada tanggal pelayanan. Setelah tiket beralih ke DILAYANI, pengumuman lama tidak harus terus tersedia.
+
+**Pembatasan data:** respons monitor tidak mengandung `tiketId`, nama pengguna, nomor telepon, QR, JWT, atau token perangkat.
+
+## 6. Socket.IO: kanal operasional `/queue`
+
+Pada contoh TypeScript, `API_ORIGIN` adalah variabel konfigurasi frontend yang berisi origin backend, misalnya `http://localhost:3000`, **bukan** nama environment backend yang sudah dipastikan tersedia.
+
+### 6.1 Handshake
+
+Klien mengirim JWT akses melalui properti autentikasi Socket.IO:
+
+```ts
+const socket = io(`${API_ORIGIN}/queue`, {
+  autoConnect: false,
+  auth: { token: accessToken },
+});
+```
+
+Namespace `/queue` mengizinkan JWT role ADMIN/PETUGAS pada handshake. Bergabung ke room tetap memerlukan pemeriksaan kewenangan. Pengguna USER tidak boleh bergabung. Versi terbaru penerapan keamanan juga membatasi Origin dan percobaan handshake.
+
+### 6.2 Join dan leave
+
+| Arah                  | Event           | Payload / balasan                                                                                                             |
+| --------------------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Client → server       | `queue:join`    | `{ "layananId": "<uuid-v4>" }`                                                                                                |
+| Server → client (ACK) | hasil join      | `{ "ok": true, "layananId": "<uuid-v4>" }` atau `{ "ok": false, "kode": "INVALID_REQUEST" \| "UNAUTHORIZED" \| "FORBIDDEN" }` |
+| Client → server       | `queue:leave`   | `{ "layananId": "<uuid-v4>" }`                                                                                                |
+| Server → client (ACK) | hasil leave     | Bentuk ACK sama                                                                                                               |
+| Server → client       | `queue:updated` | `QueueUpdatedEvent`                                                                                                           |
+
+`queue:join` mensyaratkan objek yang hanya berisi properti `layananId`, bukan properti bebas lain.
+
+### 6.3 Kontrak event `queue:updated`
+
+```json
+{
+  "versiSkema": 1,
+  "eventId": "66666666-6666-4666-8666-666666666666",
+  "terjadiPada": "2026-10-12T08:10:00.000Z",
+  "aksi": "CALL",
+  "layananId": "22222222-2222-4222-8222-222222222222",
+  "tiketId": "44444444-4444-4444-8444-444444444444",
+  "nomorAntrean": "A-025",
+  "status": "DIPANGGIL",
+  "loketId": "11111111-1111-4111-8111-111111111111",
+  "kodeLoket": "01",
+  "urutanMasukAntrean": 25,
+  "versi": 2
+}
+```
+
+`aksi` hanya: `ENQUEUE`, `CALL`, `RECALL`, `SKIP`, `REQUEUE`, `START`, `COMPLETE`. Field `loketId`, `kodeLoket`, `urutanMasukAntrean`, dan `versi` opsional; jangan mewajibkannya pada semua event. `loketId` dan `urutanMasukAntrean` juga dapat bernilai `null`.
+
+**Penting:** event ini merupakan notifikasi _best effort_, bukan catatan perubahan persisten. Frontend melakukan refresh REST Snapshot setelah event, bukan bergantung pada event sebagai database lokal final.
+
+## 7. Socket.IO: Public Display `/display`
+
+### 7.1 Handshake dan ready
+
+```ts
+const socket = io(`${API_ORIGIN}/display`, {
+  autoConnect: false,
+  auth: { token: displayToken, layananId },
+});
+```
+
+Koneksi yang sah bergabung ke room layanan secara otomatis. Tidak ada event `display:join` terpisah. Setelah tergabung, backend mengirim:
+
+```json
+{ "versiSkema": 1, "layananId": "22222222-2222-4222-8222-222222222222" }
+```
+
+Nama event: **`display:ready`**.
+
+### 7.2 Event `display:updated`
+
+```json
+{
+  "versiSkema": 1,
+  "eventId": "77777777-7777-4777-8777-777777777777",
+  "layananId": "22222222-2222-4222-8222-222222222222",
+  "terjadiPada": "2026-10-12T08:12:00.000Z",
+  "aksi": "RECALL",
+  "perluPeriksaPengumuman": true
+}
+```
+
+`perluPeriksaPengumuman` bernilai `true` untuk CALL dan RECALL; untuk aksi lain `false`. Sinyal tidak membawa identitas pribadi atau nomor antrean. **Setiap `display:updated` tetap boleh memicu snapshot**, bahkan ketika flag pengumuman `false`.
+
+## 8. Pola sinkronisasi awal dan reconnect
+
+### Dashboard PETUGAS
+
+1. Daftarkan listener Socket.IO dan fungsi refresh **sebelum** membuka koneksi.
+2. Buka namespace `/queue` dengan access token aktif.
+3. Setelah tersambung, kirim `queue:join` untuk `layananId` sesuai penugasan dan pastikan ACK `ok: true`.
+4. Setelah ACK diterima, ambil `GET /queue/snapshot?loketId=...`.
+5. Pada setiap `queue:updated` dalam layanan tersebut, tandai data kotor (_dirty_) dan ambil snapshot baru.
+6. Setelah `disconnect` lalu `connect` lagi, ulangi `queue:join` dan snapshot. Jika JWT/sesi dicabut, hentikan reconnect otomatis dan minta autentikasi ulang.
+
+### Public Display
+
+1. Daftarkan handler `display:ready` dan `display:updated` sebelum `connect()`.
+2. Buka namespace `/display` dengan `auth: { token, layananId }`.
+3. Setelah menerima `display:ready`, ambil `GET /display/:layananId/snapshot` dengan token perangkat pada header.
+4. Pada `display:updated`, refresh snapshot dan periksa apakah `pengumumanTerakhir.peristiwaId` merupakan peristiwa baru.
+5. Setelah koneksi putus dan tersambung kembali, tunggu `display:ready` berikutnya lalu ambil snapshot.
+6. Jika token perangkat dicabut/diputar, hentikan reconnect menggunakan token lama dan lakukan provisioning ulang secara aman.
+
+### Menghindari _race condition_
+
+Event bisa tiba saat fetch snapshot berjalan. Jangan mengizinkan respons dari fetch lama menimpa snapshot lebih baru. Gunakan satu fetch aktif per layanan dan penanda _dirty_ untuk memicu fetch tambahan setelah permintaan sebelumnya selesai. Setelah koneksi baru berhasil, registrasi/otorisasi Socket.IO dilakukan sebelum snapshot awal agar jendela kehilangan pembaruan lebih kecil.
+
+Perubahan yang dilewatkan selama offline tidak disediakan sebagai log replay. **REST Snapshot tetap sumber kebenaran**.
+
+## 9. TTS Browser berbahasa Indonesia
+
+Backend menghasilkan `pengumumanTerakhir` dengan `peristiwaId`, `aksi`, `teks`, dan `bahasa: "id-ID"`. Frontend menggunakan Web Speech API atau mesin suara platform.
+
+Aturan yang disarankan untuk frontend:
+
+1. Setelah bootstrap/refresh awal, simpan `peristiwaId` terakhir sebagai baseline. Jangan langsung membacakan pengumuman historis.
+2. Setelah `display:updated` aksi CALL/RECALL, ambil snapshot. Ucapkan teks hanya jika `peristiwaId` **berbeda** dari yang terakhir berhasil dijadwalkan/diputar dan event masih relevan.
+3. Toleransi `pengumumanTerakhir: null`. Jangan membuat teks sendiri dengan tebakan nomor antrean.
+4. Hindari antrean suara bertumpuk; tetapkan kebijakan cancel/queue secara eksplisit di aplikasi.
+5. Perhatikan batasan browser: TTS otomatis dapat memerlukan interaksi awal pengguna untuk mengaktifkan audio.
+6. Simpan deduplikasi yang aman untuk tampilan kiosk jika perlu. **Jangan** menyimpan token perangkat sebagai bagian dari data deduplikasi.
+
+`peristiwaId` adalah ID peristiwa audit. `eventId` pada sinyal realtime adalah ID notifikasi, **bukan pengganti** `peristiwaId` untuk menentukan pengulangan pengumuman.
+
+## 10. REST: Authentication dan manajemen sesi (terverifikasi)
+
+Semua path pada tabel berikut diawali `/api/v1`. Operasi autentikasi menggunakan JSON. `register`, `login`, `refresh`, dan `logout` menerima data melalui body. Token untuk endpoint `me` dikirim pada header `Authorization: Bearer <access_token>`.
+
+| Method | Path             | Body              | Status sukses                                       | Throttle per IP / route\*                      |
+| ------ | ---------------- | ----------------- | --------------------------------------------------- | ---------------------------------------------- |
+| `POST` | `/auth/register` | `RegisterDto`     | `201` (default NestJS untuk POST tanpa `@HttpCode`) | 3 permintaan / 60 detik                        |
+| `POST` | `/auth/login`    | `LoginDto`        | `200`                                               | 5 permintaan / 60 detik                        |
+| `GET`  | `/auth/me`       | Tidak ada         | `200`                                               | Tidak dipasang ThrottlerGuard pada handler ini |
+| `POST` | `/auth/refresh`  | `RefreshTokenDto` | `200`                                               | 10 permintaan / 60 detik                       |
+| `POST` | `/auth/logout`   | `RefreshTokenDto` | `200`                                               | 30 permintaan / 60 detik                       |
+
+_Angka throttle berasal dari dekorator `@Throttle` pada controller. Identitas kunci pelacakan permintaan mengikuti konfigurasi `ThrottlerGuard` / infrastruktur aktual. Bila proxy berada di depan API, konfigurasi `trust proxy` harus diperiksa sebelum mengandalkan identifikasi IP._
+
+### 10.1 Register
+
+**DTO input `RegisterDto`:**
+
+| Field       | Tipe     | Validasi                                   |
+| ----------- | -------- | ------------------------------------------ |
+| `nama`      | `string` | wajib; panjang 3–150 karakter              |
+| `email`     | `string` | wajib; format email; maksimal 150 karakter |
+| `kataSandi` | `string` | wajib; panjang 8–72 karakter               |
+
+```http
+POST /api/v1/auth/register HTTP/1.1
+Content-Type: application/json
+
+{
+  "nama": "Contoh Pengguna",
+  "email": "contoh@example.com",
+  "kataSandi": "ContohSandiKuat123!"
+}
+```
+
+Contoh **struktur** respons sukses (nilai ilustratif):
+
+```json
+{
+  "id": "11111111-1111-4111-8111-111111111111",
+  "nama": "Contoh Pengguna",
+  "email": "contoh@example.com",
+  "peran": "USER"
+}
+```
+
+`register()` mengubah email ke huruf kecil, merapikan spasi awal/akhir pada nama dan email, membuat hash kata sandi, lalu mengembalikan `id`, `nama`, `email`, `peran`. **`UsersService.create()` secara eksplisit menetapkan `peran: 'USER'`**, sehingga nilai `USER` pada contoh sesuai kontrak registrasi saat ini. Endpoint register tidak menyediakan field untuk memilih peran ADMIN/PETUGAS. Mekanisme provisioning akun ADMIN/PETUGAS tidak dapat ditentukan dari berkas yang telah diperiksa; jangan menganggap register dapat dipakai untuk itu. Email yang sudah terdaftar menghasilkan `409 Conflict`.
+
+### 10.2 Login
+
+**DTO input `LoginDto`:**
+
+| Field           | Tipe     | Validasi                                      |
+| --------------- | -------- | --------------------------------------------- |
+| `email`         | `string` | wajib; format email                           |
+| `kataSandi`     | `string` | wajib; tidak ada panjang minimum di DTO login |
+| `namaPerangkat` | `string` | opsional; maksimal 150 karakter               |
+
+```http
+POST /api/v1/auth/login HTTP/1.1
+Content-Type: application/json
+
+{
+  "email": "contoh@example.com",
+  "kataSandi": "ContohSandiKuat123!",
+  "namaPerangkat": "QueueB Android"
+}
+```
+
+Respons sukses **berstruktur** berikut. Token dibuat contoh dan tidak bisa digunakan:
+
+```json
+{
+  "accessToken": "<access-token-jwt>",
+  "refreshToken": "<refresh-token-jwt>",
+  "user": {
+    "id": "11111111-1111-4111-8111-111111111111",
+    "nama": "Contoh Pengguna",
+    "email": "contoh@example.com",
+    "peran": "USER"
+  }
+}
+```
+
+Login memverifikasi pengguna aktif dan kata sandinya. Jika kredensial atau status pengguna tidak memenuhi syarat, service melempar `UnauthorizedException` (HTTP 401). Setelah berhasil, server membuat ID sesi baru, menyimpan **hash SHA-256 refresh token** beserta masa berlaku sesi, serta mengembalikan pasangan token. `namaPerangkat` dicatat pada sesi jika dikirim. Tidak ada `expiresIn` atau `sessionId` sebagai field respons dari `AuthService` ini.
+
+### 10.3 Current user (`/auth/me`)
+
+```http
+GET /api/v1/auth/me HTTP/1.1
+Authorization: Bearer <access_token>
+```
+
+`GET /auth/me` dijaga oleh `JwtAuthGuard`. `JwtStrategy.validate()` mengambil pengguna dan sesi dari database; pengguna harus ada dan aktif, sedangkan sesi harus sesuai pengguna, belum dicabut, dan belum kedaluwarsa. Dekorator `@CurrentUser()` mengembalikan `request.user` yang diisi hasil validasi strategi tersebut.
+
+**Kontrak respons HTTP 200 — objek langsung, bukan `{ "user": { ... } }`:**
+
+```json
+{
+  "id": "11111111-1111-4111-8111-111111111111",
+  "nama": "Contoh Pengguna",
+  "email": "contoh@example.com",
+  "peran": "USER"
+}
+```
+
+Bentuknya mengikuti `AuthenticatedUser` yang berisi empat field: `id`, `nama`, `email`, dan `peran`. **Berbeda dari login dan refresh**, yang mengembalikan objek profil di dalam properti `user` bersama dua token. Nilai respons contoh bersifat ilustratif.
+
+Jika access token salah/kedaluwarsa atau sesi dicabut/tidak valid, autentikasi ditolak (`401`). **Peran efektif dibaca dari record pengguna yang terbaru di database**, bukan sekadar mempercayai klaim `role` yang pernah disimpan saat JWT diterbitkan. Hal ini penting bila peran akun diubah oleh administrator.
+
+### 10.4 Refresh token (rotasi wajib)
+
+**DTO `RefreshTokenDto`:** `refreshToken` wajib bertipe string dengan panjang minimal 1 karakter.
+
+```http
+POST /api/v1/auth/refresh HTTP/1.1
+Content-Type: application/json
+
+{
+  "refreshToken": "<refresh-token-lama>"
+}
+```
+
+Respons sukses memiliki **struktur yang sama seperti login**, yakni `accessToken`, `refreshToken`, dan objek `user` dengan `id`, `nama`, `email`, `peran`.
+
+**Perilaku server yang harus diikuti frontend:**
+
+1. Memverifikasi tanda tangan JWT refresh, klaim `type: refresh`, `sub`, `sid`, dan `jti`.
+2. Memeriksa sesi yang belum dicabut dan belum kedaluwarsa, kecocokan pengguna, serta pengguna masih aktif.
+3. Memastikan hash refresh token yang digunakan cocok dengan hash yang tersimpan.
+4. Menerbitkan access token baru dan **refresh token baru**. Pembaruan hash refresh token memakai `updateMany` dengan kondisi perbandingan hash lama dan sesi aktif, sehingga satu token lama hanya dapat menang dalam satu proses rotasi serentak.
+5. Jika rotasi tidak berhasil, service mengembalikan kesalahan autentikasi (`401`), bukan pasangan token baru.
+
+**Aturan klien:** setelah respons 200, ganti **kedua token** secara bersamaan pada penyimpanan kredensial. Hindari beberapa proses refresh paralel; gunakan satu refresh yang sedang berjalan (_single-flight_) agar request lain menunggu hasil yang sama. Jika refresh ditolak, bersihkan kredensial lokal dan minta pengguna masuk lagi.
+
+### 10.5 Logout (pencabutan sesi)
+
+```http
+POST /api/v1/auth/logout HTTP/1.1
+Content-Type: application/json
+
+{
+  "refreshToken": "<refresh-token-terbaru>"
+}
+```
+
+Respons sukses:
+
+```json
+{ "message": "Logout berhasil" }
+```
+
+Server memverifikasi refresh token, menemukan sesi yang sesuai, membandingkan hash token, kemudian mencatat `dicabutPada`. Klien harus menghapus access dan refresh token lokal sesudah respons berhasil serta memutus koneksi Socket.IO terkait. `logout` bukan endpoint yang menggunakan header access token dalam controller ini; refresh token dikirim melalui body.
+
+### 10.6 Klaim token dan aturan durasi
+
+Klaim yang dibuat di `AuthService`:
+
+| Jenis token   | Klaim aplikasi                                        |
+| ------------- | ----------------------------------------------------- |
+| Access token  | `sub` (ID pengguna), `sid` (ID sesi), `email`, `role` |
+| Refresh token | `sub`, `sid`, `type: 'refresh'`, `jti`                |
+
+JWT library menambahkan klaim waktu seperti `iat`/`exp` sesuai operasi tanda tangan dan pengaturan masa berlaku. Server membaca `JWT_ACCESS_EXPIRES_IN` dan `JWT_REFRESH_EXPIRES_IN` dari konfigurasi. Pada `env.validation.ts` yang ditinjau sebelumnya, nilai default masing-masing adalah `15m` dan `7d`, tetapi nilai lingkungan deployment dapat berbeda. Jangan mengasumsikan umur token dari respons login karena tidak ada field durasi di responsnya.
+
+**Relasi token dan identitas HTTP:** access token memuat klaim `role`, tetapi objek `AuthenticatedUser` berisi `peran` dari record pengguna saat `JwtStrategy.validate()` dijalankan. Jangan memperlakukan field `role` di payload JWT sebagai izin mutlak: keputusan akses tetap berada pada guard dan service backend. Refresh token digunakan untuk rotasi atau logout, bukan untuk header `Authorization` endpoint `/auth/me`.
+
+**Penyimpanan kredensial yang dianjurkan:**
+
+- Web: pertimbangkan pola BFF atau cookie `HttpOnly`, `Secure`, `SameSite` dengan proteksi CSRF bila arsitektur diubah untuk mendukung cookie. **Backend saat ini mengirim token melalui JSON, bukan cookie yang dibuat oleh controller/service ini.** Untuk frontend yang memakai mekanisme sekarang, hindari menyimpan refresh token dalam `localStorage` jika memungkinkan.
+- Android Flutter: gunakan penyimpanan rahasia platform, misalnya Keychain/Keystore melalui paket secure storage yang ditinjau keamanannya. Jangan tulis JWT ke log, analytics, atau URL.
+- Setelah refresh token diputar, buat ulang autentikasi Socket.IO `/queue` bila token akses lama kedaluwarsa atau socket perlu reconnect.
+- Pesan `401` dari login/refresh bukan bukti pengguna tidak berwenang pada layanan. Bedakan kegagalan autentikasi dengan `403` akses penugasan atau layanan.
+
+### 10.7 Validasi, status error, dan cakupan yang belum dipastikan
+
+| Kondisi                                                           | Hasil berdasarkan sumber                                                                                           |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Body tidak lolos DTO                                              | Ditolak oleh global `ValidationPipe` yang sudah diaktifkan; bentuk lengkap error belum ditetapkan sebagai kontrak  |
+| Email saat register sudah ada                                     | `409 Conflict`                                                                                                     |
+| Login salah / pengguna tidak aktif                                | `401 Unauthorized`                                                                                                 |
+| Refresh invalid, kedaluwarsa, pernah digunakan, atau sesi dicabut | `401 Unauthorized` pada jalur yang ditunjukkan service                                                             |
+| Logout dengan token atau sesi tidak valid                         | `401 Unauthorized`                                                                                                 |
+| Rate limit terlampaui                                             | `ThrottlerGuard` terpasang; biasanya HTTP `429`, tetapi format respons harus diverifikasi dengan API yang berjalan |
+
+**Sudah terverifikasi pada v1.0:** bentuk `GET /auth/me`, peran registrasi `USER`, dan pemeriksaan pengguna/sesi melalui `JwtStrategy`. Nilai enum peran yang digunakan di bagian ini adalah yang tampak dari controller dan service (`ADMIN`, `PETUGAS`, `USER`); daftar enum Prisma lengkap dan provisioning non-USER tidak diaudit sebagai bagian dari dokumen ini.
+
+**Masih perlu diverifikasi sebelum produksi:** detail serializer/filter error global, kebijakan `trust proxy`, pengaturan cookie apabila frontend beralih ke BFF/cookie, dan tes keamanan pada deployment aktual.
+
+### 10.8 Aturan integrasi Web dan Flutter yang terverifikasi
+
+1. **Saat login:** simpan pasangan token secara aman dan baca profil dari `response.user`; `response.user.peran` dapat dipakai menentukan navigasi awal, tetapi izin operasi tetap divalidasi server.
+2. **Saat aplikasi dibuka ulang:** setelah access token tersedia, gunakan `GET /auth/me` untuk mengambil profil terkini. JSON responsnya adalah profil **langsung**, bukan `response.user`. Jangan mengharapkan token baru pada `/auth/me`.
+3. **Saat access token tidak berlaku:** lakukan paling banyak satu proses rotasi refresh yang berjalan bersamaan (_single-flight_), lalu simpan pasangan token **baru**. Request yang perlu retry harus memperhatikan sifat operasi (khususnya POST antrean/reservasi yang tidak terbukti idempoten).
+4. **Saat logout:** kirim refresh token terakhir melalui body `POST /auth/logout`; setelah sukses, bersihkan kredensial lokal dan putuskan koneksi realtime. Jika server menolak token, klien tetap harus menghapus kredensial lokal yang tidak dapat dipakai dengan aman.
+5. **Saat peran berubah:** data `JwtStrategy.validate()` berasal dari database. Segarkan profil `/auth/me` dan navigasi bila akses sudah berubah; tangani `403` dari endpoint domain dengan baik. Jangan menganggap akun yang dibuat melalui register bisa menjadi PETUGAS atau ADMIN tanpa mekanisme provisioning terpisah.
+
+**Tipe profil untuk frontend (konseptual, sesuai `AuthenticatedUser`):**
+
+```ts
+type ProfilPengguna = {
+  id: string;
+  nama: string;
+  email: string;
+  peran: "ADMIN" | "PETUGAS" | "USER";
+};
+
+// login / refresh: response.user adalah ProfilPengguna
+// GET /auth/me: response langsung adalah ProfilPengguna
+```
+
+Contoh union peran di atas sesuai peran yang dipakai dalam controller aplikasi yang sudah direview; bukan klaim bahwa enum Prisma tidak dapat memiliki nilai lain.
+
+## 11. REST: Reservasi pengguna (`USER`, terverifikasi)
+
+Kontrak di bagian ini bersumber dari `reservasi.controller.ts`, `reservasi.service.ts`, dan `dto/create-reservasi.dto.ts`. Semua path diawali `/api/v1`. Controller menerapkan `JwtAuthGuard`, `RolesGuard`, dan `@Roles(PeranPengguna.USER)` di tingkat kelas. `penggunaId` diperoleh dari identitas JWT lewat `@CurrentUser()`, **bukan dari body atau query**. Pengambilan riwayat/detail dibatasi menurut pemilik reservasi. Respons sukses tidak menyertakan `tokenQrHash`.
+
+### 11.1 Daftar endpoint
+
+| Method | Path             | Tujuan                                                | Body / parameter                              | Sukses yang berlaku                              |
+| ------ | ---------------- | ----------------------------------------------------- | --------------------------------------------- | ------------------------------------------------ |
+| `POST` | `/reservasi`     | Membuat reservasi untuk layanan pada tanggal tertentu | `CreateReservasiDto`                          | HTTP `201` default NestJS; objek tiket reservasi |
+| `GET`  | `/reservasi`     | Riwayat reservasi milik pengguna login                | Tidak ada body                                | HTTP `200`; array reservasi                      |
+| `GET`  | `/reservasi/:id` | Detail reservasi berdasarkan ID, khusus pemilik       | Path `id` yang diparse dengan `ParseUUIDPipe` | HTTP `200`; objek reservasi                      |
+
+Akses token JWT dikirim pada `Authorization: Bearer <access_token>`. `POST /reservasi` **tidak** memiliki rate limit khusus yang dideklarasikan pada controller yang ditinjau. Jangan menganggap endpoint ini tidak memiliki pembatasan di lapisan lain tanpa memeriksa deployment.
+
+### 11.2 DTO untuk membuat reservasi
+
+| Field            | Tipe     | Aturan                                                                                                                                   |
+| ---------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `layananId`      | `string` | Wajib, UUID versi 4 (`@IsUUID('4')`)                                                                                                     |
+| `tanggalAntrean` | `string` | Wajib, pola tepat `YYYY-MM-DD`; service memeriksa tanggal kalender benar dan bukan hari yang telah lewat berdasarkan `SERVICE_TIME_ZONE` |
+
+Tidak ada `penggunaId`, `nomorUrut`, `kodeTiket`, atau `status` pada body. Backend menghasilkan nilainya sendiri. Global `ValidationPipe` menolak properti yang tidak tercantum pada DTO (berdasarkan konfigurasi aplikasi yang telah ditinjau).
+
+**Contoh request (ilustratif):**
+
+```http
+POST /api/v1/reservasi HTTP/1.1
+Authorization: Bearer <access_token>
+Content-Type: application/json
+
+{
+  "layananId": "22222222-2222-4222-8222-222222222222",
+  "tanggalAntrean": "2026-10-15"
+}
+```
+
+Tanggal pelayanan merupakan **tanggal kalender pada zona waktu layanan**, bukan timestamp yang dikirim klien. Jangan mengubahnya ke tanggal lokal browser yang mungkin bergeser karena offset UTC. Backend menyimpan hari tersebut sebagai representasi tanggal pukul `00:00:00.000Z` pada `tanggalAntrean`, lalu menggunakan konfigurasi `SERVICE_TIME_ZONE` (default `Asia/Jakarta`) untuk menentukan apakah tanggal sudah lewat.
+
+### 11.3 Bentuk respons reservasi
+
+Ketiga operasi mengembalikan pilihan field tiket yang sama dari `pilihTiket`. Contoh respons sukses berikut hanya memakai nilai ilustratif:
+
+```json
+{
+  "id": "88888888-8888-4888-8888-888888888888",
+  "penggunaId": "11111111-1111-4111-8111-111111111111",
+  "layananId": "22222222-2222-4222-8222-222222222222",
+  "tanggalAntrean": "2026-10-15T00:00:00.000Z",
+  "nomorUrut": 25,
+  "kodeTiket": "TK0123456789ABCDEF01234567",
+  "status": "DIPESAN",
+  "dibuatPada": "2026-10-12T09:00:00.000Z",
+  "layanan": {
+    "id": "22222222-2222-4222-8222-222222222222",
+    "kode": "LAY-A",
+    "nama": "Layanan A",
+    "prefixAntrean": "A"
+  }
+}
+```
+
+**Perhatian pada identitas tiket:** `kodeTiket` dibuat sebagai `TK` diikuti 24 karakter heksadesimal uppercase acak (total 26 karakter). `nomorUrut` adalah nomor urut numerik. `prefixAntrean` berasal dari layanan. Jangan mengasumsikan `kodeTiket` sama dengan nomor antrean yang ditampilkan kepada pengguna (`A-025` pada contoh antarmuka). Format `nomorAntrean` kini terverifikasi pada `TiketService`: `prefixAntrean.trim() + "-" + String(nomorUrut).padStart(3, "0")`.
+
+Bentuk JSON tanggal saat dikirim melalui NestJS/JSON mengikuti serialisasi `Date` pada Prisma menjadi timestamp ISO. Nama dan enum field di atas berasal dari pemilihan field service; contoh `DIPESAN` adalah status saat reservasi baru dibuat. Daftar nilai status lengkap harus diambil dari model/enum tiket terbaru, bukan ditebak dari contoh.
+
+### 11.4 Membaca riwayat reservasi pengguna
+
+```http
+GET /api/v1/reservasi HTTP/1.1
+Authorization: Bearer <access_token>
+```
+
+Respons adalah array dengan bentuk objek pada §11.3; jika tidak ada reservasi, array kosong. Service mengurutkan menurut `tanggalAntrean` **menurun**, lalu `nomorUrut` **menaik**. Controller tidak menyediakan query pagination atau filter tambahan. Frontend harus siap menangani seluruh array yang dikembalikan, tetapi tidak boleh menganggap paginasi server sudah tersedia.
+
+### 11.5 Membaca satu reservasi
+
+```http
+GET /api/v1/reservasi/88888888-8888-4888-8888-888888888888 HTTP/1.1
+Authorization: Bearer <access_token>
+```
+
+Pencarian selalu menambahkan filter `penggunaId` dari JWT. ID tidak ditemukan atau bukan milik pengguna akan menghasilkan `404 Not Found` dengan pesan `Reservasi tidak ditemukan`. Gunakan `id` tiket dari respons POST/GET sebagai parameter detail.
+
+### 11.6 Aturan bisnis saat POST
+
+1. Tanggal harus sesuai `YYYY-MM-DD`, merupakan tanggal kalender valid, dan tidak mendahului hari ini menurut zona waktu pelayanan.
+2. `layananId` harus menunjuk layanan yang ada (`404` jika tidak ditemukan) dan sedang aktif (`400` jika tidak aktif).
+3. Layanan harus mempunyai `jadwalLayanan` **aktif** untuk hari yang diminta (`400` jika tidak ada atau tidak aktif).
+4. Satu pengguna hanya dapat mempunyai satu tiket dengan status **selain `DIBATALKAN`** pada layanan dan tanggal sama (`409` jika sudah ada).
+5. Jumlah tiket yang statusnya **selain `DIBATALKAN`** tidak boleh mencapai `kapasitasHarian` (`409` jika penuh).
+6. Nomor harian diambil secara atomik dari `urutanAntreanHarian` lewat `upsert` / `increment`. Tiket baru disimpan dalam status `DIPESAN`.
+7. Semua pemeriksaan serta pembuatan tiket berlangsung dalam satu transaksi Prisma dengan isolasi `Serializable`. Konflik `P2034` atau `P2002` dapat diulang sampai **maksimal lima percobaan**, kemudian diubah menjadi `409` bila belum berhasil.
+
+Nomor counter dinaikkan di dalam transaksi. Bila proses yang sama gagal sebelum commit, transaksi mengembalikan perubahan counter juga. Pembatalan reservasi, bila dilakukan melalui modul lain, tidak berarti nomor lama dipakai ulang. Service yang ditinjau belum menjamin nomor antrean selalu tanpa celah.
+
+### 11.7 Error dan UX yang disarankan
+
+| Kasus                                                  | Status menurut source                         | Penanganan frontend                                                |
+| ------------------------------------------------------ | --------------------------------------------- | ------------------------------------------------------------------ |
+| JWT kosong atau tidak sah                              | Otentikasi ditolak oleh guard (umumnya `401`) | Login atau refresh sesuai jenis kegagalan                          |
+| Peran bukan `USER`                                     | Akses ditolak oleh RolesGuard (umumnya `403`) | Tampilkan tidak memiliki akses, jangan retry otomatis              |
+| Format UUID/tanggal/body salah                         | `400` dari ValidationPipe atau service        | Tampilkan kesalahan input                                          |
+| Tanggal sudah lewat                                    | `400`                                         | Minta tanggal hari ini atau mendatang                              |
+| Layanan tidak ditemukan                                | `404`                                         | Muat ulang katalog layanan                                         |
+| Layanan tidak aktif atau jadwal tidak aktif            | `400`                                         | Tampilkan alasan dan minta tanggal/layanan lain                    |
+| Reservasi aktif ganda pada hari dan layanan sama       | `409`                                         | Tawarkan lihat reservasi yang sudah ada                            |
+| Kapasitas harian penuh                                 | `409`                                         | Minta tanggal lain                                                 |
+| Konflik serialisasi/unique setelah retry habis         | `409`                                         | Tampilkan opsi mencoba lagi, tanpa otomatis membuat banyak request |
+| Detail reservasi bukan milik user atau tidak ditemukan | `404`                                         | Tampilkan tidak ditemukan tanpa mengungkap pemilik lain            |
+| Referensi pengguna/layanan gagal (`P2003`/`P2025`)     | `400`                                         | Tampilkan permintaan tidak dapat diproses                          |
+
+**Penting untuk aplikasi Flutter:** jangan mengulangi `POST /reservasi` secara otomatis ketika jaringan terputus **setelah request terkirim tetapi sebelum respons diterima**. Backend belum menunjukkan mekanisme idempotency key. Ambil `GET /reservasi` lebih dahulu untuk memeriksa apakah tiket sudah dibuat, lalu minta konfirmasi pengguna bila hendak mencoba lagi.
+
+**Yang belum termasuk kontrak Reservasi ini:** pembatalan, pilihan jam pelayanan, pagination server, idempotency key, serta bentuk error JSON global yang rinci. Jangan membangun UI berdasarkan asumsi adanya fitur tersebut.
+
+## 12. REST: Tiket Digital, penerbitan QR, dan QR Check-In (terverifikasi)
+
+Kontrak ini diambil dari `TiketController`, `QrController`, `CheckInController`, `TiketService`, `QrService`, `CheckInService`, dan `ProsesCheckInDto`. Semua path diawali `/api/v1`. Contoh data hanya ilustrasi; jangan menganggapnya hasil request server. Penerbitan QR dilakukan oleh USER, sedangkan pemindaian/validasi QR oleh PETUGAS.
+
+### 12.1 Endpoint dan peran
+
+| Method | Path            | Peran          | Status sukses dari controller | Keterangan                                             |
+| ------ | --------------- | -------------- | ----------------------------- | ------------------------------------------------------ |
+| `GET`  | `/tiket/saya`   | `USER`, JWT    | `200`                         | Seluruh tiket milik pengguna                           |
+| `GET`  | `/tiket/:id`    | `USER`, JWT    | `200`                         | Detail tiket milik pengguna, `id` diparse sebagai UUID |
+| `POST` | `/tiket/:id/qr` | `USER`, JWT    | `201` default NestJS `POST`   | Terbitkan QR untuk tiket sendiri yang masih `DIPESAN`  |
+| `POST` | `/check-in`     | `PETUGAS`, JWT | `200` (`@HttpCode`)           | Verifikasi QR lalu transisi `DIPESAN` → `CHECK_IN`     |
+
+Keempat endpoint menggunakan `JwtAuthGuard` dan `RolesGuard`. Controller QR menggunakan prefix `tiket` yang sama dengan `TiketController`, tetapi memiliki route berbeda. Di level service, pencarian tiket selalu memakai `penggunaId` dari JWT untuk GET tiket dan penerbitan QR. Kode QR bukan identitas akun dan tidak digunakan sebagai token login.
+
+### 12.2 Respons Tiket Digital: `GET /tiket/saya` dan `GET /tiket/:id`
+
+`TiketService` mengambil data dari `ReservasiService`. Ia mempertahankan seluruh field reservasi pada §11.3, kemudian menambahkan `nomorAntrean` dan `tanggalPelayanan`. Respons `GET /tiket/saya` adalah array, sedangkan detail mengembalikan satu objek. Urutan array mengikuti `ReservasiService`: `tanggalAntrean` menurun lalu `nomorUrut` menaik. Tidak ada pagination atau filter tambahan pada controller yang diperiksa.
+
+```http
+GET /api/v1/tiket/saya HTTP/1.1
+Authorization: Bearer <access_token>
+```
+
+**Contoh satu objek tiket** (ilustrasi; GET daftar mengembalikannya di dalam array):
+
+```json
+{
+  "id": "88888888-8888-4888-8888-888888888888",
+  "penggunaId": "11111111-1111-4111-8111-111111111111",
+  "layananId": "22222222-2222-4222-8222-222222222222",
+  "tanggalAntrean": "2026-10-12T00:00:00.000Z",
+  "nomorUrut": 25,
+  "kodeTiket": "TK0123456789ABCDEF01234567",
+  "status": "DIPESAN",
+  "dibuatPada": "2026-10-12T02:00:00.000Z",
+  "layanan": {
+    "id": "22222222-2222-4222-8222-222222222222",
+    "kode": "LAY-A",
+    "nama": "Layanan A",
+    "prefixAntrean": "A"
+  },
+  "nomorAntrean": "A-025",
+  "tanggalPelayanan": "2026-10-12"
+}
+```
+
+`nomorAntrean` dibangun di backend dari `layanan.prefixAntrean.trim()` dan `nomorUrut` yang di-_pad_ minimal tiga digit. `tanggalPelayanan` dibuat dari `tanggalAntrean.toISOString().slice(0, 10)`. `kodeTiket` **bukan** `qrPayload`; endpoint ini tidak mengembalikan rahasia QR atau `tokenQrHash`. Tiket yang tidak ditemukan atau bukan milik pengguna ditolak dengan `404` oleh layanan Reservasi yang dipanggil dari TiketService.
+
+### 12.3 Penerbitan QR: `POST /tiket/:id/qr`
+
+```http
+POST /api/v1/tiket/88888888-8888-4888-8888-888888888888/qr HTTP/1.1
+Authorization: Bearer <access_token>
+```
+
+Tidak ada JSON body pada controller penerbitan QR. Tiket harus milik USER terautentikasi, memiliki status `DIPESAN`, dan tanggal antreannya **sama dengan hari pelayanan** menurut `SERVICE_TIME_ZONE`. Default zona waktu service: `Asia/Jakarta` jika variabel tersebut tidak diatur.
+
+**Contoh respons sukses** (token ilustratif dan bukan kredensial aktif):
+
+```json
+{
+  "tiketId": "88888888-8888-4888-8888-888888888888",
+  "qrPayload": "SQ1.qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq",
+  "berlakuHingga": "2026-10-12T03:10:00.000Z",
+  "masaBerlakuDetik": 600,
+  "status": "DIPESAN"
+}
+```
+
+**Kontrak keamanan QR:**
+
+- Payload literal berupa `SQ1.` ditambah string Base64URL acak sepanjang **43 karakter**, berasal dari 32 byte acak (`randomBytes(32)`), tanpa nama atau informasi pribadi.
+- QR berlaku **10 menit (600 detik)** sejak diterbitkan. `berlakuHingga` adalah ISO timestamp; frontend menghitung sisa waktu dari nilai server, tidak mengandalkan hanya timer lokal.
+- Backend menyimpan **hash SHA-256 dari seluruh `qrPayload`**, bukan token aslinya. Nilai asli hanya dikembalikan saat penerbitan.
+- Penerbitan ulang saat tiket masih `DIPESAN` mengganti `tokenQrHash` dan tanggal kedaluwarsa; QR yang lama tidak lagi sesuai dengan hash pada database.
+- Update penerbitan QR menggunakan `updateMany` dengan kondisi `id`, `penggunaId`, `status`, dan `versi` lalu menaikkan `versi`. Konflik konkurensi dikembalikan sebagai `409`.
+- `qrPayload` **adalah teks untuk dienkode menjadi gambar QR oleh aplikasi**, bukan gambar PNG/SVG/Base64 gambar yang dikembalikan backend. Jangan menyimpan token ke log, URL, analytics, atau histori biasa.
+
+### 12.4 Check-In QR PETUGAS: `POST /check-in`
+
+```http
+POST /api/v1/check-in HTTP/1.1
+Authorization: Bearer <access_token_petugas>
+Content-Type: application/json
+
+{
+  "qrPayload": "SQ1.qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq",
+  "loketId": "11111111-1111-4111-8111-111111111111"
+}
+```
+
+**Validasi `ProsesCheckInDto`:**
+
+| Field       | Tipe   | Aturan                                |
+| ----------- | ------ | ------------------------------------- |
+| `qrPayload` | string | Pola tepat `^SQ1\.[A-Za-z0-9_-]{43}$` |
+| `loketId`   | string | UUID versi 4                          |
+
+`CheckInService` menghitung hash `qrPayload` dan mencari tiket yang memiliki hash tersebut. Check-in hanya diproses jika tiket masih `DIPESAN`, token belum kedaluwarsa, tanggal tiket sesuai hari pelayanan, layanan aktif, petugas masih memiliki penugasan aktif untuk loket/layanan tiket, serta jadwal hari itu aktif. Waktu check-in harus memenuhi **`jamBuka <= waktu lokal < jamTutup`**.
+
+**Contoh respons sukses `200 OK`:**
+
+```json
+{
+  "tiketId": "88888888-8888-4888-8888-888888888888",
+  "layananId": "22222222-2222-4222-8222-222222222222",
+  "nomorAntrean": "A-025",
+  "status": "CHECK_IN",
+  "checkInPada": "2026-10-12T03:05:00.000Z",
+  "loketId": "11111111-1111-4111-8111-111111111111",
+  "petugasId": "99999999-9999-4999-8999-999999999999"
+}
+```
+
+Pada transaksi Prisma `Serializable`, service melakukan update kondisional `DIPESAN` → `CHECK_IN`, mengisi `checkInPada` dan `loketId`, **menghapus `tokenQrHash` dan `qrKedaluwarsaPada`**, menaikkan versi, lalu mencatat audit `CHECK_IN` dalam transaksi yang sama. Token yang telah dipakai tidak dapat dipakai lagi. Kegagalan update atau audit membatalkan transaksi.
+
+### 12.5 Pemisahan status Check-In dan antrean
+
+**Jangan langsung mengubah UI menjadi `MENUNGGU` setelah `POST /check-in` berhasil.** Backend masih mengembalikan `status: "CHECK_IN"`. PETUGAS kemudian perlu menjalankan operasi antrean terpisah:
+
+```http
+POST /api/v1/queue/88888888-8888-4888-8888-888888888888/masuk HTTP/1.1
+Authorization: Bearer <access_token_petugas>
+Content-Type: application/json
+
+{
+  "loketId": "11111111-1111-4111-8111-111111111111"
+}
+```
+
+Operasi `masuk` adalah transisi `CHECK_IN` → `MENUNGGU` (ENQUEUE), dengan validasi dan audit Queue Engine. Jika langkah kedua gagal, **jangan menyatakan tiket sudah menunggu**; tampilkan status sebenarnya dan sediakan tindakan petugas untuk mencoba langkah yang belum berhasil dengan aman. Tidak ada bukti bahwa QR Check-In otomatis memanggil `masuk` atau bahwa kedua endpoint berada dalam satu transaksi.
+
+### 12.6 Error dan panduan frontend
+
+| Kasus                                                   | HTTP dari kode terkait          | Perilaku frontend                                                     |
+| ------------------------------------------------------- | ------------------------------- | --------------------------------------------------------------------- |
+| Tidak terautentikasi atau JWT tidak valid               | Umumnya `401` dari guard        | Arahkan ke login / refresh yang sah                                   |
+| Peran salah untuk tiket, QR, atau Check-In              | Umumnya `403` dari `RolesGuard` | Jangan coba operasi dengan peran lain                                 |
+| Tiket QR tidak ditemukan atau bukan milik USER          | `404`                           | Jangan tampilkan detail tiket milik akun lain                         |
+| QR diminta saat status bukan `DIPESAN`                  | `409`                           | Muat ulang status tiket                                               |
+| QR diminta bukan pada hari pelayanan                    | `400`                           | Tampilkan tanggal pelayanan                                           |
+| Penerbitan QR bersamaan dan versi berubah               | `409`                           | Refresh tiket sebelum menerbitkan ulang                               |
+| Format payload QR atau UUID tidak sah                   | `400` dari ValidationPipe       | Minta scan ulang; jangan modifikasi token                             |
+| Token QR tidak ditemukan, sudah digunakan, atau diganti | `400`                           | Tampilkan QR tidak valid; minta QR terbaru jika tiket masih `DIPESAN` |
+| Token QR masih tersimpan tetapi waktunya kedaluwarsa    | `410 Gone`                      | USER dapat menerbitkan QR baru jika tiket masih `DIPESAN`             |
+| Tiket telah berubah status / konflik update             | `409`                           | Muat ulang tiket dan hindari check-in ganda                           |
+| Petugas tidak ditugaskan pada loket dan layanan aktif   | `403`                           | Pilih loket sesuai penugasan                                          |
+| Tanggal, layanan, atau jam pelayanan tidak sesuai       | `400`                           | Tampilkan pesan layanan/jadwal                                        |
+| Konflik serialisasi PostgreSQL saat check-in            | `409`                           | Periksa status terbaru sebelum retry                                  |
+
+**Panduan Flutter Android:** setelah reservasi dibuat, ambil `GET /tiket/saya` atau `GET /tiket/:id` untuk render kartu tiket. Izinkan USER menerbitkan QR pada hari pelayanan bila status `DIPESAN`. Render gambar QR lokal dari `qrPayload`; tampilkan hitung mundur menggunakan `berlakuHingga` dan opsi terbit ulang bila diperlukan. Setelah QR dipindai, UI PETUGAS menampilkan hasil check-in. Jalankan transisi ENQUEUE secara eksplisit, lalu ambil snapshot untuk memastikan tiket benar-benar masuk FIFO. Jangan melakukan _blind retry_ pada request check-in ketika respons hilang; periksa status tiket terlebih dahulu.
+
+**Batas kontrak:** tidak ada endpoint pembatalan, unduh gambar QR dari backend, atau proses otomatis `CHECK_IN` → `MENUNGGU` dalam controller/service yang ditinjau. Bentuk respons error JSON global yang lengkap masih perlu diverifikasi; validasi `MasukAntreanDto` dan respons ENQUEUE kini telah diperiksa pada §4.
+
+## 13. REST: Administrasi Layanan, Loket, Jadwal, dan Penugasan Petugas (terverifikasi)
+
+Bagian ini diperiksa terhadap **empat controller, delapan DTO, dan empat service** pada 12 Oktober 2026. Semua endpoint mempunyai prefix `/api/v1`, menggunakan `JwtAuthGuard` dan `RolesGuard`, serta menerima JWT lewat `Authorization: Bearer <access_token>`. Data di bawah mengikuti field dan aturan yang benar-benar terlihat pada berkas sumber. Bentuk lengkap model Prisma (misalnya seluruh metadata tanggal) **belum dijamin** tanpa pemeriksaan skema database.
+
+### 13.1 Daftar 20 endpoint dan matriks peran
+
+| Modul     | HTTP     | Route sesudah `/api/v1`  | Diizinkan            | Keterangan                                          |
+| --------- | -------- | ------------------------ | -------------------- | --------------------------------------------------- |
+| Layanan   | `POST`   | `/layanan`               | ADMIN                | Buat layanan baru                                   |
+| Layanan   | `GET`    | `/layanan`               | ADMIN, PETUGAS, USER | ADMIN melihat semua; peran lain hanya layanan aktif |
+| Layanan   | `GET`    | `/layanan/:id`           | ADMIN, PETUGAS, USER | Filter `aktif` menurut peran                        |
+| Layanan   | `PATCH`  | `/layanan/:id`           | ADMIN                | Ubah sebagian field                                 |
+| Layanan   | `DELETE` | `/layanan/:id`           | ADMIN                | Soft delete: `aktif: false`                         |
+| Loket     | `POST`   | `/loket`                 | ADMIN                | Buat loket pada layanan aktif                       |
+| Loket     | `GET`    | `/loket`                 | ADMIN, PETUGAS, USER | Non-ADMIN hanya loket dan layanan induk aktif       |
+| Loket     | `GET`    | `/loket/:id`             | ADMIN, PETUGAS, USER | Filter `aktif` menurut peran                        |
+| Loket     | `PATCH`  | `/loket/:id`             | ADMIN                | Ubah sebagian field atau pindah layanan             |
+| Loket     | `DELETE` | `/loket/:id`             | ADMIN                | Soft delete: `aktif: false`                         |
+| Jadwal    | `POST`   | `/jadwal-layanan`        | ADMIN                | Tambah satu jadwal mingguan                         |
+| Jadwal    | `GET`    | `/jadwal-layanan`        | ADMIN, PETUGAS, USER | Non-ADMIN hanya jadwal dan layanan induk aktif      |
+| Jadwal    | `GET`    | `/jadwal-layanan/:id`    | ADMIN, PETUGAS, USER | Filter `aktif` menurut peran                        |
+| Jadwal    | `PATCH`  | `/jadwal-layanan/:id`    | ADMIN                | Ubah sebagian field, termasuk jam dan kapasitas     |
+| Jadwal    | `DELETE` | `/jadwal-layanan/:id`    | ADMIN                | Soft delete: `aktif: false`                         |
+| Penugasan | `POST`   | `/penugasan-petugas`     | ADMIN                | Buat penugasan aktif                                |
+| Penugasan | `GET`    | `/penugasan-petugas`     | ADMIN, PETUGAS       | ADMIN semua; PETUGAS hanya penugasan sendiri        |
+| Penugasan | `GET`    | `/penugasan-petugas/:id` | ADMIN, PETUGAS       | PETUGAS tidak boleh membaca penugasan orang lain    |
+| Penugasan | `PATCH`  | `/penugasan-petugas/:id` | ADMIN                | Ubah sebagian field/periode/loket                   |
+| Penugasan | `DELETE` | `/penugasan-petugas/:id` | ADMIN                | Soft delete: `aktif: false`                         |
+
+Seluruh `:id` di atas diproses menggunakan `ParseUUIDPipe`. Tidak terdapat endpoint paging/filter query tersendiri dalam empat controller yang ditinjau. `POST` pada empat controller tidak memiliki `@HttpCode` khusus (secara default NestJS mengembalikan 201 pada sukses), sedangkan `GET`, `PATCH`, dan `DELETE` memakai status sukses bawaan NestJS. Tidak ada response envelope khusus yang dideklarasikan di controller-controller tersebut.
+
+**Perhatian untuk menu Petugas:** query `GET /penugasan-petugas` tidak hanya mengembalikan penugasan aktif; service memfilter berdasarkan `petugasId`, bukan `aktif` atau tanggal. Frontend perlu memeriksa `aktif`, `tanggalMulai`, `tanggalSelesai`, dan status loket/layanan ketika menawarkan loket yang siap digunakan. Otorisasi operasi check-in/antrean tetap ditentukan backend, bukan oleh filter frontend.
+
+### 13.2 Layanan — DTO, respons, dan aturan
+
+**Create** `POST /api/v1/layanan`:
+
+| Field              | Tipe          | Aturan create                                          | Aturan PATCH              |
+| ------------------ | ------------- | ------------------------------------------------------ | ------------------------- |
+| `kode`             | string        | Wajib; regex `^[A-Z0-9]{2,20}$`                        | Opsional, aturan sama     |
+| `nama`             | string        | Wajib; 3–150 karakter dan harus mengandung bukan-spasi | Opsional, aturan sama     |
+| `deskripsi`        | string / null | Opsional; maksimal 1000 karakter                       | Opsional; `null` diterima |
+| `prefixAntrean`    | string        | Wajib; 1–5 huruf kapital                               | Opsional, aturan sama     |
+| `durasiDasarMenit` | integer       | Wajib; 1–240 menit                                     | Opsional, aturan sama     |
+| `aktif`            | boolean       | Otomatis `true`, tidak boleh dikirim dalam Create DTO  | Opsional                  |
+
+```http
+POST /api/v1/layanan
+Authorization: Bearer <access_token_admin>
+Content-Type: application/json
+```
+
+```json
+{
+  "kode": "CS01",
+  "nama": "Layanan Informasi",
+  "deskripsi": "Pelayanan informasi pengunjung",
+  "prefixAntrean": "CS",
+  "durasiDasarMenit": 10
+}
+```
+
+`LayananService.create()` menyimpan `nama.trim()`, mengisi `deskripsi` kosong menjadi `null` bila tidak dikirim, dan `aktif: true`. Respons create/read/update/delete berasal langsung dari objek Prisma `layanan`. Field yang terlihat dalam proses create/update: `kode`, `nama`, `deskripsi`, `prefixAntrean`, `durasiDasarMenit`, `aktif`; service juga memakai `id`. Metadata model lain perlu diperiksa pada skema jika UI membutuhkannya.
+
+- `GET /layanan`: diurutkan menurut `kode` naik. ADMIN melihat data aktif maupun nonaktif; non-ADMIN hanya aktif.
+- `GET /layanan/:id`: `404` jika ID tidak ditemukan atau, untuk non-ADMIN, layanan tidak aktif.
+- `PATCH`: menerima subset field; `nama` dipangkas spasinya sebelum disimpan; ADMIN dapat mengubah `aktif`.
+- `DELETE`: **tidak menghapus baris**; mengubah `aktif` menjadi `false` dan mengembalikan data layanan terbarui.
+- Error khusus: duplikasi `kode` dari constraint database menghasilkan `409 Conflict` (`P2002`); record tidak ditemukan menghasilkan `404`.
+
+### 13.3 Loket — DTO, relasi layanan, dan aturan
+
+**Create** `POST /api/v1/loket`:
+
+| Field       | Tipe          | Aturan create                                                                                          | Aturan PATCH                                    |
+| ----------- | ------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------- |
+| `layananId` | UUID v4       | Wajib; layanan harus ada dan aktif                                                                     | Opsional; perpindahan harus ke layanan aktif    |
+| `kode`      | string        | Wajib; 2–20 karakter, huruf kapital/angka/tanda hubung antarsegmen; regex `^[A-Z0-9]+(?:-[A-Z0-9]+)*$` | Opsional, aturan sama                           |
+| `nama`      | string        | Wajib; 3–100 karakter dan mengandung bukan-spasi                                                       | Opsional, aturan sama                           |
+| `lokasi`    | string / null | Opsional; maksimal 150 karakter                                                                        | Opsional; bisa `null` untuk mengosongkan        |
+| `aktif`     | boolean       | Otomatis `true`                                                                                        | Opsional; reaktivasi mensyaratkan layanan aktif |
+
+```json
+{
+  "layananId": "22222222-2222-4222-8222-222222222222",
+  "kode": "LK-01",
+  "nama": "Loket Informasi Satu",
+  "lokasi": "Lantai 1"
+}
+```
+
+Service melakukan `nama.trim()` serta menyimpan `lokasi` hasil `trim()` atau `null`. Pada create/read/update/delete, objek Loket dari Prisma menyertakan relasi:
+
+```json
+{
+  "layanan": {
+    "id": "22222222-2222-4222-8222-222222222222",
+    "kode": "CS01",
+    "nama": "Layanan Informasi",
+    "aktif": true
+  }
+}
+```
+
+Cuplikan di atas hanya menggambarkan **bagian `layanan` dari respons**, bukan seluruh objek respons Prisma. Loket sendiri memiliki setidaknya `id`, `layananId`, `kode`, `nama`, `lokasi`, dan `aktif` menurut implementasi service; metadata tambahan perlu dicek pada skema.
+
+- `GET /loket`: ADMIN melihat semua; non-ADMIN hanya loket aktif yang layanan induknya aktif. Diurutkan `layananId`, kemudian `kode`, keduanya naik.
+- `PATCH`: pemindahan layanan (`layananId`) dan/atau reaktivasi (`aktif: true`) memvalidasi layanan tujuan aktif. Field `lokasi` dapat dihapus dengan `null` atau string kosong.
+- `DELETE`: soft delete (`aktif: false`); respons tetap mencakup relasi `layanan`.
+- Error khusus: layanan tidak ditemukan `404`, layanan tidak aktif `400`, kode loket duplikat pada layanan `409`, loket tidak ditemukan `404`, relasi database tidak valid `400`.
+
+### 13.4 Jadwal Layanan — DTO dan waktu operasional
+
+**Create** `POST /api/v1/jadwal-layanan`:
+
+| Field             | Tipe    | Aturan create                                                         | Aturan PATCH                      |
+| ----------------- | ------- | --------------------------------------------------------------------- | --------------------------------- |
+| `layananId`       | UUID v4 | Wajib, layanan harus aktif                                            | Opsional; pindah ke layanan aktif |
+| `hari`            | enum    | Wajib; `SENIN`, `SELASA`, `RABU`, `KAMIS`, `JUMAT`, `SABTU`, `MINGGU` | Opsional                          |
+| `jamBuka`         | string  | Wajib; jam 24 jam `HH:mm` (`00:00`–`23:59`)                           | Opsional; aturan sama             |
+| `jamTutup`        | string  | Wajib; jam 24 jam `HH:mm`                                             | Opsional; aturan sama             |
+| `kapasitasHarian` | integer | Wajib; minimal 1, tanpa maksimum eksplisit di DTO                     | Opsional                          |
+| `aktif`           | boolean | Otomatis `true`                                                       | Opsional                          |
+
+```json
+{
+  "layananId": "22222222-2222-4222-8222-222222222222",
+  "hari": "SENIN",
+  "jamBuka": "08:00",
+  "jamTutup": "16:00",
+  "kapasitasHarian": 100
+}
+```
+
+- `jamTutup` harus **lebih akhir** dari `jamBuka`. Jadwal lewat tengah malam tidak didukung aturan saat ini. Ketika PATCH hanya mengubah satu jam, service menggunakan jam lama untuk memvalidasi kombinasi baru.
+- Satu layanan tidak boleh memiliki dua jadwal pada hari yang sama; constraint duplikat memunculkan `409 Conflict`.
+- Layanan induk wajib aktif saat membuat, memindahkan, atau mengaktifkan kembali jadwal.
+- `GET` pada non-ADMIN mengembalikan hanya jadwal aktif dari layanan aktif; ADMIN melihat seluruh jadwal. Daftar diurutkan `layananId` dan `hari` secara urut leksikal enum (`asc`), bukan otomatis Senin–Minggu. Untuk UI, susun hari berdasarkan urutan kalender jika diperlukan.
+- `DELETE` adalah soft delete (`aktif: false`), bukan penghapusan fisik.
+- Respons Prisma menyertakan relasi `layanan: { id, kode, nama, aktif }` dan field jadwal. `jamBuka` serta `jamTutup` disimpan dalam PostgreSQL `TIME` melalui `Date` Prisma berbasis representasi `1970-01-01T...Z`; **respons serialisasi dapat berbentuk ISO 8601**, bukan `HH:mm` literal. Ketika mengisi kembali formulir PATCH, ambil komponen waktu UTC (`HH:mm`) tanpa konversi timezone perangkat.
+- Error: jam salah atau jam tutup tidak lebih akhir `400`, layanan tidak aktif `400`, layanan tidak ditemukan `404`, duplikasi jadwal `409`, jadwal tidak ditemukan `404`.
+
+### 13.5 Penugasan Petugas — DTO Create dan PATCH
+
+**Create** `POST /api/v1/penugasan-petugas`:
+
+| Field            | Tipe          | Aturan create                                                  | Aturan PATCH                              |
+| ---------------- | ------------- | -------------------------------------------------------------- | ----------------------------------------- |
+| `petugasId`      | UUID v4       | Wajib; pengguna harus berperan `PETUGAS`                       | Opsional; bila diubah, divalidasi kembali |
+| `loketId`        | UUID v4       | Wajib; loket dan layanan induk harus aktif                     | Opsional; bila diubah, divalidasi kembali |
+| `tanggalMulai`   | string        | Wajib; tanggal kalender valid `YYYY-MM-DD`                     | Opsional; aturan sama                     |
+| `tanggalSelesai` | string / null | Opsional; `YYYY-MM-DD` valid atau `null` (tanpa tanggal akhir) | Opsional; `null` menghapus batas akhir    |
+| `aktif`          | boolean       | Otomatis `true`                                                | Opsional                                  |
+
+```http
+POST /api/v1/penugasan-petugas
+Authorization: Bearer <access_token_admin>
+Content-Type: application/json
+```
+
+```json
+{
+  "petugasId": "99999999-9999-4999-8999-999999999999",
+  "loketId": "11111111-1111-4111-8111-111111111111",
+  "tanggalMulai": "2026-10-15",
+  "tanggalSelesai": null
+}
+```
+
+Contoh PATCH memperpanjang penugasan tanpa batas akhir:
+
+```http
+PATCH /api/v1/penugasan-petugas/33333333-3333-4333-8333-333333333333
+Authorization: Bearer <access_token_admin>
+Content-Type: application/json
+```
+
+```json
+{ "tanggalSelesai": null }
+```
+
+DTO memeriksa pola tanggal, sedangkan service memeriksa **validitas tanggal kalender** (misalnya 2026-02-30 ditolak), serta `tanggalSelesai >= tanggalMulai` apabila batas akhir diberikan. Ketiadaan tanggal selesai berarti periode terbuka. Penyimpanan PostgreSQL `DATE` ditangani sebagai `Date` UTC tengah malam; frontend harus menampilkannya sebagai tanggal kalender `YYYY-MM-DD`, bukan menerapkan penyesuaian zona waktu perangkat.
+
+### 13.6 Penugasan Petugas — konflik periode dan scope baca
+
+**Aturan benturan:** satu `PETUGAS` tidak boleh mempunyai dua _penugasan aktif_ dengan periode tanggal yang saling beririsan, **termasuk jika loket berbeda**. Batas tanggal awal/akhir inklusif: periode A berakhir tanggal 20 dan periode B dimulai tanggal 20 tetap dihitung konflik. Penugasan dengan `tanggalSelesai: null` dianggap terbuka hingga tidak terbatas. Saat PATCH untuk penugasan aktif, pemeriksaan konflik mengecualikan ID penugasan yang sedang diperbarui; penugasan nonaktif tidak ikut deteksi bentrok. Pelanggaran memunculkan `409 Conflict` dengan pesan `Petugas sudah memiliki penugasan aktif pada periode tersebut`.
+
+**Cakupan baca:**
+
+- ADMIN (`GET /penugasan-petugas` / `:id`) dapat membaca semua penugasan, termasuk yang nonaktif atau lampau.
+- PETUGAS hanya dapat membaca penugasan dengan `petugasId` sesuai ID JWT mereka; penugasan petugas lain tidak terungkap (detail akan mendapat `404`). Daftar petugas **tidak otomatis difilter tanggal/aktif**.
+- USER tidak memperoleh akses kedua endpoint ini.
+- Daftar diurutkan `tanggalMulai desc`, kemudian `dibuatPada desc`.
+
+Respons dari Prisma mencakup relasi berikut (cuplikan struktur, bukan objek lengkap):
+
+```json
+{
+  "petugas": {
+    "id": "99999999-9999-4999-8999-999999999999",
+    "nama": "Petugas Contoh",
+    "email": "petugas@example.test",
+    "peran": "PETUGAS"
+  },
+  "loket": {
+    "id": "11111111-1111-4111-8111-111111111111",
+    "kode": "LK-01",
+    "nama": "Loket Informasi Satu",
+    "aktif": true,
+    "layanan": {
+      "id": "22222222-2222-4222-8222-222222222222",
+      "kode": "CS01",
+      "nama": "Layanan Informasi",
+      "aktif": true
+    }
+  }
+}
+```
+
+Objek penugasan sendiri memiliki field yang dipakai service seperti `id`, `petugasId`, `loketId`, `tanggalMulai`, `tanggalSelesai`, `aktif`, dan `dibuatPada`. Service memeriksa `peran: PETUGAS`, **tetapi fungsi `validasiPetugas` tidak mengecek flag `pengguna.aktif`**; jangan menulis bahwa ini sudah merupakan syarat create. Pemeriksaan aktif lain mungkin ada dalam alur autentikasi/operasional dan harus dievaluasi terpisah.
+
+**Error terkait:** pengguna petugas atau loket tidak ditemukan `404`; peran bukan PETUGAS `400`; loket atau layanan induk tidak aktif `400`; tanggal tidak sah/rentang terbalik `400`; konflik jadwal `409`; penugasan tidak ditemukan `404`; relasi/keunikan database dapat menghasilkan `400`/`409` melalui handler. `DELETE` melakukan soft delete dan mengembalikan objek penugasan yang diperbarui dengan relasi-relasinya.
+
+### 13.7 Panduan integrasi Dashboard ADMIN dan PETUGAS
+
+1. **Form administrasi:** gunakan `GET /layanan`, `GET /loket`, `GET /jadwal-layanan`, dan `GET /penugasan-petugas` dengan JWT berperan sesuai matriks, bukan request anonim. Saat membuat Loket/Jadwal/Penugasan, batasi pilihan dropdown ke layanan/loket yang aktif.
+2. **Urutan setup:** buat Layanan → Loket dan Jadwal Layanan → Penugasan Petugas. Penugasan harus mengarah ke petugas berperan PETUGAS dan loket/layanan aktif.
+3. **Tampilan status:** tombol "Hapus" seharusnya dipahami sebagai _nonaktifkan_. Setelah `DELETE`, periksa `aktif` pada respons dan perbarui tabel lokal. Saat mengaktifkan ulang, gunakan `PATCH` dengan `aktif: true`.
+4. **Kelola tanggal:** gunakan kontrol tanggal kalender (`YYYY-MM-DD`) untuk Penugasan, dan jam 24 jam (`HH:mm`) untuk Jadwal. Jangan mengonversi field `DATE` atau `TIME` menjadi waktu lokal pengguna secara sembarang.
+5. **Scope Petugas:** setelah login PETUGAS, ambil `GET /penugasan-petugas` dan tampilkan hanya data yang relevan saat ini; jangan menganggap hasil endpoint itu seluruhnya aktif. Semua keputusan final tentang izin room, antrean, dan check-in tetap berada di server.
+6. **Penanganan error:** tampilkan kesalahan validasi `400`, tidak ditemukan `404`, konflik `409`, tanpa membuka data milik pengguna lain. Jika konflik penugasan, tampilkan periode bertabrakan kepada ADMIN berdasarkan data yang memang berhak dibaca.
+
+### 13.8 Batas verifikasi administrasi dan catatan QA
+
+- Keempat service melakukan pembatasan akses tambahan saat `GET` dan validasi domain pada mutasi. Namun, **pengecekan benturan penugasan dilakukan sebagai query sebelum penyimpanan**; sifat atomik terhadap dua request bersamaan atau keberadaan constraint anti-overlap tingkat database **belum bisa dipastikan** dari source yang ditinjau. Bila nantinya diperlukan hardening konkurensi, verifikasi schema/constraint dan pengujian E2E paralel.
+- Kontrak 20 route, 8 DTO, 4 service, soft delete, dan aturan bisnis sudah diperiksa; metadata model Prisma, format envelope error global, dan kebijakan pagination masih berada di luar lingkup berkas ini.
+- Dokumentasi ini **tidak mengubah source code** dan tidak merupakan bukti bahwa seluruh kombinasi administrasi telah diuji ulang.
+
+## 14. Status QA dan batas kesiapan
+
+**Checkpoint regresi terakhir yang disampaikan pengembang:** 424 Unit Test dan 169 E2E, seluruhnya lulus (593/593); lint tanpa warning/error; NestJS build lulus. Angka ini adalah hasil validasi yang dilaporkan dari terminal lokal dan **bukan pengujian ulang** yang dilakukan untuk dokumen ini.
+
+Hal yang masih perlu dituntaskan sebelum deployment produksi: empat temuan _high_ pada dependency Prisma yang belum ditutup; konfigurasi origin dan reverse proxy sesuai domain aktual; pengamanan token display saat provisioning; verifikasi deployment/environment dan pengaturan multi-instance jika diaktifkan. Sebagian perlindungan handshake merupakan limiter memori per instance.
+
+## 15. Batas verifikasi dan pekerjaan sebelum rilis produksi
+
+| Area                                                  | Status v1.0 dan tindak lanjut                                                                                                                      | Dampak                                                                             |
+| ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `/auth/me`, peran default register, validasi sesi JWT | **Terverifikasi** dari empat file Authentication tambahan                                                                                          | Kontrak navigasi dan profil frontend dapat dipakai                                 |
+| Skema Prisma dan konkurensi penugasan                 | Periksa `prisma/schema.prisma`, constraint anti-overlap, dan tes request bersamaan                                                                 | Risiko dua penugasan bertabrakan saat request paralel belum ditutup                |
+| Dependency produksi                                   | Empat temuan `high` pada jalur Prisma masih terbuka menurut hasil audit terdahulu; evaluasi patch, mitigasi, dan ulangi audit environment produksi | **Blokir keputusan siap produksi** sampai risiko dinilai/diselesaikan secara resmi |
+| Konfigurasi deployment                                | Cocokkan CORS/Origin, reverse proxy, IP forwarding/trust proxy, WebSocket handshake limit dan penyimpanan token display                            | Keamanan pada satu instance lokal bukan bukti keamanan deployment produksi         |
+| Pengujian kontrak live / error global                 | Jalankan smoke test JWT, status HTTP, rate limit, REST Queue, Socket.IO, dan verifikasi bentuk error pada branch yang akan di-merge                | Dokumen ini berasal dari source review, bukan rekaman HTTP live setiap endpoint    |
+| Provisioning akun ADMIN/PETUGAS                       | Mekanisme akun non-USER belum ditelusuri dari sumber yang tersedia                                                                                 | Frontend Admin dan Petugas memerlukan akun berperan tepat sebelum UAT              |
+
+**Kriteria penggunaan:** panduan v1.0 ini merupakan **baseline kontrak untuk mulai mengerjakan frontend**, bukan sertifikasi rilis produksi. Saat membandingkan kontrak dengan server berjalan, utamakan implementasi yang telah diuji dan catat perubahan pada dokumen. Jika ada perubahan source backend setelah checkpoint 593/593, jalankan regresi lagi sebelum merge.
+
+## 16. Peta referensi sumber
+
+| Sumber                                                                                                                                                                | Informasi yang digunakan                                                                                                                                           |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `src/queue/queue.controller.ts`, `queue.service.ts`, `dto/masuk-antrean.dto.ts`, `dto/panggil-berikutnya.dto.ts`                                                      | Route Queue, UUID v4 `loketId`, RBAC PETUGAS, respons ENQUEUE/CALL/RECALL/SKIP/REQUEUE/START/COMPLETE, FIFO, validasi domain, transaksi dan broadcast pasca-commit |
+| `src/queue/queue-snapshot.types.ts`                                                                                                                                   | Kontrak `SnapshotAntrean`                                                                                                                                          |
+| `src/display/display.controller.ts`                                                                                                                                   | Route display dan token header                                                                                                                                     |
+| `src/display/display-snapshot.types.ts`, `src/display/display.service.ts`                                                                                             | Bentuk snapshot publik, aturan pemilihan pengumuman                                                                                                                |
+| `src/realtime/realtime-events.types.ts`                                                                                                                               | Jenis aksi dan `QueueUpdatedEvent`                                                                                                                                 |
+| `src/realtime/display-realtime.types.ts`                                                                                                                              | `DisplayReadyEvent` dan `DisplayUpdatedEvent`                                                                                                                      |
+| Gateway `/queue` dan `/display` yang tersedia di sesi                                                                                                                 | Room, autentikasi, listener, broadcast                                                                                                                             |
+| `src/auth/auth.controller.ts`, `src/auth/auth.service.ts` terbaru                                                                                                     | Route auth, session lifecycle, payload token, error, throttle                                                                                                      |
+| `src/auth/auth.types.ts`, `src/auth/jwt.strategy.ts`, `src/auth/decorators/current-user.decorator.ts`, `src/users/users.service.ts`                                   | Bentuk tepat `/auth/me`, pemeriksaan sesi dan pengguna aktif, sumber peran efektif dari DB, registrasi default `USER`                                              |
+| `src/auth/dto/register.dto.ts`, `login.dto.ts`, `refresh-token.dto.ts`                                                                                                | Field dan validasi request Authentication                                                                                                                          |
+| `src/reservasi/reservasi.controller.ts`, `reservasi.service.ts`, `dto/create-reservasi.dto.ts`                                                                        | Endpoint USER, DTO, kepemilikan data, alokasi nomor harian, respons reservasi, dan penanganan konflik                                                              |
+| `src/tiket/tiket.controller.ts`, `tiket.service.ts`                                                                                                                   | Daftar/detail tiket USER, field warisan Reservasi, `nomorAntrean`, `tanggalPelayanan`                                                                              |
+| `src/qr/qr.controller.ts`, `qr.service.ts`                                                                                                                            | Penerbitan QR, status dan kepemilikan tiket, format QR, hash, kedaluwarsa, version check                                                                           |
+| `src/check-in/check-in.controller.ts`, `check-in.service.ts`, `dto/proses-check-in.dto.ts`                                                                            | Body Check-In, izin penugasan/jadwal, waktu pelayanan, konsumsi token, respons dan error                                                                           |
+| `src/layanan/layanan.controller.ts`, `layanan.service.ts`, `dto/create-layanan.dto.ts`, `dto/update-layanan.dto.ts`                                                   | CRUD layanan, filter aktif, kode/prefix/durasi, soft delete, error                                                                                                 |
+| `src/loket/loket.controller.ts`, `loket.service.ts`, `dto/create-loket.dto.ts`, `dto/update-loket.dto.ts`                                                             | CRUD loket, validasi layanan aktif, relasi layanan, status dan kode                                                                                                |
+| `src/jadwal-layanan/jadwal-layanan.controller.ts`, `jadwal-layanan.service.ts`, `dto/create-jadwal-layanan.dto.ts`, `dto/update-jadwal-layanan.dto.ts`                | CRUD jadwal, jam HH:mm, PostgreSQL TIME, kapasitas, hari, soft delete                                                                                              |
+| `src/penugasan-petugas/penugasan-petugas.controller.ts`, `penugasan-petugas.service.ts`, `dto/create-penugasan-petugas.dto.ts`, `dto/update-penugasan-petugas.dto.ts` | CRUD dan scope akses penugasan, tanggal terbuka, interval bentrok, relasi petugas/loket                                                                            |
+
+---
+
+**Riwayat dokumen**
+
+- **v0.1, 12 Oktober 2026:** kontrak inti Queue, Public Display, kedua namespace Socket.IO, dan panduan sinkronisasi/TTS.
+- **v0.2, 12 Oktober 2026:** menambahkan kontrak lengkap register, login, refresh dengan rotasi token, logout, `/auth/me` yang ditandai perlu verifikasi bentuk respons, DTO, throttle, contoh payload, dan pedoman penyimpanan kredensial.
+- **v0.3, 12 Oktober 2026:** menambahkan kontrak REST Reservasi khusus USER, DTO, contoh request/response, kepemilikan reservasi, zona waktu, kapasitas, konkurensi transaksi, error dan pedoman UX.
+- **v0.4, 12 Oktober 2026:** menambahkan kontrak Tiket Digital, QR sekali pakai 600 detik, pemeriksaan dan hasil Check-In, transisi terpisah CHECK_IN → MENUNGGU, serta panduan frontend Flutter dan petugas.
+- **v0.5, 12 Oktober 2026:** melengkapi 20 endpoint administrasi dari empat controller, delapan DTO, dan empat service; termasuk RBAC, validasi form, relasi, soft delete, aturan jam/tanggal/konflik penugasan, serta catatan risiko konkurensi.
+- **v0.6, 12 Oktober 2026:** verifikasi dua DTO Queue dan `QueueService` terbaru; menambahkan request/respons tujuh mutasi, daftar FIFO, aturan transisi, status HTTP dan penanganan kegagalan, ketentuan timestamp/versi, dan panduan sinkronisasi dashboard.
+- **v1.0, 12 Oktober 2026:** verifikasi Authentication akhir (`/auth/me`, `JwtStrategy`, default `USER` dari `UsersService`), pemetaan `role` versus `peran`, panduan navigasi/token frontend, dan daftar batas verifikasi sebelum rilis produksi. Finalisasi baseline integrasi tidak berarti risiko dependency/deployment telah ditutup.
