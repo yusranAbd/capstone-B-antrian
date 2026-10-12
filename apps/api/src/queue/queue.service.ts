@@ -2,6 +2,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 
@@ -13,6 +14,8 @@ import {
 } from '../generated/prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
+import { RealtimeBroadcastService } from '../realtime/realtime-broadcast.service';
+import type { JenisPerubahanAntrean } from '../realtime/realtime-events.types';
 
 import {
   AKSI_ANTREAN,
@@ -38,7 +41,50 @@ interface KonteksTanggal {
 
 @Injectable()
 export class QueueService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(QueueService.name);
+
+  // Parameter kedua opsional pada level TypeScript agar Unit Test lama yang
+  // menginstansiasi QueueService secara langsung tetap kompatibel.
+  // Pada runtime NestJS, RealtimeBroadcastService wajib tersedia dari QueueModule.
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly realtime?: RealtimeBroadcastService,
+  ) {}
+
+  /** Best effort: kegagalan Socket.IO tidak membatalkan transaksi yang sudah commit. */
+  private async kirimSetelahCommit(
+    hasil: {
+      tiketId: string;
+      layananId: string;
+      nomorAntrean: string;
+      status: StatusTiket;
+      loketId?: string | null;
+      kodeLoket?: string;
+      urutanMasukAntrean?: number | null;
+      versi?: number;
+    },
+    aksi: JenisPerubahanAntrean,
+    loketId?: string,
+  ): Promise<void> {
+    if (!this.realtime) return;
+    try {
+      await this.realtime.kirim({
+        aksi,
+        layananId: hasil.layananId,
+        tiketId: hasil.tiketId,
+        nomorAntrean: hasil.nomorAntrean,
+        status: hasil.status,
+        loketId: hasil.loketId ?? loketId ?? null,
+        ...(hasil.kodeLoket ? { kodeLoket: hasil.kodeLoket } : {}),
+        ...(hasil.urutanMasukAntrean !== undefined
+          ? { urutanMasukAntrean: hasil.urutanMasukAntrean }
+          : {}),
+        ...(hasil.versi !== undefined ? { versi: hasil.versi } : {}),
+      });
+    } catch {
+      this.logger.warn(`Broadcast ${aksi} gagal; perubahan database tetap tersimpan`);
+    }
+  }
 
   // ==========================================
   // CHECK_IN -> MENUNGGU
@@ -52,7 +98,7 @@ export class QueueService {
       const tanggalLokal = this.dapatkanTanggalPelayanan(sekarang);
 
       try {
-        return await this.prisma.$transaction(
+        const hasil = await this.prisma.$transaction(
           async (tx) => {
             // 1. Validasi identitas PETUGAS.
             const petugas = await tx.pengguna.findUnique({
@@ -309,6 +355,8 @@ export class QueueService {
             timeout: 15000,
           },
         );
+        await this.kirimSetelahCommit(hasil, 'ENQUEUE', loketId);
+        return hasil;
       } catch (error: unknown) {
         // Retry hanya untuk konflik
         // serialisasi PostgreSQL.
@@ -463,7 +511,7 @@ export class QueueService {
       const konteks = this.dapatkanTanggalPelayanan(sekarang);
 
       try {
-        return await this.prisma.$transaction(
+        const hasil = await this.prisma.$transaction(
           async (tx) => {
             // 1. Validasi identitas PETUGAS.
             const petugas = await tx.pengguna.findUnique({
@@ -684,6 +732,8 @@ export class QueueService {
             timeout: 15000,
           },
         );
+        await this.kirimSetelahCommit(hasil, 'CALL');
+        return hasil;
       } catch (error: unknown) {
         // 10. Retry hanya ketika terjadi
         // konflik serialisasi PostgreSQL.
@@ -721,7 +771,7 @@ export class QueueService {
       const konteks = this.dapatkanTanggalPelayanan(sekarang);
 
       try {
-        return await this.prisma.$transaction(
+        const hasil = await this.prisma.$transaction(
           async (tx) => {
             // 1. Hanya PETUGAS aktif yang boleh melakukan RECALL.
             const petugas = await tx.pengguna.findUnique({
@@ -914,6 +964,8 @@ export class QueueService {
             timeout: 15000,
           },
         );
+        await this.kirimSetelahCommit(hasil, 'RECALL');
+        return hasil;
       } catch (error: unknown) {
         if (
           error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -948,7 +1000,7 @@ export class QueueService {
       const konteks = this.dapatkanTanggalPelayanan(sekarang);
 
       try {
-        return await this.prisma.$transaction(
+        const hasil = await this.prisma.$transaction(
           async (tx) => {
             // 1. Pastikan pemanggil adalah PETUGAS aktif.
             const petugas = await tx.pengguna.findUnique({
@@ -1136,6 +1188,8 @@ export class QueueService {
             timeout: 15000,
           },
         );
+        await this.kirimSetelahCommit(hasil, 'SKIP');
+        return hasil;
       } catch (error: unknown) {
         if (
           error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -1171,7 +1225,7 @@ export class QueueService {
       const konteks = this.dapatkanTanggalPelayanan(sekarang);
 
       try {
-        return await this.prisma.$transaction(
+        const hasil = await this.prisma.$transaction(
           async (tx) => {
             // 1. Hanya PETUGAS aktif yang boleh melakukan REQUEUE.
             const petugas = await tx.pengguna.findUnique({
@@ -1394,6 +1448,8 @@ export class QueueService {
             timeout: 15000,
           },
         );
+        await this.kirimSetelahCommit(hasil, 'REQUEUE');
+        return hasil;
       } catch (error: unknown) {
         if (
           error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -1430,7 +1486,7 @@ export class QueueService {
       const konteks = this.dapatkanTanggalPelayanan(sekarang);
 
       try {
-        return await this.prisma.$transaction(
+        const hasil = await this.prisma.$transaction(
           async (tx) => {
             // 1. Validasi PETUGAS aktif.
             const petugas = await tx.pengguna.findUnique({
@@ -1635,6 +1691,8 @@ export class QueueService {
             timeout: 15000,
           },
         );
+        await this.kirimSetelahCommit(hasil, 'START');
+        return hasil;
       } catch (error: unknown) {
         if (
           error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -1671,7 +1729,7 @@ export class QueueService {
       const konteks = this.dapatkanTanggalPelayanan(sekarang);
 
       try {
-        return await this.prisma.$transaction(
+        const hasil = await this.prisma.$transaction(
           async (tx) => {
             // 1. Validasi identitas dan status PETUGAS.
             const petugas = await tx.pengguna.findUnique({
@@ -1882,6 +1940,8 @@ export class QueueService {
             timeout: 15000,
           },
         );
+        await this.kirimSetelahCommit(hasil, 'COMPLETE');
+        return hasil;
       } catch (error: unknown) {
         if (
           error instanceof Prisma.PrismaClientKnownRequestError &&

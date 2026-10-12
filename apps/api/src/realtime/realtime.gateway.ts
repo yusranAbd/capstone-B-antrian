@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import {
@@ -5,6 +6,7 @@ import {
   MessageBody,
   OnGatewayInit,
   SubscribeMessage,
+  WebSocketServer,
   WebSocketGateway,
 } from '@nestjs/websockets';
 import type { Namespace, Socket } from 'socket.io';
@@ -16,6 +18,7 @@ import {
   RealtimeRoomAccessService,
   type IdentitasSocket,
 } from './realtime-room-access.service';
+import type { QueueUpdatedEvent } from './realtime-events.types';
 
 const POLA_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -26,6 +29,11 @@ type BalasanRoom =
 /** Namespace operasional. Room harus diotorisasi di server, bukan dipercaya dari client. */
 @WebSocketGateway({ namespace: '/queue' })
 export class RealtimeGateway implements OnGatewayInit<Namespace> {
+  private readonly logger = new Logger(RealtimeGateway.name);
+
+  @WebSocketServer()
+  private server?: Namespace;
+
   constructor(
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
@@ -34,6 +42,7 @@ export class RealtimeGateway implements OnGatewayInit<Namespace> {
   ) {}
 
   afterInit(server: Namespace): void {
+    this.server = server;
     server.use((client, next) => {
       void this.autentikasiKoneksi(client)
         .then(() => next())
@@ -87,6 +96,44 @@ export class RealtimeGateway implements OnGatewayInit<Namespace> {
 
     await client.leave(this.namaRoom(layananId));
     return { ok: true, layananId };
+  }
+
+  /**
+   * Kirim hanya ke socket room layanan yang MASIH berwenang.
+   * Pengiriman dilakukan sesudah database commit oleh QueueService.
+   * Saat sesi tidak sah atau pemeriksaan DB gagal, kiriman ditahan (fail closed).
+   * Berlaku untuk satu instance NestJS / Socket.IO; scale-out perlu adapter dan
+   * strategi revalidasi lintas instance.
+   */
+  async broadcastPerubahan(event: QueueUpdatedEvent): Promise<void> {
+    if (!this.server) return;
+
+    const room = this.namaRoom(event.layananId);
+    for (const client of this.server.sockets.values()) {
+      if (!client.rooms.has(room)) continue;
+
+      const identitas = this.ambilIdentitas(client);
+      if (!identitas) {
+        await client.leave(room);
+        client.disconnect(true);
+        continue;
+      }
+
+      try {
+        const izin = await this.aksesRoom.periksa(identitas, event.layananId);
+        if (izin !== 'ALLOWED') {
+          await client.leave(room);
+          if (izin === 'UNAUTHORIZED') client.disconnect(true);
+          continue;
+        }
+
+        client.emit('queue:updated', event);
+      } catch {
+        // Lebih aman kehilangan event daripada membocorkan data saat DB bermasalah.
+        await client.leave(room);
+        this.logger.warn('Broadcast ditahan karena pemeriksaan akses gagal');
+      }
+    }
   }
 
   private async autentikasiKoneksi(client: Socket): Promise<void> {
