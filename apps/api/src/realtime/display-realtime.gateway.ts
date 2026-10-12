@@ -6,6 +6,7 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import type { Namespace, Socket } from 'socket.io';
+import { keamananHandshakeSocket } from '../config/socket-handshake-security';
 import {
   DisplayRealtimeAccessService,
   type IdentitasDisplay,
@@ -27,6 +28,12 @@ export class DisplayRealtimeGateway
   afterInit(server: Namespace): void {
     this.server = server;
     server.use((client, next) => {
+      try {
+        keamananHandshakeSocket.periksa(client, 'display');
+      } catch (error) {
+        next(new Error(error instanceof Error ? error.message : 'UNAUTHORIZED'));
+        return;
+      }
       void this.akses
         .autentikasi(client.handshake.auth?.token, client.handshake.auth?.layananId)
         .then((identitas) => {

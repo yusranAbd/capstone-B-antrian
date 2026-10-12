@@ -12,6 +12,7 @@ import {
 import type { Namespace, Socket } from 'socket.io';
 
 import type { AccessTokenPayload } from '../auth/auth.types';
+import { keamananHandshakeSocket } from '../config/socket-handshake-security';
 import { JwtStrategy } from '../auth/jwt.strategy';
 import { PeranPengguna } from '../generated/prisma/client';
 import {
@@ -44,6 +45,12 @@ export class RealtimeGateway implements OnGatewayInit<Namespace> {
   afterInit(server: Namespace): void {
     this.server = server;
     server.use((client, next) => {
+      try {
+        keamananHandshakeSocket.periksa(client, 'queue');
+      } catch (error) {
+        next(new Error(error instanceof Error ? error.message : 'UNAUTHORIZED'));
+        return;
+      }
       void this.autentikasiKoneksi(client)
         .then(() => next())
         .catch(() => next(new Error('UNAUTHORIZED')));
