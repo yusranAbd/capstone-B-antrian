@@ -29,6 +29,15 @@ enum StatusTiket {
   @@map("status_tiket")
 }
 
+// Default menjaga alur reservasi harian QueueB yang sudah berjalan.
+// Aktivasi JANJI_TEMU_DOKTER hanya setelah API dan Queue Engine siap.
+enum ModeReservasi {
+  ANTREAN_HARIAN
+  JANJI_TEMU_DOKTER
+
+  @@map("mode_reservasi")
+}
+
 enum HariLayanan {
   SENIN
   SELASA
@@ -75,6 +84,7 @@ model Layanan {
   nama             String   @db.VarChar(150)
   deskripsi        String?  @db.Text
   prefixAntrean    String   @map("prefix_antrean") @db.VarChar(5)
+  modeReservasi    ModeReservasi @default(ANTREAN_HARIAN) @map("mode_reservasi")
   durasiDasarMenit Int      @map("durasi_dasar_menit")
   aktif            Boolean  @default(true)
   dibuatPada       DateTime @default(now()) @map("dibuat_pada") @db.Timestamptz(6)
@@ -85,6 +95,7 @@ model Layanan {
   tiketAntrean        TiketAntrean[]
   urutanAntreanHarian UrutanAntreanHarian[]
   perangkatTampilan   PerangkatTampilan[]
+  dokterLayanan       DokterLayanan[]
 
   @@map("layanan")
 }
@@ -102,6 +113,7 @@ model Loket {
   layanan          Layanan            @relation(fields: [layananId], references: [id])
   tiketAntrean     TiketAntrean[]
   penugasanPetugas PenugasanPetugas[]
+  jadwalPraktik    JadwalPraktik[]
 
   @@unique([layananId, kode])
   @@index([layananId])
@@ -173,6 +185,7 @@ model TiketAntrean {
   loket            Loket?             @relation(fields: [loketId], references: [id])
   peristiwaAntrean PeristiwaAntrean[]
   notifikasi       Notifikasi[]
+  janjiTemu        JanjiTemu?
 
   // Nomor tiket tetap unik per layanan dan tanggal.
   @@unique([layananId, tanggalAntrean, nomorUrut])
@@ -272,4 +285,95 @@ model Notifikasi {
   @@index([tiketAntreanId])
   @@index([dibacaPada])
   @@map("notifikasi")
+}
+
+// ============================================================
+// H1 HOSPITAL — PERLUASAN ADITIF (REVIEW, BELUM MIGRASI)
+// ============================================================
+// Dokter adalah data master, BUKAN peran autentikasi.
+model Dokter {
+  id             String   @id @default(uuid()) @db.Uuid
+  kode           String   @unique @db.VarChar(30)
+  nama           String   @db.VarChar(150)
+  spesialisasi   String?  @db.VarChar(150)
+  aktif          Boolean  @default(true)
+  dibuatPada     DateTime @default(now()) @map("dibuat_pada") @db.Timestamptz(6)
+  diperbaruiPada DateTime @updatedAt @map("diperbarui_pada") @db.Timestamptz(6)
+
+  dokterLayanan DokterLayanan[]
+
+  @@map("dokter")
+}
+
+// M:N dokter dan poliklinik. Tidak boleh ada pasangan yang berulang.
+model DokterLayanan {
+  id        String  @id @default(uuid()) @db.Uuid
+  dokterId  String  @map("dokter_id") @db.Uuid
+  layananId String  @map("layanan_id") @db.Uuid
+  aktif     Boolean @default(true)
+
+  dokter        Dokter         @relation(fields: [dokterId], references: [id])
+  layanan       Layanan        @relation(fields: [layananId], references: [id])
+  jadwalPraktik JadwalPraktik[]
+
+  @@unique([dokterId, layananId])
+  @@index([layananId, aktif])
+  @@map("dokter_layanan")
+}
+
+// Satu SESI dokter pada tanggal nyata, bukan template mingguan.
+// loketId = ruang/loket tempat PETUGAS menjalankan antrean dokter.
+model JadwalPraktik {
+  id              String   @id @default(uuid()) @db.Uuid
+  dokterLayananId String   @map("dokter_layanan_id") @db.Uuid
+  loketId         String   @map("loket_id") @db.Uuid
+  tanggal         DateTime @db.Date
+  mulaiPada       DateTime @map("mulai_pada") @db.Timestamptz(6)
+  selesaiPada     DateTime @map("selesai_pada") @db.Timestamptz(6)
+  aktif           Boolean  @default(true)
+  dibuatPada      DateTime @default(now()) @map("dibuat_pada") @db.Timestamptz(6)
+
+  dokterLayanan DokterLayanan @relation(fields: [dokterLayananId], references: [id])
+  loket         Loket         @relation(fields: [loketId], references: [id])
+  slotPraktik   SlotPraktik[]
+
+  @@unique([dokterLayananId, mulaiPada])
+  @@index([loketId, tanggal, aktif])
+  @@index([dokterLayananId, tanggal, aktif])
+  @@map("jadwal_praktik")
+}
+
+// Slot konsultasi bertanggal; semua instan waktu memakai timestamptz.
+// Kapasitas > 0 dijaga oleh CHECK PostgreSQL (lihat SQL review).
+model SlotPraktik {
+  id              String   @id @default(uuid()) @db.Uuid
+  jadwalPraktikId String   @map("jadwal_praktik_id") @db.Uuid
+  mulaiPada       DateTime @map("mulai_pada") @db.Timestamptz(6)
+  selesaiPada     DateTime @map("selesai_pada") @db.Timestamptz(6)
+  kapasitas       Int      @default(1)
+  aktif           Boolean  @default(true)
+
+  jadwalPraktik JadwalPraktik @relation(fields: [jadwalPraktikId], references: [id])
+  janjiTemu     JanjiTemu[]
+
+  @@unique([jadwalPraktikId, mulaiPada])
+  @@index([jadwalPraktikId, aktif, mulaiPada])
+  @@map("slot_praktik")
+}
+
+// Satu janji temu terkait SATU tiket; status operasional bersumber
+// dari TiketAntrean.status, tidak menduplikasi status di JanjiTemu.
+// Dokter/layanan/ruang diturunkan melalui slot dan jadwal.
+model JanjiTemu {
+  id             String   @id @default(uuid()) @db.Uuid
+  tiketId        String   @unique @map("tiket_id") @db.Uuid
+  slotPraktikId  String   @map("slot_praktik_id") @db.Uuid
+  dibuatPada     DateTime @default(now()) @map("dibuat_pada") @db.Timestamptz(6)
+  diperbaruiPada DateTime @updatedAt @map("diperbarui_pada") @db.Timestamptz(6)
+
+  tiket       TiketAntrean @relation(fields: [tiketId], references: [id])
+  slotPraktik SlotPraktik  @relation(fields: [slotPraktikId], references: [id])
+
+  @@index([slotPraktikId])
+  @@map("janji_temu")
 }
