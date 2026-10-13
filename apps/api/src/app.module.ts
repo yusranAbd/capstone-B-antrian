@@ -15,6 +15,7 @@ import { QrModule } from './qr/qr.module';
 import { CheckInModule } from './check-in/check-in.module';
 import { QueueModule } from './queue/queue.module';
 import { RealtimeModule } from './realtime/realtime.module';
+import { DokterModule } from './dokter/dokter.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { RealtimeModule } from './realtime/realtime.module';
     LoketModule,
     JadwalLayananModule,
     PenugasanPetugasModule,
+    DokterModule,
     ReservasiModule,
     TiketModule,
     QrModule,
