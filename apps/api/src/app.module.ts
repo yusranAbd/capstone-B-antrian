@@ -17,6 +17,7 @@ import { QueueModule } from './queue/queue.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { DokterModule } from './dokter/dokter.module';
 import { JadwalPraktikModule } from './jadwal-praktik/jadwal-praktik.module';
+import { SlotPraktikModule } from './slot-praktik/slot-praktik.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { JadwalPraktikModule } from './jadwal-praktik/jadwal-praktik.module';
     DokterModule,
     ReservasiModule,
     TiketModule,
+    SlotPraktikModule,
     QrModule,
     CheckInModule,
     QueueModule,
