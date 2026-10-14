@@ -1,0 +1,22 @@
+# QueueB Hospital — Flutter
+
+Satu aplikasi Dart untuk ADMIN, PETUGAS, USER dan Public Display. Target: Web dan Android. Backend tetap NestJS existing dengan prefix `/api/v1`.
+
+```powershell
+flutter pub get
+flutter run -d chrome --web-hostname localhost --web-port 5173 --dart-define=API_BASE_URL=http://localhost:3000/api/v1 --dart-define=SERVICE_TIME_ZONE=Asia/Jakarta
+```
+
+Gunakan origin Web yang diizinkan backend. Untuk Android emulator, API_BASE_URL memakai `http://10.0.2.2:3000/api/v1`; perangkat fisik memakai host yang dapat dijangkau. HTTP hanya tersedia pada build debug, release memakai HTTPS.
+
+```powershell
+flutter analyze
+flutter test
+flutter build web --release --no-web-resources-cdn --dart-define=API_BASE_URL=https://api.example.org/api/v1
+flutter build apk --debug --dart-define=API_BASE_URL=http://10.0.2.2:3000/api/v1
+```
+
+Kontrak API: [API_INTEGRATION_GUIDE.md](../../docs/backend/API_INTEGRATION_GUIDE.md).
+Panduan alur, QA nyata, konfigurasi dan batas MVP: [FLUTTER_MVP.md](../../docs/frontend/FLUTTER_MVP.md).
+
+Token hanya di memori sesi. Akun operasional/perangkat display disediakan pengelola server. Jangan masukkan token/kredensial ke dart-define, URL, source atau Git. Backend tidak dimodifikasi oleh proyek ini.
