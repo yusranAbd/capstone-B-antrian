@@ -57,10 +57,12 @@ function setup() {
       findFirst: jest.fn().mockResolvedValue({ tiketId, tiket: { status: StatusTiket.DIPESAN } }),
     },
     urutanAntreanHarian: { upsert: jest.fn().mockResolvedValue({ nomorTerakhir: 7 }) },
+    jadwalLayanan: { findUnique: jest.fn().mockResolvedValue({ aktif: true, kapasitasHarian: 4 }) },
     tiketAntrean: {
       findFirst: jest.fn().mockResolvedValue(null),
       create: jest.fn().mockResolvedValue({ id: tiketId }),
       updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      count: jest.fn().mockResolvedValue(0),
     },
     peristiwaAntrean: { create: jest.fn().mockResolvedValue({ id: 'audit-id' }) },
   };
@@ -109,6 +111,44 @@ describe('JanjiTemuService H2.4', () => {
     slot.jadwalPraktik.dokterLayanan.layanan.modeReservasi = ModeReservasi.ANTREAN_HARIAN;
     tx.slotPraktik.findUnique.mockResolvedValueOnce(slot);
     await expect(service.create({ slotPraktikId: slotId }, penggunaId)).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('H3.2: menerima booking janji temu pada mode HIBRIDA jika kapasitas gabungan tersedia', async () => {
+    const { service, tx } = setup();
+    const slot = buatSlot();
+    slot.jadwalPraktik.dokterLayanan.layanan.modeReservasi = ModeReservasi.HIBRIDA;
+    tx.slotPraktik.findUnique.mockResolvedValueOnce(slot);
+    tx.jadwalLayanan.findUnique.mockResolvedValue({ aktif: true, kapasitasHarian: 3 });
+    tx.tiketAntrean.count.mockResolvedValue(1);
+
+    await expect(service.create({ slotPraktikId: slotId }, penggunaId))
+      .resolves.toMatchObject({ id: janjiId });
+    expect(tx.tiketAntrean.count).toHaveBeenCalledWith({
+      where: { layananId, tanggalAntrean: tanggal, status: { not: StatusTiket.DIBATALKAN } },
+    });
+  });
+
+  it('H3.2: booking hibrida ditolak jika kapasitas gabungan poli habis', async () => {
+    const { service, tx } = setup();
+    const slot = buatSlot();
+    slot.jadwalPraktik.dokterLayanan.layanan.modeReservasi = ModeReservasi.HIBRIDA;
+    tx.slotPraktik.findUnique.mockResolvedValueOnce(slot);
+    tx.jadwalLayanan.findUnique.mockResolvedValue({ aktif: true, kapasitasHarian: 1 });
+    tx.tiketAntrean.count.mockResolvedValue(1);
+    await expect(service.create({ slotPraktikId: slotId }, penggunaId))
+      .rejects.toBeInstanceOf(ConflictException);
+    expect(tx.tiketAntrean.create).not.toHaveBeenCalled();
+  });
+
+  it('H3.2: booking hibrida ditolak ketika jadwal harian nonaktif', async () => {
+    const { service, tx } = setup();
+    const slot = buatSlot();
+    slot.jadwalPraktik.dokterLayanan.layanan.modeReservasi = ModeReservasi.HIBRIDA;
+    tx.slotPraktik.findUnique.mockResolvedValueOnce(slot);
+    tx.jadwalLayanan.findUnique.mockResolvedValue({ aktif: false, kapasitasHarian: 4 });
+    await expect(service.create({ slotPraktikId: slotId }, penggunaId))
+      .rejects.toBeInstanceOf(BadRequestException);
+    expect(tx.tiketAntrean.create).not.toHaveBeenCalled();
   });
 
   it('booking menolak slot yang nonaktif', async () => {
