@@ -7,7 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
-import { HariLayanan, Prisma, StatusTiket } from '../generated/prisma/client';
+import { HariLayanan, ModeReservasi, Prisma, StatusTiket } from '../generated/prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateReservasiDto } from './dto/create-reservasi.dto';
@@ -69,6 +69,7 @@ export class ReservasiService {
               select: {
                 id: true,
                 aktif: true,
+                modeReservasi: true,
               },
             });
 
@@ -78,6 +79,12 @@ export class ReservasiService {
 
             if (!layanan.aktif) {
               throw new BadRequestException('Layanan sedang tidak aktif');
+            }
+
+            // Jalur reservasi harian tidak boleh menerbitkan tiket langsung
+            // untuk layanan yang mensyaratkan pemilihan slot dokter.
+            if (layanan.modeReservasi === ModeReservasi.JANJI_TEMU_DOKTER) {
+              throw new BadRequestException('Gunakan API janji temu untuk layanan dokter');
             }
 
             // 2. Periksa jadwal pada hari tersebut.
