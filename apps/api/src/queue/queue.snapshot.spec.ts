@@ -1,6 +1,7 @@
 import { ForbiddenException } from '@nestjs/common';
 
 import {
+  ModeReservasi,
   PeranPengguna,
   Prisma,
   StatusTiket,
@@ -60,6 +61,7 @@ describe('QueueService - REST Snapshot', () => {
           kode: 'ADM',
           nama: 'Administrasi',
           prefixAntrean: 'A',
+          modeReservasi: ModeReservasi.ANTREAN_HARIAN,
         },
       },
     });
@@ -99,6 +101,75 @@ describe('QueueService - REST Snapshot', () => {
     );
   });
 
+  it.each(['2026-10-12T05:00:00Z', '2026-10-12T03:45:00Z'])(
+    'mode HIBRIDA: snapshot memprioritaskan appointment dengan akhir slot %s', async (akhirSlot) => {
+    tx.penugasanPetugas.findFirst.mockResolvedValue({
+      loket: {
+        id: loketId, kode: 'L-1', nama: 'Loket Satu', layananId,
+        layanan: { id: layananId, kode: 'POLI', nama: 'Poli Hibrida',
+          prefixAntrean: 'A', modeReservasi: ModeReservasi.HIBRIDA },
+      },
+    });
+    const walk = {
+      id: tiketMenungguId, nomorUrut: 9, status: StatusTiket.MENUNGGU,
+      versi: 3, urutanMasukAntrean: 1,
+      masukAntreanPada: new Date('2026-10-12T02:00:00Z'),
+      checkInPada: new Date('2026-10-12T02:00:00Z'),
+      tanggalAntrean: new Date('2026-10-12T00:00:00Z'), janjiTemu: null,
+    };
+    const janji = {
+      ...walk, id: '00000000-0000-4000-8000-000000000066', nomorUrut: 10,
+      urutanMasukAntrean: 2,
+      checkInPada: new Date('2026-10-12T03:30:00Z'),
+      janjiTemu: {
+        slotPraktik: { aktif: true,
+          mulaiPada: new Date('2026-10-12T03:00:00Z'),
+          selesaiPada: new Date(akhirSlot),
+          jadwalPraktik: { aktif: true, loketId, tanggal: new Date('2026-10-12T00:00:00Z'),
+            mulaiPada: new Date('2026-10-12T02:00:00Z'), selesaiPada: new Date('2026-10-12T06:00:00Z'),
+            dokterLayanan: { aktif: true, dokter: { aktif: true } } },
+        },
+      },
+    };
+    tx.tiketAntrean.findMany.mockReset()
+      .mockResolvedValueOnce([walk, janji])
+      .mockResolvedValueOnce([]);
+    const hasil = await service.snapshotAntrean(petugasId, loketId);
+    expect(hasil.menunggu.tiket.map((t) => t.tiketId)).toEqual([janji.id, walk.id]);
+    expect(hasil.menunggu.tiket[0]).toMatchObject({
+      jenisAntrean: 'JANJI_TEMU', layakDipanggil: true,
+    });
+    expect(hasil.menunggu.tiket[1]).toMatchObject({
+      jenisAntrean: 'WALK_IN', layakDipanggil: true,
+    });
+    expect(tx.tiketAntrean.findMany.mock.calls[0][0]).not.toHaveProperty('take');
+  });
+
+  it('snapshot memakai audit REQUEUE terbaru tanpa membocorkannya dalam respons', async () => {
+    tx.penugasanPetugas.findFirst.mockResolvedValue({ loket: {
+      id: loketId, kode: 'L-1', nama: 'Loket Satu', layananId,
+      layanan: { id: layananId, kode: 'POLI', nama: 'Poli Hibrida',
+        prefixAntrean: 'A', modeReservasi: ModeReservasi.HIBRIDA },
+    } });
+    const ulang = { id: tiketMenungguId, nomorUrut: 9, status: StatusTiket.MENUNGGU,
+      versi: 6, urutanMasukAntrean: 9, masukAntreanPada: new Date('2026-10-12T03:50:00Z'),
+      checkInPada: new Date('2026-10-12T02:00:00Z'),
+      tanggalAntrean: new Date('2026-10-12T00:00:00Z'), janjiTemu: null,
+      peristiwaAntrean: [{ terjadiPada: new Date('2026-10-12T03:50:00Z') }] };
+    const menunggu = { ...ulang, id: tiketAktifId, nomorUrut: 10, versi: 3,
+      urutanMasukAntrean: 2, checkInPada: new Date('2026-10-12T03:30:00Z'), peristiwaAntrean: [] };
+    tx.tiketAntrean.findMany.mockReset().mockResolvedValueOnce([ulang, menunggu]).mockResolvedValueOnce([]);
+    const hasil = await service.snapshotAntrean(petugasId, loketId);
+    expect(hasil.menunggu.tiket.map((tiket) => tiket.tiketId)).toEqual([menunggu.id, ulang.id]);
+    expect(tx.tiketAntrean.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      select: expect.objectContaining({ peristiwaAntrean: {
+        where: { tipe: 'REQUEUE' }, orderBy: { terjadiPada: 'desc' },
+        take: 1, select: { terjadiPada: true },
+      } }),
+    }));
+    expect(JSON.stringify(hasil)).not.toContain('peristiwaAntrean');
+  });
+
   it('mengembalikan FIFO, total, dan tiket aktif lintas loket satu layanan', async () => {
     const hasil = await service.snapshotAntrean(petugasId, loketId);
     expect(hasil).toMatchObject({
@@ -130,7 +201,7 @@ describe('QueueService - REST Snapshot', () => {
   });
 
   it('membatasi daftar FIFO menjadi 100 dan menghitung total secara terpisah', async () => {
-    await service.snapshotAntrean(petugasId, loketId);
+    const hasil = await service.snapshotAntrean(petugasId, loketId);
     const panggilan = tx.tiketAntrean.findMany.mock.calls[0][0] as {
       take: number;
       orderBy: unknown;
@@ -141,6 +212,7 @@ describe('QueueService - REST Snapshot', () => {
       { id: 'asc' },
     ]);
     expect(tx.tiketAntrean.count).toHaveBeenCalledTimes(1);
+    expect(hasil.menunggu.tiket.every((tiket) => tiket.jenisAntrean === undefined)).toBe(true);
   });
 
   it('membaca tanggal pelayanan lokal, bukan tanggal UTC server', async () => {

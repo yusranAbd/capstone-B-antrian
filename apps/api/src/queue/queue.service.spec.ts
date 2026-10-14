@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
-import { PeranPengguna, Prisma, StatusTiket } from '../generated/prisma/client';
+import { ModeReservasi, PeranPengguna, Prisma, StatusTiket } from '../generated/prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { QueueService } from './queue.service';
@@ -74,6 +74,7 @@ const buatTxMock = () => ({
   tiketAntrean: {
     findUnique: jest.fn(),
     findFirst: jest.fn(),
+    findMany: jest.fn(),
     updateMany: jest.fn(),
   },
   penugasanPetugas: {
@@ -654,6 +655,129 @@ describe('QueueService', () => {
     });
   });
 
+  // ========================================
+  // H3.3 - HOSPITAL SELECTOR (MODE HIBRIDA)
+  // ========================================
+  describe('Hospital Queue Selector H3.3', () => {
+    const slot = (mulai: string, selesai: string, ruang = loketId) => ({
+      slotPraktik: {
+        aktif: true,
+        mulaiPada: new Date(mulai),
+        selesaiPada: new Date(selesai),
+        jadwalPraktik: { aktif: true, loketId: ruang, tanggal: TANGGAL_PELAYANAN,
+          mulaiPada: new Date('2026-10-10T00:00:00Z'), selesaiPada: new Date('2026-10-10T06:00:00Z'),
+          dokterLayanan: { aktif: true, dokter: { aktif: true } } },
+      },
+    });
+    const tiketWalk = {
+      id: '00000000-0000-4000-8000-000000000111',
+      nomorUrut: 1,
+      status: StatusTiket.MENUNGGU,
+      versi: 3,
+      loketId: null,
+      urutanMasukAntrean: 1,
+      masukAntreanPada: SEKARANG,
+      checkInPada: new Date('2026-10-10T01:00:00Z'),
+      tanggalAntrean: TANGGAL_PELAYANAN,
+      janjiTemu: null,
+    };
+    const tiketJanji = {
+      ...tiketWalk,
+      id: tiketId,
+      nomorUrut: 2,
+      urutanMasukAntrean: 2,
+      checkInPada: new Date('2026-10-10T02:10:00Z'),
+      janjiTemu: slot('2026-10-10T02:00:00Z', '2026-10-10T03:00:00Z'),
+    };
+    function pakaiModeHibrida() {
+      txMock.penugasanPetugas.findFirst.mockResolvedValue({
+        id: penugasanId,
+        loket: {
+          id: loketId, kode: 'LKT-A1', aktif: true, layananId,
+          layanan: { aktif: true, prefixAntrean: 'A', modeReservasi: ModeReservasi.HIBRIDA },
+        },
+      });
+      prismaMock.penugasanPetugas.findFirst.mockResolvedValue({
+        loket: { aktif: true, layananId,
+          layanan: { aktif: true, prefixAntrean: 'A', modeReservasi: ModeReservasi.HIBRIDA } },
+      });
+      txMock.tiketAntrean.findFirst.mockResolvedValue(null);
+    }
+    it('CALL mengutamakan janji valid meski walk-in check-in lebih awal', async () => {
+      pakaiModeHibrida();
+      txMock.tiketAntrean.findMany.mockResolvedValue([tiketWalk, tiketJanji]);
+      const hasil = await service.panggilBerikutnya(petugasId, loketId);
+      expect(hasil.tiketId).toBe(tiketId);
+      expect(txMock.tiketAntrean.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+        where: expect.objectContaining({ id: tiketId }),
+      }));
+      expect(txMock.peristiwaAntrean.create).toHaveBeenCalledTimes(1);
+    });
+    it('CALL mengutamakan walk-in ketika slot belum dibuka', async () => {
+      pakaiModeHibrida();
+      txMock.tiketAntrean.findMany.mockResolvedValue([
+        tiketWalk,
+        { ...tiketJanji, janjiTemu: slot('2026-10-10T03:00:00Z','2026-10-10T04:00:00Z') },
+      ]);
+      const hasil = await service.panggilBerikutnya(petugasId, loketId);
+      expect(hasil.tiketId).toBe(tiketWalk.id);
+    });
+    it('CALL dan GET menunggu tetap memprioritaskan pasien setelah slot selesai', async () => {
+      pakaiModeHibrida();
+      const lama = { ...tiketJanji, janjiTemu: slot('2026-10-10T01:00:00Z', '2026-10-10T02:00:00Z') };
+      const kandidat = [tiketWalk, lama];
+      txMock.tiketAntrean.findMany.mockResolvedValue(kandidat);
+      prismaMock.tiketAntrean.findMany.mockResolvedValue(kandidat);
+      const daftar = await service.daftarMenunggu(petugasId, loketId);
+      const hasil = await service.panggilBerikutnya(petugasId, loketId);
+      expect(daftar[0]).toMatchObject({ tiketId: lama.id, layakDipanggil: true });
+      expect(hasil.tiketId).toBe(daftar[0]?.tiketId);
+    });
+    it('CALL menolak janji yang dijadwalkan pada ruang lain', async () => {
+      pakaiModeHibrida();
+      txMock.tiketAntrean.findMany.mockResolvedValue([
+        { ...tiketJanji, janjiTemu: slot('2026-10-10T02:00:00Z', '2026-10-10T03:00:00Z', 'loket-lain') },
+      ]);
+      await expect(service.panggilBerikutnya(petugasId, loketId)).rejects.toThrow(NotFoundException);
+      expect(txMock.tiketAntrean.updateMany).not.toHaveBeenCalled();
+    });
+    it('GET menunggu menggunakan urutan prioritas yang sama dengan CALL', async () => {
+      pakaiModeHibrida();
+      prismaMock.tiketAntrean.findMany.mockResolvedValue([tiketWalk, tiketJanji]);
+      const hasil = await service.daftarMenunggu(petugasId, loketId);
+      expect(hasil.map((item) => item.tiketId)).toEqual([tiketId, tiketWalk.id]);
+      expect(hasil[0]).toMatchObject({ jenisAntrean: 'JANJI_TEMU', layakDipanggil: true });
+    });
+    it('CALL dan GET menunggu membaca audit REQUEUE terbaru dan tidak memakai check-in lama', async () => {
+      pakaiModeHibrida();
+      const ulang = { ...tiketJanji, checkInPada: new Date('2026-10-10T01:00:00Z'),
+        urutanMasukAntrean: 9,
+        peristiwaAntrean: [{ terjadiPada: new Date('2026-10-10T02:25:00Z') }] };
+      const menunggu = { ...tiketJanji, id: '00000000-0000-4000-8000-000000000222',
+        nomorUrut: 3, urutanMasukAntrean: 3, peristiwaAntrean: [] };
+      txMock.tiketAntrean.findMany.mockResolvedValue([ulang, menunggu]);
+      prismaMock.tiketAntrean.findMany.mockResolvedValue([ulang, menunggu]);
+      const daftar = await service.daftarMenunggu(petugasId, loketId);
+      const hasil = await service.panggilBerikutnya(petugasId, loketId);
+      expect(daftar.map((item) => item.tiketId)).toEqual([menunggu.id, ulang.id]);
+      expect(hasil.tiketId).toBe(menunggu.id);
+      const audit = { where: { tipe: 'REQUEUE' }, orderBy: { terjadiPada: 'desc' },
+        take: 1, select: { terjadiPada: true } };
+      for (const mock of [txMock.tiketAntrean.findMany, prismaMock.tiketAntrean.findMany]) {
+        expect(mock).toHaveBeenCalledWith(expect.objectContaining({
+          select: expect.objectContaining({ peristiwaAntrean: audit }),
+        }));
+      }
+      expect(JSON.stringify(daftar)).not.toContain('peristiwaAntrean');
+    });
+    it('mode HIBRIDA tidak membatasi query kandidat menjadi 100 sebelum sorting', async () => {
+      pakaiModeHibrida();
+      prismaMock.tiketAntrean.findMany.mockResolvedValue([tiketWalk]);
+      await service.daftarMenunggu(petugasId, loketId);
+      expect(prismaMock.tiketAntrean.findMany.mock.calls[0][0]).not.toHaveProperty('take');
+    });
+  });
+
   // ==========================================
   // F. PEMANGGILAN ANTREAN (CALL)
   // ==========================================
@@ -679,6 +803,7 @@ describe('QueueService', () => {
           layanan: {
             aktif: true,
             prefixAntrean: 'A',
+            modeReservasi: ModeReservasi.ANTREAN_HARIAN,
           },
         },
       });

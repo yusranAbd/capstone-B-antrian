@@ -8,6 +8,7 @@ import {
 
 import {
   HariLayanan,
+  ModeReservasi,
   PeranPengguna,
   Prisma,
   StatusTiket,
@@ -17,6 +18,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RealtimeBroadcastService } from '../realtime/realtime-broadcast.service';
 import type { JenisPerubahanAntrean } from '../realtime/realtime-events.types';
 import type { SnapshotAntrean, SnapshotTiketAktif } from './queue-snapshot.types';
+import { pilihBerikutnyaHospital, urutkanKandidatHospital, type KandidatHospital } from './hospital-queue-selector';
 
 import {
   AKSI_ANTREAN,
@@ -33,6 +35,49 @@ const NAMA_HARI: HariLayanan[] = [
   HariLayanan.JUMAT,
   HariLayanan.SABTU,
 ];
+
+// Prisma select bersama: dipakai pada CALL, daftar menunggu dan snapshot.
+// Tidak membaca identitas pasien ataupun token QR.
+const PILIHAN_HOSPITAL = {
+  id: true,
+  tanggalAntrean: true,
+  nomorUrut: true,
+  status: true,
+  versi: true,
+  loketId: true,
+  urutanMasukAntrean: true,
+  masukAntreanPada: true,
+  checkInPada: true,
+  // Audit REQUEUE adalah bukti bahwa FIFO tidak lagi memakai CHECK_IN awal.
+  // Ketiga jalur Hospital membaca audit terbaru dengan select yang sama.
+  peristiwaAntrean: {
+    where: { tipe: 'REQUEUE' },
+    orderBy: { terjadiPada: 'desc' },
+    take: 1,
+    select: { terjadiPada: true },
+  },
+  janjiTemu: {
+    select: {
+      slotPraktik: {
+        select: {
+          aktif: true,
+          mulaiPada: true,
+          selesaiPada: true,
+          jadwalPraktik: {
+            select: {
+              aktif: true,
+              loketId: true,
+              tanggal: true,
+              mulaiPada: true,
+              selesaiPada: true,
+              dokterLayanan: { select: { aktif: true, dokter: { select: { aktif: true } } } },
+            },
+          },
+        },
+      },
+    },
+  },
+} as const;
 
 interface KonteksTanggal {
   tanggal: string;
@@ -437,6 +482,8 @@ export class QueueService {
             layanan: {
               select: {
                 aktif: true,
+                modeReservasi: true,
+                prefixAntrean: true,
               },
             },
           },
@@ -452,6 +499,31 @@ export class QueueService {
       throw new ForbiddenException(
         'Petugas tidak memiliki penugasan aktif pada loket layanan ini',
       );
+    }
+
+    const mode = penugasan.loket.layanan.modeReservasi;
+    if (mode === ModeReservasi.HIBRIDA || mode === ModeReservasi.JANJI_TEMU_DOKTER) {
+      const kandidat = await this.prisma.tiketAntrean.findMany({
+        where: {
+          layananId: penugasan.loket.layananId,
+          tanggalAntrean: tanggalLokal.tanggalDb,
+          status: StatusTiket.MENUNGGU,
+          urutanMasukAntrean: { not: null },
+        },
+        select: PILIHAN_HOSPITAL,
+        orderBy: [{ urutanMasukAntrean: 'asc' }, { id: 'asc' }],
+      });
+      const urutan = urutkanKandidatHospital(kandidat, mode, loketId, sekarang);
+      return urutan.slice(0, 100).map(({ tiket, jenisAntrean, layakDipanggil, slotMulaiPada }) => ({
+        tiketId: tiket.id,
+        nomorAntrean: `${penugasan.loket.layanan.prefixAntrean.trim()}-${String(tiket.nomorUrut).padStart(3, '0')}`,
+        status: tiket.status,
+        urutanMasukAntrean: tiket.urutanMasukAntrean,
+        masukAntreanPada: tiket.masukAntreanPada?.toISOString() ?? null,
+        jenisAntrean,
+        layakDipanggil,
+        slotMulaiPada,
+      }));
     }
 
     // 3. Ambil antrean berdasarkan layanan,
@@ -555,6 +627,7 @@ export class QueueService {
                     kode: true,
                     nama: true,
                     prefixAntrean: true,
+                    modeReservasi: true,
                   },
                 },
               },
@@ -575,6 +648,8 @@ export class QueueService {
           tanggalAntrean: tanggal.tanggalDb,
         };
 
+        const modeHospital = layanan.modeReservasi === ModeReservasi.HIBRIDA ||
+          layanan.modeReservasi === ModeReservasi.JANJI_TEMU_DOKTER;
         const [loketLayanan, tiketMenunggu, totalMenunggu, tiketAktif] =
           await Promise.all([
             tx.loket.findMany({
@@ -582,26 +657,36 @@ export class QueueService {
               select: { id: true, kode: true, nama: true },
               orderBy: [{ kode: 'asc' }, { id: 'asc' }],
             }),
-            tx.tiketAntrean.findMany({
-              where: {
-                ...whereHariIni,
-                status: StatusTiket.MENUNGGU,
-                urutanMasukAntrean: { not: null },
-              },
-              select: {
-                id: true,
-                nomorUrut: true,
-                status: true,
-                versi: true,
-                urutanMasukAntrean: true,
-                masukAntreanPada: true,
-              },
-              orderBy: [
-                { urutanMasukAntrean: 'asc' },
-                { id: 'asc' },
-              ],
-              take: 100,
-            }),
+            modeHospital
+              ? tx.tiketAntrean.findMany({
+                  where: {
+                    ...whereHariIni,
+                    status: StatusTiket.MENUNGGU,
+                    urutanMasukAntrean: { not: null },
+                  },
+                  select: PILIHAN_HOSPITAL,
+                  orderBy: [{ urutanMasukAntrean: 'asc' }, { id: 'asc' }],
+                })
+              : tx.tiketAntrean.findMany({
+                  where: {
+                    ...whereHariIni,
+                    status: StatusTiket.MENUNGGU,
+                    urutanMasukAntrean: { not: null },
+                  },
+                  select: {
+                    id: true,
+                    nomorUrut: true,
+                    status: true,
+                    versi: true,
+                    urutanMasukAntrean: true,
+                    masukAntreanPada: true,
+                  },
+                  orderBy: [
+                    { urutanMasukAntrean: 'asc' },
+                    { id: 'asc' },
+                  ],
+                  take: 100,
+                }),
             tx.tiketAntrean.count({
               where: {
                 ...whereHariIni,
@@ -654,6 +739,32 @@ export class QueueService {
           aktifPerLoket.set(tiket.loketId, daftar);
         }
 
+        const menungguDitampilkan = modeHospital
+          ? urutkanKandidatHospital(
+              tiketMenunggu as Array<(typeof tiketMenunggu)[number] & KandidatHospital>,
+              layanan.modeReservasi,
+              loketId,
+              new Date(),
+            ).slice(0, 100).map(({ tiket, jenisAntrean, layakDipanggil, slotMulaiPada }) => ({
+              tiketId: tiket.id,
+              nomorAntrean: nomorAntrean(tiket.nomorUrut),
+              status: 'MENUNGGU' as const,
+              urutanMasukAntrean: tiket.urutanMasukAntrean,
+              masukAntreanPada: tiket.masukAntreanPada?.toISOString() ?? null,
+              versi: tiket.versi,
+              jenisAntrean,
+              layakDipanggil,
+              slotMulaiPada,
+            }))
+          : tiketMenunggu.map((tiket) => ({
+              tiketId: tiket.id,
+              nomorAntrean: nomorAntrean(tiket.nomorUrut),
+              status: 'MENUNGGU' as const,
+              urutanMasukAntrean: tiket.urutanMasukAntrean,
+              masukAntreanPada: tiket.masukAntreanPada?.toISOString() ?? null,
+              versi: tiket.versi,
+            }));
+
         return {
           versiSkema: 1 as const,
           tanggalPelayanan: tanggal.tanggal,
@@ -665,16 +776,8 @@ export class QueueService {
           },
           menunggu: {
             total: totalMenunggu,
-            ditampilkan: tiketMenunggu.length,
-            tiket: tiketMenunggu.map((tiket) => ({
-              tiketId: tiket.id,
-              nomorAntrean: nomorAntrean(tiket.nomorUrut),
-              status: StatusTiket.MENUNGGU,
-              urutanMasukAntrean: tiket.urutanMasukAntrean,
-              masukAntreanPada:
-                tiket.masukAntreanPada?.toISOString() ?? null,
-              versi: tiket.versi,
-            })),
+            ditampilkan: menungguDitampilkan.length,
+            tiket: menungguDitampilkan,
           },
           loket: loketLayanan.map((loket) => ({
             ...loket,
@@ -754,6 +857,7 @@ export class QueueService {
                       select: {
                         aktif: true,
                         prefixAntrean: true,
+                        modeReservasi: true,
                       },
                     },
                   },
@@ -813,9 +917,26 @@ export class QueueService {
               );
             }
 
-            // 5. Pilih antrean MENUNGGU
-            // dengan urutan FIFO terkecil.
-            const tiket = await tx.tiketAntrean.findFirst({
+            // 5. H3.3: gunakan selector slot-aware hanya pada mode Hospital.
+            // Jalur ANTREAN_HARIAN tetap memakai findFirst FIFO lama.
+            const mode = penugasan.loket.layanan.modeReservasi;
+            const modeHospital = mode === ModeReservasi.HIBRIDA ||
+              mode === ModeReservasi.JANJI_TEMU_DOKTER;
+            const tiketHospital = modeHospital
+              ? await tx.tiketAntrean.findMany({
+                  where: {
+                    layananId,
+                    tanggalAntrean: konteks.tanggalDb,
+                    status: StatusTiket.MENUNGGU,
+                    urutanMasukAntrean: { not: null },
+                  },
+                  select: PILIHAN_HOSPITAL,
+                  orderBy: [{ urutanMasukAntrean: 'asc' }, { id: 'asc' }],
+                })
+              : null;
+            const tiket = tiketHospital
+              ? pilihBerikutnyaHospital(tiketHospital, mode, loketId, sekarang)
+              : await tx.tiketAntrean.findFirst({
               where: {
                 layananId,
                 tanggalAntrean: konteks.tanggalDb,

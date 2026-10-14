@@ -6,6 +6,10 @@ export interface SnapshotTiketMenunggu {
   urutanMasukAntrean: number | null;
   masukAntreanPada: string | null;
   versi: number;
+  /** H3.3: hanya ada untuk mode Hospital; kontrak v1 tetap kompatibel. */
+  jenisAntrean?: 'JANJI_TEMU' | 'WALK_IN';
+  layakDipanggil?: boolean;
+  slotMulaiPada?: string | null;
 }
 
 export interface SnapshotTiketAktif {
