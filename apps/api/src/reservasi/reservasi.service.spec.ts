@@ -197,6 +197,7 @@ describe('ReservasiService', () => {
         select: {
           id: true,
           aktif: true,
+          modeReservasi: true,
         },
       });
 

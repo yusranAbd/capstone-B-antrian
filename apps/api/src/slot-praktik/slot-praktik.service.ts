@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { PeranPengguna, Prisma } from '../generated/prisma/client';
+import { PeranPengguna, Prisma, StatusTiket } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CariSlotPraktikDto } from './dto/cari-slot-praktik.dto';
 import { CreateSlotPraktikDto, POLA_WAKTU_OFFSET } from './dto/create-slot-praktik.dto';
@@ -33,7 +33,12 @@ const rincianSlot = {
       loket: { select: { id: true, nama: true, aktif: true } },
     },
   },
-  _count: { select: { janjiTemu: true } },
+  _count: {
+    select: {
+      // Ketersediaan untuk pasien memakai jumlah janji yang BELUM dibatalkan.
+      janjiTemu: { where: { tiket: { is: { status: { not: StatusTiket.DIBATALKAN } } } } },
+    },
+  },
 } as const;
 
 // Untuk USER/PETUGAS hanya sesi aktif dengan seluruh rantai relasi aktif.
@@ -130,6 +135,9 @@ export class SlotPraktikService {
         }
         const kapasitas = dto.kapasitas ?? existing.kapasitas;
         this.pastikanKapasitas(kapasitas);
+        // Tetap konservatif untuk pengubahan kapasitas admin: jumlah relasi
+        // historis dipakai sebagai batas bawah (termasuk yang dibatalkan).
+        // Hanya perhitungan ketersediaan bagi pasien yang mengecualikan pembatalan.
         if (kapasitas < jumlahJanji) {
           throw new ConflictException('Kapasitas tidak boleh kurang dari jumlah janji temu');
         }
@@ -270,6 +278,7 @@ export class SlotPraktikService {
     };
     _count: { janjiTemu: number };
   }>(slot: T) {
+    // Hanya janji belum dibatalkan yang dihitung sebagai terisi.
     const jumlahJanjiTemu = slot._count.janjiTemu;
     const sisaKapasitas = Math.max(0, slot.kapasitas - jumlahJanjiTemu);
     const tersedia = slot.aktif && slot.jadwalPraktik.aktif &&

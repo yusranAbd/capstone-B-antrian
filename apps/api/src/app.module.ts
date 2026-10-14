@@ -10,6 +10,7 @@ import { LoketModule } from './loket/loket.module';
 import { JadwalLayananModule } from './jadwal-layanan/jadwal-layanan.module';
 import { PenugasanPetugasModule } from './penugasan-petugas/penugasan-petugas.module';
 import { ReservasiModule } from './reservasi/reservasi.module';
+import { JanjiTemuModule } from './janji-temu/janji-temu.module';
 import { TiketModule } from './tiket/tiket.module';
 import { QrModule } from './qr/qr.module';
 import { CheckInModule } from './check-in/check-in.module';
@@ -43,6 +44,7 @@ import { SlotPraktikModule } from './slot-praktik/slot-praktik.module';
     PenugasanPetugasModule,
     DokterModule,
     ReservasiModule,
+    JanjiTemuModule,
     TiketModule,
     SlotPraktikModule,
     QrModule,
