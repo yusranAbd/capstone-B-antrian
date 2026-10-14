@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  HariLayanan,
   ModeReservasi,
   Prisma,
   StatusTiket,
@@ -91,8 +92,11 @@ export class JanjiTemuService {
         ) {
           throw new BadRequestException('Slot, dokter, poliklinik, atau ruang tidak aktif');
         }
-        if (layanan.modeReservasi !== ModeReservasi.JANJI_TEMU_DOKTER) {
-          throw new BadRequestException('Layanan belum menggunakan mode janji temu dokter');
+        if (
+          layanan.modeReservasi !== ModeReservasi.JANJI_TEMU_DOKTER &&
+          layanan.modeReservasi !== ModeReservasi.HIBRIDA
+        ) {
+          throw new BadRequestException('Layanan belum menerima janji temu dokter');
         }
         if (slot.mulaiPada.getTime() <= Date.now()) {
           throw new BadRequestException('Slot konsultasi sudah dimulai atau berlalu');
@@ -125,6 +129,39 @@ export class JanjiTemuService {
           create: { layananId: layanan.id, tanggal, nomorTerakhir: 1 },
           update: { nomorTerakhir: { increment: 1 } },
         });
+
+        // Pada mode HIBRIDA, booking dan walk-in berbagi batas kapasitas
+        // harian poliklinik. Periksa sesudah counter terkunci agar transaksi
+        // serializable menolak/meretry interleaving booking bersamaan.
+        if (layanan.modeReservasi === ModeReservasi.HIBRIDA) {
+          const hari = [
+            HariLayanan.MINGGU, HariLayanan.SENIN,
+            HariLayanan.SELASA, HariLayanan.RABU,
+            HariLayanan.KAMIS, HariLayanan.JUMAT, HariLayanan.SABTU,
+          ];
+          const jadwalHarian = await tx.jadwalLayanan.findUnique({
+            where: {
+              layananId_hari: {
+                layananId: layanan.id,
+                hari: hari[tanggal.getUTCDay()],
+              },
+            },
+            select: { aktif: true, kapasitasHarian: true },
+          });
+          if (!jadwalHarian?.aktif) {
+            throw new BadRequestException('Jadwal layanan poliklinik tidak aktif');
+          }
+          const jumlahTiket = await tx.tiketAntrean.count({
+            where: {
+              layananId: layanan.id,
+              tanggalAntrean: tanggal,
+              status: { not: StatusTiket.DIBATALKAN },
+            },
+          });
+          if (jumlahTiket >= jadwalHarian.kapasitasHarian) {
+            throw new ConflictException('Kapasitas harian poliklinik sudah penuh');
+          }
+        }
 
         const sudahPunya = await tx.tiketAntrean.findFirst({
           where: {

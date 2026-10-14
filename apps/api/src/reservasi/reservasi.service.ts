@@ -81,8 +81,8 @@ export class ReservasiService {
               throw new BadRequestException('Layanan sedang tidak aktif');
             }
 
-            // Jalur reservasi harian tidak boleh menerbitkan tiket langsung
-            // untuk layanan yang mensyaratkan pemilihan slot dokter.
+            // Layanan HIBRIDA tetap boleh menerima reservasi walk-in.
+            // Hanya mode JANJI_TEMU_DOKTER eksklusif yang menolaknya.
             if (layanan.modeReservasi === ModeReservasi.JANJI_TEMU_DOKTER) {
               throw new BadRequestException('Gunakan API janji temu untuk layanan dokter');
             }
