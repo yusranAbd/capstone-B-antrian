@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -19,6 +20,7 @@ import { RealtimeBroadcastService } from '../realtime/realtime-broadcast.service
 import type { JenisPerubahanAntrean } from '../realtime/realtime-events.types';
 import type { SnapshotAntrean, SnapshotTiketAktif } from './queue-snapshot.types';
 import { pilihBerikutnyaHospital, urutkanKandidatHospital, type KandidatHospital } from './hospital-queue-selector';
+import { alasanPenerimaanHospital, PILIH_JANJI_TEMU_HOSPITAL } from '../hospital/hospital-context';
 
 import {
   AKSI_ANTREAN,
@@ -40,6 +42,7 @@ const NAMA_HARI: HariLayanan[] = [
 // Tidak membaca identitas pasien ataupun token QR.
 const PILIHAN_HOSPITAL = {
   id: true,
+  layananId: true,
   tanggalAntrean: true,
   nomorUrut: true,
   status: true,
@@ -56,27 +59,7 @@ const PILIHAN_HOSPITAL = {
     take: 1,
     select: { terjadiPada: true },
   },
-  janjiTemu: {
-    select: {
-      slotPraktik: {
-        select: {
-          aktif: true,
-          mulaiPada: true,
-          selesaiPada: true,
-          jadwalPraktik: {
-            select: {
-              aktif: true,
-              loketId: true,
-              tanggal: true,
-              mulaiPada: true,
-              selesaiPada: true,
-              dokterLayanan: { select: { aktif: true, dokter: { select: { aktif: true } } } },
-            },
-          },
-        },
-      },
-    },
-  },
+  janjiTemu: PILIH_JANJI_TEMU_HOSPITAL,
 } as const;
 
 interface KonteksTanggal {
@@ -96,6 +79,23 @@ export class QueueService {
     private readonly prisma: PrismaService,
     private readonly realtime?: RealtimeBroadcastService,
   ) {}
+
+  private async sesiWalkInAktif(
+    db: Pick<Prisma.TransactionClient, 'jadwalPraktik'>,
+    layananId: string, loketId: string, tanggal: Date, sekarang: Date,
+  ): Promise<boolean> {
+    const sesi = await db.jadwalPraktik.findFirst({
+      where: {
+        loketId, tanggal, aktif: true,
+        mulaiPada: { lte: sekarang }, selesaiPada: { gt: sekarang },
+        loket: { is: { aktif: true, layananId } },
+        dokterLayanan: { is: { aktif: true, layananId,
+          dokter: { is: { aktif: true } }, layanan: { is: { aktif: true } } } },
+      },
+      select: { id: true },
+    });
+    return sesi !== null;
+  }
 
   /** Best effort: kegagalan Socket.IO tidak membatalkan transaksi yang sudah commit. */
   private async kirimSetelahCommit(
@@ -180,10 +180,13 @@ export class QueueService {
                 versi: true,
                 checkInPada: true,
                 urutanMasukAntrean: true,
+                loketId: true,
+                janjiTemu: PILIH_JANJI_TEMU_HOSPITAL,
                 layanan: {
                   select: {
                     aktif: true,
                     prefixAntrean: true,
+                    modeReservasi: true,
                   },
                 },
               },
@@ -278,6 +281,16 @@ export class QueueService {
                 'Petugas tidak memiliki penugasan aktif pada loket layanan ini',
               );
             }
+
+            const alasan = alasanPenerimaanHospital({
+              ...tiket, modeReservasi: tiket.layanan.modeReservasi,
+            }, loketId, sekarang);
+            const hospital = tiket.layanan.modeReservasi === ModeReservasi.HIBRIDA ||
+              tiket.layanan.modeReservasi === ModeReservasi.JANJI_TEMU_DOKTER;
+            if (alasan === 'RUANG_BERBEDA' || (hospital && tiket.loketId !== loketId)) {
+              throw new ForbiddenException('ENQUEUE harus dilakukan pada ruang check-in yang sesuai');
+            }
+            if (alasan) throw new ConflictException(`Konteks Hospital tidak valid: ${alasan}`);
 
             // 6. Pastikan jadwal hari
             // pelayanan masih aktif.
@@ -432,7 +445,7 @@ export class QueueService {
   // MEMBACA ANTREAN MENUNGGU (FIFO)
   // ==========================================
 
-  async daftarMenunggu(petugasId: string, loketId: string) {
+  async daftarMenunggu(petugasId: string, loketId: string, hanyaTidakLayak = false) {
     const sekarang = new Date();
 
     const tanggalLokal = this.dapatkanTanggalPelayanan(sekarang);
@@ -513,8 +526,12 @@ export class QueueService {
         select: PILIHAN_HOSPITAL,
         orderBy: [{ urutanMasukAntrean: 'asc' }, { id: 'asc' }],
       });
-      const urutan = urutkanKandidatHospital(kandidat, mode, loketId, sekarang);
-      return urutan.slice(0, 100).map(({ tiket, jenisAntrean, layakDipanggil, slotMulaiPada }) => ({
+      const sesi = mode === ModeReservasi.HIBRIDA && await this.sesiWalkInAktif(
+        this.prisma, penugasan.loket.layananId, loketId, tanggalLokal.tanggalDb, sekarang,
+      );
+      const urutan = urutkanKandidatHospital(kandidat, mode, loketId, sekarang, sesi);
+      return urutan.filter((item) => !hanyaTidakLayak || !item.layakDipanggil).slice(0, 100)
+        .map(({ tiket, jenisAntrean, layakDipanggil, slotMulaiPada, alasanTidakLayak }) => ({
         tiketId: tiket.id,
         nomorAntrean: `${penugasan.loket.layanan.prefixAntrean.trim()}-${String(tiket.nomorUrut).padStart(3, '0')}`,
         status: tiket.status,
@@ -523,8 +540,11 @@ export class QueueService {
         jenisAntrean,
         layakDipanggil,
         slotMulaiPada,
+        alasanTidakLayak,
       }));
     }
+
+    if (hanyaTidakLayak) throw new BadRequestException('Filter ketidaklayakan hanya tersedia untuk mode Hospital');
 
     // 3. Ambil antrean berdasarkan layanan,
     // bukan berdasarkan loket check-in.
@@ -745,7 +765,10 @@ export class QueueService {
               layanan.modeReservasi,
               loketId,
               new Date(),
-            ).slice(0, 100).map(({ tiket, jenisAntrean, layakDipanggil, slotMulaiPada }) => ({
+              layanan.modeReservasi === ModeReservasi.HIBRIDA && await this.sesiWalkInAktif(
+                tx, layananId, loketId, tanggal.tanggalDb, new Date(),
+              ),
+            ).slice(0, 100).map(({ tiket, jenisAntrean, layakDipanggil, slotMulaiPada, alasanTidakLayak }) => ({
               tiketId: tiket.id,
               nomorAntrean: nomorAntrean(tiket.nomorUrut),
               status: 'MENUNGGU' as const,
@@ -755,6 +778,7 @@ export class QueueService {
               jenisAntrean,
               layakDipanggil,
               slotMulaiPada,
+              alasanTidakLayak,
             }))
           : tiketMenunggu.map((tiket) => ({
               tiketId: tiket.id,
@@ -935,7 +959,10 @@ export class QueueService {
                 })
               : null;
             const tiket = tiketHospital
-              ? pilihBerikutnyaHospital(tiketHospital, mode, loketId, sekarang)
+              ? pilihBerikutnyaHospital(tiketHospital, mode, loketId, sekarang,
+                  mode === ModeReservasi.HIBRIDA && await this.sesiWalkInAktif(
+                    tx, layananId, loketId, konteks.tanggalDb, sekarang,
+                  ))
               : await tx.tiketAntrean.findFirst({
               where: {
                 layananId,

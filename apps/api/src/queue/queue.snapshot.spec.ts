@@ -21,6 +21,7 @@ function buatTx() {
     pengguna: { findUnique: jest.fn() },
     penugasanPetugas: { findFirst: jest.fn() },
     loket: { findMany: jest.fn() },
+    jadwalPraktik: { findFirst: jest.fn().mockResolvedValue({ id: 'sesi-aktif' }) },
     tiketAntrean: { findMany: jest.fn(), count: jest.fn() },
   };
 }
@@ -116,6 +117,7 @@ describe('QueueService - REST Snapshot', () => {
       masukAntreanPada: new Date('2026-10-12T02:00:00Z'),
       checkInPada: new Date('2026-10-12T02:00:00Z'),
       tanggalAntrean: new Date('2026-10-12T00:00:00Z'), janjiTemu: null,
+      layananId,
     };
     const janji = {
       ...walk, id: '00000000-0000-4000-8000-000000000066', nomorUrut: 10,
@@ -127,7 +129,8 @@ describe('QueueService - REST Snapshot', () => {
           selesaiPada: new Date(akhirSlot),
           jadwalPraktik: { aktif: true, loketId, tanggal: new Date('2026-10-12T00:00:00Z'),
             mulaiPada: new Date('2026-10-12T02:00:00Z'), selesaiPada: new Date('2026-10-12T06:00:00Z'),
-            dokterLayanan: { aktif: true, dokter: { aktif: true } } },
+            loket: { aktif: true, layananId },
+            dokterLayanan: { aktif: true, layananId, layanan: { aktif: true }, dokter: { aktif: true } } },
         },
       },
     };
@@ -155,6 +158,7 @@ describe('QueueService - REST Snapshot', () => {
       versi: 6, urutanMasukAntrean: 9, masukAntreanPada: new Date('2026-10-12T03:50:00Z'),
       checkInPada: new Date('2026-10-12T02:00:00Z'),
       tanggalAntrean: new Date('2026-10-12T00:00:00Z'), janjiTemu: null,
+      layananId,
       peristiwaAntrean: [{ terjadiPada: new Date('2026-10-12T03:50:00Z') }] };
     const menunggu = { ...ulang, id: tiketAktifId, nomorUrut: 10, versi: 3,
       urutanMasukAntrean: 2, checkInPada: new Date('2026-10-12T03:30:00Z'), peristiwaAntrean: [] };

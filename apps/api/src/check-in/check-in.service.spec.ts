@@ -7,7 +7,8 @@ import {
 
 import { createHash } from 'node:crypto';
 
-import { Prisma, StatusTiket } from '../generated/prisma/client';
+import { ModeReservasi, Prisma, StatusTiket } from '../generated/prisma/client';
+import { buatKonteksJanjiUji } from '../../test/helpers/hospital-context.fixture';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { CheckInService } from './check-in.service';
@@ -144,6 +145,34 @@ describe('CheckInService', () => {
 
   afterEach(() => {
     jest.useRealTimers();
+  });
+
+  describe('Penerimaan appointment Hospital', () => {
+    it('slot yang sudah berakhir tetap dapat CHECK_IN selama sesi relevan', async () => {
+      txMock.tiketAntrean.findUnique.mockResolvedValue({ ...tiketUji,
+        layanan: { ...tiketUji.layanan, modeReservasi: ModeReservasi.JANJI_TEMU_DOKTER },
+        janjiTemu: buatKonteksJanjiUji(layananId, loketId, '2026-10-10') });
+      await expect(service.proses(dto, petugasId)).resolves.toMatchObject({ status: StatusTiket.CHECK_IN });
+    });
+    it.each(['ruang', 'layanan', 'dokter', 'slot', 'tanggal', 'sesi', 'tanpa-janji'] as const)(
+      'menolak CHECK_IN dengan konteks %s tidak valid tanpa mengonsumsi QR', async (kasus) => {
+        const janji = buatKonteksJanjiUji(layananId, loketId, '2026-10-10');
+        if (kasus === 'ruang') janji.slotPraktik.jadwalPraktik.loketId = 'ruang-lain';
+        if (kasus === 'layanan') janji.slotPraktik.jadwalPraktik.dokterLayanan.layananId = 'poli-lain';
+        if (kasus === 'dokter') janji.slotPraktik.jadwalPraktik.dokterLayanan.dokter.aktif = false;
+        if (kasus === 'slot') janji.slotPraktik.aktif = false;
+        if (kasus === 'tanggal') janji.slotPraktik.jadwalPraktik.tanggal = new Date('2026-10-11T00:00:00Z');
+        if (kasus === 'sesi') janji.slotPraktik.jadwalPraktik.selesaiPada = new Date('2026-10-10T02:25:00Z');
+        txMock.tiketAntrean.findUnique.mockResolvedValue({ ...tiketUji,
+          layanan: { ...tiketUji.layanan, modeReservasi: ModeReservasi.JANJI_TEMU_DOKTER },
+          janjiTemu: kasus === 'tanpa-janji' ? null : janji });
+        await expect(service.proses(dto, petugasId)).rejects.toBeInstanceOf(
+          kasus === 'ruang' ? ForbiddenException : BadRequestException,
+        );
+        expect(txMock.tiketAntrean.updateMany).not.toHaveBeenCalled();
+        expect(txMock.peristiwaAntrean.create).not.toHaveBeenCalled();
+      },
+    );
   });
 
   describe('Check-In Berhasil', () => {

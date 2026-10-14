@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 
 import { PeranPengguna } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { waktuPelayanan } from '../hospital/hospital-context';
 
 export interface IdentitasSocket {
   id: string;
@@ -55,7 +56,7 @@ export class RealtimeRoomAccessService {
       return 'FORBIDDEN';
     }
 
-    const hariIni = this.tanggalPelayananJakarta(new Date());
+    const hariIni = waktuPelayanan(new Date()).tanggalDb;
     const penugasan = await this.prisma.penugasanPetugas.findFirst({
       where: {
         petugasId: identitas.id,
@@ -74,16 +75,4 @@ export class RealtimeRoomAccessService {
     return penugasan ? 'ALLOWED' : 'FORBIDDEN';
   }
 
-  /** Prisma @db.Date menyimpan tanggal tanpa waktu, direpresentasikan sebagai UTC midnight. */
-  private tanggalPelayananJakarta(sekarang: Date): Date {
-    const bagian = new Intl.DateTimeFormat('en-GB', {
-      timeZone: 'Asia/Jakarta',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).formatToParts(sekarang);
-    const ambil = (tipe: Intl.DateTimeFormatPartTypes): string =>
-      bagian.find((item) => item.type === tipe)?.value ?? '';
-    return new Date(`${ambil('year')}-${ambil('month')}-${ambil('day')}T00:00:00.000Z`);
-  }
 }
