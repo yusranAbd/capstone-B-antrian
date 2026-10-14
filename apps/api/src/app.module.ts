@@ -16,6 +16,7 @@ import { CheckInModule } from './check-in/check-in.module';
 import { QueueModule } from './queue/queue.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { DokterModule } from './dokter/dokter.module';
+import { JadwalPraktikModule } from './jadwal-praktik/jadwal-praktik.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { DokterModule } from './dokter/dokter.module';
     LayananModule,
     LoketModule,
     JadwalLayananModule,
+    JadwalPraktikModule,
     PenugasanPetugasModule,
     DokterModule,
     ReservasiModule,
