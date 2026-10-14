@@ -1,11 +1,13 @@
 import {
   Body,
   Controller,
+  DefaultValuePipe,
   ForbiddenException,
   Get,
   HttpCode,
   HttpStatus,
   Param,
+  ParseBoolPipe,
   ParseUUIDPipe,
   Post,
   Query,
@@ -101,12 +103,20 @@ export class QueueController {
     @Query('loketId', new ParseUUIDPipe({ version: '4' }))
     loketId: string,
 
+    @Query('hanyaTidakLayak', new DefaultValuePipe(false), ParseBoolPipe)
+    hanyaTidakLayak // Union mencegah ValidationPipe global mengonversi nilai invalid sebelum ParseBoolPipe.
+    : boolean | string,
+
     @Req()
     request: RequestTerautentikasi,
   ) {
     const petugasId = this.ambilPetugasId(request);
 
-    return this.queueService.daftarMenunggu(petugasId, loketId);
+    return this.queueService.daftarMenunggu(
+      petugasId,
+      loketId,
+      hanyaTidakLayak === true,
+    );
   }
 
   // ========================================
@@ -233,7 +243,11 @@ export class QueueController {
   ) {
     const petugasId = this.ambilPetugasId(request);
 
-    return this.queueService.selesaikanPelayanan(tiketId, petugasId, dto.loketId);
+    return this.queueService.selesaikanPelayanan(
+      tiketId,
+      petugasId,
+      dto.loketId,
+    );
   }
 
   // ========================================

@@ -1,7 +1,11 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 
-import { PeranPengguna, Prisma } from '../generated/prisma/client';
+import {
+  ModeReservasi,
+  PeranPengguna,
+  Prisma,
+} from '../generated/prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { LayananService } from './layanan.service';
@@ -101,10 +105,31 @@ describe('LayananService', () => {
           deskripsi: 'Layanan untuk pengujian.',
           prefixAntrean: 'B',
           durasiDasarMenit: 20,
+          modeReservasi: ModeReservasi.ANTREAN_HARIAN,
           aktif: true,
         },
       });
     });
+
+    it.each([ModeReservasi.JANJI_TEMU_DOKTER, ModeReservasi.HIBRIDA])(
+      'membuat poli dengan mode %s sesuai permintaan ADMIN',
+      async (modeReservasi) => {
+        prismaMock.layanan.create.mockResolvedValue({
+          ...layananUji,
+          modeReservasi,
+        });
+        await service.create({
+          kode: 'HOSP',
+          nama: 'Poli Hospital',
+          prefixAntrean: 'H',
+          durasiDasarMenit: 15,
+          modeReservasi,
+        });
+        expect(prismaMock.layanan.create).toHaveBeenCalledWith({
+          data: expect.objectContaining({ modeReservasi }),
+        });
+      },
+    );
 
     it('menolak kode layanan yang sudah digunakan', async () => {
       prismaMock.layanan.create.mockRejectedValue(buatErrorPrisma('P2002'));

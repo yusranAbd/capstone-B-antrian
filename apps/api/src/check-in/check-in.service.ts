@@ -12,6 +12,7 @@ import { HariLayanan, Prisma, StatusTiket } from '../generated/prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { ProsesCheckInDto } from './dto/proses-check-in.dto';
+import { alasanPenerimaanHospital, PILIH_JANJI_TEMU_HOSPITAL } from '../hospital/hospital-context';
 
 const DAFTAR_HARI: HariLayanan[] = [
   HariLayanan.MINGGU,
@@ -56,10 +57,12 @@ export class CheckInService {
               status: true,
               versi: true,
               qrKedaluwarsaPada: true,
+              janjiTemu: PILIH_JANJI_TEMU_HOSPITAL,
               layanan: {
                 select: {
                   aktif: true,
                   prefixAntrean: true,
+                  modeReservasi: true,
                 },
               },
             },
@@ -145,6 +148,14 @@ export class CheckInService {
               'Petugas tidak memiliki penugasan aktif pada loket layanan ini',
             );
           }
+
+          const alasan = alasanPenerimaanHospital({
+            ...tiket, modeReservasi: tiket.layanan.modeReservasi,
+          }, dto.loketId, sekarang);
+          if (alasan === 'RUANG_BERBEDA') {
+            throw new ForbiddenException('Appointment harus check-in pada ruang sesi dokter');
+          }
+          if (alasan) throw new BadRequestException(`Konteks Hospital tidak valid: ${alasan}`);
 
           // 6. Validasi jadwal operasional.
           const jadwal = await tx.jadwalLayanan.findUnique({

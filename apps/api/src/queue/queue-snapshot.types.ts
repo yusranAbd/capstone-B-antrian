@@ -1,3 +1,4 @@
+import type { AlasanTidakLayakHospital } from '../hospital/hospital-context';
 /** Kontrak respons REST khusus dashboard PETUGAS, tanpa data pribadi. */
 export interface SnapshotTiketMenunggu {
   tiketId: string;
@@ -10,6 +11,7 @@ export interface SnapshotTiketMenunggu {
   jenisAntrean?: 'JANJI_TEMU' | 'WALK_IN';
   layakDipanggil?: boolean;
   slotMulaiPada?: string | null;
+  alasanTidakLayak?: AlasanTidakLayakHospital | null;
 }
 
 export interface SnapshotTiketAktif {

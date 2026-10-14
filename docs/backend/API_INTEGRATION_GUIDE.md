@@ -1,14 +1,14 @@
 # QueueB | Panduan Integrasi REST API, Socket.IO, dan Public Display
 
 **Lokasi repository:** `docs/backend/API_INTEGRATION_GUIDE.md`
-**Versi dokumen:** 1.0 — baseline kontrak integrasi frontend (Web ADMIN/PETUGAS, Public Display, Flutter USER); diverifikasi menggunakan controller, service, DTO, tipe data, dan strategi autentikasi yang tersedia
-**Tanggal penelaahan:** 12 Oktober 2026
-**Status:** Baseline dokumentasi integrasi frontend v1.0. Kontrak Authentication (termasuk `/auth/me` dan peran default), Reservasi, Tiket/QR/Check-In, Queue, Realtime, Display, dan 20 endpoint Administrasi sudah dipetakan terhadap sumber tersedia. **Ini bukan persetujuan deployment produksi atau bukti semua endpoint sudah diuji ulang**; catatan keterbatasan dan risiko keamanan berada pada Bagian 14–15.
-**Basis:** `QueueController`, `QueueService` terbaru dan dua DTO Queue; source Display/Socket.IO; Authentication; Reservasi; Tiket/QR/Check-In; serta empat controller Administrasi, delapan DTO, dan empat service. Isi branch/commit terbaru tetap merupakan sumber kebenaran jika ada perbedaan.
+**Versi dokumen:** 1.2 — kontrak Backend MVP Hospital untuk integrasi Web dan Flutter
+**Tanggal penelaahan:** 14 Oktober 2026
+**Status:** Kontrak Authentication, Reservasi, Tiket/QR/Check-In, Queue, Realtime, Display, 20 endpoint Administrasi dan endpoint Hospital dipetakan terhadap source. Bagian 17 mencatat integrasi Hospital; Bagian 18 menyediakan urutan request untuk dua alur utama. Hasil QA dan batas MVP tersedia pada `MVP_BACKEND_FINAL.md`; checkpoint Milestone 2 tersedia pada `MILESTONE_2_INTEGRASI_HOSPITAL.md`. Resolusi manual HOSP-OPS-01 ditunda sesuai keputusan Project Lead. Deployment produksi tetap memerlukan konfigurasi dan penilaian risiko pada Bagian 14–15.
+**Basis:** `QueueController`, `QueueService` terbaru dan dua DTO Queue; source Display/Socket.IO; Authentication; Reservasi; Tiket/QR/Check-In; empat controller Administrasi; serta controller, DTO dan service Dokter, JadwalPraktik, SlotPraktik dan JanjiTemu. Isi branch/commit terbaru tetap merupakan sumber kebenaran jika ada perbedaan.
 
 ## 1. Ruang lingkup dan batas dokumentasi
 
-Dokumen ini menjelaskan endpoint yang benar-benar tampak pada `QueueController`, `DisplayController`, `AuthController`, `ReservasiController`, `TiketController`, `QrController`, `CheckInController`, serta empat controller Administrasi; bentuk `SnapshotAntrean`, `DisplaySnapshot`, `QueueUpdatedEvent`, dan `DisplayUpdatedEvent`; serta alur autentikasi dan sinkronisasi frontend.
+Dokumen ini menjelaskan endpoint yang benar-benar tampak pada `QueueController`, `DisplayController`, `AuthController`, `ReservasiController`, `TiketController`, `QrController`, `CheckInController`, empat controller Administrasi dan empat controller Hospital; bentuk `SnapshotAntrean`, `DisplaySnapshot`, `QueueUpdatedEvent`, dan `DisplayUpdatedEvent`; serta alur autentikasi dan sinkronisasi frontend.
 
 Berkas `MasukAntreanDto`, `PanggilBerikutnyaDto`, dan `QueueService` versi unggahan 12 Oktober 2026 **sudah ditinjau**; bentuk request dan respons mutasi Queue didokumentasikan berdasarkan implementasi. Dokumentasi Tiket Digital, penerbitan QR, Check-In, Reservasi, dan administrasi dari v0.6 tetap dipertahankan. Tambahan verifikasi `auth.types.ts`, `jwt.strategy.ts`, `current-user.decorator.ts`, dan `users.service.ts` memastikan respons `GET /auth/me`, pemeriksaan sesi, dan peran registrasi. Verifikasi constraint Prisma/infrastruktur tetap pekerjaan terpisah sebelum produksi.
 
@@ -147,6 +147,8 @@ Authorization: Bearer <access_token>
 - Snapshot operasional tidak menyertakan data pribadi dalam tipe responsnya.
 
 ### 4.4 `GET /queue/menunggu`: daftar FIFO ringkas
+
+Aturan FIFO di bagian ini berlaku untuk `ANTREAN_HARIAN`. Mode Hospital memakai selector slot/sesi serta metadata kelayakan pada Bagian 17; field existing, respons array, dan batas 100 tetap dipertahankan.
 
 Service mengembalikan **array**, bukan objek terbungkus. Semua entri berasal dari tiket `MENUNGGU` untuk **layanan yang terkait dengan loket petugas**, pada tanggal pelayanan saat ini, diurutkan berdasarkan `urutanMasukAntrean ASC` kemudian `id ASC`, dengan batas **100 entri**. Ini bukan pagination dan tidak mencakup `total` keseluruhan; gunakan `/queue/snapshot` jika dashboard membutuhkan `menunggu.total`.
 
@@ -296,6 +298,8 @@ Semua timestamp dihasilkan sebagai string ISO 8601 oleh service. `versi` pada op
 **Catatan:** seluruh ID, nomor urut, waktu, dan nilai versi di atas hanya ilustrasi. Field dan status berasal dari objek `return` dalam metode `QueueService`, bukan hasil panggilan HTTP live.
 
 ### 4.6 Aturan FIFO, penugasan, dan transaksi
+
+Aturan FIFO berikut merupakan baseline mode `ANTREAN_HARIAN`. Perbedaan Hospital pada CHECK_IN, ENQUEUE, CALL dan HOSP-OPS-01 dijelaskan di Bagian 17. START/COMPLETE tetap memakai State Machine existing agar akhir sesi tidak mengunci pelayanan yang telah dipanggil/dimulai.
 
 1. **ENQUEUE:** tiket harus `CHECK_IN`, memiliki `checkInPada`, belum mempunyai `urutanMasukAntrean`, berasal dari tanggal pelayanan hari ini, dan memiliki layanan serta jadwal aktif. PETUGAS harus aktif dan ditugaskan pada loket yang berada dalam layanan tiket. Service menggunakan counter `urutanMasukTerakhir` untuk mengalokasikan FIFO secara atomik. `CHECK_IN` dan `ENQUEUE` adalah **dua request dan dua transaksi berbeda**.
 2. **CALL:** memilih satu tiket `MENUNGGU` dengan urutan paling kecil **untuk layanan**, tidak terbatas pada loket tempat check-in. Loket tidak boleh memiliki tiket `DIPANGGIL` atau `DILAYANI` pada tanggal hari ini. Tidak ada tiket menunggu menghasilkan `404`, bukan respons kosong. Service memeriksa jadwal **aktif pada hari tersebut**, tetapi **tidak membandingkan jam saat ini dengan jamBuka/jamTutup** pada metode Queue; validasi jam ada di QR Check-In.
@@ -1032,6 +1036,7 @@ Seluruh `:id` di atas diproses menggunakan `ParseUUIDPipe`. Tidak terdapat endpo
 | `deskripsi`        | string / null | Opsional; maksimal 1000 karakter                       | Opsional; `null` diterima |
 | `prefixAntrean`    | string        | Wajib; 1–5 huruf kapital                               | Opsional, aturan sama     |
 | `durasiDasarMenit` | integer       | Wajib; 1–240 menit                                     | Opsional, aturan sama     |
+| `modeReservasi`    | enum string   | Opsional; ANTREAN_HARIAN (default), JANJI_TEMU_DOKTER atau HIBRIDA | Tidak diterima; perubahan mode existing belum tersedia |
 | `aktif`            | boolean       | Otomatis `true`, tidak boleh dikirim dalam Create DTO  | Opsional                  |
 
 ```http
@@ -1050,7 +1055,7 @@ Content-Type: application/json
 }
 ```
 
-`LayananService.create()` menyimpan `nama.trim()`, mengisi `deskripsi` kosong menjadi `null` bila tidak dikirim, dan `aktif: true`. Respons create/read/update/delete berasal langsung dari objek Prisma `layanan`. Field yang terlihat dalam proses create/update: `kode`, `nama`, `deskripsi`, `prefixAntrean`, `durasiDasarMenit`, `aktif`; service juga memakai `id`. Metadata model lain perlu diperiksa pada skema jika UI membutuhkannya.
+`LayananService.create()` menyimpan `nama.trim()`, mengisi `deskripsi` kosong menjadi `null` bila tidak dikirim, `modeReservasi` menjadi ANTREAN_HARIAN bila tidak dikirim, dan `aktif: true`. Mode explicit hanya menerima tiga nilai enum; null atau nilai lain ditolak 400. Respons create/read/update/delete berasal langsung dari objek Prisma `layanan`, termasuk `id`, `modeReservasi`, `dibuatPada` dan `diperbaruiPada`. Request lama tanpa mode tetap kompatibel. ADMIN dapat membuat poli Hospital tanpa SQL manual; perubahan mode poli existing melalui PATCH sengaja tidak dibuka agar tidak mengubah interpretasi tiket yang sudah berjalan.
 
 - `GET /layanan`: diurutkan menurut `kode` naik. ADMIN melihat data aktif maupun nonaktif; non-ADMIN hanya aktif.
 - `GET /layanan/:id`: `404` jika ID tidak ditemukan atau, untuk non-ADMIN, layanan tidak aktif.
@@ -1279,3 +1284,171 @@ Hal yang masih perlu dituntaskan sebelum deployment produksi: empat temuan _high
 - **v0.5, 12 Oktober 2026:** melengkapi 20 endpoint administrasi dari empat controller, delapan DTO, dan empat service; termasuk RBAC, validasi form, relasi, soft delete, aturan jam/tanggal/konflik penugasan, serta catatan risiko konkurensi.
 - **v0.6, 12 Oktober 2026:** verifikasi dua DTO Queue dan `QueueService` terbaru; menambahkan request/respons tujuh mutasi, daftar FIFO, aturan transisi, status HTTP dan penanganan kegagalan, ketentuan timestamp/versi, dan panduan sinkronisasi dashboard.
 - **v1.0, 12 Oktober 2026:** verifikasi Authentication akhir (`/auth/me`, `JwtStrategy`, default `USER` dari `UsersService`), pemetaan `role` versus `peran`, panduan navigasi/token frontend, dan daftar batas verifikasi sebelum rilis produksi. Finalisasi baseline integrasi tidak berarti risiko dependency/deployment telah ditutup.
+- **v1.1, 14 Oktober 2026:** dokumentasi endpoint Doctor/Practice/Slot/Appointment, kapasitas semua mode, integrasi Hospital dan kebijakan HOSP-OPS-01. Metadata/filter baca disetujui Project Lead; resolusi manual MENUNGGU tetap gap yang tidak diaktifkan tanpa persetujuan tambahan.
+- **v1.2, 14 Oktober 2026:** finalisasi Backend MVP untuk integrasi frontend, pilihan mode poli pada POST layanan dan urutan request kedua alur utama. Resolusi manual serta penyempurnaan nonkritis ditunda sesuai instruksi final Project Lead.
+
+## 17. Kontrak Hospital dan HOSP-OPS-01 (Milestone 2)
+
+Dokter adalah master data, bukan role JWT. `Layanan` tetap poli, `Loket` tetap ruang operasional, `JadwalPraktik` merupakan sesi bertanggal, `SlotPraktik` merupakan interval konsultasi, dan `JanjiTemu` terkait satu tiket. Status operasional tetap pada tiket. Semua path berikut memakai `/api/v1` dan JWT.
+
+### 17.1 Endpoint master dan appointment existing
+
+| Method | Path | Akses | Keterangan |
+|---|---|---|---|
+| POST | /dokter | ADMIN | Body kode, nama, spesialisasi opsional |
+| GET | /dokter, /dokter/:id | ADMIN/PETUGAS/USER | Non-ADMIN hanya dokter dengan rantai layanan aktif |
+| PATCH | /dokter/:id | ADMIN | Perubahan parsial; aktif dan spesialisasi null didukung |
+| DELETE | /dokter/:id | ADMIN | Soft delete |
+| GET | /dokter/:id/layanan | ADMIN/PETUGAS/USER | Relasi poli sesuai scope baca |
+| POST | /dokter/:id/layanan | ADMIN | Body layananId; upsert/reaktivasi relasi |
+| DELETE | /dokter/:id/layanan/:layananId | ADMIN | Nonaktifkan relasi |
+| POST | /jadwal-praktik | ADMIN | dokterLayananId, loketId, tanggal, mulaiPada, selesaiPada |
+| GET | /jadwal-praktik, /jadwal-praktik/:id | ADMIN/PETUGAS/USER | Filter daftar opsional dokterId, layananId, tanggal |
+| PATCH, DELETE | /jadwal-praktik/:id | ADMIN | Jadwal dengan slot tidak boleh digeser/dinonaktifkan |
+| POST | /slot-praktik | ADMIN | jadwalPraktikId, mulaiPada, selesaiPada, kapasitas |
+| GET | /slot-praktik | ADMIN/PETUGAS/USER | Query jadwalPraktikId wajib |
+| GET | /slot-praktik/:id | ADMIN/PETUGAS/USER | Detail dan ketersediaan |
+| PATCH, DELETE | /slot-praktik/:id | ADMIN | Slot dengan histori appointment tidak boleh digeser/dinonaktifkan; kapasitas dibatasi jumlah histori |
+| POST | /janji-temu | USER | Body slotPraktikId; pemilik dari JWT |
+| GET | /janji-temu, /janji-temu/:id | USER | Hanya milik sendiri |
+| POST | /janji-temu/:id/batalkan | USER | Hanya DIPESAN milik sendiri; sukses 201, audit dan histori dipertahankan |
+
+GET/PATCH/DELETE sukses 200; POST pada tabel sukses 201. Dokter kode 2–30 karakter `[A-Z0-9-]`, nama 3–150, spesialisasi maksimal 150. Waktu sesi/slot wajib ISO 8601 berzona dan tepat menit penuh; tanggal sesi harus sesuai tanggal lokal `SERVICE_TIME_ZONE`. Sesi harus berada dalam jam poli, dokter/ruang tidak overlap dan slot berada dalam sesi. Referensi UUID dan field asing divalidasi DTO.
+
+POST appointment mengembalikan objek janji dengan `id`, `tiket`, `slotPraktik`, `nomorAntrean`, dan `tanggalPelayanan`. **ID appointment berbeda dari tiket.id**: GET tiket dan penerbitan QR memakai `tiket.id`, pembatalan appointment memakai ID janji. Riwayat tiket existing tetap dapat dibaca melalui `/tiket/saya`; konteks dokter/slot diperoleh melalui `/janji-temu`.
+
+### 17.2 Mode, booking dan ketersediaan
+
+- ANTREAN_HARIAN: POST /reservasi tetap FIFO harian; tidak menerima booking dokter.
+- JANJI_TEMU_DOKTER: POST /janji-temu; POST /reservasi ditolak 400.
+- HIBRIDA: kedua kanal menerima reservasi dan berbagi nomor serta kuota poli/tanggal.
+- **Kedua mode appointment** memeriksa slot/sesi/dokter/relasi/poli/ruang aktif, kesesuaian tanggal/rentang waktu, jadwal poli aktif, kapasitas slot dan kapasitas harian. Booking hanya sebelum awal slot.
+- Satu pasien hanya satu tiket non-DIBATALKAN per poli/tanggal, lintas kanal/dokter/slot. Semua tiket non-DIBATALKAN, termasuk SELESAI, dihitung terhadap kuota harian sebagaimana baseline.
+- Lock sesi dan slot menggunakan advisory transaction lock bersama. Counter harian, tiket, appointment dan audit dibuat dalam transaksi Serializable; konflik P2034/P2002 di-retry terbatas sebelum 409.
+- Slot mengembalikan `jumlahJanjiTemu`, `sisaKapasitas`, `tersedia`. Sisa kapasitas adalah kapasitas **slot**; `tersedia` bisa false walaupun sisa slot positif karena kuota harian penuh, mode tidak menerima appointment, jadwal poli nonaktif/berubah, waktu atau relasi tidak valid.
+- Pembacaan slot dan kuota dilakukan dalam satu RepeatableRead snapshot; daftar memakai satu pembacaan kuota per poli/tanggal. Metadata relasi slot kini juga memuat loketId, layananId dan modeReservasi secara aditif.
+- Ketersediaan bersifat global dan sementara, bukan jaminan booking personal: POST tetap memeriksa duplikasi pasien, keadaan terbaru dan konkurensi. Tetap hindari blind retry; idempotency key belum tersedia.
+
+### 17.3 QR CHECK_IN dan ENQUEUE Hospital
+
+QR dan DTO existing tetap. USER menerbitkan QR pada hari pelayanan; PETUGAS memindai pada ruang yang ditugaskan. CHECK_IN tetap DIPESAN → CHECK_IN, lalu ENQUEUE terpisah CHECK_IN → MENUNGGU.
+
+Untuk appointment, backend memeriksa rantai slot/sesi/dokter/relasi/poli/ruang, tanggal lokal sesi terhadap tiket, interval slot dalam sesi dan ruang tujuan yang ditetapkan sesi. Sesi yang telah berakhir menolak penerimaan baru. Akhir slot sendiri tidak menolak CHECK_IN/ENQUEUE selama sesi relevan. Check-in sebelum awal sesi/slot diperbolehkan selama jam poli buka; tidak ada toleransi menit tambahan. CALL tetap menunggu awal sesi/slot.
+
+Untuk walk-in HIBRIDA, CHECK_IN memakai otorisasi, tanggal, poli dan jam operasional existing. ENQUEUE Hospital harus dilakukan pada ruang CHECK_IN yang sama. CALL walk-in hanya berjalan bila ruang tersebut memiliki sesi dokter aktif pada tanggal dan waktu pelayanan; tidak mengubah walk-in menjadi appointment.
+
+QR yang gagal validasi tidak dikonsumsi; ENQUEUE yang ditolak tidak menambah counter atau audit. Transaksi, update status/versi kondisional dan audit existing tetap dipertahankan. Ruang appointment salah: 403; konteks Hospital invalid pada CHECK_IN: 400; pada ENQUEUE: 409. Expiry QR tetap 410 dan konflik QR tetap 409.
+
+### 17.4 CALL, daftar menunggu dan alasan ketidaklayakan
+
+Ketiga jalur memakai select/selector Hospital yang sama. Urutan: appointment layak → walk-in layak → kandidat belum/tidak layak; appointment menurut awal slot; lalu waktu REQUEUE terbaru atau CHECK_IN jika belum pernah antre ulang, urutan masuk, dan ID. Prioritas slot tetap dipertahankan sesudah REQUEUE sesuai keputusan Project Lead.
+
+Appointment layak hanya jika check-in, semua relasi aktif/konsisten, tanggal sesuai, ruang sama, sesi berlangsung (`mulaiPada <= sekarang < selesaiPada`), dan slot sudah mulai. Akhir slot bukan kedaluwarsa hak pelayanan. Walk-in membutuhkan sesi aktif yang sesuai pada ruang peminta. Tidak ada kandidat layak menghasilkan 404 meskipun ada tiket MENUNGGU yang belum/tidak layak.
+
+Field aditif pada tiket Hospital di GET /queue/menunggu dan `snapshot.menunggu.tiket[]`:
+
+| Field | Tipe | Arti |
+|---|---|---|
+| jenisAntrean | JANJI_TEMU atau WALK_IN | Kanal tiket |
+| layakDipanggil | boolean | Kelayakan untuk ruang peminta saat snapshot dibaca |
+| slotMulaiPada | ISO string atau null | Awal slot appointment |
+| alasanTidakLayak | string atau null | null jika layak; kode alasan jika belum/tidak layak |
+
+Kode alasan: BELUM_CHECK_IN, SLOT_BELUM_DIMULAI, SESI_BELUM_DIMULAI, SESI_BERAKHIR, RUANG_BERBEDA, TANGGAL_TIDAK_SESUAI, RELASI_TIDAK_AKTIF, RELASI_TIDAK_SESUAI, JADWAL_TIDAK_VALID, APPOINTMENT_TIDAK_ADA, SESI_WALK_IN_TIDAK_TERSEDIA. Ini metadata API, bukan status/enum database. Tidak semua alasan memerlukan pembatalan; slot mendatang cukup ditunggu. Klien perlu menerima kode baru secara defensif.
+
+Filter baca yang disetujui:
+
+```http
+GET /api/v1/queue/menunggu?loketId=<uuid-v4>&hanyaTidakLayak=true
+Authorization: Bearer <access_token_petugas>
+```
+
+Query opsional menerima true/false literal; tanpa query tetap perilaku daftar default. Filter diterapkan sebelum batas 100 sehingga kandidat tidak layak tidak tersisih oleh kandidat layak. Hanya mode Hospital; pemakaian true pada ANTREAN_HARIAN ditolak 400. JWT dan penugasan tetap wajib. Respons tetap array dengan maksimum 100; bukan pagination. `snapshot.menunggu.total` tetap menghitung seluruh MENUNGGU layanan/tanggal, termasuk yang tidak layak. Field Hospital tidak ditambahkan ke mode harian dan versiSkema tetap 1.
+
+Kelayakan dapat berubah hanya karena waktu berlalu. Tidak ada event persisten khusus batas slot/sesi; klien perlu menyegarkan snapshot ketika batas waktu tercapai atau sebelum memanggil, selain pola event/reconnect existing.
+
+### 17.5 HOSP-OPS-01 dan gap resolusi manual
+
+Appointment MENUNGGU setelah sesi berakhir **tetap MENUNGGU**, tercatat dalam database dan daftar dengan alasan SESI_BERAKHIR. CALL normal tidak mengambilnya dari sesi atau ruang lain. Pembacaan kelayakan tidak mengubah versi/status, tidak membuat audit mutasi semu dan tidak melakukan auto-cancel, reschedule, requeue atau perpindahan hari.
+
+PETUGAS berwenang memeriksa daftar/filter lalu berkoordinasi dengan pasien dan pihak berwenang. Tiket DIPANGGIL/DILAYANI sebelum akhir sesi tetap dapat START/COMPLETE sesuai State Machine dan otorisasi existing; berakhirnya sesi tidak menambahkan penolakan baru pada pelayanan yang telah berjalan.
+
+**Gap belum diselesaikan:** tidak ada mutasi sah untuk menutup MENUNGGU yang tidak dapat dilayani; POST pembatalan existing hanya USER/DIPESAN. PATCH jadwal existing juga melarang perubahan sesi yang sudah memiliki slot. Perluasan pembatalan PETUGAS atau perpanjangan resmi sesi belum disetujui dan belum diimplementasikan. Jangan membuat tombol/aksi frontend berdasarkan usulan ini dan jangan menyatakan resolusi manual telah selesai. Rincian usulan tersedia pada `HOSP_OPS_01_GAP_DAN_USULAN.md`.
+
+### 17.6 Timezone, kompatibilitas dan checklist integrasi
+
+REST Hospital dan otorisasi room Socket.IO menggunakan SERVICE_TIME_ZONE; tanggal PostgreSQL DATE tetap UTC midnight representasi hari kalender. Room PETUGAS tidak lagi mengasumsikan Asia/Jakarta jika konfigurasi layanan berbeda. Konfigurasi timezone merupakan konfigurasi server, bukan nilai bebas dari klien.
+
+Checklist API untuk Web/Flutter, tanpa implementasi frontend:
+
+1. Gunakan role JWT dan penugasan yang tepat; register tetap USER.
+2. Pilih alur menurut modeReservasi dari katalog layanan; dokter → jadwal bertanggal → slot tersedia → POST janji-temu, atau POST reservasi untuk walk-in.
+3. Gunakan tiket.id untuk QR/tiket dan id appointment untuk pembatalan USER; jangan menukar kedua ID.
+4. Tampilkan status aktual CHECK_IN sebelum ENQUEUE berhasil; bedakan akhir slot dari akhir sesi.
+5. Refresh snapshot sesudah event/reconnect dan batas waktu; gunakan layakDipanggil serta alasan untuk keputusan tampilan, tetapi backend tetap menentukan izin CALL.
+6. Untuk tindak lanjut petugas gunakan filter baca; jangan menganggap tersedia endpoint resolusi manual.
+7. Tangani 400/403/404/409/410 dan kemungkinan response hilang sesudah commit; hindari blind retry booking/queue.
+8. Public Display, versi snapshot, QR sekali pakai, privacy dan best-effort Socket.IO tetap sesuai baseline. Tidak ada endpoint atau field pasien/medis publik baru.
+
+Temuan dependency historis, reverse proxy/origin, multi-instance Socket.IO, provisioning akun/perangkat dan race administrasi penugasan tetap memerlukan gate rilis terpisah. Mode poli baru sudah dapat ditetapkan ADMIN melalui POST layanan. Backend MVP tidak mengubah dependency/schema/migration atau mengesahkan deployment produksi.
+
+## 18. Urutan integrasi dua alur MVP
+
+Gunakan basis `/api/v1`, header JSON untuk POST, dan Bearer access token sesuai kolom aktor. Semua ID di bawah diperoleh dari respons API, bukan nomor antrean. Tanggal pelayanan adalah tanggal kalender dalam SERVICE_TIME_ZONE. Bagian Authentication menjelaskan bootstrap/login akun, refresh dan pemisahan role; pembuatan akun ADMIN/PETUGAS pertama merupakan provisioning server, bukan register publik dengan pilihan role.
+
+### 18.1 Persiapan data operasional oleh ADMIN
+
+1. `POST /layanan` dengan kode, nama, prefixAntrean, durasiDasarMenit dan modeReservasi. Pilih HIBRIDA untuk poli yang menerima appointment dan walk-in; JANJI_TEMU_DOKTER untuk appointment saja. Simpan `id` sebagai layananId.
+2. `POST /jadwal-layanan`: layananId, hari enum (misalnya KAMIS), jamBuka/jamTutup HH:mm dan kapasitasHarian. Siapkan seluruh hari praktik yang digunakan, bukan hanya hari booking dibuat.
+3. `POST /loket`: layananId, kode dan nama. Simpan id ruang sebagai loketId.
+4. `POST /penugasan-petugas`: petugasId dari akun PETUGAS aktif, loketId, tanggalMulai YYYY-MM-DD dan tanggalSelesai opsional. Pastikan penugasan mencakup tanggal pelayanan.
+5. `POST /dokter`: kode, nama dan spesialisasi opsional. Simpan id sebagai dokterId.
+6. `POST /dokter/:dokterId/layanan` dengan layananId. **ID respons adalah dokterLayananId**, berbeda dari dokterId dan layananId.
+7. `POST /jadwal-praktik`: dokterLayananId, loketId, tanggal YYYY-MM-DD, mulaiPada/selesaiPada ISO berzona. Sesi harus dalam jam poli dan tidak overlap dokter/ruang.
+8. `POST /slot-praktik`: jadwalPraktikId dari id sesi, mulaiPada/selesaiPada ISO berzona dan kapasitas. Slot berada dalam sesi, tidak overlap, dan waktu tepat menit penuh. Kapasitas slot tidak menggantikan kuota harian poli.
+
+Contoh body membuat poli yang menerima kedua alur:
+
+```json
+{
+  "kode": "POLI01",
+  "nama": "Poliklinik Umum",
+  "prefixAntrean": "PU",
+  "durasiDasarMenit": 15,
+  "modeReservasi": "HIBRIDA"
+}
+```
+
+### 18.2 Pemilihan dan booking oleh USER
+
+| Alur | Request | Field/ID yang dipakai selanjutnya |
+|---|---|---|
+| Katalog poli | GET /layanan | id → layananId; modeReservasi menentukan kanal |
+| Appointment: dokter | GET /dokter | id → dokterId; dokterLayanan memuat relasi poli |
+| Appointment: jadwal | GET /jadwal-praktik?dokterId=…&layananId=…&tanggal=YYYY-MM-DD | id → jadwalPraktikId; loketId adalah ruang tujuan |
+| Appointment: slot | GET /slot-praktik?jadwalPraktikId=… | id → slotPraktikId; periksa tersedia, kapasitas dan interval |
+| Appointment: booking | POST /janji-temu dengan {"slotPraktikId":"UUID slot"} | id → appointmentId; tiket.id → tiketId |
+| Walk-in: reservasi | POST /reservasi dengan {"layananId":"UUID poli","tanggalAntrean":"YYYY-MM-DD"} | id → tiketId |
+| Tiket digital | GET /tiket/saya atau GET /tiket/:tiketId | Status/nomorAntrean aktual; appointment detail melalui GET /janji-temu/:appointmentId |
+| QR pada hari pelayanan | POST /tiket/:tiketId/qr dengan JWT USER pemilik | qrPayload dan berlakuHingga; render payload persis, tanpa membangun token sendiri |
+
+Booking appointment harus sebelum awal slot; QR diterbitkan pada hari pelayanan dan berlaku 600 detik. USER tidak mengirim penggunaId atau role. Jika QR perlu diperbarui sebelum check-in, gunakan endpoint QR existing; payload lama menjadi tidak valid. Tidak ada pasien/rekam medis atau role dokter tambahan.
+
+### 18.3 Check-in dan pelayanan oleh PETUGAS
+
+| Langkah | Request/body | Hasil sukses |
+|---|---|---|
+| CHECK_IN | POST /check-in {"qrPayload":"payload SQ1 dari USER","loketId":"UUID ruang"} | 200; DIPESAN → CHECK_IN, QR dikonsumsi sekali |
+| ENQUEUE | POST /queue/:tiketId/masuk {"loketId":"UUID ruang"} | 200; CHECK_IN → MENUNGGU |
+| Baca antrean | GET /queue/menunggu?loketId=… dan GET /queue/snapshot?loketId=… | 200; baca status dan kelayakan aktual |
+| CALL | POST /queue/panggil {"loketId":"UUID ruang"} | 200; tiketId pada respons adalah tiket yang berhasil DIPANGGIL |
+| START | POST /queue/:tiketId/mulai-pelayanan {"loketId":"UUID ruang"} | 200; DIPANGGIL → DILAYANI |
+| COMPLETE | POST /queue/:tiketId/selesaikan-pelayanan {"loketId":"UUID ruang"} | 200; DILAYANI → SELESAI |
+
+CALL menentukan tiket di server; klien tidak mengirim pilihan tiket untuk melewati prioritas. Untuk appointment, CHECK_IN/ENQUEUE dan CALL harus sesuai ruang sesi. Walk-in HIBRIDA membutuhkan sesi dokter aktif pada ruang CALL. Mode ANTREAN_HARIAN tetap FIFO tanpa syarat sesi dokter.
+
+Tidak ada kandidat layak menghasilkan 404, busy/conflict 409, otorisasi ruang 403, QR expired 410, DTO invalid 400. Gunakan status backend sebagai sumber kebenaran; setelah event Socket.IO, reconnect atau respons mutasi yang tidak pasti, baca ulang snapshot. Jangan mengulang booking secara buta setelah timeout karena idempotency key belum tersedia. Public Display tetap memakai token perangkat, bukan token pasien/PETUGAS.
+
+### 18.4 Revisi berikutnya yang tidak menghalangi dua alur utama
+
+Resolusi manual HOSP-OPS-01, perpanjangan sesi berisi slot, toleransi menit keterlambatan, fairness lanjutan, pagination/backlog historis dan perubahan mode poli existing belum tersedia. Jangan membuat aksi frontend yang mengasumsikan endpoint tersebut. Metadata ketidaklayakan dan filter baca sudah tersedia; tiket MENUNGGU setelah akhir sesi tetap dicatat tanpa auto-cancel. Kesiapan integrasi MVP dibedakan dari persetujuan deployment produksi.

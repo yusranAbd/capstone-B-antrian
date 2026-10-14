@@ -8,6 +8,7 @@ import { ModeReservasi, PeranPengguna, Prisma, StatusTiket } from '../generated/
 
 import { PrismaService } from '../prisma/prisma.service';
 import { QueueService } from './queue.service';
+import { buatKonteksJanjiUji } from '../../test/helpers/hospital-context.fixture';
 
 // ==========================================
 // DATA PENGUJIAN
@@ -83,6 +84,7 @@ const buatTxMock = () => ({
   jadwalLayanan: {
     findUnique: jest.fn(),
   },
+  jadwalPraktik: { findFirst: jest.fn().mockResolvedValue({ id: 'sesi-aktif' }) },
   urutanAntreanHarian: {
     findUnique: jest.fn(),
     update: jest.fn(),
@@ -93,6 +95,7 @@ const buatTxMock = () => ({
 });
 
 const buatPrismaMock = () => ({
+  jadwalPraktik: { findFirst: jest.fn().mockResolvedValue({ id: 'sesi-aktif' }) },
   $transaction: jest.fn(),
   pengguna: {
     findUnique: jest.fn(),
@@ -190,6 +193,36 @@ describe('QueueService', () => {
   // ========================================
   // A. MASUK ANTREAN
   // ========================================
+
+  describe('ENQUEUE Hospital', () => {
+    it('appointment dengan slot berakhir tetap dapat ENQUEUE dalam sesi relevan', async () => {
+      txMock.tiketAntrean.findUnique.mockResolvedValue({ ...tiketUji, loketId,
+        layanan: { ...tiketUji.layanan, modeReservasi: ModeReservasi.JANJI_TEMU_DOKTER },
+        janjiTemu: buatKonteksJanjiUji(layananId, loketId, '2026-10-10') });
+      await expect(service.masukAntrean(tiketId, petugasId, loketId)).resolves.toMatchObject({ status: StatusTiket.MENUNGGU });
+    });
+    it.each(['ruang', 'layanan', 'dokter', 'slot', 'tanggal', 'sesi', 'tanpa-janji', 'ruang-check-in'] as const)(
+      'ENQUEUE menolak konteks %s tanpa mengubah status atau counter', async (kasus) => {
+        const janji = buatKonteksJanjiUji(layananId, loketId, '2026-10-10');
+        if (kasus === 'ruang') janji.slotPraktik.jadwalPraktik.loketId = 'ruang-lain';
+        if (kasus === 'layanan') janji.slotPraktik.jadwalPraktik.dokterLayanan.layananId = 'poli-lain';
+        if (kasus === 'dokter') janji.slotPraktik.jadwalPraktik.dokterLayanan.dokter.aktif = false;
+        if (kasus === 'slot') janji.slotPraktik.aktif = false;
+        if (kasus === 'tanggal') janji.slotPraktik.jadwalPraktik.tanggal = new Date('2026-10-11T00:00:00Z');
+        if (kasus === 'sesi') janji.slotPraktik.jadwalPraktik.selesaiPada = new Date('2026-10-10T02:25:00Z');
+        txMock.tiketAntrean.findUnique.mockResolvedValue({ ...tiketUji,
+          loketId: kasus === 'ruang-check-in' ? 'ruang-lain' : loketId,
+          layanan: { ...tiketUji.layanan, modeReservasi: ModeReservasi.JANJI_TEMU_DOKTER },
+          janjiTemu: kasus === 'tanpa-janji' ? null : janji });
+        await expect(service.masukAntrean(tiketId, petugasId, loketId)).rejects.toBeInstanceOf(
+          kasus === 'ruang' || kasus === 'ruang-check-in' ? ForbiddenException : ConflictException,
+        );
+        expect(txMock.urutanAntreanHarian.update).not.toHaveBeenCalled();
+        expect(txMock.tiketAntrean.updateMany).not.toHaveBeenCalled();
+        expect(txMock.peristiwaAntrean.create).not.toHaveBeenCalled();
+      },
+    );
+  });
 
   describe('Masuk Antrean', () => {
     it('mengubah CHECK_IN menjadi MENUNGGU', async () => {
@@ -666,7 +699,8 @@ describe('QueueService', () => {
         selesaiPada: new Date(selesai),
         jadwalPraktik: { aktif: true, loketId: ruang, tanggal: TANGGAL_PELAYANAN,
           mulaiPada: new Date('2026-10-10T00:00:00Z'), selesaiPada: new Date('2026-10-10T06:00:00Z'),
-          dokterLayanan: { aktif: true, dokter: { aktif: true } } },
+          loket: { aktif: true, layananId },
+          dokterLayanan: { aktif: true, layananId, layanan: { aktif: true }, dokter: { aktif: true } } },
       },
     });
     const tiketWalk = {
@@ -679,6 +713,7 @@ describe('QueueService', () => {
       masukAntreanPada: SEKARANG,
       checkInPada: new Date('2026-10-10T01:00:00Z'),
       tanggalAntrean: TANGGAL_PELAYANAN,
+      layananId,
       janjiTemu: null,
     };
     const tiketJanji = {
@@ -775,6 +810,30 @@ describe('QueueService', () => {
       prismaMock.tiketAntrean.findMany.mockResolvedValue([tiketWalk]);
       await service.daftarMenunggu(petugasId, loketId);
       expect(prismaMock.tiketAntrean.findMany.mock.calls[0][0]).not.toHaveProperty('take');
+    });
+    it('filter tidak layak diterapkan sebelum batas 100 sehingga sesi berakhir tetap terlihat', async () => {
+      pakaiModeHibrida();
+      const janjiTemu = slot('2026-10-10T01:00:00Z', '2026-10-10T02:00:00Z');
+      janjiTemu.slotPraktik.jadwalPraktik.selesaiPada = new Date('2026-10-10T02:20:00Z');
+      const berakhir = { ...tiketJanji, janjiTemu };
+      const layak = Array.from({ length: 101 }, (_, i) => ({ ...tiketWalk, id: `walk-${i}` }));
+      prismaMock.tiketAntrean.findMany.mockResolvedValue([...layak, berakhir]);
+      const hasil = await service.daftarMenunggu(petugasId, loketId, true);
+      expect(hasil).toHaveLength(1);
+      expect(hasil[0]).toMatchObject({ tiketId, status: StatusTiket.MENUNGGU,
+        layakDipanggil: false, alasanTidakLayak: 'SESI_BERAKHIR' });
+      expect(prismaMock.$transaction).not.toHaveBeenCalled();
+      expect(txMock.tiketAntrean.updateMany).not.toHaveBeenCalled();
+    });
+    it('walk-in tidak di-CALL bila tidak ada sesi dokter aktif pada ruang', async () => {
+      pakaiModeHibrida(); txMock.jadwalPraktik.findFirst.mockResolvedValue(null);
+      prismaMock.jadwalPraktik.findFirst.mockResolvedValue(null);
+      txMock.tiketAntrean.findMany.mockResolvedValue([tiketWalk]);
+      prismaMock.tiketAntrean.findMany.mockResolvedValue([tiketWalk]);
+      const hasil = await service.daftarMenunggu(petugasId, loketId);
+      expect(hasil[0]).toMatchObject({ layakDipanggil: false, alasanTidakLayak: 'SESI_WALK_IN_TIDAK_TERSEDIA' });
+      await expect(service.panggilBerikutnya(petugasId, loketId)).rejects.toBeInstanceOf(NotFoundException);
+      expect(txMock.tiketAntrean.updateMany).not.toHaveBeenCalled();
     });
   });
 

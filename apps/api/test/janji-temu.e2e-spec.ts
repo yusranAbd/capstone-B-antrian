@@ -124,6 +124,9 @@ describe('Appointment Booking API H2.4 (e2e)', () => {
         durasiDasarMenit: 15, aktif: true, modeReservasi: ModeReservasi.JANJI_TEMU_DOKTER },
     });
     layananId = layanan.id;
+    await db().jadwalLayanan.create({ data: { layananId, hari: 'SENIN',
+      jamBuka: new Date('1970-01-01T07:00:00Z'), jamTutup: new Date('1970-01-01T17:00:00Z'),
+      kapasitasHarian: 50 } });
     const ruang = await db().loket.create({ data: { layananId, kode: `R${kodeUnik}`, nama: 'Ruang Janji E2E' } });
     ruangId = ruang.id;
     const dokter = await db().dokter.create({ data: { kode: `D${kodeUnik}`, nama: 'Dokter Janji E2E' } });
@@ -154,6 +157,7 @@ describe('Appointment Booking API H2.4 (e2e)', () => {
         if (dokterId) await db().dokter.deleteMany({ where: { id: dokterId } });
         if (layananId) {
           await db().loket.deleteMany({ where: { layananId } });
+          await db().jadwalLayanan.deleteMany({ where: { layananId } });
           await db().layanan.deleteMany({ where: { id: layananId } });
         }
         if (akunIds.length) {

@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
-import { PeranPengguna } from '../generated/prisma/client';
+import { ModeReservasi, PeranPengguna } from '../generated/prisma/client';
 import type { PrismaService } from '../prisma/prisma.service';
 import { SlotPraktikService } from './slot-praktik.service';
 
@@ -8,10 +8,12 @@ const akhir = '2035-10-15T08:30:00+07:00';
 const dto = { jadwalPraktikId: 'jadwal-1', mulaiPada: awal, selesaiPada: akhir, kapasitas: 2 };
 const parent = {
   id: 'jadwal-1', aktif: true,
+  tanggal: new Date('2035-10-15T00:00:00Z'), loketId: 'ruang-1',
   mulaiPada: new Date('2035-10-15T07:00:00+07:00'),
   selesaiPada: new Date('2035-10-15T11:00:00+07:00'),
-  dokterLayanan: { aktif: true, dokter: { aktif: true }, layanan: { aktif: true } },
-  loket: { aktif: true },
+  dokterLayanan: { aktif: true, layananId: 'layanan-1', dokter: { aktif: true },
+    layanan: { id: 'layanan-1', aktif: true, modeReservasi: ModeReservasi.JANJI_TEMU_DOKTER } },
+  loket: { aktif: true, layananId: 'layanan-1' },
 };
 const slot = {
   id: 'slot-1', jadwalPraktikId: 'jadwal-1',
@@ -24,7 +26,11 @@ function setup() {
   const tx = {
     $queryRaw: jest.fn().mockResolvedValue([{ ok: 1 }]),
     jadwalPraktik: { findUnique: jest.fn().mockResolvedValue(parent) },
+    jadwalLayanan: { findUnique: jest.fn().mockResolvedValue({ aktif: true, kapasitasHarian: 10,
+      jamBuka: new Date('1970-01-01T07:00:00Z'), jamTutup: new Date('1970-01-01T17:00:00Z') }) },
+    tiketAntrean: { count: jest.fn().mockResolvedValue(0) },
     slotPraktik: {
+      findMany: jest.fn().mockResolvedValue([slot]),
       findFirst: jest.fn().mockResolvedValue(null),
       findUnique: jest.fn().mockResolvedValue(slot),
       create: jest.fn().mockResolvedValue(slot),
@@ -34,8 +40,8 @@ function setup() {
   const prisma = {
     $transaction: jest.fn().mockImplementation((fn: (arg: typeof tx) => Promise<unknown>) => fn(tx)),
     slotPraktik: {
-      findMany: jest.fn().mockResolvedValue([slot]),
-      findFirst: jest.fn().mockResolvedValue(slot),
+      findMany: tx.slotPraktik.findMany,
+      findFirst: tx.slotPraktik.findFirst,
       findUnique: jest.fn().mockResolvedValue({ jadwalPraktikId: 'jadwal-1' }),
     },
   };
@@ -44,6 +50,28 @@ function setup() {
 }
 
 describe('SlotPraktikService H2.3', () => {
+  it.each(['harian-penuh', 'jadwal-nonaktif', 'mode-harian', 'tanggal-tidak-sesuai', 'jam-poli-berubah'] as const)(
+    'tersedia false ketika booking tidak dapat menerima slot: %s', async (kasus) => {
+      const { service, tx } = setup();
+      if (kasus === 'harian-penuh') tx.tiketAntrean.count.mockResolvedValue(10);
+      if (kasus === 'jadwal-nonaktif') tx.jadwalLayanan.findUnique.mockResolvedValue(null);
+      if (kasus === 'jam-poli-berubah') tx.jadwalLayanan.findUnique.mockResolvedValue({ aktif: true, kapasitasHarian: 10,
+        jamBuka: new Date('1970-01-01T08:00:00Z'), jamTutup: new Date('1970-01-01T10:00:00Z') });
+      if (kasus === 'mode-harian') tx.slotPraktik.findMany.mockResolvedValue([{ ...slot, jadwalPraktik: {
+        ...parent, dokterLayanan: { ...parent.dokterLayanan,
+          layanan: { ...parent.dokterLayanan.layanan, modeReservasi: ModeReservasi.ANTREAN_HARIAN } },
+      } }]);
+      if (kasus === 'tanggal-tidak-sesuai') tx.slotPraktik.findMany.mockResolvedValue([{ ...slot,
+        jadwalPraktik: { ...parent, tanggal: new Date('2035-10-16T00:00:00Z') } }]);
+      const hasil = await service.findAll(PeranPengguna.ADMIN, { jadwalPraktikId: 'jadwal-1' });
+      expect(hasil[0]).toMatchObject({ sisaKapasitas: 2, tersedia: false });
+    },
+  );
+  it('slot dalam jadwal yang sama memakai satu snapshot kuota harian', async () => {
+    const { service, tx } = setup(); tx.slotPraktik.findMany.mockResolvedValue([slot, { ...slot, id: 'slot-2' }]);
+    const hasil = await service.findAll(PeranPengguna.USER, { jadwalPraktikId: 'jadwal-1' });
+    expect(hasil).toHaveLength(2); expect(tx.tiketAntrean.count).toHaveBeenCalledTimes(1);
+  });
   it('membuat slot dan mengunci jadwal sebelum pemeriksaan benturan', async () => {
     const { service, tx } = setup();
     await expect(service.create(dto)).resolves.toMatchObject({ id: 'slot-1', sisaKapasitas: 2, tersedia: true });

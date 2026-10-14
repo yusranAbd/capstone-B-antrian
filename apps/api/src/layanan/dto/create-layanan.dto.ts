@@ -1,5 +1,6 @@
 import {
   IsInt,
+  IsEnum,
   IsOptional,
   IsString,
   Matches,
@@ -7,9 +8,15 @@ import {
   MaxLength,
   Min,
   MinLength,
+  ValidateIf,
 } from 'class-validator';
+import { ModeReservasi } from '../../generated/prisma/client';
 
 export class CreateLayananDto {
+  @ValidateIf((_, value: unknown) => value !== undefined)
+  @IsEnum(ModeReservasi)
+  modeReservasi?: ModeReservasi;
+
   @IsString()
   @Matches(/^[A-Z0-9]{2,20}$/, {
     message: 'Kode harus terdiri dari 2-20 karakter huruf kapital atau angka',

@@ -107,9 +107,13 @@ describe('Consultation Slot API H2.3 (e2e)', () => {
     user = await buatAkun(PeranPengguna.USER);
     petugas = await buatAkun(PeranPengguna.PETUGAS);
     const layanan = await db().layanan.create({
-      data: { kode: `SL${unik}`, nama: 'Poli Slot E2E', prefixAntrean: 'SL', durasiDasarMenit: 15, aktif: true },
+      data: { kode: `SL${unik}`, nama: 'Poli Slot E2E', prefixAntrean: 'SL', durasiDasarMenit: 15, aktif: true,
+        modeReservasi: 'JANJI_TEMU_DOKTER' },
     });
     layananId = layanan.id;
+    await db().jadwalLayanan.create({ data: { layananId, hari: 'SENIN',
+      jamBuka: new Date('1970-01-01T07:00:00Z'), jamTutup: new Date('1970-01-01T17:00:00Z'),
+      kapasitasHarian: 50 } });
     const ruang = await db().loket.create({
       data: { layananId, kode: `R${unik}`, nama: 'Ruang Slot E2E' },
     });
@@ -155,6 +159,7 @@ describe('Consultation Slot API H2.3 (e2e)', () => {
         if (dokterId) await prisma.dokter.deleteMany({ where: { id: dokterId } });
         if (layananId) {
           await prisma.loket.deleteMany({ where: { layananId } });
+          await prisma.jadwalLayanan.deleteMany({ where: { layananId } });
           await prisma.layanan.deleteMany({ where: { id: layananId } });
         }
         if (akunIds.length) {

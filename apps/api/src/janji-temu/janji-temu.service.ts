@@ -13,6 +13,7 @@ import {
 } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateJanjiTemuDto } from './dto/create-janji-temu.dto';
+import { alasanRelasiSlot, rentangDalamJamLayanan } from '../hospital/hospital-context';
 
 type Transaksi = Prisma.TransactionClient;
 
@@ -108,6 +109,8 @@ export class JanjiTemuService {
         ) {
           throw new BadRequestException('Waktu slot tidak sesuai jadwal praktik');
         }
+        const alasan = alasanRelasiSlot(slot, layanan.id, jadwal.tanggal);
+        if (alasan) throw new BadRequestException(`Konteks slot tidak valid: ${alasan}`);
 
         // Relasi historis yang sudah dibatalkan tidak lagi menempati kapasitas.
         const terisi = await tx.janjiTemu.count({
@@ -130,10 +133,11 @@ export class JanjiTemuService {
           update: { nomorTerakhir: { increment: 1 } },
         });
 
-        // Pada mode HIBRIDA, booking dan walk-in berbagi batas kapasitas
-        // harian poliklinik. Periksa sesudah counter terkunci agar transaksi
+        // Semua mode appointment memakai kapasitas harian poliklinik.
+        // Pada HIBRIDA kapasitas ini juga dipakai walk-in.
+        // Periksa sesudah counter terkunci agar transaksi
         // serializable menolak/meretry interleaving booking bersamaan.
-        if (layanan.modeReservasi === ModeReservasi.HIBRIDA) {
+        {
           const hari = [
             HariLayanan.MINGGU, HariLayanan.SENIN,
             HariLayanan.SELASA, HariLayanan.RABU,
@@ -146,10 +150,13 @@ export class JanjiTemuService {
                 hari: hari[tanggal.getUTCDay()],
               },
             },
-            select: { aktif: true, kapasitasHarian: true },
+            select: { aktif: true, kapasitasHarian: true, jamBuka: true, jamTutup: true },
           });
           if (!jadwalHarian?.aktif) {
             throw new BadRequestException('Jadwal layanan poliklinik tidak aktif');
+          }
+          if (!rentangDalamJamLayanan(slot, jadwalHarian)) {
+            throw new BadRequestException('Sesi dokter berada di luar jam operasional poliklinik');
           }
           const jumlahTiket = await tx.tiketAntrean.count({
             where: {

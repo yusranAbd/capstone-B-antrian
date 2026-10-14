@@ -22,8 +22,10 @@ describe('RealtimeRoomAccessService - penugasan dan sesi aktif', () => {
     penugasanPetugas: { findFirst: penugasanFind },
   } as unknown as PrismaService;
   const service = new RealtimeRoomAccessService(prisma);
+  const zonaAwal = process.env.SERVICE_TIME_ZONE;
 
   beforeEach(() => {
+    process.env.SERVICE_TIME_ZONE = 'Asia/Jakarta';
     jest.useFakeTimers().setSystemTime(new Date('2026-10-12T02:00:00Z'));
     jest.clearAllMocks();
     sesiFind.mockResolvedValue({ id: 'sesi-uji' });
@@ -33,6 +35,8 @@ describe('RealtimeRoomAccessService - penugasan dan sesi aktif', () => {
 
   afterEach(() => {
     jest.useRealTimers();
+    if (zonaAwal === undefined) delete process.env.SERVICE_TIME_ZONE;
+    else process.env.SERVICE_TIME_ZONE = zonaAwal;
   });
 
   it('menerima petugas dengan sesi, layanan, loket, dan penugasan aktif', async () => {
@@ -94,5 +98,13 @@ describe('RealtimeRoomAccessService - penugasan dan sesi aktif', () => {
       where: { tanggalMulai: { lte: Date } };
     };
     expect(arg.where.tanggalMulai.lte.toISOString()).toBe('2026-10-12T00:00:00.000Z');
+  });
+  it('timezone Jayapura menghasilkan tanggal room yang sama dengan REST di pergantian hari', async () => {
+    process.env.SERVICE_TIME_ZONE = 'Asia/Jayapura';
+    jest.setSystemTime(new Date('2026-10-11T15:30:00Z'));
+    expect(await service.periksa(identitas, layananId)).toBe('ALLOWED');
+    expect(penugasanFind).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ tanggalMulai: { lte: new Date('2026-10-12T00:00:00Z') } }),
+    }));
   });
 });

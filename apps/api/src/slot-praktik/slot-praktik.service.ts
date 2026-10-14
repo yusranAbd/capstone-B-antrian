@@ -4,7 +4,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { PeranPengguna, Prisma, StatusTiket } from '../generated/prisma/client';
+import { ModeReservasi, PeranPengguna, Prisma, StatusTiket } from '../generated/prisma/client';
+import { alasanRelasiSlot, rentangDalamJamLayanan, waktuPelayanan, type KonteksSlotHospital } from '../hospital/hospital-context';
 import { PrismaService } from '../prisma/prisma.service';
 import { CariSlotPraktikDto } from './dto/cari-slot-praktik.dto';
 import { CreateSlotPraktikDto, POLA_WAKTU_OFFSET } from './dto/create-slot-praktik.dto';
@@ -13,6 +14,15 @@ import { UpdateSlotPraktikDto } from './dto/update-slot-praktik.dto';
 type Transaksi = Prisma.TransactionClient;
 
 type Rentang = { mulai: Date; selesai: Date };
+type KuotaHarian = { jadwal: { aktif: boolean; jamBuka: Date; jamTutup: Date; kapasitasHarian: number } | null; jumlah: number };
+type SlotTersedia = KonteksSlotHospital & {
+  kapasitas: number; _count: { janjiTemu: number };
+  jadwalPraktik: KonteksSlotHospital['jadwalPraktik'] & {
+    dokterLayanan: KonteksSlotHospital['jadwalPraktik']['dokterLayanan'] & {
+      layanan: { id: string; aktif: boolean; modeReservasi: ModeReservasi };
+    };
+  };
+};
 
 // Relasi ditampilkan untuk keperluan Flutter; identitas pasien tidak pernah diikutkan.
 const rincianSlot = {
@@ -23,14 +33,16 @@ const rincianSlot = {
       mulaiPada: true,
       selesaiPada: true,
       aktif: true,
+      loketId: true,
       dokterLayanan: {
         select: {
           aktif: true,
+          layananId: true,
           dokter: { select: { id: true, nama: true, spesialisasi: true, aktif: true } },
-          layanan: { select: { id: true, kode: true, nama: true, aktif: true } },
+          layanan: { select: { id: true, kode: true, nama: true, aktif: true, modeReservasi: true } },
         },
       },
-      loket: { select: { id: true, nama: true, aktif: true } },
+      loket: { select: { id: true, nama: true, aktif: true, layananId: true } },
     },
   },
   _count: {
@@ -77,27 +89,31 @@ export class SlotPraktikService {
           },
           include: rincianSlot,
         });
-        return this.denganKetersediaan(slot);
+        return this.denganKetersediaan(slot, tx);
       });
     } catch (error: unknown) {
       this.handleDatabaseError(error);
     }
   }
 
-  findAll(peran: PeranPengguna, query: CariSlotPraktikDto) {
+  async findAll(peran: PeranPengguna, query: CariSlotPraktikDto) {
     const where: Prisma.SlotPraktikWhereInput = {
       jadwalPraktikId: query.jadwalPraktikId,
       ...(peran === PeranPengguna.ADMIN ? {} : { aktif: true, jadwalPraktik: { is: jadwalTerlihat } }),
     };
-    return this.prisma.slotPraktik.findMany({
-      where,
-      include: rincianSlot,
-      orderBy: [{ mulaiPada: 'asc' }, { id: 'asc' }],
-    }).then((slots) => slots.map((slot) => this.denganKetersediaan(slot)));
+    return this.prisma.$transaction(async (tx) => {
+      const slots = await tx.slotPraktik.findMany({ where, include: rincianSlot,
+        orderBy: [{ mulaiPada: 'asc' }, { id: 'asc' }] });
+      const cache = new Map<string, KuotaHarian>();
+      const hasil = [];
+      for (const slot of slots) hasil.push(await this.denganKetersediaan(slot, tx, cache));
+      return hasil;
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
   }
 
   async findOne(id: string, peran: PeranPengguna) {
-    const slot = await this.prisma.slotPraktik.findFirst({
+    return this.prisma.$transaction(async (tx) => {
+    const slot = await tx.slotPraktik.findFirst({
       where: {
         id,
         ...(peran === PeranPengguna.ADMIN ? {} : { aktif: true, jadwalPraktik: { is: jadwalTerlihat } }),
@@ -105,7 +121,8 @@ export class SlotPraktikService {
       include: rincianSlot,
     });
     if (!slot) throw new NotFoundException('Slot konsultasi tidak ditemukan');
-    return this.denganKetersediaan(slot);
+    return this.denganKetersediaan(slot, tx);
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
   }
 
   async update(id: string, dto: UpdateSlotPraktikDto) {
@@ -161,7 +178,7 @@ export class SlotPraktikService {
           },
           include: rincianSlot,
         });
-        return this.denganKetersediaan(slot);
+        return this.denganKetersediaan(slot, tx);
       });
     } catch (error: unknown) {
       this.handleDatabaseError(error);
@@ -187,7 +204,7 @@ export class SlotPraktikService {
         const slot = await tx.slotPraktik.update({
           where: { id }, data: { aktif: false }, include: rincianSlot,
         });
-        return this.denganKetersediaan(slot);
+        return this.denganKetersediaan(slot, tx);
       });
     } catch (error: unknown) {
       this.handleDatabaseError(error);
@@ -267,24 +284,35 @@ export class SlotPraktikService {
     `;
   }
 
-  private denganKetersediaan<T extends {
-    kapasitas: number;
-    aktif: boolean;
-    mulaiPada: Date;
-    jadwalPraktik: {
-      aktif: boolean;
-      dokterLayanan: { aktif: boolean; dokter: { aktif: boolean }; layanan: { aktif: boolean } };
-      loket: { aktif: boolean };
-    };
-    _count: { janjiTemu: number };
-  }>(slot: T) {
+  private async denganKetersediaan<T extends SlotTersedia>(
+    slot: T, db: Prisma.TransactionClient, cache = new Map<string, KuotaHarian>(),
+  ) {
     // Hanya janji belum dibatalkan yang dihitung sebagai terisi.
     const jumlahJanjiTemu = slot._count.janjiTemu;
     const sisaKapasitas = Math.max(0, slot.kapasitas - jumlahJanjiTemu);
-    const tersedia = slot.aktif && slot.jadwalPraktik.aktif &&
-      slot.jadwalPraktik.dokterLayanan.aktif && slot.jadwalPraktik.dokterLayanan.dokter.aktif &&
-      slot.jadwalPraktik.dokterLayanan.layanan.aktif && slot.jadwalPraktik.loket.aktif &&
+    const layanan = slot.jadwalPraktik.dokterLayanan.layanan;
+    let tersedia = (layanan.modeReservasi === ModeReservasi.JANJI_TEMU_DOKTER ||
+      layanan.modeReservasi === ModeReservasi.HIBRIDA) &&
+      alasanRelasiSlot(slot, layanan.id, slot.jadwalPraktik.tanggal) === null &&
       slot.mulaiPada.getTime() > Date.now() && sisaKapasitas > 0;
+    if (tersedia) {
+      const tanggal = slot.jadwalPraktik.tanggal;
+      const kunci = `${layanan.id}:${tanggal.toISOString()}`;
+      let kuota = cache.get(kunci);
+      if (!kuota) {
+        const hari = waktuPelayanan(slot.mulaiPada).hari;
+        const jadwal = await db.jadwalLayanan.findUnique({
+          where: { layananId_hari: { layananId: layanan.id, hari } },
+          select: { aktif: true, kapasitasHarian: true, jamBuka: true, jamTutup: true },
+        });
+        const jumlah = await db.tiketAntrean.count({ where: {
+          layananId: layanan.id, tanggalAntrean: tanggal, status: { not: StatusTiket.DIBATALKAN },
+        } });
+        kuota = { jadwal, jumlah }; cache.set(kunci, kuota);
+      }
+      tersedia = kuota.jadwal !== null && rentangDalamJamLayanan(slot, kuota.jadwal) &&
+        kuota.jumlah < kuota.jadwal.kapasitasHarian;
+    }
     const { _count, ...data } = slot;
     return { ...data, jumlahJanjiTemu, sisaKapasitas, tersedia };
   }
