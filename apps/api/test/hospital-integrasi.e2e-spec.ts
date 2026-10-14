@@ -29,6 +29,7 @@ describe('Integrasi Hospital dan HOSP-OPS-01 (e2e)', () => {
   let pasien: Akun[] = [];
   let petugas!: Akun;
   let petugasLain!: Akun;
+  let admin!: Akun;
   const akunIds: string[] = [];
   const sandi = 'Fixture-Hospital-Integrasi-123!';
   const zonaAwal = process.env.SERVICE_TIME_ZONE;
@@ -53,6 +54,17 @@ describe('Integrasi Hospital dan HOSP-OPS-01 (e2e)', () => {
     return app.getHttpServer();
   };
   const auth = (akun: Akun) => ({ Authorization: `Bearer ${akun.token}` });
+  async function buatMaster(
+    path: string,
+    body: object,
+  ): Promise<{ id: string }> {
+    const res = await request(server())
+      .post(`/api/v1/${path}`)
+      .set(auth(admin))
+      .send(body)
+      .expect(201);
+    return res.body as { id: string };
+  }
 
   async function login(akun: Akun) {
     const hasil = await request(server())
@@ -142,6 +154,7 @@ describe('Integrasi Hospital dan HOSP-OPS-01 (e2e)', () => {
     for (let i = 0; i < 3; i++) pasien.push(await akun(PeranPengguna.USER));
     petugas = await akun(PeranPengguna.PETUGAS);
     petugasLain = await akun(PeranPengguna.PETUGAS);
+    admin = await akun(PeranPengguna.ADMIN);
   }, 120_000);
 
   beforeEach(async () => {
@@ -162,7 +175,7 @@ describe('Integrasi Hospital dan HOSP-OPS-01 (e2e)', () => {
         'queueMicrotask',
       ],
     });
-    for (const pemilik of [...pasien, petugas, petugasLain])
+    for (const pemilik of [...pasien, petugas, petugasLain, admin])
       await login(pemilik);
     tanggalDb = new Date(`${tanggal}T00:00:00Z`);
     mulaiSlot = new Date(`${tanggal}T12:01:00Z`);
@@ -170,14 +183,12 @@ describe('Integrasi Hospital dan HOSP-OPS-01 (e2e)', () => {
     akhirSesi = new Date(`${tanggal}T12:10:00Z`);
     const unik = randomUUID().replace(/-/g, '').slice(0, 10).toUpperCase();
     layananId = (
-      await db().layanan.create({
-        data: {
-          kode: `I${unik}`,
-          nama: 'Poli Integrasi E2E',
-          prefixAntrean: 'HI',
-          durasiDasarMenit: 5,
-          modeReservasi: ModeReservasi.HIBRIDA,
-        },
+      await buatMaster('layanan', {
+        kode: `I${unik}`,
+        nama: 'Poli Integrasi E2E',
+        prefixAntrean: 'HI',
+        durasiDasarMenit: 5,
+        modeReservasi: ModeReservasi.HIBRIDA,
       })
     ).id;
     const hari = [
@@ -189,62 +200,60 @@ describe('Integrasi Hospital dan HOSP-OPS-01 (e2e)', () => {
       HariLayanan.JUMAT,
       HariLayanan.SABTU,
     ][tanggalDb.getUTCDay()];
-    await db().jadwalLayanan.create({
-      data: {
-        layananId,
-        hari,
-        kapasitasHarian: 5,
-        jamBuka: new Date('1970-01-01T00:00:00Z'),
-        jamTutup: new Date('1970-01-01T23:59:00Z'),
-      },
+    await buatMaster('jadwal-layanan', {
+      layananId,
+      hari,
+      kapasitasHarian: 5,
+      jamBuka: '00:00',
+      jamTutup: '23:59',
     });
     ruangId = (
-      await db().loket.create({
-        data: { layananId, kode: `A${unik}`, nama: 'Ruang Integrasi A' },
+      await buatMaster('loket', {
+        layananId,
+        kode: `A${unik}`,
+        nama: 'Ruang Integrasi A',
       })
     ).id;
     ruangLainId = (
-      await db().loket.create({
-        data: { layananId, kode: `B${unik}`, nama: 'Ruang Integrasi B' },
+      await buatMaster('loket', {
+        layananId,
+        kode: `B${unik}`,
+        nama: 'Ruang Integrasi B',
       })
     ).id;
-    await db().penugasanPetugas.createMany({
-      data: [
-        { petugasId: petugas.id, loketId: ruangId, tanggalMulai: tanggalDb },
-        {
-          petugasId: petugasLain.id,
-          loketId: ruangLainId,
-          tanggalMulai: tanggalDb,
-        },
-      ],
+    await buatMaster('penugasan-petugas', {
+      petugasId: petugas.id,
+      loketId: ruangId,
+      tanggalMulai: tanggal,
+    });
+    await buatMaster('penugasan-petugas', {
+      petugasId: petugasLain.id,
+      loketId: ruangLainId,
+      tanggalMulai: tanggal,
     });
     dokterId = (
-      await db().dokter.create({
-        data: { kode: `D${unik}`, nama: 'Dokter Integrasi E2E' },
+      await buatMaster('dokter', {
+        kode: `D${unik}`,
+        nama: 'Dokter Integrasi E2E',
       })
     ).id;
-    relasiId = (
-      await db().dokterLayanan.create({ data: { dokterId, layananId } })
-    ).id;
+    relasiId = (await buatMaster(`dokter/${dokterId}/layanan`, { layananId }))
+      .id;
     sesiId = (
-      await db().jadwalPraktik.create({
-        data: {
-          dokterLayananId: relasiId,
-          loketId: ruangId,
-          tanggal: tanggalDb,
-          mulaiPada: tanggalDb,
-          selesaiPada: akhirSesi,
-        },
+      await buatMaster('jadwal-praktik', {
+        dokterLayananId: relasiId,
+        loketId: ruangId,
+        tanggal,
+        mulaiPada: tanggalDb.toISOString(),
+        selesaiPada: akhirSesi.toISOString(),
       })
     ).id;
     slotId = (
-      await db().slotPraktik.create({
-        data: {
-          jadwalPraktikId: sesiId,
-          mulaiPada: mulaiSlot,
-          selesaiPada: akhirSlot,
-          kapasitas: 5,
-        },
+      await buatMaster('slot-praktik', {
+        jadwalPraktikId: sesiId,
+        mulaiPada: mulaiSlot.toISOString(),
+        selesaiPada: akhirSlot.toISOString(),
+        kapasitas: 5,
       })
     ).id;
   }, 60_000);
@@ -301,6 +310,45 @@ describe('Integrasi Hospital dan HOSP-OPS-01 (e2e)', () => {
   it.each(['appointment', 'walk-in'] as const)(
     '%s melewati QR, CHECK_IN, ENQUEUE, CALL, START, COMPLETE',
     async (jenis) => {
+      const poli = await request(server())
+        .get('/api/v1/layanan')
+        .set(auth(pasien[0]))
+        .expect(200);
+      expect(poli.body).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: layananId,
+            modeReservasi: ModeReservasi.HIBRIDA,
+          }),
+        ]),
+      );
+      if (jenis === 'appointment') {
+        const dokter = await request(server())
+          .get('/api/v1/dokter')
+          .set(auth(pasien[0]))
+          .expect(200);
+        expect(dokter.body).toEqual(
+          expect.arrayContaining([expect.objectContaining({ id: dokterId })]),
+        );
+        const jadwal = await request(server())
+          .get('/api/v1/jadwal-praktik')
+          .set(auth(pasien[0]))
+          .query({ dokterId, layananId, tanggal })
+          .expect(200);
+        expect(jadwal.body).toEqual(
+          expect.arrayContaining([expect.objectContaining({ id: sesiId })]),
+        );
+        const slots = await request(server())
+          .get('/api/v1/slot-praktik')
+          .set(auth(pasien[0]))
+          .query({ jadwalPraktikId: sesiId })
+          .expect(200);
+        expect(slots.body).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ id: slotId, tersedia: true }),
+          ]),
+        );
+      }
       const res = await (
         jenis === 'appointment' ? booking(pasien[0]) : walkIn(pasien[0])
       ).expect(201);

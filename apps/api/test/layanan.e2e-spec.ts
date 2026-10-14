@@ -5,7 +5,7 @@ import request from 'supertest';
 
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/configure-app';
-import { PeranPengguna } from '../src/generated/prisma/client';
+import { ModeReservasi, PeranPengguna } from '../src/generated/prisma/client';
 import { PrismaService } from '../src/prisma/prisma.service';
 
 // ==========================================
@@ -36,6 +36,7 @@ interface LayananResponse {
   prefixAntrean: string;
   durasiDasarMenit: number;
   aktif: boolean;
+  modeReservasi: ModeReservasi;
 }
 
 // ==========================================
@@ -58,6 +59,7 @@ describe('Manajemen Layanan API (e2e)', () => {
   let userId = '';
   let adminId = '';
   let layananId = '';
+  const layananHospitalIds: string[] = [];
 
   let tokenUser = '';
   let tokenAdmin = '';
@@ -215,10 +217,10 @@ describe('Manajemen Layanan API (e2e)', () => {
     try {
       if (prisma) {
         // Hapus layanan yang dibuat khusus untuk test.
-        if (layananId) {
+        if (layananId || layananHospitalIds.length) {
           await prisma.layanan.deleteMany({
             where: {
-              id: layananId,
+              id: { in: [layananId, ...layananHospitalIds].filter(Boolean) },
             },
           });
         }
@@ -316,6 +318,7 @@ describe('Manajemen Layanan API (e2e)', () => {
     expect(layanan.kode).toBe(kodeLayanan);
     expect(layanan.nama).toBe(body.nama);
     expect(layanan.aktif).toBe(true);
+    expect(layanan.modeReservasi).toBe(ModeReservasi.ANTREAN_HARIAN);
 
     // Kode sama tidak boleh dibuat dua kali.
     await request(httpServer())
@@ -328,6 +331,67 @@ describe('Manajemen Layanan API (e2e)', () => {
   // ========================================
   // TEST 4: READ ALL DAN READ ONE
   // ========================================
+
+  it.each([ModeReservasi.JANJI_TEMU_DOKTER, ModeReservasi.HIBRIDA])(
+    'ADMIN membuat poli %s dan USER membaca mode yang sama',
+    async (modeReservasi) => {
+      const body = {
+        kode: `H${randomUUID().replace(/-/g, '').slice(0, 10).toUpperCase()}`,
+        nama: 'Poli Hospital API',
+        prefixAntrean: 'H',
+        durasiDasarMenit: 15,
+        modeReservasi,
+      };
+      await request(httpServer())
+        .post('/api/v1/layanan')
+        .set('Authorization', `Bearer ${tokenUser}`)
+        .send(body)
+        .expect(403);
+      const res = await request(httpServer())
+        .post('/api/v1/layanan')
+        .set('Authorization', `Bearer ${tokenAdmin}`)
+        .send(body)
+        .expect(201);
+      const poli = res.body as LayananResponse;
+      layananHospitalIds.push(poli.id);
+      expect(poli.modeReservasi).toBe(modeReservasi);
+      const detail = await request(httpServer())
+        .get(`/api/v1/layanan/${poli.id}`)
+        .set('Authorization', `Bearer ${tokenUser}`)
+        .expect(200);
+      expect((detail.body as LayananResponse).modeReservasi).toBe(
+        modeReservasi,
+      );
+      // Perubahan mode poli existing sengaja tidak dibuka pada MVP.
+      await request(httpServer())
+        .patch(`/api/v1/layanan/${poli.id}`)
+        .set('Authorization', `Bearer ${tokenAdmin}`)
+        .send({ modeReservasi: ModeReservasi.ANTREAN_HARIAN })
+        .expect(400);
+      expect(
+        (await database().layanan.findUniqueOrThrow({ where: { id: poli.id } }))
+          .modeReservasi,
+      ).toBe(modeReservasi);
+    },
+  );
+
+  it('menolak mode invalid atau null tanpa membuat poli', async () => {
+    const kode = `V${identitas.slice(0, 10).toUpperCase()}`;
+    for (const modeReservasi of ['INVALID', null, 1]) {
+      await request(httpServer())
+        .post('/api/v1/layanan')
+        .set('Authorization', `Bearer ${tokenAdmin}`)
+        .send({
+          kode,
+          nama: 'Poli Invalid',
+          prefixAntrean: 'V',
+          durasiDasarMenit: 15,
+          modeReservasi,
+        })
+        .expect(400);
+    }
+    expect(await database().layanan.count({ where: { kode } })).toBe(0);
+  });
 
   it('ADMIN dan USER dapat melihat layanan aktif', async () => {
     const responseAdmin = await request(httpServer())

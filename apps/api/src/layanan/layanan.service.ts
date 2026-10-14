@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
-import { PeranPengguna, Prisma } from '../generated/prisma/client';
+import { ModeReservasi, PeranPengguna, Prisma } from '../generated/prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateLayananDto } from './dto/create-layanan.dto';
@@ -27,6 +27,7 @@ export class LayananService {
           deskripsi: dto.deskripsi ?? null,
           prefixAntrean: dto.prefixAntrean,
           durasiDasarMenit: dto.durasiDasarMenit,
+          modeReservasi: dto.modeReservasi ?? ModeReservasi.ANTREAN_HARIAN,
           aktif: true,
         },
       });
