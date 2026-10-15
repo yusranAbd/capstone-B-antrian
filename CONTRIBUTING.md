@@ -6,7 +6,6 @@
 
 ## Daftar isi
 
-- [1. Tujuan dan skenario](#1-tujuan-dan-skenario)
 - [2. Persiapan aplikasi](#2-persiapan-aplikasi)
 - [3. Mengambil repository](#3-mengambil-repository)
 - [4. Mode A — Laptop masing-masing](#4-mode-a--menjalankan-semua-komponen-di-laptop-masing-masing)
@@ -19,20 +18,9 @@
 
 ---
 
-## 1. Tujuan dan skenario
-
-Panduan ini membantu anggota kelompok menjalankan **QueueB Hospital** untuk mencoba alur pasien, petugas, admin, dan display. Antarmuka yang digunakan saat ini adalah **Flutter**; backend menggunakan **NestJS + Prisma + PostgreSQL**.
-
-Ada dua cara menjalankan:
-
-1. **Mode A — Mandiri:** setiap anggota menjalankan database, API, dan Flutter sendiri di laptopnya. Cocok untuk coding dan pengujian terisolasi.
-2. **Mode B — Satu server lokal/LAN (lebih praktis untuk demo bersama):** satu laptop menjadi host database, API, dan Flutter Web; laptop anggota lain mengakses alamat IP host melalui browser. Mereka **tidak perlu** menyalakan PostgreSQL/API masing-masing.
-
-> Jangan menggunakan database E2E `capstone_antrean_test` untuk demo. Database demo/development menggunakan database tersendiri, misalnya `capstone_antrean`. Jangan mengirim `.env`, dump database, token, atau kredensial lewat Git.
-
 ## 2. Persiapan aplikasi
 
-Di Windows, pasang aplikasi berikut sebelum clone repository:
+Di Windows, install aplikasi berikut sebelum clone repository:
 
 - **Git** untuk mengambil source code.
 - **Node.js** dan npm untuk backend (gunakan versi sesuai `engines` di `apps/api/package.json`; pada panduan awal proyek digunakan Node.js 24).
@@ -65,8 +53,6 @@ git switch main
 git pull --ff-only origin main
 git status --short
 ```
-
-Jika repository bersifat private, anggota harus mendapat akses GitHub terlebih dahulu. Pada checkout awal, `git status --short` idealnya kosong.
 
 Struktur yang relevan:
 
