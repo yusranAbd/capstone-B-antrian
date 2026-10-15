@@ -2,6 +2,11 @@
   "name": "queueb-flutter-browser-tests",
   "private": true,
   "description": "Tooling QA untuk build Flutter Web, tanpa aplikasi JavaScript.",
-  "scripts": { "test:live": "node run-live.cjs" },
-  "devDependencies": { "@playwright/test": "1.64.1" }
+  "scripts": {
+    "test:live": "node run-live.cjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "qrcode": "1.5.4"
+  }
 }

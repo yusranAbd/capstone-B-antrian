@@ -31,6 +31,7 @@ module.exports = async function browserSmoke(fixture) {
   await new Promise(resolve => server.listen(8080, '127.0.0.1', resolve));
   let browser, lastPage;
   try {
+    if (fixture.demoFull) return await require('./browser-demo.cjs')({fixture, root});
     browser = await chromium.launch({channel: process.env.FLUTTER_BROWSER_CHANNEL || 'msedge', headless: true});
     for (const [account, heading] of [['admin','Poliklinik'], ['petugas','Operasional antrean'], ['patient1','Daftar pelayanan']]) {
       const context = await browser.newContext({viewport: {width: account === 'patient1' ? 390 : 1365, height: 1000}});

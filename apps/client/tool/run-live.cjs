@@ -110,6 +110,7 @@ async function main() {
   configureApp(app);
   let serviceId = '';
   let doctorId = '';
+  let fixture;
   const users = [];
   let code = 1;
   try {
@@ -187,7 +188,7 @@ async function main() {
       kode: `R${unique}`,
       nama: 'Ruang Fixture Flutter',
     });
-    await post('/penugasan-petugas', {
+    const assignment = await post('/penugasan-petugas', {
       petugasId: accounts.petugas.id,
       loketId: room.id,
       tanggalMulai: date,
@@ -221,11 +222,14 @@ async function main() {
       layananId: serviceId, nama: 'Display Fixture Flutter',
       tokenHash: require('node:crypto').createHash('sha256').update(displayToken).digest('hex'),
     }});
-    const fixture = {
-      date, ...accounts, roomId: room.id, serviceId, doctorId,
+    fixture = {
+      date, unique, ...accounts, roomId: room.id, serviceId, doctorId, assignmentId: assignment.id, extraDoctorIds: [],
       scheduleId: schedule.id, slotId: slot.id, slotStart: slotStart.toISOString(), displayToken,
     };
-    if (process.argv.includes('--browser-only')) {
+    if (process.argv.includes('--demo-browser')) {
+      fixture.demoFull = true;
+      code = 0;
+    } else if (process.argv.includes('--browser-only')) {
       const patient = await call('/auth/login', {email: accounts.patient1.email, kataSandi: password});
       await call('/reservasi', {layananId: serviceId, tanggalAntrean: date}, patient.accessToken);
       code = 0;
@@ -238,7 +242,7 @@ async function main() {
       child.once('error', reject);
       child.once('exit', value => resolve(value ?? 1));
     });
-    if (code === 0 && (process.argv.includes('--browser') || process.argv.includes('--browser-only'))) {
+    if (code === 0 && (process.argv.includes('--browser') || process.argv.includes('--browser-only') || fixture.demoFull)) {
       await require('./browser-smoke.cjs')(fixture);
     }
   } catch (error) {
@@ -266,7 +270,7 @@ async function main() {
       await prisma.dokterLayanan.deleteMany({
         where: { layananId: serviceId },
       });
-      if (doctorId) await prisma.dokter.deleteMany({ where: { id: doctorId } });
+      if (doctorId) await prisma.dokter.deleteMany({ where: { id: {in: [doctorId, ...(fixture?.extraDoctorIds || [])]} } });
       await prisma.penugasanPetugas.deleteMany({
         where: { loket: { layananId: serviceId } },
       });

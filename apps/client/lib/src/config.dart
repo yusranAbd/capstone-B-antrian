@@ -70,6 +70,18 @@ class AppConfig {
 String two(int value) => value.toString().padLeft(2, '0');
 String calendarDate(DateTime value) =>
     '${value.year}-${two(value.month)}-${two(value.day)}';
+DateTime initialServiceDate(String input, String today) {
+  final first = DateTime.parse(today);
+  final last = first.add(const Duration(days: 365));
+  final parsed = DateTime.tryParse(input);
+  if (parsed == null ||
+      calendarDate(parsed) != input ||
+      parsed.isBefore(first)) {
+    return first;
+  }
+  return parsed.isAfter(last) ? last : parsed;
+}
+
 String dateOnly(Object? value) =>
     value == null ? '' : '$value'.split('T').first;
 String clockOnly(Object? value) {
