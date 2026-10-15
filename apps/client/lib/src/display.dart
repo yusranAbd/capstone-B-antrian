@@ -41,14 +41,19 @@ class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
   RealtimeFeed? feed;
   Timer? poll;
   Json? snapshot;
-  String? error;
+  String? error, audioError;
   String status = 'Menghubungkan…';
-  bool connected = false, audio = false;
+  bool connected = false, audio = false, audioBusy = false;
+  int speechEpoch = 0;
   int callSignals = 0, fetchedSignals = 0, consumedSignals = 0;
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    tts.setErrorHandler((message) {
+      // Cancelling the preceding announcement is expected during RECALL/mute.
+      if (!['canceled', 'interrupted'].contains('$message')) speechFailed();
+    });
   }
 
   void connect() {
@@ -59,6 +64,8 @@ class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
       snapshot = null;
       error = null;
       audio = false;
+      audioError = null;
+      speechEpoch++;
       callSignals = fetchedSignals = consumedSignals = 0;
       gate = AnnouncementGate();
     });
@@ -122,22 +129,59 @@ class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
     token.clear();
   }
 
-  Future<void> speak(String text) async {
+  void speechFailed() {
+    speechEpoch++;
+    if (mounted) {
+      setState(() {
+        audio = false;
+        audioError = 'Suara tidak tersedia. Gunakan pengumuman visual.';
+      });
+    }
+  }
+
+  Future<bool> speak(String text) async {
+    final epoch = ++speechEpoch;
     try {
       await tts.stop();
-      await tts.setLanguage('id-ID');
-      await tts.speak(text);
-    } catch (_) {
-      if (mounted) {
-        setState(() {
-          audio = false;
-          error = 'Suara tidak tersedia. Gunakan pengumuman visual.';
-        });
+      final available = await tts.isLanguageAvailable('id-ID');
+      if (available != true && available != 1) {
+        throw StateError('Indonesian voice is unavailable');
       }
+      await tts.setLanguage('id-ID');
+      final result = await tts.speak(text);
+      if (result == 0 || result == false) throw StateError('Speech rejected');
+      return mounted && epoch == speechEpoch;
+    } catch (_) {
+      speechFailed();
+      return false;
+    }
+  }
+
+  Future<void> toggleAudio() async {
+    if (audioBusy) return;
+    setState(() => audioBusy = true);
+    try {
+      if (audio) {
+        speechEpoch++;
+        await tts.stop();
+        if (mounted) setState(() => audio = false);
+      } else if (await speak('Suara pengumuman QueueB aktif.')) {
+        if (mounted) {
+          setState(() {
+            audio = true;
+            audioError = null;
+          });
+        }
+      }
+    } catch (_) {
+      speechFailed();
+    } finally {
+      if (mounted) setState(() => audioBusy = false);
     }
   }
 
   void disconnect() {
+    speechEpoch++;
     feed?.dispose();
     loader?.dispose();
     poll?.cancel();
@@ -157,6 +201,7 @@ class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    speechEpoch++;
     WidgetsBinding.instance.removeObserver(this);
     feed?.dispose();
     loader?.dispose();
@@ -245,7 +290,8 @@ class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
                 style: Theme.of(context).textTheme.headlineLarge,
               ),
               Text('$status · ${dateOnly(snapshot?['tanggalPelayanan'])}'),
-              if (error != null) Notice(error!, error: true),
+              if (error != null || audioError != null)
+                Notice(error ?? audioError!, error: true),
               Wrap(
                 spacing: 16,
                 crossAxisAlignment: WrapCrossAlignment.center,
@@ -260,14 +306,7 @@ class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
                     label: const Text('Muat ulang'),
                   ),
                   OutlinedButton.icon(
-                    onPressed: () async {
-                      if (audio) {
-                        await tts.stop();
-                      } else {
-                        await speak('Suara pengumuman QueueB aktif.');
-                      }
-                      if (mounted) setState(() => audio = !audio);
-                    },
+                    onPressed: audioBusy ? null : toggleAudio,
                     icon: Icon(audio ? Icons.volume_up : Icons.volume_off),
                     label: Text(audio ? 'Matikan suara' : 'Aktifkan suara'),
                   ),

@@ -302,9 +302,10 @@ class _PatientPageState extends State<PatientPage> {
                               : () async {
                                   final chosen = await showDatePicker(
                                     context: context,
-                                    initialDate:
-                                        DateTime.tryParse(date.text) ??
-                                        DateTime.parse(widget.api.config.today),
+                                    initialDate: initialServiceDate(
+                                      date.text,
+                                      widget.api.config.today,
+                                    ),
                                     firstDate: DateTime.parse(
                                       widget.api.config.today,
                                     ),

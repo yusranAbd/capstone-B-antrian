@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -258,6 +259,108 @@ void main() {
     await tester.tap(finder);
     await tester.pumpAndSettle();
   }
+
+  testWidgets(
+    'Calendar remains usable after manual date outside supported range',
+    (tester) async {
+      await launch(tester, FakeBackend('USER'));
+      for (final input in ['2020-01-01', '2099-12-31', 'tidak valid']) {
+        await tester.enterText(
+          find.widgetWithText(TextField, 'Tanggal pelayanan (YYYY-MM-DD)'),
+          input,
+        );
+        await tester.tap(find.byTooltip('Pilih tanggal pelayanan'));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        expect(find.byType(DatePickerDialog), findsOneWidget);
+        await tester.tap(find.text('Batal'));
+        await tester.pumpAndSettle();
+      }
+    },
+  );
+
+  Future<void> displayForSpeech(
+    WidgetTester tester, {
+    bool failSpeak = false,
+    bool unavailableLanguage = false,
+  }) async {
+    const channel = MethodChannel('flutter_tts');
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
+      call,
+    ) async {
+      if (call.method == 'isLanguageAvailable' && unavailableLanguage) {
+        return false;
+      }
+      if (call.method == 'speak' && failSpeak) {
+        throw PlatformException(code: 'synthesis-failed');
+      }
+      return 1;
+    });
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        channel,
+        null,
+      ),
+    );
+    await launch(tester, FakeBackend('USER'), login: false);
+    await press(tester, 'Buka Public Display');
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'ID layanan'),
+      uid,
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Token perangkat'),
+      'a' * 64,
+    );
+    await press(tester, 'Hubungkan display');
+  }
+
+  testWidgets('Failed TTS activation must not show audio enabled', (
+    tester,
+  ) async {
+    await displayForSpeech(tester, failSpeak: true);
+    await press(tester, 'Aktifkan suara');
+    expect(find.text('Aktifkan suara'), findsOneWidget);
+    expect(find.text('Matikan suara'), findsNothing);
+    expect(
+      find.text('Suara tidak tersedia. Gunakan pengumuman visual.'),
+      findsOneWidget,
+    );
+  });
+  testWidgets(
+    'Missing Indonesian voice leaves audio disabled with visual fallback',
+    (tester) async {
+      await displayForSpeech(tester, unavailableLanguage: true);
+      await press(tester, 'Aktifkan suara');
+      expect(find.text('Aktifkan suara'), findsOneWidget);
+      expect(find.text('Matikan suara'), findsNothing);
+      expect(
+        find.text('Suara tidak tersedia. Gunakan pengumuman visual.'),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets('Asynchronous speech engine failure disables audio', (
+    tester,
+  ) async {
+    await displayForSpeech(tester);
+    await press(tester, 'Aktifkan suara');
+    expect(find.text('Matikan suara'), findsOneWidget);
+    await tester.binding.defaultBinaryMessenger.handlePlatformMessage(
+      'flutter_tts',
+      const StandardMethodCodec().encodeMethodCall(
+        const MethodCall('speak.onError', 'synthesis-unavailable'),
+      ),
+      (_) {},
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Aktifkan suara'), findsOneWidget);
+    expect(
+      find.text('Suara tidak tersedia. Gunakan pengumuman visual.'),
+      findsOneWidget,
+    );
+  });
 
   testWidgets('Login validates input and registration is USER only', (
     tester,
