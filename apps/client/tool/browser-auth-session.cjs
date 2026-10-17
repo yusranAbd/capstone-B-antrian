@@ -41,6 +41,8 @@ const token=()=>['e30',Buffer.from(JSON.stringify({exp:Math.floor(Date.now()/100
         else if(p==='/auth/me'){meReads++;body=identity;}
         await route.fulfill({status,contentType:'application/json',body:JSON.stringify(body)});
       });
+      // Auth QA owns HTTP responses; never connect its synthetic JWT to a live Socket.IO server.
+      await context.routeWebSocket(/\/socket.io\//,socket=>socket.close());
       const page=lastPage=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
       await page.goto('http://127.0.0.1:8080');await enter(page,'Email','session@test.local');await enter(page,'Kata sandi','controlled-password');await button(page,'Masuk');
       await expect(page.getByRole('button',{name:'Profil akun',exact:true})).toBeVisible();

@@ -132,8 +132,8 @@ module.exports = async function demo({fixture:f, root}) {
     await button(walk,'Tutup'); report.walkIn=true;
     const appt=await pageIn(b,'patient2',{width:390,height:1000});
     await appt.getByRole('tab',{name:'Pendaftaran',exact:true}).click();
-    await choose(appt,'Poliklinik',f.serviceName); await appt.screenshot({path:path.join(root,'mobile-03-poliklinik.png')}); await choose(appt,'Dokter',doctorName); await button(appt,'Lihat jadwal dokter'); await button(appt,'Lihat slot');
-    await appt.getByRole('button', {name:/Tersedia · Sisa slot 2/}).click();
+    await choose(appt,'Poliklinik',f.serviceName); await appt.screenshot({path:path.join(root,'mobile-03-poliklinik.png')}); await button(appt,'Lihat Jadwal'); await button(appt,'Lihat slot');
+    await appt.getByRole('button', {name:/Sisa slot 2/}).click();
     await appt.screenshot({path:path.join(root,'mobile-04-booking.png')});
     await button(appt,'Booking janji temu'); const booking=await mutation(appt,'POST','/janji-temu',()=>button(appt,'Lanjutkan'));
     await button(appt,'Lihat tiket / QR'); const apptQR=await mutation(appt,'POST',`/tiket/${booking.tiket.id}/qr`,()=>button(appt,'Terbitkan QR'));qrSecrets.push(apptQR.qrPayload); await appt.screenshot({path:path.join(root,'mobile-05-tiket.png')}); await button(appt,'Tutup');report.appointment=true;

@@ -10,7 +10,7 @@ module.exports = async function androidDemo(fixture, clientPath, prepareSlot) {
   const adb = process.env.ADB_PATH || path.join(process.env.LOCALAPPDATA, 'Android/sdk/platform-tools/adb.exe');
   const output = path.join(clientPath, 'build/android-screenshots');
   fs.mkdirSync(output, {recursive:true});
-  const names = new Set(['01-login','02-beranda','03-poliklinik-dokter','04-booking-slot','05-tiket-qr','06-petugas']);
+  const names = new Set(['01-login','02-beranda','03-poliklinik-dokter','04-booking-slot','05-tiket-qr','06-petugas','07-detail-dokter']);
   const server = http.createServer(async (req,res) => {
     try {
       if (req.method === 'GET' && req.url === '/fixture') {
@@ -46,7 +46,7 @@ module.exports = async function androidDemo(fixture, clientPath, prepareSlot) {
       child.once('error',reject);child.once('exit',value=>resolve(value??1));
     });
     if(code!==0)throw new Error('Pengujian Android gagal');
-    console.log('Android fisik: PASS; enam screenshot tersimpan di build/android-screenshots');
+    console.log('Android fisik: PASS; tujuh screenshot tersimpan di build/android-screenshots');
   } finally {
     clearInterval(grant);
     await new Promise(resolve=>server.close(resolve));

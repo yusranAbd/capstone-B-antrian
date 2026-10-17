@@ -15,7 +15,7 @@ import 'package:queueb_client/src/config.dart';
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   testWidgets(
-    'Android: six screens, appointment and walk-in through COMPLETE',
+    'Android: seven screens, appointment and walk-in through COMPLETE',
     (tester) async {
       tz.initializeTimeZones();
       final response = await http.get(
@@ -50,21 +50,49 @@ void main() {
         final base = type == null
             ? find.text(text)
             : find.widgetWithText(type, text);
-        if (base.evaluate().isEmpty) {
-          await tester.drag(
-            find.byType(Scrollable).first,
-            const Offset(0, 5000),
-          );
-          await tester.pumpAndSettle();
-          await tester.scrollUntilVisible(
-            base,
-            300,
-            scrollable: find.byType(Scrollable).first,
-          );
+        // Settled frames do not guarantee that REST or Socket.IO has finished.
+        // Wait for the actual next action and its enabled state before tapping.
+        final deadline = DateTime.now().add(const Duration(seconds: 30));
+        bool resetScroll = false;
+        while (true) {
+          if (base.evaluate().isNotEmpty) {
+            await tester.ensureVisible(base.last);
+            await tester.pumpAndSettle();
+            final element = base.evaluate().lastOrNull;
+            if (element != null) {
+              bool enabled = true, foundButton = false;
+              void inspect(Widget widget) {
+                if (widget is ButtonStyleButton) {
+                  foundButton = true;
+                  enabled = widget.onPressed != null;
+                } else if (widget is IconButton) {
+                  foundButton = true;
+                  enabled = widget.onPressed != null;
+                }
+              }
+
+              inspect(element.widget);
+              if (!foundButton) {
+                element.visitAncestorElements((parent) {
+                  inspect(parent.widget);
+                  return !foundButton;
+                });
+              }
+              if (enabled) break;
+            }
+          } else if (find.byType(Scrollable).evaluate().isNotEmpty) {
+            await tester.drag(
+              find.byType(Scrollable).first,
+              Offset(0, resetScroll ? -240 : 5000),
+            );
+            resetScroll = true;
+          }
+          if (DateTime.now().isAfter(deadline)) {
+            fail('Kontrol "$text" belum siap setelah respons API/snapshot.');
+          }
+          await tester.pump(const Duration(milliseconds: 200));
         }
         final finder = base.last;
-        await tester.ensureVisible(finder);
-        await tester.pumpAndSettle();
         await tester.tap(finder);
         await tester.pumpAndSettle(
           const Duration(milliseconds: 100),
@@ -146,15 +174,10 @@ void main() {
       await login('patient2');
       await clinic();
       await capture('03-poliklinik-dokter');
-      final doctorDropdown = find.byType(DropdownButtonFormField<String>).last;
-      await tester.ensureVisible(doctorDropdown);
-      await tester.pumpAndSettle();
-      await tester.tap(doctorDropdown);
-      await tester.pumpAndSettle();
-      await select('Dokter Fixture Flutter · Umum');
-      await press('Lihat jadwal dokter');
+      await press('Lihat Jadwal');
+      await capture('07-detail-dokter');
       await press('Lihat slot');
-      await press('Tersedia · Sisa slot 2');
+      await press('Sisa slot 2');
       await tester.ensureVisible(find.text('Slot konsultasi'));
       await capture('04-booking-slot');
       await press('Booking janji temu');

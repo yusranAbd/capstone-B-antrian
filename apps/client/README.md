@@ -24,5 +24,6 @@ Redesign enam layar mobile, komponen tema dan QA perangkat: [MOBILE_UI_FLUTTER.m
 Perbaikan Poliklinik ADMIN, jadwal berkelompok dan input beberapa hari: [ADMIN_POLIKLINIK_JADWAL.md](../../docs/frontend/ADMIN_POLIKLINIK_JADWAL.md).
 Sinkronisasi pasien lintas klien, navigasi ADMIN berkategori, hasil QA dan batas deployment: [REALTIME_ADMIN_OPTIMIZATION.md](../../docs/frontend/REALTIME_ADMIN_OPTIMIZATION.md).
 Pemulihan sesi Android, Secure Storage, offline dan logout: [PERSISTENT_LOGIN.md](../../docs/frontend/PERSISTENT_LOGIN.md).
+Informasi dokter, kalender praktik dari API, slot dan booking mobile: [DOCTOR_SCHEDULE_MOBILE.md](../../docs/frontend/DOCTOR_SCHEDULE_MOBILE.md).
 
 Pasangan token akun Android disimpan melalui Android Keystore/`flutter_secure_storage`; Web dan platform lain tetap di memori. Password dan token perangkat display tidak dipersistenkan aplikasi. Startup Android memvalidasi `/auth/me` sebelum membuka halaman role. Akun operasional/perangkat display disediakan pengelola server. Jangan masukkan token/kredensial ke dart-define, URL, source atau Git. Kanal pasien `/patient` memakai JWT USER; jangan memakai room PETUGAS atau token display untuk pasien. Backend menyediakan invalidasi setelah commit; respons dan endpoint REST existing tetap dipakai.

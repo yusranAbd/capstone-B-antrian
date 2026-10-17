@@ -8,6 +8,7 @@ import 'config.dart';
 import 'widgets.dart';
 import 'mobile_ui.dart';
 import 'patient_sync.dart';
+import 'doctor_schedule_ui.dart';
 
 String appointmentDetails(Json appointment, AppConfig config) {
   final slot = object(appointment['slotPraktik']);
@@ -32,6 +33,7 @@ class _PatientPageState extends State<PatientPage> {
   String? error, message, serviceId, doctorId, sessionId, slotId;
   bool appointment = true, bookingStage = false;
   String search = '', channel = 'Semua';
+  List<Json> clinicSchedules = [];
   List<Json> services = [],
       doctors = [],
       schedules = [],
@@ -44,10 +46,87 @@ class _PatientPageState extends State<PatientPage> {
   List<Json> get matchingDoctors => doctors
       .where(
         (d) =>
+            d['aktif'] != false &&
             rows(d['dokterLayanan'])
                 .any((l) => l['layananId'] == serviceId && l['aktif'] == true),
       )
       .toList();
+  List<String> get practiceDates =>
+      clinicSchedules
+          .where(
+            (s) =>
+                object(s['dokterLayanan'])['dokterId'] == doctorId ||
+                object(object(s['dokterLayanan'])['dokter'])['id'] == doctorId,
+          )
+          .map((s) => dateOnly(s['tanggal']))
+          .where((d) => d.compareTo(widget.api.config.today) >= 0)
+          .toSet()
+          .toList()
+        ..sort();
+
+  String doctorAvailability(Json doctor) {
+    final future = clinicSchedules
+        .where(
+          (s) =>
+              (object(s['dokterLayanan'])['dokterId'] == doctor['id'] ||
+                  object(object(s['dokterLayanan'])['dokter'])['id'] ==
+                      doctor['id']) &&
+              dateOnly(s['tanggal']).compareTo(widget.api.config.today) >= 0,
+        )
+        .toList();
+    if (loading) return 'Memuat jadwal praktik…';
+    if (error != null) return 'Jadwal belum dapat dimuat. Coba lagi.';
+    if (future.isEmpty) return 'Belum ada jadwal praktik mendatang.';
+    return 'Jadwal: ${dateOnly(future.first['tanggal'])} · Lihat slot untuk ketersediaan';
+  }
+
+  Future<List<Json>> fetchClinicSchedules(String clinic) async => rows(
+    await widget.api.request(
+      'GET',
+      '/jadwal-praktik',
+      query: {'layananId': clinic},
+    ),
+  );
+
+  Future<void> loadClinicSchedules() async {
+    final clinic = serviceId;
+    if (clinic == null || !appointment) return;
+    final current = ++catalogRevision;
+    setState(() {
+      loading = true;
+      error = null;
+    });
+    try {
+      final result = await fetchClinicSchedules(clinic);
+      if (mounted && current == catalogRevision) {
+        setState(() => clinicSchedules = result);
+      }
+    } catch (e) {
+      if (mounted && current == catalogRevision) setState(() => error = '$e');
+    } finally {
+      if (mounted && current == catalogRevision) {
+        setState(() => loading = false);
+      }
+    }
+  }
+
+  Future<void> chooseDoctor(Json doctor) async {
+    setState(() {
+      doctorId = '${doctor['id']}';
+      final dates = practiceDates;
+      if (!dates.contains(date.text) && dates.isNotEmpty) {
+        date.text = dates.first;
+      }
+    });
+    await loadSchedules();
+  }
+
+  void chooseDate(String value) {
+    if (busy || loading || value == date.text) return;
+    date.text = value;
+    loadSchedules();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -127,10 +206,21 @@ class _PatientPageState extends State<PatientPage> {
             doctorId = sessionId = slotId = null;
             schedules = [];
             slots = [];
+            clinicSchedules = [];
             bookingStage = false;
+            loading = false;
             catalogRevision++;
           }
         });
+      }
+      if (mounted &&
+          current == catalogRevision &&
+          selectedClinic != null &&
+          appointment) {
+        final nextCalendar = await fetchClinicSchedules(selectedClinic);
+        if (mounted && current == catalogRevision) {
+          setState(() => clinicSchedules = nextCalendar);
+        }
       }
       if (!mounted ||
           current != catalogRevision ||
@@ -281,12 +371,11 @@ class _PatientPageState extends State<PatientPage> {
       }
       await load();
     } catch (e) {
+      // Never retry POST after an uncertain response. Reconcile owned tickets and
+      // invalidate the selected slot, including when another patient fills it.
+      if (mounted) setState(() => slotId = null);
+      await readOverview();
       if (mounted) setState(() => error = '$e');
-      // A lost mutation response is uncertain; read owned tickets before another attempt.
-      try {
-        final current = rows(await widget.api.request('GET', '/tiket/saya'));
-        if (mounted) setState(() => tickets = current);
-      } catch (_) {}
     } finally {
       if (mounted) setState(() => busy = false);
     }
@@ -351,12 +440,14 @@ class _PatientPageState extends State<PatientPage> {
       schedules = [];
       slots = [];
       bookingStage = false;
+      clinicSchedules = [];
       appointment = selectedService?['modeReservasi'] != 'ANTREAN_HARIAN';
       if (channel == 'Walk-in' &&
           selectedService?['modeReservasi'] != 'JANJI_TEMU_DOKTER') {
         appointment = false;
       }
     });
+    loadClinicSchedules();
   }
 
   void startRegistration(bool isAppointment) {
@@ -370,6 +461,7 @@ class _PatientPageState extends State<PatientPage> {
       schedules = [];
       slots = [];
       search = '';
+      clinicSchedules = [];
     });
   }
 
@@ -764,151 +856,68 @@ class _PatientPageState extends State<PatientPage> {
     ],
   );
 
-  Widget _registration(BuildContext context) => Section(
-    title: bookingStage ? 'Booking janji temu' : 'Pilih poliklinik & dokter',
-    subtitle:
-        'Pilih poli, tanggal dan kanal pendaftaran. Zona: ${widget.api.config.serviceTimeZone}.',
-    child: Column(
+  Widget _registration(BuildContext context) {
+    final doctor =
+        doctors.where((d) => d['id'] == doctorId).firstOrNull ??
+        <String, dynamic>{};
+    final dates = practiceDates;
+    final clinicName = label(selectedService ?? {});
+    final visibleDoctors = matchingDoctors
+        .where(
+          (d) =>
+              clinicName.toLowerCase().contains(search) ||
+              ('${label(d)} ${d['spesialisasi'] ?? ''}').toLowerCase().contains(
+                search,
+              ),
+        )
+        .toList();
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (!bookingStage) ..._catalog(context),
-        if (bookingStage) ...[
-          TextButton.icon(
-            onPressed: busy || loading
-                ? null
-                : () => setState(() => bookingStage = false),
-            icon: const Icon(Icons.arrow_back),
-            label: const Text('Kembali ke dokter'),
-          ),
-          DoctorCard(
-            name: label(
-              doctors.where((d) => d['id'] == doctorId).firstOrNull ?? {},
+        SizedBox(
+          height: 64,
+          child: ClipRect(
+            child: AppBar(
+              primary: false,
+              automaticallyImplyLeading: false,
+              leading: bookingStage
+                  ? IconButton(
+                      tooltip: 'Kembali ke dokter',
+                      onPressed: busy || loading
+                          ? null
+                          : () => setState(() {
+                              catalogRevision++;
+                              bookingStage = false;
+                              sessionId = slotId = null;
+                              schedules = [];
+                              slots = [];
+                            }),
+                      icon: const Icon(Icons.arrow_back),
+                    )
+                  : null,
+              title: Text(
+                bookingStage ? 'Detail & Jadwal Dokter' : 'Poliklinik & Dokter',
+                style: Theme.of(context).textTheme.titleLarge
+                    ?.copyWith(fontWeight: FontWeight.w700),
+              ),
             ),
-            specialty:
-                '${doctors.where((d) => d['id'] == doctorId).firstOrNull?['spesialisasi'] ?? ''}',
-            onTap: null,
           ),
-        ],
-        if (bookingStage)
-          Text(
-            label(selectedService ?? {}),
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-        if (!bookingStage)
+        ),
+        Text(
+          'Waktu pelayanan: ${widget.api.config.serviceTimeZone}',
+          style: const TextStyle(fontSize: 12, color: QueueBStyle.muted),
+        ),
+        const SizedBox(height: 12),
+        if (!bookingStage) ...[
+          ..._catalog(context),
           ChoiceField(
             label: 'Poliklinik',
             choices: choicesOf(services),
             value: serviceId,
             onChanged: busy || loading ? null : selectService,
           ),
-        const SizedBox(height: 16),
-        if (bookingStage) ...[
-          const Text(
-            'Tanggal kunjungan',
-            style: TextStyle(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 76,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: 7,
-              separatorBuilder: (_, index) => const SizedBox(width: 8),
-              itemBuilder: (context, index) {
-                final day = DateTime.parse(widget.api.config.today)
-                    .add(Duration(days: index));
-                final value = calendarDate(day);
-                final selected = date.text == value;
-                return OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    backgroundColor: selected ? QueueBStyle.mint : null,
-                    side: BorderSide(
-                      color: selected ? QueueBStyle.teal : QueueBStyle.border,
-                    ),
-                  ),
-                  onPressed: busy || loading
-                      ? null
-                      : () {
-                          setState(() {
-                            catalogRevision++;
-                            date.text = value;
-                            sessionId = slotId = null;
-                            schedules = [];
-                            slots = [];
-                          });
-                          loadSchedules();
-                        },
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        const [
-                          'Sen',
-                          'Sel',
-                          'Rab',
-                          'Kam',
-                          'Jum',
-                          'Sab',
-                          'Min',
-                        ][day.weekday - 1],
-                      ),
-                      Text(
-                        '${day.day}/${day.month}',
-                        style: const TextStyle(fontWeight: FontWeight.w800),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 16),
-        ],
-        TextField(
-          controller: date,
-          enabled: !busy && !loading,
-          decoration: InputDecoration(
-            labelText: 'Tanggal pelayanan (YYYY-MM-DD)',
-            suffixIcon: IconButton(
-              tooltip: 'Pilih tanggal pelayanan',
-              onPressed: busy || loading
-                  ? null
-                  : () async {
-                      final chosen = await showDatePicker(
-                        context: context,
-                        initialDate: initialServiceDate(
-                          date.text,
-                          widget.api.config.today,
-                        ),
-                        firstDate: DateTime.parse(widget.api.config.today),
-                        lastDate: DateTime.parse(widget.api.config.today)
-                            .add(const Duration(days: 365)),
-                      );
-                      if (chosen != null && mounted) {
-                        setState(() {
-                          catalogRevision++;
-                          date.text = calendarDate(chosen);
-                          schedules = [];
-                          slots = [];
-                          sessionId = null;
-                          slotId = null;
-                        });
-                      }
-                    },
-              icon: const Icon(Icons.calendar_month),
-            ),
-          ),
-          onChanged: (_) => setState(() {
-            catalogRevision++;
-            schedules = [];
-            slots = [];
-            sessionId = null;
-            slotId = null;
-          }),
-        ),
-        if (selectedService != null) ...[
-          const SizedBox(height: 16),
-          if (!bookingStage)
+          if (selectedService != null) ...[
+            const SizedBox(height: 16),
             SegmentedButton<bool>(
               segments: [
                 if (selectedService!['modeReservasi'] != 'ANTREAN_HARIAN')
@@ -919,144 +928,203 @@ class _PatientPageState extends State<PatientPage> {
               selected: {appointment},
               onSelectionChanged: busy || loading
                   ? null
-                  : (v) => setState(() => appointment = v.first),
-            ),
-          if (appointment) ...[
-            const SizedBox(height: 16),
-            if (!bookingStage) ...[
-              Text(
-                'Dokter di poliklinik ini',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              if (matchingDoctors.isEmpty)
-                const EmptyState(
-                  text: 'Belum ada dokter terhubung pada poliklinik ini.',
-                ),
-              for (final d in matchingDoctors.where(
-                (d) => ('${label(d)} ${d['spesialisasi'] ?? ''}')
-                    .toLowerCase()
-                    .contains(search),
-              ))
-                DoctorCard(
-                  name: label(d),
-                  specialty: '${d['spesialisasi'] ?? ''}',
-                  selected: doctorId == d['id'],
-                  onTap: busy || loading
-                      ? null
-                      : () {
-                          setState(() => doctorId = '${d['id']}');
-                          loadSchedules();
-                        },
-                ),
-            ],
-            if (!bookingStage)
-              ChoiceField(
-                label: 'Dokter',
-                choices: matchingDoctors
-                    .map(
-                      (d) => (
-                        '${d['id']}',
-                        '${label(d)} · ${d['spesialisasi'] ?? ''}',
-                      ),
-                    )
-                    .toList(),
-                value: doctorId,
-                onChanged: busy || loading
-                    ? null
-                    : (v) => setState(() {
-                        doctorId = v;
+                  : (v) {
+                      setState(() {
+                        catalogRevision++;
+                        appointment = v.first;
+                        doctorId = sessionId = slotId = null;
                         schedules = [];
                         slots = [];
-                        sessionId = null;
-                        slotId = null;
-                      }),
-              ),
-            const SizedBox(height: 16),
-            OutlinedButton(
-              onPressed: busy || loading || doctorId == null
-                  ? null
-                  : loadSchedules,
-              child: const Text('Lihat jadwal dokter'),
+                      });
+                      if (appointment) loadClinicSchedules();
+                    },
             ),
-            for (final s in schedules)
-              ListTile(
-                title: Text(
-                  '${widget.api.config.instantLabel(s['mulaiPada'])}–${widget.api.config.instantLabel(s['selesaiPada'])}',
+            const SizedBox(height: 16),
+            if (appointment) ...[
+              Text(
+                'Dokter · $clinicName',
+                style: Theme.of(context).textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              if (visibleDoctors.isEmpty && !loading)
+                EmptyState(
+                  text: matchingDoctors.isEmpty
+                      ? 'Belum ada dokter pada poliklinik ini.'
+                      : 'Tidak ada dokter yang sesuai pencarian.',
                 ),
-                subtitle: Text(label(object(s['loket']))),
-                selected: sessionId == s['id'],
-                trailing: OutlinedButton(
-                  onPressed: busy || loading
-                      ? null
-                      : () => loadSlots('${s['id']}'),
-                  child: const Text('Lihat slot'),
+              for (final d in visibleDoctors)
+                DoctorProfileCard(
+                  doctor: d,
+                  clinics: clinicName,
+                  availability: doctorAvailability(d),
+                  onSchedule: busy || loading ? null : () => chooseDoctor(d),
                 ),
-              ),
-            if (!loading && doctorId != null && schedules.isEmpty)
-              const Text(
-                'Pilih tanggal, lalu lihat jadwal dokter. Jadwal dapat belum tersedia.',
-              ),
-            if (sessionId != null && !loading && slots.isEmpty)
-              const EmptyState(
-                text: 'Belum ada slot konsultasi pada sesi ini.',
-              ),
-            if (slots.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              const Text(
-                'Slot konsultasi',
-                style: TextStyle(fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
+            ],
+          ],
+        ],
+        if (bookingStage) ...[
+          DoctorProfileCard(
+            doctor: doctor,
+            clinics: rows(doctor['dokterLayanan'])
+                .where((r) => r['aktif'] == true)
+                .map((r) => label(object(r['layanan'])))
+                .join(' · '),
+            detail: true,
+          ),
+          const SizedBox(height: 8),
+          Text(clinicName, style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 12),
+          const Text(
+            'Tanggal praktik',
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 8),
+          if (dates.isNotEmpty) ...[
+            PracticeDateStrip(
+              dates: dates,
+              value: date.text,
+              enabled: !busy && !loading,
+              onChanged: chooseDate,
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: busy || loading
+                  ? null
+                  : () async {
+                      final chosen = await showDatePicker(
+                        context: context,
+                        initialDate: DateTime.parse(
+                          dates.contains(date.text) ? date.text : dates.first,
+                        ),
+                        firstDate: DateTime.parse(dates.first),
+                        lastDate: DateTime.parse(dates.last),
+                        selectableDayPredicate: (day) =>
+                            dates.contains(calendarDate(day)),
+                      );
+                      if (chosen != null && mounted) {
+                        chooseDate(calendarDate(chosen));
+                      }
+                    },
+              icon: const Icon(Icons.calendar_month_outlined),
+              label: Text('Kalender · ${date.text}'),
+            ),
+          ],
+          if (!loading && (dates.isEmpty || schedules.isEmpty))
+            const EmptyState(
+              text: 'Dokter belum memiliki jadwal pada tanggal ini. Pilih tanggal lain atau muat ulang.',
+            ),
+          const SizedBox(height: 16),
+          const Text(
+            'Sesi & ruang praktik',
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
+          for (final s in schedules)
+            AppCard(
+              color: sessionId == s['id'] ? QueueBStyle.mint : null,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  for (final s in slots)
-                    SizedBox(
-                      width: 132,
-                      child: OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          backgroundColor: slotId == s['id']
-                              ? QueueBStyle.mint
-                              : null,
-                          side: BorderSide(
-                            color: slotId == s['id']
-                                ? QueueBStyle.teal
-                                : QueueBStyle.border,
-                          ),
-                          padding: const EdgeInsets.all(10),
-                        ),
-                        onPressed: busy || loading || s['tersedia'] != true
-                            ? null
-                            : () => setState(() => slotId = '${s['id']}'),
-                        child: Column(
-                          children: [
-                            Text(
-                              '${widget.api.config.localInput(s['mulaiPada']).split('T').last} – ${widget.api.config.localInput(s['selesaiPada']).split('T').last}',
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${s['tersedia'] == true ? 'Tersedia' : 'Tidak tersedia'} · Sisa slot ${s['sisaKapasitas']}',
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(fontSize: 11),
-                            ),
-                          ],
-                        ),
-                      ),
+                  Text(
+                    '${widget.api.config.localInput(s['mulaiPada']).split('T').last} – ${widget.api.config.localInput(s['selesaiPada']).split('T').last}',
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  Text('Ruang: ${label(object(s['loket']))}'),
+                  const SizedBox(height: 8),
+                  OutlinedButton(
+                    onPressed: busy || loading
+                        ? null
+                        : () => loadSlots('${s['id']}'),
+                    child: Text(
+                      sessionId == s['id'] ? 'Muat ulang slot' : 'Lihat slot',
                     ),
+                  ),
                 ],
               ),
-            ],
-          ] else
-            const MobileNotice(
-              'Walk-in mengikuti kuota harian poli. Bawa tiket QR pada tanggal pelayanan.',
             ),
-          const SizedBox(height: 20),
-          FilledButton(
+          if (sessionId != null && !loading && slots.isEmpty)
+            const EmptyState(text: 'Belum ada slot konsultasi pada sesi ini.'),
+          if (slots.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            const Text(
+              'Slot konsultasi',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Pilih jam tersedia. Kapasitas mengikuti data terbaru dari server.',
+              style: TextStyle(fontSize: 12, color: QueueBStyle.muted),
+            ),
+            const SizedBox(height: 12),
+            if (!slots.any((s) => s['tersedia'] == true))
+              EmptyState(
+                text: slots.every((s) => consultationSlotStatus(s) == 'Penuh')
+                    ? 'Seluruh slot penuh. Pilih sesi atau tanggal lain.'
+                    : 'Tidak ada slot tersedia untuk dipesan. Pilih sesi atau tanggal lain.',
+              ),
+            ConsultationSlotGrid(
+              slots: slots,
+              config: widget.api.config,
+              value: slotId,
+              enabled: !busy && !loading,
+              onChanged: (v) => setState(() => slotId = v),
+            ),
+            const SizedBox(height: 12),
+          ],
+          OutlinedButton.icon(
+            onPressed: busy || loading ? null : load,
+            icon: const Icon(Icons.refresh),
+            label: const Text('Muat ulang jadwal'),
+          ),
+        ],
+        if (selectedService != null && !appointment) ...[
+          const SizedBox(height: 16),
+          TextField(
+            controller: date,
+            enabled: !busy && !loading,
+            decoration: InputDecoration(
+              labelText: 'Tanggal pelayanan (YYYY-MM-DD)',
+              suffixIcon: IconButton(
+                tooltip: 'Pilih tanggal pelayanan',
+                onPressed: busy || loading
+                    ? null
+                    : () async {
+                        final chosen = await showDatePicker(
+                          context: context,
+                          initialDate: initialServiceDate(
+                            date.text,
+                            widget.api.config.today,
+                          ),
+                          firstDate: DateTime.parse(widget.api.config.today),
+                          lastDate: DateTime.parse(widget.api.config.today)
+                              .add(const Duration(days: 365)),
+                        );
+                        if (chosen != null && mounted) {
+                          setState(() => date.text = calendarDate(chosen));
+                        }
+                      },
+                icon: const Icon(Icons.calendar_month),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          const MobileNotice(
+            'Walk-in mengikuti kuota harian poli. Bawa tiket QR pada tanggal pelayanan.',
+          ),
+        ],
+        if (selectedService != null && (!appointment || bookingStage)) ...[
+          const SizedBox(height: 16),
+          if (slotId != null)
+            Text(
+              'Tanggal terpilih: ${date.text}',
+              style: const TextStyle(color: QueueBStyle.darkTeal),
+            ),
+          const SizedBox(height: 8),
+          FilledButton.icon(
             onPressed: busy || loading || (appointment && slotId == null)
                 ? null
                 : book,
-            child: Text(
+            icon: const Icon(Icons.arrow_forward),
+            label: Text(
               busy
                   ? 'Memproses…'
                   : appointment
@@ -1066,8 +1134,8 @@ class _PatientPageState extends State<PatientPage> {
           ),
         ],
       ],
-    ),
-  );
+    );
+  }
 
   Widget _tickets(BuildContext context) => Section(
     title: 'Tiket Saya',
