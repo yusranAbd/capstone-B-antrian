@@ -44,10 +44,46 @@ class _Root extends StatefulWidget {
 class _RootState extends State<_Root> {
   bool display = false;
   @override
+  void initState() {
+    super.initState();
+    widget.api.addListener(_sessionChanged);
+  }
+
+  void _sessionChanged() {
+    if (widget.api.user != null &&
+        widget.api.sessionPhase == SessionPhase.ready) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted &&
+          (widget.api.user == null ||
+              widget.api.sessionPhase != SessionPhase.ready)) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant _Root oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.api != widget.api) {
+      oldWidget.api.removeListener(_sessionChanged);
+      widget.api.addListener(_sessionChanged);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.api.removeListener(_sessionChanged);
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: widget.api,
     builder: (context, _) {
       final api = widget.api;
+      if (api.sessionPhase != SessionPhase.ready) return _SessionGate(api: api);
       if (display) {
         return DisplayPage(
           api: api,
@@ -57,6 +93,7 @@ class _RootState extends State<_Root> {
       if (api.user == null) {
         return LoginPage(
           api: api,
+          notice: api.sessionMessage,
           onDisplay: () => setState(() => display = true),
         );
       }
@@ -104,7 +141,7 @@ class _RootState extends State<_Root> {
                   try {
                     await api.logout();
                   } catch (_) {
-                    /* Local session is already cleared. */
+                    /* Session gate reports cleanup failures and server confirmation. */
                   }
                 },
               ),
@@ -130,10 +167,85 @@ class _RootState extends State<_Root> {
   );
 }
 
+/// Authentication boundary only; dashboards keep their existing UI.
+class _SessionGate extends StatelessWidget {
+  const _SessionGate({required this.api});
+  final QueueApi api;
+  @override
+  Widget build(BuildContext context) {
+    final waiting = [
+      SessionPhase.restoring,
+      SessionPhase.signingOut,
+    ].contains(api.sessionPhase);
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (waiting) const CircularProgressIndicator(),
+                  const SizedBox(height: 20),
+                  Text(
+                    waiting
+                        ? api.sessionPhase == SessionPhase.signingOut
+                              ? 'Menutup sesi…'
+                              : 'Memulihkan sesi…'
+                        : api.sessionPhase == SessionPhase.storageError
+                        ? 'Penyimpanan sesi belum tersedia'
+                        : 'Koneksi sesi belum tersedia',
+                    style: Theme.of(context).textTheme.titleLarge,
+                    textAlign: TextAlign.center,
+                  ),
+                  if (api.sessionMessage != null)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      child: Text(
+                        api.sessionMessage!,
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  if (!waiting) ...[
+                    FilledButton(
+                      onPressed: () async {
+                        try {
+                          await api.restoreSession();
+                        } catch (_) {}
+                      },
+                      child: const Text('Coba lagi'),
+                    ),
+                    TextButton(
+                      onPressed: () async {
+                        try {
+                          await api.logout();
+                        } catch (_) {}
+                      },
+                      child: const Text('Hapus sesi & kembali ke login'),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key, required this.api, required this.onDisplay});
+  const LoginPage({
+    super.key,
+    required this.api,
+    required this.onDisplay,
+    this.notice,
+  });
   final QueueApi api;
   final VoidCallback onDisplay;
+  final String? notice;
   @override
   State<LoginPage> createState() => _LoginPageState();
 }
@@ -224,6 +336,14 @@ class _LoginPageState extends State<LoginPage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
+                              if (widget.notice != null)
+                                Semantics(
+                                  container: true,
+                                  liveRegion: true,
+                                  label: widget.notice!,
+                                  excludeSemantics: true,
+                                  child: MobileNotice(widget.notice!),
+                                ),
                               if (error != null)
                                 MobileNotice(error!, error: true),
                               if (message != null) MobileNotice(message!),

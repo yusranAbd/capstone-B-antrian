@@ -52,8 +52,8 @@ Host direktori `build/web` pada origin yang diizinkan backend, termasuk WebSocke
 ## Keamanan dan batas perilaku
 
 - Role UI berasal dari `/auth/me`; backend JWT/RBAC tetap otoritas. Registrasi tidak mengirim role.
-- Token hanya di memori. Menutup/reload aplikasi memerlukan login/provisioning display ulang. Logout meminta pencabutan token server dan langsung membersihkan sesi lokal.
-- Refresh hanya satu request saat beberapa 401. Timeout/network error mutasi tidak diulang otomatis; UI membaca ulang data dan meminta evaluasi status. Refresh yang kehilangan respons mengakhiri sesi agar token rotasi tidak digunakan ulang secara buta.
+- Pasangan token akun Android dipersistenkan melalui Secure Storage dan dipulihkan melalui `/auth/me` sebelum halaman role dibuka. Web/platform lain dan token perangkat display tetap di memori. Logout membersihkan kredensial lokal lalu mencoba pencabutan server, dengan informasi jika pencabutan belum terkonfirmasi. Rincian dan batas: [PERSISTENT_LOGIN.md](PERSISTENT_LOGIN.md).
+- Refresh hanya satu request saat beberapa 401, termasuk penyimpanan pasangan hasil rotasi. Timeout/network error mutasi tidak diulang otomatis. Gangguan jaringan/5xx saat memulihkan atau refresh mempertahankan token dan menampilkan pemulihan koneksi; tidak mengulang refresh otomatis tanpa batas. Penolakan autentikasi yang sah membersihkan kredensial. Respons rotasi yang hilang tetap mungkin memerlukan login ulang jika token lama sudah dikonsumsi backend.
 - Form membatasi input, backend tetap memvalidasi hubungan dokter/slot/ruang/sesi/kapasitas. Error validasi dan konflik disajikan sebagai pesan backend.
 - HOSP-OPS-01 masih batas backend: MENUNGGU setelah sesi berakhir tampil dengan alasan, tanpa tombol cancel/perpanjangan petugas. Tidak ada toleransi/fairness numerik tambahan.
 
