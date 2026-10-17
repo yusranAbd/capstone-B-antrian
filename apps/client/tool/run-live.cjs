@@ -225,6 +225,7 @@ async function main() {
     fixture = {
       date, unique, serviceCode: `W${unique}`, ...accounts, roomId: room.id, serviceId, doctorId, assignmentId: assignment.id, extraDoctorIds: [],
       scheduleId: schedule.id, slotId: slot.id, slotStart: slotStart.toISOString(), displayToken,
+      extraServiceCodes: [],
     };
     if (process.argv.includes('--android')) {
       await require('./android-demo.cjs')(fixture, clientPath, async () => {
@@ -238,6 +239,9 @@ async function main() {
         fixture.slotStart=start.toISOString();
       });
       code=0;
+    } else if (process.argv.includes('--admin-schedules')) {
+      fixture.adminSchedules = true;
+      code = 0;
     } else if (process.argv.includes('--demo-browser')) {
       fixture.demoFull = true;
       code = 0;
@@ -254,13 +258,20 @@ async function main() {
       child.once('error', reject);
       child.once('exit', value => resolve(value ?? 1));
     });
-    if (code === 0 && (process.argv.includes('--browser') || process.argv.includes('--browser-only') || fixture.demoFull)) {
+    if (code === 0 && (process.argv.includes('--browser') || process.argv.includes('--browser-only') || fixture.demoFull || fixture.adminSchedules)) {
       await require('./browser-smoke.cjs')(fixture);
     }
   } catch (error) {
     code = 1;
     console.error('Integrasi Flutter gagal: ' + (error.code || error.name));
   } finally {
+    // Only unique codes registered by this run, never development/master data.
+    if (fixture?.extraServiceCodes.length) {
+      const owned = await prisma.layanan.findMany({where: {kode: {in: fixture.extraServiceCodes}},select: {id:true}});
+      const ownedIds = owned.map(row => row.id);
+      await prisma.jadwalLayanan.deleteMany({where: {layananId: {in: ownedIds}}});
+      await prisma.layanan.deleteMany({where: {id: {in: ownedIds}}});
+    }
     if (serviceId) {
       await prisma.perangkatTampilan.deleteMany({where: {layananId: serviceId}});
       const tickets = await prisma.tiketAntrean.findMany({
