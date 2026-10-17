@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -9,6 +10,7 @@ import 'package:timezone/data/latest.dart' as tz;
 import 'package:queueb_client/src/api.dart';
 import 'package:queueb_client/src/app.dart';
 import 'package:queueb_client/src/config.dart';
+import 'package:queueb_client/src/mobile_ui.dart';
 
 const uid = '11111111-1111-4111-8111-111111111111';
 
@@ -18,6 +20,8 @@ class FakeBackend {
   final List<(String, String, Json)> requests = [];
   final List<Json> tickets = [], appointments = [];
   String status = 'DIPESAN';
+  bool offline = false, slotsAvailable = true;
+  Completer<void>? catalogGate;
   Json get user => {
     'id': uid,
     'nama': 'Akun $role',
@@ -69,6 +73,8 @@ class FakeBackend {
     if (path == '/auth/me') return reply(user);
     if (path == '/auth/register' || path == '/auth/logout') return reply(user);
     if (path == '/layanan') {
+      await catalogGate?.future;
+      if (offline) return reply({'message': 'Koneksi layanan terputus.'}, 503);
       if (request.method == 'POST') return reply({...service, ...body}, 201);
       return reply([service]);
     }
@@ -119,8 +125,8 @@ class FakeBackend {
           'id': uid,
           'mulaiPada': '${today}T02:00:00Z',
           'selesaiPada': '${today}T02:15:00Z',
-          'tersedia': true,
-          'sisaKapasitas': 2,
+          'tersedia': slotsAvailable,
+          'sisaKapasitas': slotsAvailable ? 2 : 0,
         },
       ]);
     }
@@ -240,6 +246,7 @@ void main() {
         find.widgetWithText(TextFormField, 'Kata sandi'),
         'password',
       );
+      await tester.ensureVisible(find.widgetWithText(FilledButton, 'Masuk'));
       await tester.tap(find.widgetWithText(FilledButton, 'Masuk'));
       await tester.pumpAndSettle();
     }
@@ -251,9 +258,19 @@ void main() {
   }
 
   Future<void> press(WidgetTester tester, String text, {Type? type}) async {
-    final finder = type == null
-        ? find.text(text).last
-        : find.widgetWithText(type, text).last;
+    final base = type == null
+        ? find.text(text)
+        : find.widgetWithText(type, text);
+    if (base.evaluate().isEmpty) {
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, 5000));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        base,
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+    }
+    final finder = base.last;
     await tester.ensureVisible(finder);
     await tester.pumpAndSettle();
     await tester.tap(finder);
@@ -264,6 +281,7 @@ void main() {
     'Calendar remains usable after manual date outside supported range',
     (tester) async {
       await launch(tester, FakeBackend('USER'));
+      await press(tester, 'Pendaftaran');
       for (final input in ['2020-01-01', '2099-12-31', 'tidak valid']) {
         await tester.enterText(
           find.widgetWithText(TextField, 'Tanggal pelayanan (YYYY-MM-DD)'),
@@ -443,6 +461,7 @@ void main() {
   ) async {
     final server = FakeBackend('USER', mode: 'ANTREAN_HARIAN');
     await launch(tester, server, size: const Size(390, 844));
+    await press(tester, 'Pendaftaran');
     await tester.tap(find.byType(DropdownButtonFormField<String>).first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('UM · Poli Umum').last);
@@ -461,6 +480,7 @@ void main() {
     (tester) async {
       final server = FakeBackend('USER');
       await launch(tester, server);
+      await press(tester, 'Pendaftaran');
       await tester.tap(find.byType(DropdownButtonFormField<String>).first);
       await tester.pumpAndSettle();
       await tester.tap(find.text('UM · Poli Umum').last);
@@ -524,4 +544,129 @@ void main() {
     await press(tester, 'Tutup');
     expect(tester.takeException(), isNull);
   });
+  testWidgets('Patient home navigation, empty tickets and catalog search', (
+    tester,
+  ) async {
+    await launch(tester, FakeBackend('USER'), size: const Size(375, 812));
+    expect(find.text('Selamat datang,'), findsOneWidget);
+    await press(tester, 'Daftar Walk-in');
+    expect(find.text('Pilih poliklinik & dokter'), findsOneWidget);
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Cari poliklinik atau dokter'),
+      'Tidak ada',
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Tidak ada poliklinik yang sesuai pencarian.'),
+      findsOneWidget,
+    );
+    await press(tester, 'Tiket Saya');
+    expect(
+      find.text(
+        'Belum ada tiket. Daftar janji temu atau walk-in terlebih dahulu.',
+      ),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+  for (final width in [320.0, 375.0, 414.0, 768.0]) {
+    testWidgets('Mobile home layout at width $width', (tester) async {
+      await launch(tester, FakeBackend('USER'), size: Size(width, 900));
+      expect(tester.takeException(), isNull);
+      await press(tester, 'Pendaftaran');
+      expect(tester.takeException(), isNull);
+      await tester.tap(find.byTooltip('Keluar akun'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    });
+  }
+  testWidgets('Catalog loading and offline recovery remain visible', (
+    tester,
+  ) async {
+    final server = FakeBackend('USER')..catalogGate = Completer<void>();
+    final api = QueueApi(
+      config: AppConfig(apiBaseUrl: 'http://localhost/api/v1', realtime: false),
+      client: MockClient(server.handle),
+    );
+    await api.login('test@test.local', 'password');
+    await tester.pumpWidget(QueueBApp(api: api));
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.byType(LinearProgressIndicator), findsOneWidget);
+    server.offline = true;
+    server.catalogGate!.complete();
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Koneksi layanan terputus.'), findsOneWidget);
+    server.offline = false;
+    await press(tester, 'Coba lagi');
+    expect(find.textContaining('Koneksi layanan terputus.'), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+    api.dispose();
+  });
+  for (final status in [
+    'DIPESAN',
+    'CHECK_IN',
+    'MENUNGGU',
+    'DIPANGGIL',
+    'DILAYANI',
+    'DILEWATI',
+    'SELESAI',
+  ]) {
+    testWidgets('Digital ticket displays actual status $status', (
+      tester,
+    ) async {
+      final server = FakeBackend('USER')..status = status;
+      server.tickets.add(server.ticket);
+      await launch(tester, server, size: const Size(320, 900));
+      await press(tester, 'Tiket Saya');
+      expect(find.text(status.replaceAll('_', ' ')), findsOneWidget);
+      await press(tester, 'Lihat tiket / QR');
+      expect(find.text(status.replaceAll('_', ' ')), findsWidgets);
+      if (status != 'DIPESAN') expect(find.text('Terbitkan QR'), findsNothing);
+      expect(tester.takeException(), isNull);
+      await press(tester, 'Tutup');
+    });
+  }
+  for (final width in [320.0, 375.0, 414.0, 768.0]) {
+    testWidgets('Mobile staff layout and state gated controls at $width', (
+      tester,
+    ) async {
+      await launch(tester, FakeBackend('PETUGAS'), size: Size(width, 900));
+      expect(find.text('Panel petugas'), findsOneWidget);
+      expect(find.text('Mulai Pelayanan'), findsNothing);
+      expect(find.text('Selesaikan Pelayanan'), findsNothing);
+      await press(tester, 'Panggil berikutnya');
+      expect(find.text('Mulai Pelayanan'), findsOneWidget);
+      expect(find.text('Selesaikan Pelayanan'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  }
+  testWidgets(
+    'Doctor card opens booking and unavailable slots cannot be booked',
+    (tester) async {
+      final server = FakeBackend('USER')..slotsAvailable = false;
+      await launch(tester, server, size: const Size(375, 900));
+      await press(tester, 'Janji Temu Dokter');
+      await tester.tap(find.byType(ClinicCard).first);
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byType(DoctorCard).first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(DoctorCard).first);
+      await tester.pumpAndSettle();
+      expect(find.text('Kembali ke dokter'), findsOneWidget);
+      await press(tester, 'Lihat slot');
+      final unavailable = tester.widget<OutlinedButton>(
+        find.widgetWithText(OutlinedButton, 'Tidak tersedia · Sisa slot 0'),
+      );
+      expect(unavailable.onPressed, isNull);
+      final book = tester.widget<FilledButton>(
+        find.widgetWithText(FilledButton, 'Booking janji temu'),
+      );
+      expect(book.onPressed, isNull);
+      expect(
+        server.requests.where((r) => r.$1 == 'POST' && r.$2 == '/janji-temu'),
+        isEmpty,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

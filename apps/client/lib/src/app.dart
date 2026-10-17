@@ -7,7 +7,7 @@ import 'api.dart';
 import 'display.dart';
 import 'patient.dart';
 import 'queue.dart';
-import 'widgets.dart';
+import 'mobile_ui.dart';
 
 class QueueBApp extends StatelessWidget {
   const QueueBApp({super.key, required this.api});
@@ -61,58 +61,69 @@ class _RootState extends State<_Root> {
         );
       }
       final role = api.user!['peran'];
-      return Scaffold(
-        appBar: AppBar(
-          title: Text('QueueB · ${role == 'USER' ? 'Pasien' : role}'),
-          actions: [
-            IconButton(
-              tooltip: 'Profil akun',
-              icon: const Icon(Icons.account_circle_outlined),
-              onPressed: () => showDialog<void>(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: Text('${api.user!['nama']}'),
-                  content: SelectableText(
-                    '${api.user!['email']}\nPeran: $role\nID akun: ${api.user!['id']}',
+      return Theme(
+        data: role == 'ADMIN' ? Theme.of(context) : QueueBStyle.theme,
+        child: Scaffold(
+          appBar: AppBar(
+            title: role == 'ADMIN'
+                ? const Text('QueueB · ADMIN')
+                : const QueueBBrand(compact: true),
+            actions: [
+              IconButton(
+                tooltip: 'Profil akun',
+                icon: const Icon(Icons.account_circle_outlined),
+                onPressed: () => showDialog<void>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: Text('${api.user!['nama']}'),
+                    content: SelectableText(
+                      '${api.user!['email']}\nPeran: $role\nID akun: ${api.user!['id']}',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () async {
+                          await Clipboard.setData(
+                            ClipboardData(text: '${api.user!['id']}'),
+                          );
+                          if (context.mounted) Navigator.pop(context);
+                        },
+                        child: const Text('Salin ID akun'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Tutup'),
+                      ),
+                    ],
                   ),
-                  actions: [
-                    TextButton(
-                      onPressed: () async {
-                        await Clipboard.setData(
-                          ClipboardData(text: '${api.user!['id']}'),
-                        );
-                        if (context.mounted) Navigator.pop(context);
-                      },
-                      child: const Text('Salin ID akun'),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Tutup'),
-                    ),
-                  ],
                 ),
               ),
-            ),
-            IconButton(
-              tooltip: 'Keluar akun',
-              icon: const Icon(Icons.logout),
-              onPressed: () async {
-                try {
-                  await api.logout();
-                } catch (_) {
-                  /* Local session is already cleared. */
-                }
+              IconButton(
+                tooltip: 'Keluar akun',
+                icon: const Icon(Icons.logout),
+                onPressed: () async {
+                  try {
+                    await api.logout();
+                  } catch (_) {
+                    /* Local session is already cleared. */
+                  }
+                },
+              ),
+            ],
+          ),
+          body: SafeArea(
+            top: false,
+            child: KeyedSubtree(
+              key: ValueKey(api.user!['id']),
+              child: switch (role) {
+                'ADMIN' => AdminPage(api: api),
+                'PETUGAS' => QueuePage(api: api),
+                _ => PatientPage(
+                  api: api,
+                  onDisplay: () => setState(() => display = true),
+                ),
               },
             ),
-          ],
-        ),
-        body: KeyedSubtree(
-          key: ValueKey(api.user!['id']),
-          child: switch (role) {
-            'ADMIN' => AdminPage(api: api),
-            'PETUGAS' => QueuePage(api: api),
-            _ => PatientPage(api: api),
-          },
+          ),
         ),
       );
     },
@@ -169,117 +180,146 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    body: Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 440),
-          child: AutofillGroup(
-            child: Form(
-              key: form,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Icon(
-                    Icons.local_hospital_outlined,
-                    size: 48,
-                    color: Color(0xff245cdb),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'QueueB Hospital',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineMedium,
-                  ),
-                  Text(
-                    register
-                        ? 'Daftar akun pasien'
-                        : 'Masuk untuk mengelola pelayanan atau tiket Anda.',
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 28),
-                  if (error != null) Notice(error!, error: true),
-                  if (message != null) Notice(message!),
-                  if (register)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: TextFormField(
-                        controller: name,
-                        decoration: const InputDecoration(
-                          labelText: 'Nama lengkap',
+  Widget build(BuildContext context) => Theme(
+    data: QueueBStyle.theme,
+    child: Builder(
+      builder: (context) => Scaffold(
+        backgroundColor: QueueBStyle.mint,
+        body: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 440),
+                child: AutofillGroup(
+                  child: Form(
+                    key: form,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const QueueBBrand(),
+                        const SizedBox(height: 24),
+                        Text(
+                          'Akses mudah untuk\npelayanan lebih baik',
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(fontWeight: FontWeight.w800),
                         ),
-                        validator: (v) =>
-                            v == null || v.trim().length < 3 || v.length > 150
-                            ? 'Nama 3–150 karakter.'
-                            : null,
-                      ),
-                    ),
-                  TextFormField(
-                    controller: email,
-                    keyboardType: TextInputType.emailAddress,
-                    autofillHints: const [AutofillHints.username],
-                    decoration: const InputDecoration(labelText: 'Email'),
-                    validator: (v) =>
-                        v == null ||
-                            !RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
-                                .hasMatch(v.trim())
-                        ? 'Masukkan email yang valid.'
-                        : null,
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: password,
-                    obscureText: obscure,
-                    autofillHints: const [AutofillHints.password],
-                    decoration: InputDecoration(
-                      labelText: 'Kata sandi',
-                      suffixIcon: IconButton(
-                        tooltip: 'Tampilkan kata sandi',
-                        onPressed: () => setState(() => obscure = !obscure),
-                        icon: Icon(
-                          obscure ? Icons.visibility : Icons.visibility_off,
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Daftar, dapatkan tiket, dan ikuti antrean rumah sakit dalam satu aplikasi.',
+                          style: TextStyle(color: QueueBStyle.muted),
                         ),
-                      ),
+                        const HospitalVisual(),
+                        Text(
+                          register ? 'Daftar akun pasien' : 'Masuk untuk mengelola pelayanan atau tiket Anda.',
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 20),
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              if (error != null)
+                                MobileNotice(error!, error: true),
+                              if (message != null) MobileNotice(message!),
+                              if (register)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 16),
+                                  child: TextFormField(
+                                    controller: name,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Nama lengkap',
+                                    ),
+                                    validator: (v) =>
+                                        v == null ||
+                                            v.trim().length < 3 ||
+                                            v.length > 150
+                                        ? 'Nama 3–150 karakter.'
+                                        : null,
+                                  ),
+                                ),
+                              TextFormField(
+                                controller: email,
+                                keyboardType: TextInputType.emailAddress,
+                                autofillHints: const [AutofillHints.username],
+                                decoration: const InputDecoration(
+                                  labelText: 'Email',
+                                ),
+                                validator: (v) =>
+                                    v == null ||
+                                        !RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
+                                            .hasMatch(v.trim())
+                                    ? 'Masukkan email yang valid.'
+                                    : null,
+                              ),
+                              const SizedBox(height: 16),
+                              TextFormField(
+                                controller: password,
+                                obscureText: obscure,
+                                autofillHints: const [AutofillHints.password],
+                                decoration: InputDecoration(
+                                  labelText: 'Kata sandi',
+                                  suffixIcon: IconButton(
+                                    tooltip: 'Tampilkan kata sandi',
+                                    onPressed: () =>
+                                        setState(() => obscure = !obscure),
+                                    icon: Icon(
+                                      obscure
+                                          ? Icons.visibility
+                                          : Icons.visibility_off,
+                                    ),
+                                  ),
+                                ),
+                                onFieldSubmitted: (_) => submit(),
+                                validator: (v) => v == null || v.isEmpty
+                                    ? 'Kata sandi wajib diisi.'
+                                    : register &&
+                                          (v.length < 8 || v.length > 72)
+                                    ? 'Kata sandi 8–72 karakter.'
+                                    : null,
+                              ),
+                              const SizedBox(height: 24),
+                              FilledButton(
+                                onPressed: busy ? null : submit,
+                                child: Text(
+                                  busy
+                                      ? 'Memproses…'
+                                      : register
+                                      ? 'Daftar pasien'
+                                      : 'Masuk',
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: busy
+                                    ? null
+                                    : () => setState(() {
+                                        register = !register;
+                                        error = null;
+                                      }),
+                                child: Text(
+                                  register
+                                      ? 'Sudah punya akun? Masuk'
+                                      : 'Pasien baru? Daftar',
+                                ),
+                              ),
+                              const Divider(),
+                              TextButton.icon(
+                                onPressed: busy ? null : widget.onDisplay,
+                                icon: const Icon(Icons.tv),
+                                label: const Text('Buka Public Display'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    onFieldSubmitted: (_) => submit(),
-                    validator: (v) => v == null || v.isEmpty
-                        ? 'Kata sandi wajib diisi.'
-                        : register && (v.length < 8 || v.length > 72)
-                        ? 'Kata sandi 8–72 karakter.'
-                        : null,
                   ),
-                  const SizedBox(height: 24),
-                  FilledButton(
-                    onPressed: busy ? null : submit,
-                    child: Text(
-                      busy
-                          ? 'Memproses…'
-                          : register
-                          ? 'Daftar pasien'
-                          : 'Masuk',
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: busy
-                        ? null
-                        : () => setState(() {
-                            register = !register;
-                            error = null;
-                          }),
-                    child: Text(
-                      register
-                          ? 'Sudah punya akun? Masuk'
-                          : 'Pasien baru? Daftar',
-                    ),
-                  ),
-                  const Divider(),
-                  TextButton.icon(
-                    onPressed: busy ? null : widget.onDisplay,
-                    icon: const Icon(Icons.tv),
-                    label: const Text('Buka Public Display'),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
