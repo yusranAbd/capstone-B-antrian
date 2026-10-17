@@ -1,0 +1,12 @@
+{
+  "transport": "compiled Flutter Web + controlled HTTP; no database",
+  "roles": [
+    "ADMIN",
+    "PETUGAS",
+    "USER"
+  ],
+  "rotation": true,
+  "logoutWarning": true,
+  "webMemoryOnly": true,
+  "reloadRequiresLogin": true
+}

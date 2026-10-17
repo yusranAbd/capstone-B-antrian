@@ -3,6 +3,9 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <application
+        android:allowBackup="false"
+        android:fullBackupContent="false"
+        android:dataExtractionRules="@xml/session_backup_rules"
         android:label="QueueB Hospital"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
