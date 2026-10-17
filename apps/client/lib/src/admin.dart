@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'admin_schema.dart';
+import 'admin_schedules.dart';
 import 'api.dart';
 import 'config.dart';
 import 'widgets.dart';
@@ -17,6 +18,7 @@ class _AdminPageState extends State<AdminPage> {
   Map<String, List<Json>> catalog = {};
   List<Json> data = [];
   String? session, error, message;
+  String scheduleSearch = '';
   bool loading = true;
   int revision = 0;
   AdminResource get resource => resources[selected];
@@ -73,19 +75,31 @@ class _AdminPageState extends State<AdminPage> {
   }
 
   Future<void> edit([Json? row]) async {
+    final bulk = resource.path == '/jadwal-layanan' && row == null;
     final changed = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => _AdminEditor(
-        api: widget.api,
-        resource: resource,
-        row: row,
-        catalog: catalog,
-        initialSession: session,
-      ),
+      builder: (context) => bulk
+          ? BulkScheduleEditor(
+              api: widget.api,
+              clinics: catalog['/layanan'] ?? [],
+            )
+          : _AdminEditor(
+              api: widget.api,
+              resource: resource,
+              row: row,
+              catalog: catalog,
+              initialSession: session,
+            ),
     );
-    if (changed == true && mounted) {
-      setState(() => message = 'Data disimpan.');
+    if (mounted && (changed == true || bulk)) {
+      setState(
+        () => message = changed != true
+            ? null
+            : bulk
+            ? 'Proses jadwal selesai. Daftar diperbarui; periksa hasil per hari.'
+            : 'Data disimpan.',
+      );
       await load();
     }
   }
@@ -93,7 +107,7 @@ class _AdminPageState extends State<AdminPage> {
   Future<void> deactivateRow(Json row) async {
     if (!await confirm(
       context,
-      'Nonaktifkan ${label(row)}? Riwayat tetap disimpan.',
+      'Nonaktifkan ${resource.path == '/jadwal-layanan' ? '${label(object(row['layanan']))} · ${dayLabel('${row['hari']}')}' : label(row)}? Riwayat tetap disimpan.',
     )) {
       return;
     }
@@ -192,46 +206,57 @@ class _AdminPageState extends State<AdminPage> {
           ],
         ),
         if (loading) const LinearProgressIndicator(),
-        if (!loading && data.isEmpty)
+        if (!loading && data.isEmpty && resource.path != '/jadwal-layanan')
           const Padding(
             padding: EdgeInsets.all(32),
             child: Text('Belum ada data.'),
           ),
-        ...data.map(
-          (row) => Section(
-            title: resource.path == '/penugasan-petugas'
-                ? label(object(row['petugas']))
-                : resource.path == '/jadwal-praktik'
-                ? dateOnly(row['tanggal'])
-                : resource.path == '/slot-praktik'
-                ? 'Slot konsultasi'
-                : label(row),
-            subtitle: detail(row),
-            child: Wrap(
-              spacing: 10,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                stateChip(row['aktif'] == true ? 'AKTIF' : 'NONAKTIF'),
-                TextButton.icon(
-                  onPressed: loading ? null : () => edit(row),
-                  icon: const Icon(Icons.edit_outlined),
-                  label: const Text('Ubah'),
-                ),
-                if (row['aktif'] == true)
-                  TextButton(
-                    onPressed: loading ? null : () => deactivateRow(row),
-                    child: const Text('Nonaktifkan'),
+        if (resource.path == '/jadwal-layanan')
+          GroupedClinicSchedules(
+            clinics: catalog['/layanan'] ?? [],
+            schedules: data,
+            search: scheduleSearch,
+            onSearch: (value) => setState(() => scheduleSearch = value),
+            onEdit: edit,
+            onDeactivate: deactivateRow,
+            busy: loading,
+          )
+        else
+          ...data.map(
+            (row) => Section(
+              title: resource.path == '/penugasan-petugas'
+                  ? label(object(row['petugas']))
+                  : resource.path == '/jadwal-praktik'
+                  ? dateOnly(row['tanggal'])
+                  : resource.path == '/slot-praktik'
+                  ? 'Slot konsultasi'
+                  : label(row),
+              subtitle: detail(row),
+              child: Wrap(
+                spacing: 10,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  stateChip(row['aktif'] == true ? 'AKTIF' : 'NONAKTIF'),
+                  TextButton.icon(
+                    onPressed: loading ? null : () => edit(row),
+                    icon: const Icon(Icons.edit_outlined),
+                    label: const Text('Ubah'),
                   ),
-                if (resource.path == '/dokter')
-                  OutlinedButton(
-                    onPressed: loading ? null : () => doctorLinks(row),
-                    child: const Text('Hubungkan poliklinik'),
-                  ),
-              ],
+                  if (row['aktif'] == true)
+                    TextButton(
+                      onPressed: loading ? null : () => deactivateRow(row),
+                      child: const Text('Nonaktifkan'),
+                    ),
+                  if (resource.path == '/dokter')
+                    OutlinedButton(
+                      onPressed: loading ? null : () => doctorLinks(row),
+                      child: const Text('Hubungkan poliklinik'),
+                    ),
+                ],
+              ),
             ),
           ),
-        ),
       ],
     );
     return LayoutBuilder(
@@ -407,7 +432,12 @@ class _AdminEditorState extends State<_AdminEditor> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          error = '$e';
+          error =
+              widget.resource.path == '/layanan' &&
+                  e is ApiException &&
+                  e.status >= 500
+              ? 'Server belum dapat menyimpan poliklinik (${e.status}). Minta pengelola memeriksa log API dan migration database. Periksa daftar sebelum mencoba lagi.'
+              : '$e';
           busy = false;
         });
       }
@@ -436,7 +466,7 @@ class _AdminEditorState extends State<_AdminEditor> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text('Zona waktu: ${widget.api.config.serviceTimeZone}'),
-                if (error != null) Notice(error!, error: true),
+                if (error != null) AdminNotice(error!, error: true),
                 for (final f in fields)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8),
@@ -470,11 +500,23 @@ class _AdminEditorState extends State<_AdminEditor> {
                             ? TextInputType.number
                             : TextInputType.text,
                         onChanged: (v) => values[f.key] = v.trim(),
-                        validator: (v) => validateAdminField(
-                          f,
-                          v?.trim() ?? '',
-                          widget.api.config,
-                        ),
+                        validator: (v) {
+                          final invalid = validateAdminField(
+                            f,
+                            v?.trim() ?? '',
+                            widget.api.config,
+                          );
+                          if (invalid != null) return invalid;
+                          if (widget.resource.path == '/jadwal-layanan' &&
+                              f.key == 'jamTutup' &&
+                              !scheduleClosesAfter(
+                                values['jamBuka'] ?? '',
+                                values['jamTutup'] ?? '',
+                              )) {
+                            return 'Jam tutup harus sesudah jam buka.';
+                          }
+                          return null;
+                        },
                       ),
                     },
                   ),
