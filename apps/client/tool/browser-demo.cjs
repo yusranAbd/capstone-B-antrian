@@ -1,5 +1,6 @@
 /** Full demo through the compiled Flutter UI. No REST stubs or queue clock changes. */
-const {chromium, expect} = require('@playwright/test');
+const {chromium, expect: baseExpect} = require('@playwright/test');
+const expect = baseExpect.configure({timeout:25000});
 const fs = require('node:fs');
 const path = require('node:path');
 const QRCode = require('qrcode');
@@ -31,7 +32,8 @@ async function button(page, name) { await page.bringToFront();const control=page
 async function choose(page, label, option) {
   const scope = await page.getByRole('dialog').count() ? page.getByRole('dialog') : page;
   const name = new RegExp('^' + escape(label) + '(?:\\s|$)');
-  await scope.getByRole('button', {name}).or(scope.getByRole('combobox', {name})).first().click();
+  const control=(label === 'Dokter' ? scope.getByRole('button', {name:label,exact:true}).or(scope.getByRole('combobox', {name})) : scope.getByRole('button', {name}).or(scope.getByRole('combobox', {name}))).first();
+  await reveal(page,control); await control.click();
   const choice = new RegExp(escape(option));
   await page.getByRole('menuitem', {name:choice}).or(page.getByRole('option', {name:choice})).or(page.getByText(option, {exact:false})).last().click();
 }
@@ -76,7 +78,9 @@ module.exports = async function demo({fixture:f, root}) {
   async function pageIn(b, account, viewport={width:1440,height:1100}, init) {
     const context=await b.newContext({viewport});contexts.push(context);if(init)await context.addInitScript(init);const page=await context.newPage();current=page;
     page.on('pageerror',error=>errors.push(error.message)); await page.goto(base);
+    if(account === 'patient1') {await expect(page.getByRole('textbox',{name:'Email',exact:true})).toBeVisible();await page.screenshot({path:path.join(root,'mobile-01-login.png')});}
     if(account) {await enter(page,'Email',f[account].email); await enter(page,'Kata sandi',f[account].password); await button(page,'Masuk'); await expect(page.getByRole('button',{name:'Profil akun',exact:true})).toBeVisible();}
+    if(account === 'patient1') {await expect(page.getByRole('progressbar')).toHaveCount(0);await page.screenshot({path:path.join(root,'mobile-02-beranda.png')});}
     return page;
   }
   try {
@@ -111,15 +115,18 @@ module.exports = async function demo({fixture:f, root}) {
     report.admin=true;console.log('Demo UI ADMIN: PASS (poli/dokter/relasi/ruang/jadwal/slot/penugasan)');
 
     const walk=await pageIn(b,'patient1',{width:390,height:1000});
-    await choose(walk,'Poliklinik',f.serviceName); await walk.getByRole('button',{name:'Walk-in',exact:true}).click();
+    await walk.getByRole('tab',{name:'Pendaftaran',exact:true}).click();
+    await choose(walk,'Poliklinik',f.serviceName); await walk.getByRole('button',{name:'Walk-in',exact:true}).last().click();
     await button(walk,'Reservasi walk-in'); const walkTicket=await mutation(walk,'POST','/reservasi',()=>button(walk,'Lanjutkan'));
     await button(walk,'Lihat tiket / QR'); const walkQR=await mutation(walk,'POST',`/tiket/${walkTicket.id}/qr`,()=>button(walk,'Terbitkan QR')); qrSecrets.push(walkQR.qrPayload);
     await button(walk,'Tutup'); report.walkIn=true;
     const appt=await pageIn(b,'patient2',{width:390,height:1000});
-    await choose(appt,'Poliklinik',f.serviceName); await choose(appt,'Dokter',doctorName); await button(appt,'Lihat jadwal dokter'); await button(appt,'Lihat slot');
+    await appt.getByRole('tab',{name:'Pendaftaran',exact:true}).click();
+    await choose(appt,'Poliklinik',f.serviceName); await appt.screenshot({path:path.join(root,'mobile-03-poliklinik.png')}); await choose(appt,'Dokter',doctorName); await button(appt,'Lihat jadwal dokter'); await button(appt,'Lihat slot');
     await appt.getByRole('button', {name:/Tersedia · Sisa slot 2/}).click();
+    await appt.screenshot({path:path.join(root,'mobile-04-booking.png')});
     await button(appt,'Booking janji temu'); const booking=await mutation(appt,'POST','/janji-temu',()=>button(appt,'Lanjutkan'));
-    await button(appt,'Lihat tiket / QR'); const apptQR=await mutation(appt,'POST',`/tiket/${booking.tiket.id}/qr`,()=>button(appt,'Terbitkan QR'));qrSecrets.push(apptQR.qrPayload); await button(appt,'Tutup');report.appointment=true;
+    await button(appt,'Lihat tiket / QR'); const apptQR=await mutation(appt,'POST',`/tiket/${booking.tiket.id}/qr`,()=>button(appt,'Terbitkan QR'));qrSecrets.push(apptQR.qrPayload); await appt.screenshot({path:path.join(root,'mobile-05-tiket.png')}); await button(appt,'Tutup');report.appointment=true;
     console.log('Demo UI USER: PASS (walk-in + appointment + dua tiket QR)');
 
     const display=publicPage=await pageIn(b);
@@ -153,7 +160,7 @@ module.exports = async function demo({fixture:f, root}) {
 
     cameraVideo(walkQR.qrPayload,videoFile);
     const cameraBrowser=await browser(['--use-fake-device-for-media-stream',`--use-file-for-fake-video-capture=${videoFile}`]);
-    const staff=await pageIn(cameraBrowser,'petugas'); await staff.context().grantPermissions(['camera']);
+    const staff=await pageIn(cameraBrowser,'petugas',{width:390,height:1000}); await staff.context().grantPermissions(['camera']);
     await expect(staff.getByText('Realtime terhubung',{exact:false})).toBeVisible();
     await button(staff,'Pindai kamera');
     // The action waits for the scanner overlay to close. Backend identity proves the decoded QR.
@@ -165,6 +172,7 @@ module.exports = async function demo({fixture:f, root}) {
     await display.bringToFront();await expect(display.getByText('Menunggu: 2',{exact:false}).or(display.getByRole('group',{name:/Menunggu: 2/})).first()).toBeVisible({timeout:20000});
     const wait=new Date(f.slotStart).getTime()-Date.now();if(wait>0){console.log(`Demo menunggu awal slot sah: ${Math.ceil(wait/1000)} detik`);await new Promise(resolve=>setTimeout(resolve,wait+500));}
     let called=await mutation(staff,'POST','/queue/panggil',()=>button(staff,'Panggil berikutnya'));expect(called.tiketId).toBe(booking.tiket.id);
+    await staff.screenshot({path:path.join(root,'mobile-06-petugas.png')});
     await display.bringToFront();await expect(display.getByText(booking.nomorAntrean,{exact:true}).or(display.getByRole('group',{name:new RegExp(escape(booking.nomorAntrean))})).first()).toBeVisible({timeout:20000});
     await expect.poll(()=>soundLogic.evaluate(()=>window.__qaSpeech.length),{timeout:10000}).toBe(2);
     await mutation(staff,'POST',`/queue/${called.tiketId}/panggil-ulang`,()=>button(staff,'Panggil Ulang'));

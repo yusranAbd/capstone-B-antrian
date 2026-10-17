@@ -223,10 +223,22 @@ async function main() {
       tokenHash: require('node:crypto').createHash('sha256').update(displayToken).digest('hex'),
     }});
     fixture = {
-      date, unique, ...accounts, roomId: room.id, serviceId, doctorId, assignmentId: assignment.id, extraDoctorIds: [],
+      date, unique, serviceCode: `W${unique}`, ...accounts, roomId: room.id, serviceId, doctorId, assignmentId: assignment.id, extraDoctorIds: [],
       scheduleId: schedule.id, slotId: slot.id, slotStart: slotStart.toISOString(), displayToken,
     };
-    if (process.argv.includes('--demo-browser')) {
+    if (process.argv.includes('--android')) {
+      await require('./android-demo.cjs')(fixture, clientPath, async () => {
+        const freshAdmin = await call('/auth/login', {email:accounts.admin.email,kataSandi:password});
+        const start = new Date(Math.ceil(Date.now()/60000)*60000+2*60000);
+        const result = await fetch(`http://127.0.0.1:3001/api/v1/slot-praktik/${fixture.slotId}`, {
+          method:'PATCH', headers:{'Content-Type':'application/json',Authorization:`Bearer ${freshAdmin.accessToken}`},
+          body:JSON.stringify({mulaiPada:start.toISOString(),selesaiPada:new Date(start.getTime()+15*60000).toISOString()}),
+        });
+        if(!result.ok)throw new Error('Persiapan slot Android HTTP '+result.status);
+        fixture.slotStart=start.toISOString();
+      });
+      code=0;
+    } else if (process.argv.includes('--demo-browser')) {
       fixture.demoFull = true;
       code = 0;
     } else if (process.argv.includes('--browser-only')) {

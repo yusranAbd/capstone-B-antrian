@@ -20,5 +20,6 @@ Kontrak API: [API_INTEGRATION_GUIDE.md](../../docs/backend/API_INTEGRATION_GUIDE
 Panduan alur, QA nyata, konfigurasi dan batas MVP: [FLUTTER_MVP.md](../../docs/frontend/FLUTTER_MVP.md).
 Panduan presentasi Web/Android, kamera, suara dan urutan aktor: [DEMO_FLUTTER.md](../../docs/frontend/DEMO_FLUTTER.md).
 Hasil verifikasi dan batas perangkat: [FINALISASI_FLUTTER_MVP.md](../../docs/frontend/FINALISASI_FLUTTER_MVP.md).
+Redesign enam layar mobile, komponen tema dan QA perangkat: [MOBILE_UI_FLUTTER.md](../../docs/frontend/MOBILE_UI_FLUTTER.md).
 
 Token hanya di memori sesi. Akun operasional/perangkat display disediakan pengelola server. Jangan masukkan token/kredensial ke dart-define, URL, source atau Git. Backend tidak dimodifikasi oleh proyek ini.
