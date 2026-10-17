@@ -1,0 +1,36 @@
+{
+  "result": "PASS",
+  "applicationSourceCommit": "4874108dc458968cc0db4b012192f70a2023f746",
+  "date": "2026-10-18",
+  "device": {
+    "manufacturer": "Xiaomi",
+    "model": "2410CRP4CG"
+  },
+  "test": "integration_test/mobile_flow_test.dart",
+  "scenarios": [
+    "appointment sampai COMPLETE",
+    "walk-in sampai COMPLETE"
+  ],
+  "queueActions": [
+    "CHECK_IN",
+    "ENQUEUE",
+    "CALL",
+    "RECALL",
+    "SKIP",
+    "REQUEUE",
+    "START",
+    "COMPLETE"
+  ],
+  "bothPatientsSeeCompletedTicket": true,
+  "cameraPermission": true,
+  "cameraRunning": true,
+  "physicalPrintedQrDecodeTested": false,
+  "screenshots": 7,
+  "database": "127.0.0.1:5433/capstone_antrean_test",
+  "dataExisting": {
+    "jumlah": 13,
+    "hilang": 0,
+    "berubah": 0
+  },
+  "recordBaruTersisa": 0
+}

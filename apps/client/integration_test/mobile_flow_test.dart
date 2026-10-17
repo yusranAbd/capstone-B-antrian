@@ -50,21 +50,49 @@ void main() {
         final base = type == null
             ? find.text(text)
             : find.widgetWithText(type, text);
-        if (base.evaluate().isEmpty) {
-          await tester.drag(
-            find.byType(Scrollable).first,
-            const Offset(0, 5000),
-          );
-          await tester.pumpAndSettle();
-          await tester.scrollUntilVisible(
-            base,
-            300,
-            scrollable: find.byType(Scrollable).first,
-          );
+        // Settled frames do not guarantee that REST or Socket.IO has finished.
+        // Wait for the actual next action and its enabled state before tapping.
+        final deadline = DateTime.now().add(const Duration(seconds: 30));
+        bool resetScroll = false;
+        while (true) {
+          if (base.evaluate().isNotEmpty) {
+            await tester.ensureVisible(base.last);
+            await tester.pumpAndSettle();
+            final element = base.evaluate().lastOrNull;
+            if (element != null) {
+              bool enabled = true, foundButton = false;
+              void inspect(Widget widget) {
+                if (widget is ButtonStyleButton) {
+                  foundButton = true;
+                  enabled = widget.onPressed != null;
+                } else if (widget is IconButton) {
+                  foundButton = true;
+                  enabled = widget.onPressed != null;
+                }
+              }
+
+              inspect(element.widget);
+              if (!foundButton) {
+                element.visitAncestorElements((parent) {
+                  inspect(parent.widget);
+                  return !foundButton;
+                });
+              }
+              if (enabled) break;
+            }
+          } else if (find.byType(Scrollable).evaluate().isNotEmpty) {
+            await tester.drag(
+              find.byType(Scrollable).first,
+              Offset(0, resetScroll ? -240 : 5000),
+            );
+            resetScroll = true;
+          }
+          if (DateTime.now().isAfter(deadline)) {
+            fail('Kontrol "$text" belum siap setelah respons API/snapshot.');
+          }
+          await tester.pump(const Duration(milliseconds: 200));
         }
         final finder = base.last;
-        await tester.ensureVisible(finder);
-        await tester.pumpAndSettle();
         await tester.tap(finder);
         await tester.pumpAndSettle(
           const Duration(milliseconds: 100),
