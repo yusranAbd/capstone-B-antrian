@@ -1,0 +1,84 @@
+{
+  "transitions": [
+    {
+      "action": "CHECK_IN",
+      "status": "CHECK_IN",
+      "latencyMs": 2482,
+      "manualRefresh": false
+    },
+    {
+      "action": "ENQUEUE",
+      "status": "MENUNGGU",
+      "latencyMs": 949,
+      "manualRefresh": false
+    },
+    {
+      "action": "CALL",
+      "status": "DIPANGGIL",
+      "latencyMs": 779,
+      "manualRefresh": false
+    },
+    {
+      "action": "RECALL",
+      "status": "DIPANGGIL",
+      "latencyMs": 802,
+      "manualRefresh": false
+    },
+    {
+      "action": "SKIP + offline/reconnect",
+      "status": "DILEWATI",
+      "manualRefresh": false
+    },
+    {
+      "action": "REQUEUE + frozen/resume",
+      "status": "MENUNGGU",
+      "manualRefresh": false
+    },
+    {
+      "action": "CALL after REQUEUE",
+      "status": "DIPANGGIL",
+      "latencyMs": 2249,
+      "manualRefresh": false
+    },
+    {
+      "action": "START",
+      "status": "DILAYANI",
+      "latencyMs": 1273,
+      "manualRefresh": false
+    },
+    {
+      "action": "COMPLETE",
+      "status": "SELESAI",
+      "latencyMs": 1599,
+      "manualRefresh": false
+    },
+    {
+      "action": "Appointment cancellation",
+      "status": "DIBATALKAN",
+      "latencyMs": 491,
+      "manualRefresh": false
+    },
+    {
+      "action": "External appointment booking",
+      "status": "DIPESAN",
+      "manualRefresh": false
+    }
+  ],
+  "catalog": [
+    "poliklinik",
+    "dokter"
+  ],
+  "isolation": true,
+  "reconnect": true,
+  "resume": true,
+  "admin": [
+    "Poliklinik search/status/edit",
+    "Dokter search/clinic/status/create/deactivate",
+    "Ruang grouping/search/clinic/edit",
+    "Praktik clinic/doctor/date/grouping/create/edit/deactivate + existing slot conflict 409",
+    "Slot lazy loading/grouping/filters/create/edit/deactivate",
+    "Penugasan grouping/search/clinic/edit/deactivate"
+  ],
+  "flutterClients": 2,
+  "physicalAndroid": false
+}

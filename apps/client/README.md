@@ -22,5 +22,6 @@ Panduan presentasi Web/Android, kamera, suara dan urutan aktor: [DEMO_FLUTTER.md
 Hasil verifikasi dan batas perangkat: [FINALISASI_FLUTTER_MVP.md](../../docs/frontend/FINALISASI_FLUTTER_MVP.md).
 Redesign enam layar mobile, komponen tema dan QA perangkat: [MOBILE_UI_FLUTTER.md](../../docs/frontend/MOBILE_UI_FLUTTER.md).
 Perbaikan Poliklinik ADMIN, jadwal berkelompok dan input beberapa hari: [ADMIN_POLIKLINIK_JADWAL.md](../../docs/frontend/ADMIN_POLIKLINIK_JADWAL.md).
+Sinkronisasi pasien lintas klien, navigasi ADMIN berkategori, hasil QA dan batas deployment: [REALTIME_ADMIN_OPTIMIZATION.md](../../docs/frontend/REALTIME_ADMIN_OPTIMIZATION.md).
 
-Token hanya di memori sesi. Akun operasional/perangkat display disediakan pengelola server. Jangan masukkan token/kredensial ke dart-define, URL, source atau Git. Backend tidak dimodifikasi oleh proyek ini.
+Token hanya di memori sesi. Akun operasional/perangkat display disediakan pengelola server. Jangan masukkan token/kredensial ke dart-define, URL, source atau Git. Kanal pasien `/patient` memakai JWT USER; jangan memakai room PETUGAS atau token display untuk pasien. Backend menyediakan invalidasi setelah commit; respons dan endpoint REST existing tetap dipakai.

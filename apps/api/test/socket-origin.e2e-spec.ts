@@ -40,7 +40,7 @@ describe('Socket.IO Origin Security (e2e)', () => {
     await app?.close();
   });
 
-  function cobaKoneksi(namespace: 'queue' | 'display', origin: string): Promise<string> {
+  function cobaKoneksi(namespace: 'queue' | 'display' | 'patient', origin: string): Promise<string> {
     return new Promise((resolve, reject) => {
       const socket = io(`${alamatServer}/${namespace}`, {
         transports: ['websocket'],
@@ -68,6 +68,9 @@ describe('Socket.IO Origin Security (e2e)', () => {
   it('menolak origin asing sebelum autentikasi pada namespace /queue', async () => {
     await expect(cobaKoneksi('queue', 'https://asing.example.invalid'))
       .resolves.toBe('ORIGIN_NOT_ALLOWED');
+  });
+  it('menolak origin asing sebelum autentikasi pada namespace /patient', async () => {
+    await expect(cobaKoneksi('patient', 'https://asing.example.invalid')).resolves.toBe('ORIGIN_NOT_ALLOWED');
   });
 
   it('menolak origin asing sebelum autentikasi pada namespace /display', async () => {

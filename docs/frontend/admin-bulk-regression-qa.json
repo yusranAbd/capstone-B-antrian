@@ -1,0 +1,13 @@
+{
+  "poliklinik": true,
+  "duplicate": true,
+  "validation": true,
+  "fiveDays": true,
+  "existingDays": true,
+  "partialFailure": true,
+  "edit": true,
+  "softDeactivate": true,
+  "persistence": true,
+  "postSchedules": 8,
+  "runtimeErrors": 0
+}
