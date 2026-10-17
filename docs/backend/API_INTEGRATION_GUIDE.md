@@ -1,10 +1,10 @@
 # QueueB | Panduan Integrasi REST API, Socket.IO, dan Public Display
 
 **Lokasi repository:** `docs/backend/API_INTEGRATION_GUIDE.md`
-**Versi dokumen:** 1.2 — kontrak Backend MVP Hospital untuk integrasi Web dan Flutter
-**Tanggal penelaahan:** 14 Oktober 2026
+**Versi dokumen:** 1.3 — kontrak Backend MVP Hospital dan realtime pasien
+**Tanggal penelaahan:** 17 Oktober 2026
 **Status:** Kontrak Authentication, Reservasi, Tiket/QR/Check-In, Queue, Realtime, Display, 20 endpoint Administrasi dan endpoint Hospital dipetakan terhadap source. Bagian 17 mencatat integrasi Hospital; Bagian 18 menyediakan urutan request untuk dua alur utama. Hasil QA dan batas MVP tersedia pada `MVP_BACKEND_FINAL.md`; checkpoint Milestone 2 tersedia pada `MILESTONE_2_INTEGRASI_HOSPITAL.md`. Resolusi manual HOSP-OPS-01 ditunda sesuai keputusan Project Lead. Deployment produksi tetap memerlukan konfigurasi dan penilaian risiko pada Bagian 14–15.
-**Basis:** `QueueController`, `QueueService` terbaru dan dua DTO Queue; source Display/Socket.IO; Authentication; Reservasi; Tiket/QR/Check-In; empat controller Administrasi; serta controller, DTO dan service Dokter, JadwalPraktik, SlotPraktik dan JanjiTemu. Isi branch/commit terbaru tetap merupakan sumber kebenaran jika ada perbedaan.
+**Basis:** `QueueController`, `QueueService` terbaru dan dua DTO Queue; source Display/Socket.IO termasuk `PatientRealtimeGateway` dan `PatientInvalidationInterceptor`; Authentication; Reservasi; Tiket/QR/Check-In; empat controller Administrasi; serta controller, DTO dan service Dokter, JadwalPraktik, SlotPraktik dan JanjiTemu. Isi branch/commit terbaru tetap merupakan sumber kebenaran jika ada perbedaan.
 
 ## 1. Ruang lingkup dan batas dokumentasi
 
@@ -25,6 +25,7 @@ Contoh UUID, nomor tiket, tanggal, dan nama layanan di bawah merupakan **data il
 | Endpoint Public Display          | Token perangkat pada `x-display-token: <token_perangkat>`                     |
 | Namespace Socket.IO operasional  | `/queue`                                                                      |
 | Namespace Socket.IO monitor      | `/display`                                                                    |
+| Namespace Socket.IO pasien       | `/patient` — JWT USER dan sesi aktif, tanpa join dari klien                     |
 | Skema snapshot dan event         | `versiSkema: 1`                                                               |
 | Format waktu pada contoh payload | ISO 8601; tanggal pelayanan dipisahkan sebagai `YYYY-MM-DD`                   |
 | Model update realtime            | Event menandakan perubahan; baca ulang snapshot REST sebagai sumber kebenaran |
@@ -37,6 +38,7 @@ Contoh UUID, nomor tiket, tanggal, dan nama layanan di bawah merupakan **data il
 | ------------------------------------------------------------------------------------- | -------------------------------------------------- | ----------------------- | ----------------------------------- | ------------------------------------ |
 | `GET /queue/snapshot`, `GET /queue/menunggu`, dan seluruh mutasi di `QueueController` | Diizinkan sesuai penugasan dan pemeriksaan service | Ditolak controller      | Ditolak controller                  | Tidak dipakai                        |
 | Socket.IO `/queue`                                                                    | JWT valid dan izin room                            | JWT valid dan izin room | Ditolak                             | Tidak dipakai                        |
+| Socket.IO `/patient`                                                                  | Ditolak                                            | Ditolak                 | JWT USER + sesi aktif milik sendiri | Ditolak                              |
 | `GET /display/:layananId/snapshot`                                                    | Bukan jalur akun                                   | Bukan jalur akun        | Bukan jalur akun                    | Token perangkat + status/layanan sah |
 | Socket.IO `/display`                                                                  | Bukan jalur akun                                   | Bukan jalur akun        | Bukan jalur akun                    | Token perangkat + `layananId` sah    |
 | Reservasi `POST/GET`                                                                  | Ditolak                                            | Ditolak                 | JWT dan scope milik sendiri         | Tidak dipakai                        |
@@ -433,6 +435,37 @@ Namespace `/queue` mengizinkan JWT role ADMIN/PETUGAS pada handshake. Bergabung 
 `aksi` hanya: `ENQUEUE`, `CALL`, `RECALL`, `SKIP`, `REQUEUE`, `START`, `COMPLETE`. Field `loketId`, `kodeLoket`, `urutanMasukAntrean`, dan `versi` opsional; jangan mewajibkannya pada semua event. `loketId` dan `urutanMasukAntrean` juga dapat bernilai `null`.
 
 **Penting:** event ini merupakan notifikasi _best effort_, bukan catatan perubahan persisten. Frontend melakukan refresh REST Snapshot setelah event, bukan bergantung pada event sebagai database lokal final.
+
+### 6.4 Kanal pasien `/patient`
+
+Kanal ini terpisah dari `/queue` dan `/display`. Hubungkan ke origin backend (tanpa `/api/v1`) dengan `auth: { token: accessToken }`. Hanya JWT akses USER dengan akun aktif dan sesi yang belum dicabut/kedaluwarsa diterima. Token refresh, token display, ADMIN/PETUGAS, JWT kedaluwarsa dan Origin Web asing ditolak. Pembatasan handshake per namespace/IP juga berlaku. Koneksi native tanpa Origin tetap memerlukan JWT sah.
+
+Tidak ada event join/subscribe dari klien: server menentukan pengguna dari JWT dan sesi. Mengirim `penggunaId`, `tiketId`, atau nama room tidak memberikan akses tambahan. Semua perangkat USER yang sama dapat menerima invalidasi tiketnya; USER lain tidak menerima invalidasi tiket tersebut.
+
+| Arah | Event | Payload |
+| --- | --- | --- |
+| Server → USER terautentikasi | `patient:ready` | `{ "versiSkema": 1 }` |
+| Server → USER pemilik | `patient:updated`, jenis `TIKET` | Bentuk minimal di bawah |
+| Server → semua USER terautentikasi | `patient:updated`, jenis `KATALOG` | Bentuk minimal di bawah |
+
+```json
+{
+  "versiSkema": 1,
+  "eventId": "66666666-6666-4666-8666-666666666666",
+  "jenis": "TIKET",
+  "terjadiPada": "2026-10-17T08:10:00.000Z"
+}
+```
+
+Event **tidak** membawa status, ID/nomor tiket, identitas pasien, QR, atau token. `terjadiPada` adalah timestamp UTC ISO 8601, bukan waktu slot lokal. Dedup berdasarkan `eventId`, lalu baca ulang REST dengan JWT sendiri: `GET /tiket/saya`, `GET /janji-temu`, dan `GET /tiket/:id` bila detail terbuka. Otorisasi kepemilikan REST tetap berlaku. Jenis `KATALOG` memicu pembacaan ulang layanan/dokter serta jadwal/slot yang sedang dipilih; jangan menganggap seluruh katalog ada di event.
+
+Invalidasi diterbitkan setelah operasi HTTP berhasil dan promise transaksi existing selesai commit. Reservasi, booking dan pembatalan appointment mengirim `TIKET` ke pemilik serta `KATALOG` untuk kapasitas/ketersediaan. CHECK_IN dan seluruh mutasi antrean mengirim `TIKET` ke pemilik tiket hasil operasi. Mutasi ADMIN layanan/dokter/relasi dokter, ruang, jam layanan, jadwal praktik dan slot mengirim `KATALOG`. Kegagalan transaksi tidak menghasilkan invalidasi; kegagalan pengiriman tidak membatalkan transaksi yang telah tersimpan. Tidak ada perubahan response REST, state machine, algoritma prioritas, audit atau migration.
+
+Sesi kandidat diperiksa ulang secara batch sebelum pengiriman. Sesi dicabut, akun nonaktif/berubah role atau JWT kedaluwarsa diputus; kegagalan pemeriksaan database menahan event dan memutus koneksi kandidat. Pada kedaluwarsa JWT, refresh lewat REST lalu buat koneksi dengan token akses terbaru. Logout harus menutup socket. Tidak ada data pribadi yang dikirim sambil menunggu pemeriksaan berikutnya karena payload hanya invalidasi.
+
+Flutter memakai satu koneksi per halaman pasien yang dibagi dengan dialog tiket; debounce 250 ms, dedup maksimal 256 event, dan pembacaan REST terserialisasi dengan satu pembacaan susulan bila terjadi invalidasi saat fetch. Saat realtime terputus, fallback foreground berjalan setiap 30 detik; saat terhubung, rekonsiliasi REST setiap dua menit. Saat kembali dari background/reconnect/rotasi token, baca ulang REST. Background tidak menjalankan fallback. Nilai ini adalah interval sinkronisasi teknis, bukan aturan toleransi keterlambatan atau fairness antrean.
+
+**Batas deployment:** sinyal best effort, tanpa replay/outbox, berlaku pada socket lokal proses NestJS. Mutasi internal yang memanggil service langsung di luar HTTP tidak otomatis menerbitkan kanal pasien. Deployment multi-instance memerlukan distribusi invalidasi lintas proses sebelum menjanjikan realtime menyeluruh; fallback REST tetap diperlukan. Kanal PETUGAS dan Public Display mempertahankan kontrak sebelumnya.
 
 ## 7. Socket.IO: Public Display `/display`
 

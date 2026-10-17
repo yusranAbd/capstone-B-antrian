@@ -87,7 +87,7 @@ module.exports = async function adminSchedules({fixture:f, root}) {
     const invalid=await request('POST','/layanan',{kode:'V'+f.unique,nama:'Validasi Durasi',prefixAntrean:'SF',durasiDasarMenit:0,modeReservasi:'HIBRIDA'},400);
     assert.ok(Array.isArray(invalid.message));
     console.log('ADMIN Poliklinik: PASS (durasi 25, HIBRIDA, HTTP 409 duplikat, HTTP 400 validasi)');
-    await page.getByRole('button',{name:/^Jam & kapasitas poli(?:\s|$)/}).click();
+    await require('./browser-demo.cjs').helpers.nav(page,'Jam & kapasitas poli');
     await expect(page.getByRole('button',{name:'Tambah',exact:true})).toBeEnabled();
     await enter('Cari poliklinik','Saraf');
     const collapsed=page.getByRole('button',{name:/^Saraf \(Neurologi\)(?:\s|$)/});
@@ -130,7 +130,7 @@ module.exports = async function adminSchedules({fixture:f, root}) {
     await button('Muat ulang');await clinicSummary(6);
     await page.reload();await enter('Email',f.admin.email);await enter('Kata sandi',f.admin.password);await button('Masuk');
     await expect(page.getByRole('button',{name:'Tambah',exact:true})).toBeEnabled();
-    await page.getByRole('button',{name:/^Jam & kapasitas poli(?:\s|$)/}).click();
+    await require('./browser-demo.cjs').helpers.nav(page,'Jam & kapasitas poli');
     await expect(page.getByRole('button',{name:'Tambah',exact:true})).toBeEnabled();await enter('Cari poliklinik',code);
     await clinicSummary(6);
     assert.equal((await currentSchedules()).length,7);

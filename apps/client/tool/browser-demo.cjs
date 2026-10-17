@@ -45,11 +45,19 @@ async function mutation(page, method, route, action) {
   return result.json();
 }
 async function nav(page, title) {
+  await page.bringToFront();
+  await expect(page.getByRole('button', {name:'Tambah', exact:true})).toBeEnabled();
+  await page.waitForTimeout(150); // Wait for Flutter's enabled semantic tree after catalog refresh.
   const name=new RegExp('^'+escape(title)+'(?:\\s|$)');
-  await page.getByRole('tab', {name}).or(page.getByRole('button', {name})).click();
+  const item=page.getByRole('tab', {name}).or(page.getByRole('button', {name}));
+  if(!await item.count()) {
+    const category=['Poliklinik','Dokter','Ruang & loket'].includes(title)?'Master data':title==='Penugasan petugas'?'Manajemen petugas':'Manajemen jadwal';
+    await page.getByRole('button',{name:new RegExp('^'+escape(category)+'(?:\\s|$)')}).click();
+  }
+  await item.click();
   await expect(page.getByRole('button', {name:'Tambah', exact:true})).toBeEnabled();
 }
-function card(page, title) { return page.getByRole('group', {name: new RegExp('^' + escape(title) + '(?:\\s|$)')}).first().locator('..'); }
+function card(page, title) { return page.getByRole('group', {name: new RegExp('^' + escape(title) + '(?:\\s|$)')}).first(); }
 async function save(page, method, route, record=()=>{}) {
   const result = await mutation(page, method, route, () => button(page, 'Simpan'));
   record(result);
@@ -109,6 +117,8 @@ module.exports = async function demo({fixture:f, root}) {
     await enter(admin,'Mulai (YYYY-MM-DDTHH:mm)',localMinute(slotStart)); await enter(admin,'Selesai (YYYY-MM-DDTHH:mm)',localMinute(new Date(slotStart.getTime()+15*60000))); await enter(admin,'Kapasitas slot','2');
     const slot=await save(admin,'POST','/slot-praktik');f.slotId=slot.id;
     await nav(admin,'Penugasan petugas');
+    const assignmentClinic=admin.getByRole('button',{name:new RegExp('^'+escape(f.serviceName)+'(?:\\s|$)')});
+    await reveal(admin,assignmentClinic);if(await assignmentClinic.count())await assignmentClinic.click();
     await card(admin,'Fixture Flutter petugas').getByRole('button',{name:'Ubah',exact:true,includeHidden:true}).click();
     await choose(admin,'Ruang / loket','Ruang Demo '+f.unique);
     await mutation(admin,'PATCH',`/penugasan-petugas/${f.assignmentId}`,()=>button(admin,'Simpan')); await expect(admin.getByRole('dialog')).toHaveCount(0);
@@ -208,3 +218,4 @@ module.exports = async function demo({fixture:f, root}) {
     throw new Error('Demo browser gagal; lihat diagnostik QA teredaksi.');
   }finally{clearTimeout(watchdog);for(const c of contexts)await c.close().catch(()=>{});for(const b of browsers)await b.close();if(fs.existsSync(videoFile))fs.unlinkSync(videoFile);}
 };
+module.exports.helpers={enter,button,choose,mutation,nav,card,reveal};

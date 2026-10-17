@@ -11,11 +11,16 @@ module.exports = async function browserSmoke(fixture) {
     await expect.poll(async () => (await input.inputValue()) === value).toBe(true);
   }
   const root = path.resolve(__dirname, '../build/web');
-  const sourceTime = fs.statSync(path.resolve(__dirname, '../lib/src/api.dart')).mtimeMs;
+  const libRoot = path.resolve(__dirname,'../lib');
+  const sourceTime = Math.max(...fs.readdirSync(libRoot,{recursive:true}).filter(file=>file.endsWith('.dart')).map(file=>fs.statSync(path.join(libRoot,file)).mtimeMs));
   const buildDeadline = Date.now() + 5 * 60_000;
   while (!fs.existsSync(path.join(root, 'main.dart.js')) || fs.statSync(path.join(root, 'main.dart.js')).mtimeMs < sourceTime) {
     if (Date.now() > buildDeadline) throw new Error('Build Flutter Web terbaru belum tersedia. Jalankan build sebelum smoke browser.');
     await new Promise(resolve => setTimeout(resolve, 1000));
+  }
+  // Fail before opening a browser: the compiled UI must not write to development.
+  if (!fs.readFileSync(path.join(root,'main.dart.js'),'utf8').includes('http://127.0.0.1:3001/api/v1')) {
+    throw new Error('QA Web wajib dibangun dengan API_BASE_URL=http://127.0.0.1:3001/api/v1; browser tidak dibuka.');
   }
   const mime = {'.html':'text/html', '.js':'text/javascript', '.json':'application/json', '.wasm':'application/wasm', '.css':'text/css'};
   const server = http.createServer((req, res) => {
@@ -31,6 +36,7 @@ module.exports = async function browserSmoke(fixture) {
   await new Promise(resolve => server.listen(8080, '127.0.0.1', resolve));
   let browser, lastPage;
   try {
+    if (fixture.realtimeAdmin) return await require('./browser-realtime-admin.cjs')({fixture, root});
     if (fixture.adminSchedules) return await require('./browser-admin-schedules.cjs')({fixture, root});
     if (fixture.demoFull) return await require('./browser-demo.cjs')({fixture, root});
     browser = await chromium.launch({channel: process.env.FLUTTER_BROWSER_CHANNEL || 'msedge', headless: true});

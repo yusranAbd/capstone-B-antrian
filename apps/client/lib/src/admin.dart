@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import 'admin_schema.dart';
+import 'admin_data.dart';
+import 'admin_navigation.dart';
 import 'admin_schedules.dart';
 import 'api.dart';
 import 'config.dart';
@@ -28,7 +30,7 @@ class _AdminPageState extends State<AdminPage> {
     load();
   }
 
-  Future<void> load() async {
+  Future<void> load({bool reloadCatalog = false}) async {
     final current = ++revision;
     final selectedResource = resource;
     setState(() {
@@ -36,28 +38,28 @@ class _AdminPageState extends State<AdminPage> {
       error = null;
     });
     try {
-      final paths = resources
-          .where((r) => r.path != '/slot-praktik')
-          .map((r) => r.path)
-          .toList();
+      final paths = catalog.isEmpty || reloadCatalog
+          ? resources
+                .where((r) => r.path != '/slot-praktik')
+                .map((r) => r.path)
+                .toList()
+          : selectedResource.path == '/slot-praktik'
+          ? ['/jadwal-praktik', '/dokter', '/layanan', '/loket']
+          : [selectedResource.path];
       final values = await Future.wait(
         paths.map((path) async => rows(await widget.api.request('GET', path))),
       );
-      final next = {for (int i = 0; i < paths.length; i++) paths[i]: values[i]};
+      final next = {
+        ...catalog,
+        for (int i = 0; i < paths.length; i++) paths[i]: values[i],
+      };
       List<Json> items;
       if (selectedResource.path == '/slot-praktik') {
         if (!next['/jadwal-praktik']!.any((v) => v['id'] == session)) {
           session = next['/jadwal-praktik']!.firstOrNull?['id'];
         }
-        items = session == null
-            ? []
-            : rows(
-                await widget.api.request(
-                  'GET',
-                  '/slot-praktik',
-                  query: {'jadwalPraktikId': session!},
-                ),
-              );
+        items =
+            []; // Slots are fetched lazily when a practice session is expanded.
       } else {
         items = next[selectedResource.path]!;
       }
@@ -100,7 +102,7 @@ class _AdminPageState extends State<AdminPage> {
             ? 'Proses jadwal selesai. Daftar diperbarui; periksa hasil per hari.'
             : 'Data disimpan.',
       );
-      await load();
+      await load(reloadCatalog: true);
     }
   }
 
@@ -120,7 +122,7 @@ class _AdminPageState extends State<AdminPage> {
     } finally {
       if (mounted) {
         final previousError = error;
-        await load();
+        await load(reloadCatalog: true);
         if (mounted && previousError != null) {
           setState(() => error = previousError);
         }
@@ -137,7 +139,7 @@ class _AdminPageState extends State<AdminPage> {
         services: catalog['/layanan'] ?? [],
       ),
     );
-    if (mounted) await load();
+    if (mounted) await load(reloadCatalog: true);
   }
 
   String detail(Json row) => switch (resource.path) {
@@ -155,6 +157,37 @@ class _AdminPageState extends State<AdminPage> {
       '${label(object(row['petugas']))} · ${label(object(row['loket']))}\n${dateOnly(row['tanggalMulai'])} → ${row['tanggalSelesai'] == null ? 'Tanpa akhir' : dateOnly(row['tanggalSelesai'])}',
     _ => '${label(object(row['layanan']))} · ${row['lokasi'] ?? ''}',
   };
+  void selectResource(int value) {
+    setState(() {
+      selected = value;
+      message = null;
+      error = null;
+      data = [];
+    });
+    load();
+  }
+
+  Future<void> openMenu() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => SafeArea(
+        child: SizedBox(
+          height: MediaQuery.sizeOf(context).height * .8,
+          child: AdminNavigation(
+            selected: selected,
+            onSelect: loading
+                ? null
+                : (value) {
+                    Navigator.pop(sheetContext);
+                    selectResource(value);
+                  },
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final content = ListView(
@@ -162,36 +195,16 @@ class _AdminPageState extends State<AdminPage> {
       children: [
         Text(resource.title, style: Theme.of(context).textTheme.headlineSmall),
         Text('Zona pelayanan: ${widget.api.config.serviceTimeZone}'),
-        if (error != null) Notice(error!, error: true),
-        if (message != null) Notice(message!),
+        if (error != null) AdminNotice(error!, error: true),
+        if (message != null) AdminNotice(message!),
         if (resource.path == '/penugasan-petugas')
-          const Notice(
+          const AdminNotice(
             'Akun ADMIN/PETUGAS disediakan pengelola server. Gunakan ID akun dari profil petugas untuk memberikan penugasan.',
           ),
-        if (resource.path == '/slot-praktik')
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            child: ChoiceField(
-              label: 'Sesi untuk daftar slot',
-              choices: (catalog['/jadwal-praktik'] ?? [])
-                  .map(
-                    (v) => (
-                      '${v['id']}',
-                      '${dateOnly(v['tanggal'])} · ${label(object(object(v['dokterLayanan'])['dokter']))} · ${label(object(v['loket']))}',
-                    ),
-                  )
-                  .toList(),
-              value: session,
-              onChanged: loading
-                  ? null
-                  : (value) {
-                      session = value;
-                      load();
-                    },
-            ),
-          ),
+        const SizedBox(height: 12),
         Wrap(
           spacing: 12,
+          runSpacing: 8,
           children: [
             FilledButton.icon(
               onPressed: loading ? null : () => edit(),
@@ -199,18 +212,13 @@ class _AdminPageState extends State<AdminPage> {
               label: const Text('Tambah'),
             ),
             OutlinedButton.icon(
-              onPressed: loading ? null : load,
+              onPressed: loading ? null : () => load(reloadCatalog: true),
               icon: const Icon(Icons.refresh),
               label: const Text('Muat ulang'),
             ),
           ],
         ),
         if (loading) const LinearProgressIndicator(),
-        if (!loading && data.isEmpty && resource.path != '/jadwal-layanan')
-          const Padding(
-            padding: EdgeInsets.all(32),
-            child: Text('Belum ada data.'),
-          ),
         if (resource.path == '/jadwal-layanan')
           GroupedClinicSchedules(
             clinics: catalog['/layanan'] ?? [],
@@ -222,67 +230,31 @@ class _AdminPageState extends State<AdminPage> {
             busy: loading,
           )
         else
-          ...data.map(
-            (row) => Section(
-              title: resource.path == '/penugasan-petugas'
-                  ? label(object(row['petugas']))
-                  : resource.path == '/jadwal-praktik'
-                  ? dateOnly(row['tanggal'])
-                  : resource.path == '/slot-praktik'
-                  ? 'Slot konsultasi'
-                  : label(row),
-              subtitle: detail(row),
-              child: Wrap(
-                spacing: 10,
-                runSpacing: 8,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  stateChip(row['aktif'] == true ? 'AKTIF' : 'NONAKTIF'),
-                  TextButton.icon(
-                    onPressed: loading ? null : () => edit(row),
-                    icon: const Icon(Icons.edit_outlined),
-                    label: const Text('Ubah'),
-                  ),
-                  if (row['aktif'] == true)
-                    TextButton(
-                      onPressed: loading ? null : () => deactivateRow(row),
-                      child: const Text('Nonaktifkan'),
-                    ),
-                  if (resource.path == '/dokter')
-                    OutlinedButton(
-                      onPressed: loading ? null : () => doctorLinks(row),
-                      child: const Text('Hubungkan poliklinik'),
-                    ),
-                ],
-              ),
-            ),
+          AdminDataView(
+            key: ValueKey(resource.path),
+            resource: resource,
+            data: data,
+            catalog: catalog,
+            api: widget.api,
+            busy: loading,
+            revision: revision,
+            onEdit: edit,
+            onDeactivate: deactivateRow,
+            onDoctorLinks: doctorLinks,
+            detail: detail,
           ),
       ],
     );
     return LayoutBuilder(
-      builder: (context, constraints) => constraints.maxWidth >= 960
+      builder: (context, box) => box.maxWidth >= 960
           ? Row(
               children: [
-                NavigationRail(
-                  extended: true,
-                  selectedIndex: selected,
-                  onDestinationSelected: loading
-                      ? null
-                      : (i) {
-                          setState(() {
-                            selected = i;
-                            message = null;
-                            data = [];
-                          });
-                          load();
-                        },
-                  destinations: [
-                    for (final r in resources)
-                      NavigationRailDestination(
-                        icon: Icon(_icon(r.path)),
-                        label: Text(r.title),
-                      ),
-                  ],
+                SizedBox(
+                  width: 252,
+                  child: AdminNavigation(
+                    selected: selected,
+                    onSelect: loading ? null : selectResource,
+                  ),
                 ),
                 const VerticalDivider(width: 1),
                 Expanded(child: content),
@@ -291,24 +263,28 @@ class _AdminPageState extends State<AdminPage> {
           : Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: ChoiceField(
-                    label: 'Administrasi',
-                    choices: [
-                      for (int i = 0; i < resources.length; i++)
-                        ('$i', resources[i].title),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                  child: Row(
+                    children: [
+                      Tooltip(
+                        message: 'Menu administrasi',
+                        child: OutlinedButton.icon(
+                          onPressed: loading ? null : openMenu,
+                          icon: const Icon(Icons.menu),
+                          label: Text(
+                            box.maxWidth < 375 ? 'Menu' : 'Menu administrasi',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          resource.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                     ],
-                    value: '$selected',
-                    onChanged: loading
-                        ? null
-                        : (value) {
-                            setState(() {
-                              selected = int.parse(value!);
-                              message = null;
-                              data = [];
-                            });
-                            load();
-                          },
                   ),
                 ),
                 Expanded(child: content),
@@ -316,16 +292,6 @@ class _AdminPageState extends State<AdminPage> {
             ),
     );
   }
-
-  IconData _icon(String path) => switch (path) {
-    '/dokter' => Icons.medical_services_outlined,
-    '/loket' => Icons.meeting_room_outlined,
-    '/jadwal-layanan' => Icons.access_time,
-    '/jadwal-praktik' => Icons.calendar_month_outlined,
-    '/slot-praktik' => Icons.event_available,
-    '/penugasan-petugas' => Icons.badge_outlined,
-    _ => Icons.local_hospital_outlined,
-  };
 }
 
 class _AdminEditor extends StatefulWidget {

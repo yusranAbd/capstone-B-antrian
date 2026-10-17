@@ -7,6 +7,7 @@ import 'api.dart';
 import 'config.dart';
 import 'widgets.dart';
 import 'mobile_ui.dart';
+import 'patient_sync.dart';
 
 String appointmentDetails(Json appointment, AppConfig config) {
   final slot = object(appointment['slotPraktik']);
@@ -24,6 +25,8 @@ class PatientPage extends StatefulWidget {
 }
 
 class _PatientPageState extends State<PatientPage> {
+  late final PatientUpdates updates;
+  late final RefreshGate overview;
   int tab = 0, catalogRevision = 0;
   bool busy = false, loading = true;
   String? error, message, serviceId, doctorId, sessionId, slotId;
@@ -48,35 +51,129 @@ class _PatientPageState extends State<PatientPage> {
   @override
   void initState() {
     super.initState();
+    overview = RefreshGate(readOverview);
+    updates = PatientUpdates(api: widget.api)..addListener(autoRefresh);
     load();
   }
 
   Future<void> load() async {
+    if (!mounted) return;
     setState(() {
       loading = true;
       error = null;
     });
+    await overview.refresh();
+    if (mounted) setState(() => loading = false);
+  }
+
+  void autoRefresh() {
+    overview.refresh();
+  }
+
+  Future<void> readOverview() async {
+    final errors = <String>[];
+    await Future.wait([
+      (() async {
+        try {
+          final values = await Future.wait(
+            [
+              '/tiket/saya',
+              '/janji-temu',
+            ].map((p) async => rows(await widget.api.request('GET', p))),
+          );
+          if (mounted) {
+            setState(() {
+              tickets = values[0];
+              appointments = values[1];
+            });
+          }
+        } catch (e) {
+          errors.add('$e');
+        }
+      })(),
+      readCatalog().catchError((Object e) {
+        errors.add('$e');
+      }),
+    ]);
+    if (mounted) setState(() => error = errors.firstOrNull);
+  }
+
+  Future<void> readCatalog() async {
+    final current = catalogRevision;
+    final selectedDoctor = doctorId,
+        selectedClinic = serviceId,
+        selectedSession = sessionId;
     try {
       final values = await Future.wait(
         [
           '/layanan',
           '/dokter',
-          '/tiket/saya',
-          '/janji-temu',
         ].map((p) async => rows(await widget.api.request('GET', p))),
       );
       if (mounted) {
         setState(() {
           services = values[0];
           doctors = values[1];
-          tickets = values[2];
-          appointments = values[3];
+          if (current == catalogRevision &&
+              selectedClinic != null &&
+              (!services.any((s) => s['id'] == selectedClinic) ||
+                  (selectedDoctor != null &&
+                      !matchingDoctors.any(
+                        (d) => d['id'] == selectedDoctor,
+                      )))) {
+            serviceId = services.any((s) => s['id'] == selectedClinic)
+                ? selectedClinic
+                : null;
+            doctorId = sessionId = slotId = null;
+            schedules = [];
+            slots = [];
+            bookingStage = false;
+            catalogRevision++;
+          }
         });
       }
-    } catch (e) {
-      if (mounted) setState(() => error = '$e');
-    } finally {
-      if (mounted) setState(() => loading = false);
+      if (!mounted ||
+          current != catalogRevision ||
+          !bookingStage ||
+          selectedDoctor == null ||
+          selectedClinic == null) {
+        return;
+      }
+      final nextSchedules = rows(
+        await widget.api.request(
+          'GET',
+          '/jadwal-praktik',
+          query: {
+            'layananId': selectedClinic,
+            'dokterId': selectedDoctor,
+            'tanggal': date.text.trim(),
+          },
+        ),
+      );
+      final sessionExists = nextSchedules.any(
+        (s) => s['id'] == selectedSession,
+      );
+      final nextSlots = !sessionExists
+          ? <Json>[]
+          : rows(
+              await widget.api.request(
+                'GET',
+                '/slot-praktik',
+                query: {'jadwalPraktikId': selectedSession!},
+              ),
+            );
+      if (mounted && current == catalogRevision) {
+        setState(() {
+          schedules = nextSchedules;
+          slots = nextSlots;
+          if (!sessionExists) sessionId = null;
+          if (!slots.any((s) => s['id'] == slotId && s['tersedia'] == true)) {
+            slotId = null;
+          }
+        });
+      }
+    } catch (_) {
+      rethrow;
     }
   }
 
@@ -227,6 +324,7 @@ class _PatientPageState extends State<PatientPage> {
       barrierDismissible: false,
       builder: (context) => _TicketDialog(
         api: widget.api,
+        updates: updates,
         ticket: ticket,
         appointment: appointments
             .where((a) => object(a['tiket'])['id'] == ticket['id'])
@@ -238,6 +336,9 @@ class _PatientPageState extends State<PatientPage> {
 
   @override
   void dispose() {
+    updates.removeListener(autoRefresh);
+    updates.dispose();
+    overview.dispose();
     date.dispose();
     super.dispose();
   }
@@ -572,6 +673,16 @@ class _PatientPageState extends State<PatientPage> {
               key: ValueKey('$tab:$bookingStage'),
               padding: const EdgeInsets.all(16),
               children: [
+                ValueListenableBuilder<String>(
+                  valueListenable: updates.status,
+                  builder: (context, value, _) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      value,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+                ),
                 if (error != null) ...[
                   MobileNotice(error!, error: true),
                   TextButton.icon(
@@ -1019,21 +1130,24 @@ class _TicketDialog extends StatefulWidget {
   const _TicketDialog({
     required this.api,
     required this.ticket,
+    required this.updates,
     this.appointment,
   });
   final QueueApi api;
   final Json ticket;
+  final PatientUpdates updates;
   final Json? appointment;
   @override
   State<_TicketDialog> createState() => _TicketDialogState();
 }
 
 class _TicketDialogState extends State<_TicketDialog> {
+  late final RefreshGate reader;
   late Json data = widget.ticket;
   Json? qr;
   String? error;
   bool busy = false;
-  Timer? poll, countdown;
+  Timer? countdown;
   int remaining = 0;
   bool get canIssue =>
       data['status'] == 'DIPESAN' &&
@@ -1042,7 +1156,8 @@ class _TicketDialogState extends State<_TicketDialog> {
   @override
   void initState() {
     super.initState();
-    poll = Timer.periodic(const Duration(seconds: 10), (_) => refresh());
+    reader = RefreshGate(readTicket);
+    widget.updates.addListener(refresh);
     countdown = Timer.periodic(const Duration(seconds: 1), (_) {
       final expiry = DateTime.tryParse('${qr?['berlakuHingga']}');
       if (mounted) {
@@ -1057,10 +1172,8 @@ class _TicketDialogState extends State<_TicketDialog> {
     refresh();
   }
 
-  bool fetching = false;
-  Future<void> refresh() async {
-    if (fetching) return;
-    fetching = true;
+  Future<void> refresh() => reader.refresh();
+  Future<void> readTicket() async {
     try {
       final next = object(
         await widget.api.request('GET', '/tiket/${data['id']}'),
@@ -1074,8 +1187,6 @@ class _TicketDialogState extends State<_TicketDialog> {
       }
     } catch (e) {
       if (mounted) setState(() => error = '$e');
-    } finally {
-      fetching = false;
     }
   }
 
@@ -1109,7 +1220,8 @@ class _TicketDialogState extends State<_TicketDialog> {
 
   @override
   void dispose() {
-    poll?.cancel();
+    widget.updates.removeListener(refresh);
+    reader.dispose();
     countdown?.cancel();
     super.dispose();
   }

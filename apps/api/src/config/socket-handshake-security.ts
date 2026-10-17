@@ -1,6 +1,6 @@
 import type { Socket } from 'socket.io';
 
-type KanalSocket = 'queue' | 'display';
+type KanalSocket = 'queue' | 'display' | 'patient';
 
 interface Percobaan {
   jumlah: number;
@@ -67,5 +67,5 @@ export class SocketHandshakeSecurity {
   }
 }
 
-/** Kedua namespace berbagi pembatasan memori; counter tetap dipisah per namespace. */
+/** Semua namespace berbagi pembatasan memori; counter tetap dipisah per namespace. */
 export const keamananHandshakeSocket = new SocketHandshakeSecurity();
