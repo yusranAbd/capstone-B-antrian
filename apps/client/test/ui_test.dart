@@ -114,7 +114,8 @@ class FakeBackend {
           'selesaiPada': '${today}T04:00:00Z',
           'loket': room,
           'dokterLayanan': {
-            'dokter': {'nama': 'Dokter Umum'},
+            'dokterId': uid,
+            'dokter': {'id': uid, 'nama': 'Dokter Umum'},
           },
         },
       ]);
@@ -281,7 +282,9 @@ void main() {
     'Calendar remains usable after manual date outside supported range',
     (tester) async {
       await launch(tester, FakeBackend('USER'));
-      await press(tester, 'Pendaftaran');
+      await press(tester, 'Daftar Walk-in');
+      await tester.tap(find.byType(ClinicCard).first);
+      await tester.pumpAndSettle();
       for (final input in ['2020-01-01', '2099-12-31', 'tidak valid']) {
         await tester.enterText(
           find.widgetWithText(TextField, 'Tanggal pelayanan (YYYY-MM-DD)'),
@@ -485,13 +488,9 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('UM · Poli Umum').last);
       await tester.pumpAndSettle();
-      await tester.tap(find.byType(DropdownButtonFormField<String>).last);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Dokter Umum · ').last);
-      await tester.pumpAndSettle();
-      await press(tester, 'Lihat jadwal dokter');
+      await press(tester, 'Lihat Jadwal');
       await press(tester, 'Lihat slot');
-      await press(tester, 'Tersedia · Sisa slot 2');
+      await press(tester, 'Sisa slot 2');
       await press(tester, 'Booking janji temu');
       await press(tester, 'Lanjutkan');
       expect(
@@ -550,7 +549,7 @@ void main() {
     await launch(tester, FakeBackend('USER'), size: const Size(375, 812));
     expect(find.text('Selamat datang,'), findsOneWidget);
     await press(tester, 'Daftar Walk-in');
-    expect(find.text('Pilih poliklinik & dokter'), findsOneWidget);
+    expect(find.text('Poliklinik & Dokter'), findsOneWidget);
     await tester.enterText(
       find.widgetWithText(TextField, 'Cari poliklinik atau dokter'),
       'Tidak ada',
@@ -648,14 +647,11 @@ void main() {
       await press(tester, 'Janji Temu Dokter');
       await tester.tap(find.byType(ClinicCard).first);
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.byType(DoctorCard).first);
-      await tester.pumpAndSettle();
-      await tester.tap(find.byType(DoctorCard).first);
-      await tester.pumpAndSettle();
-      expect(find.text('Kembali ke dokter'), findsOneWidget);
+      await press(tester, 'Lihat Jadwal');
+      expect(find.byTooltip('Kembali ke dokter'), findsOneWidget);
       await press(tester, 'Lihat slot');
       final unavailable = tester.widget<OutlinedButton>(
-        find.widgetWithText(OutlinedButton, 'Tidak tersedia · Sisa slot 0'),
+        find.widgetWithText(OutlinedButton, 'Sisa slot 0'),
       );
       expect(unavailable.onPressed, isNull);
       final book = tester.widget<FilledButton>(

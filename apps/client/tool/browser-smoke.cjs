@@ -36,11 +36,12 @@ module.exports = async function browserSmoke(fixture) {
   await new Promise(resolve => server.listen(8080, '127.0.0.1', resolve));
   let browser, lastPage;
   try {
+    if (fixture.doctorSchedule) return await require('./browser-doctor-schedule.cjs')({fixture, root});
     if (fixture.realtimeAdmin) return await require('./browser-realtime-admin.cjs')({fixture, root});
     if (fixture.adminSchedules) return await require('./browser-admin-schedules.cjs')({fixture, root});
     if (fixture.demoFull) return await require('./browser-demo.cjs')({fixture, root});
     browser = await chromium.launch({channel: process.env.FLUTTER_BROWSER_CHANNEL || 'msedge', headless: true});
-    for (const [account, heading] of [['admin','Poliklinik'], ['petugas','Panel petugas'], ['patient1','Pilih poliklinik & dokter']]) {
+    for (const [account, heading] of [['admin','Poliklinik'], ['petugas','Panel petugas'], ['patient1','Poliklinik & Dokter']]) {
       const context = await browser.newContext({viewport: {width: account === 'patient1' ? 390 : 1365, height: 1000}});
       const page = lastPage = await context.newPage();
       const errors = []; page.on('pageerror', error => errors.push(error.message));
@@ -49,7 +50,7 @@ module.exports = async function browserSmoke(fixture) {
       await enter(page, 'Kata sandi', fixture[account].password);
       await page.getByRole('button', {name: 'Masuk', exact: true}).click();
       if (account === 'patient1') await page.getByRole('tab',{name:'Pendaftaran',exact:true}).click();
-      if (account === 'patient1') await expect(page.getByRole('textbox', {name: 'Tanggal pelayanan (YYYY-MM-DD)', exact:true})).toBeVisible({timeout:15000});
+      if (account === 'patient1') await expect(page.getByText('Poliklinik & Dokter', {exact:true})).toBeVisible({timeout:15000});
       else await expect(page.getByText(heading, {exact: false}).first()).toBeVisible({timeout: 15000});
       if (account === 'petugas') await expect(page.getByText('Realtime terhubung', {exact:false})).toBeVisible({timeout: 15000});
       if (account === 'patient1') { await page.getByRole('tab', {name:'Tiket Saya', exact:true}).click(); await expect(page.getByRole('button', {name:'Lihat tiket / QR', exact:true}).first()).toBeVisible(); }

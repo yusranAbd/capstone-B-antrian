@@ -15,7 +15,7 @@ import 'package:queueb_client/src/config.dart';
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   testWidgets(
-    'Android: six screens, appointment and walk-in through COMPLETE',
+    'Android: seven screens, appointment and walk-in through COMPLETE',
     (tester) async {
       tz.initializeTimeZones();
       final response = await http.get(
@@ -146,15 +146,10 @@ void main() {
       await login('patient2');
       await clinic();
       await capture('03-poliklinik-dokter');
-      final doctorDropdown = find.byType(DropdownButtonFormField<String>).last;
-      await tester.ensureVisible(doctorDropdown);
-      await tester.pumpAndSettle();
-      await tester.tap(doctorDropdown);
-      await tester.pumpAndSettle();
-      await select('Dokter Fixture Flutter · Umum');
-      await press('Lihat jadwal dokter');
+      await press('Lihat Jadwal');
+      await capture('07-detail-dokter');
       await press('Lihat slot');
-      await press('Tersedia · Sisa slot 2');
+      await press('Sisa slot 2');
       await tester.ensureVisible(find.text('Slot konsultasi'));
       await capture('04-booking-slot');
       await press('Booking janji temu');

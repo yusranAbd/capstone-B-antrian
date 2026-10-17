@@ -1,0 +1,15 @@
+{
+  "database": "127.0.0.1:5433/capstone_antrean_test",
+  "transport": "compiled Flutter Web → NestJS existing API",
+  "widths": [
+    320,
+    375,
+    414,
+    768
+  ],
+  "fullSlotDisabled": true,
+  "appointment": true,
+  "distinctIds": true,
+  "ownedTicket": true,
+  "bookingHttpStatus": 201
+}

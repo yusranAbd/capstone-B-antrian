@@ -239,6 +239,9 @@ async function main() {
         fixture.slotStart=start.toISOString();
       });
       code=0;
+    } else if (process.argv.includes('--doctor-schedule')) {
+      fixture.doctorSchedule = true;
+      code = 0;
     } else if (process.argv.includes('--realtime-admin')) {
       fixture.realtimeAdmin = true;
       fixture.adminLayoutOnly = process.argv.includes('--admin-layout-only');
@@ -262,7 +265,7 @@ async function main() {
       child.once('error', reject);
       child.once('exit', value => resolve(value ?? 1));
     });
-    if (code === 0 && (process.argv.includes('--browser') || process.argv.includes('--browser-only') || fixture.demoFull || fixture.adminSchedules || fixture.realtimeAdmin)) {
+    if (code === 0 && (process.argv.includes('--browser') || process.argv.includes('--browser-only') || fixture.demoFull || fixture.adminSchedules || fixture.realtimeAdmin || fixture.doctorSchedule)) {
       await require('./browser-smoke.cjs')(fixture);
     }
   } catch (error) {
