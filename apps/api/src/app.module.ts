@@ -1,3 +1,4 @@
+import { PortalDokterModule } from './portal-dokter/portal-dokter.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
@@ -35,6 +36,7 @@ import { SlotPraktikModule } from './slot-praktik/slot-praktik.module';
       },
     ]),
 
+    PortalDokterModule,
     HealthModule,
     AuthModule,
     LayananModule,
