@@ -1,6 +1,6 @@
 import type { Socket } from 'socket.io';
 
-type KanalSocket = 'queue' | 'display' | 'patient';
+type KanalSocket = 'queue' | 'display' | 'patient' | 'doctor';
 
 interface Percobaan {
   jumlah: number;

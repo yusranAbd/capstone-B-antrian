@@ -1,3 +1,5 @@
+import { DoctorRealtimeGateway } from './doctor-realtime.gateway';
+import { DoctorInvalidationInterceptor } from './doctor-invalidation.interceptor';
 import { Module } from '@nestjs/common';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 
@@ -14,6 +16,8 @@ import { PatientInvalidationInterceptor } from './patient-invalidation.intercept
 @Module({
   imports: [AuthModule, PrismaModule],
   providers: [
+    DoctorRealtimeGateway,
+    { provide: APP_INTERCEPTOR, useClass: DoctorInvalidationInterceptor },
     RealtimeGateway,
     RealtimeRoomAccessService,
     DisplayRealtimeGateway,

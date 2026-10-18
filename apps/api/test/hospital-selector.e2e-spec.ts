@@ -126,8 +126,13 @@ describe('Hospital Queue Selector H3.3 (e2e)', () => {
     }
     // Sesuaikan jam layanan di test tanpa mengubah konfigurasi .env pada disk.
     zonaAwal = process.env.SERVICE_TIME_ZONE;
-    process.env.SERVICE_TIME_ZONE = 'UTC';
     const now = new Date();
+    // Keep the relative +/-3h session on one service date at any UTC hour.
+    // UTC near midnight previously made valid appointment fixtures fail with
+    // TANGGAL_TIDAK_SESUAI. This changes only fixture timezone, never queue policy.
+    const offset = 12 - now.getUTCHours();
+    process.env.SERVICE_TIME_ZONE = offset === 0 ? 'UTC'
+      : `Etc/GMT${offset > 0 ? '-' : '+'}${Math.abs(offset)}`;
     tanggalLokal = now.toISOString().slice(0, 10);
     tanggalDb = new Date(`${tanggalLokal}T00:00:00.000Z`);
     mulaiLayanan = new Date(now.getTime() - 180 * 60_000);
