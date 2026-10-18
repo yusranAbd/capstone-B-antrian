@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -8,13 +9,82 @@ import {
 import { PeranPengguna, Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
+import { PasswordService } from '../auth/password.service';
+import { ProvisionAkunDokterDto } from './dto/provision-akun-dokter.dto';
 import { CreateDokterDto } from './dto/create-dokter.dto';
 import { HubungkanDokterLayananDto } from './dto/hubungkan-dokter-layanan.dto';
 import { UpdateDokterDto } from './dto/update-dokter.dto';
 
 @Injectable()
 export class DokterService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly password?: PasswordService,
+  ) {}
+
+  async provisionAkun(id: string, dto: ProvisionAkunDokterDto) {
+    if (
+      dto.penggunaId
+        ? dto.email !== undefined || dto.kataSandi !== undefined
+        : !dto.email || !dto.kataSandi
+    ) {
+      throw new BadRequestException(
+        'Pilih penggunaId atau pasangan email dan kataSandi',
+      );
+    }
+    const hash = dto.kataSandi
+      ? await this.password!.hash(dto.kataSandi)
+      : undefined;
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const dokter = await tx.dokter.findUnique({ where: { id } });
+        if (!dokter) throw new NotFoundException('Dokter tidak ditemukan');
+        if (!dokter.aktif)
+          throw new UnprocessableEntityException('Dokter tidak aktif');
+        if (dokter.penggunaId)
+          throw new ConflictException('Dokter sudah memiliki akun');
+        const akun = dto.penggunaId
+          ? await tx.pengguna.findUnique({
+              where: { id: dto.penggunaId },
+              select: {
+                id: true,
+                nama: true,
+                email: true,
+                peran: true,
+                aktif: true,
+              },
+            })
+          : await tx.pengguna.create({
+              data: {
+                nama: dokter.nama,
+                email: dto.email!.trim().toLowerCase(),
+                kataSandiHash: hash!,
+                peran: 'DOKTER',
+              },
+              select: {
+                id: true,
+                nama: true,
+                email: true,
+                peran: true,
+                aktif: true,
+              },
+            });
+        if (!akun || akun.peran !== 'DOKTER' || !akun.aktif)
+          throw new UnprocessableEntityException('Akun harus DOKTER aktif');
+        const linked = await tx.dokter.updateMany({
+          where: { id, penggunaId: null, aktif: true },
+          data: { penggunaId: akun.id },
+        });
+        if (linked.count !== 1)
+          throw new ConflictException(
+            'Dokter sudah ditautkan atau tidak aktif',
+          );
+        return { dokterId: id, akun };
+      });
+    } catch (error) {
+      this.handleDatabaseError(error);
+    }
+  }
 
   async create(dto: CreateDokterDto) {
     try {
@@ -42,6 +112,7 @@ export class DokterService {
               some: { aktif: true, layanan: { aktif: true } },
             },
           },
+      omit: { penggunaId: !admin },
       include: {
         dokterLayanan: {
           where: admin ? undefined : { aktif: true, layanan: { aktif: true } },
@@ -73,6 +144,7 @@ export class DokterService {
               },
             }),
       },
+      omit: { penggunaId: !admin },
       include: {
         dokterLayanan: {
           where: admin ? undefined : { aktif: true, layanan: { aktif: true } },
@@ -197,7 +269,7 @@ export class DokterService {
   private handleDatabaseError(error: unknown): never {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === 'P2002') {
-        throw new ConflictException('Kode dokter atau relasi dokter-layanan sudah digunakan');
+        throw new ConflictException('Kode dokter, email, akun atau relasi dokter sudah digunakan');
       }
       if (error.code === 'P2025') {
         throw new NotFoundException('Dokter atau relasi layanan tidak ditemukan');

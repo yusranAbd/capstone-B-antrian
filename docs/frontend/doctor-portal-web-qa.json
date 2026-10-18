@@ -1,0 +1,16 @@
+{
+  "database": "127.0.0.1:5433/capstone_antrean_test",
+  "transport": "Flutter Web release → NestJS/Prisma/PostgreSQL + Socket.IO /doctor",
+  "widths": [
+    320,
+    390,
+    768,
+    1280
+  ],
+  "appointment": true,
+  "walkIn": true,
+  "realtimeCall": true,
+  "realtimeComplete": true,
+  "readOnly": true,
+  "doctorEvents": 5
+}

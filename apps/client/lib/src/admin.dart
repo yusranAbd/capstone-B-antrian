@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'admin_schema.dart';
+import 'doctor_account.dart';
 import 'admin_data.dart';
 import 'admin_navigation.dart';
 import 'admin_schedules.dart';
@@ -240,6 +241,14 @@ class _AdminPageState extends State<AdminPage> {
             revision: revision,
             onEdit: edit,
             onDeactivate: deactivateRow,
+            onDoctorAccount: (doctor) async {
+              final changed = await showDialog<bool>(
+                context: context,
+                builder: (_) =>
+                    DoctorAccountDialog(api: widget.api, doctor: doctor),
+              );
+              if (changed == true && mounted) await load(reloadCatalog: true);
+            },
             onDoctorLinks: doctorLinks,
             detail: detail,
           ),

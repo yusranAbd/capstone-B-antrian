@@ -5,6 +5,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'admin.dart';
 import 'api.dart';
 import 'display.dart';
+import 'doctor.dart';
 import 'patient.dart';
 import 'queue.dart';
 import 'mobile_ui.dart';
@@ -154,6 +155,7 @@ class _RootState extends State<_Root> {
               child: switch (role) {
                 'ADMIN' => AdminPage(api: api),
                 'PETUGAS' => QueuePage(api: api),
+                'DOKTER' => DoctorPage(api: api),
                 _ => PatientPage(
                   api: api,
                   onDisplay: () => setState(() => display = true),

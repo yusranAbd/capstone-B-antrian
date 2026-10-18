@@ -12,6 +12,7 @@ enum PeranPengguna {
   USER
   PETUGAS
   ADMIN
+  DOKTER
 
   @@map("peran_pengguna")
 }
@@ -70,6 +71,7 @@ model Pengguna {
   dibuatPada     DateTime      @default(now()) @map("dibuat_pada") @db.Timestamptz(6)
   diperbaruiPada DateTime      @updatedAt @map("diperbarui_pada") @db.Timestamptz(6)
 
+  dokter           Dokter?
   tiketAntrean     TiketAntrean[]
   penugasanPetugas PenugasanPetugas[]
   peristiwaAntrean PeristiwaAntrean[]
@@ -291,8 +293,10 @@ model Notifikasi {
 // ============================================================
 // H1 HOSPITAL — PERLUASAN ADITIF (REVIEW, BELUM MIGRASI)
 // ============================================================
-// Dokter adalah data master, BUKAN peran autentikasi.
+// Profil dokter tetap dapat berdiri sendiri; akun portal bersifat opsional.
 model Dokter {
+  penggunaId     String? @unique @map("pengguna_id") @db.Uuid
+  pengguna       Pengguna? @relation(fields: [penggunaId], references: [id], onDelete: Restrict)
   id             String   @id @default(uuid()) @db.Uuid
   kode           String   @unique @db.VarChar(30)
   nama           String   @db.VarChar(150)

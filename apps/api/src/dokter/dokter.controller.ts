@@ -17,6 +17,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { PeranPengguna } from '../generated/prisma/client';
 
+import { ProvisionAkunDokterDto } from './dto/provision-akun-dokter.dto';
 import { CreateDokterDto } from './dto/create-dokter.dto';
 import { HubungkanDokterLayananDto } from './dto/hubungkan-dokter-layanan.dto';
 import { UpdateDokterDto } from './dto/update-dokter.dto';
@@ -31,6 +32,12 @@ export class DokterController {
   @Roles(PeranPengguna.ADMIN)
   create(@Body() dto: CreateDokterDto) {
     return this.dokterService.create(dto);
+  }
+
+  @Post(':id/akun')
+  @Roles(PeranPengguna.ADMIN)
+  provisionAkun(@Param('id', ParseUUIDPipe) id: string, @Body() dto: ProvisionAkunDokterDto) {
+    return this.dokterService.provisionAkun(id, dto);
   }
 
   @Get()

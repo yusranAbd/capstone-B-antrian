@@ -68,3 +68,15 @@ Sebelum deployment, pengelola perlu memastikan SERVICE_TIME_ZONE, konfigurasi ra
 ## Git
 
 Commit Milestone 2 dan commit final MVP hanya memuat source/test/dokumentasi backend dalam manifest. `.env`, `backups/`, `sql/`, `cls`, schema review dan `tmp/` berada di luar commit. PR ditujukan ke main; merge menunggu persetujuan akhir Project Lead setelah check CI aktual berhasil. Hasil push/PR/CI dilaporkan dari GitHub, bukan diasumsikan dari hasil lokal.
+
+
+## Perluasan Doctor Portal D1–D4 — 18 Oktober 2026
+
+Perluasan yang disetujui menambah role DOKTER, relasi akun–profil opsional one-to-one dan provisioning ADMIN `POST /dokter/:id/akun`. Empat GET portal memakai dokter dari JWT/account database, tidak dari parameter dokterId. Snapshot dibatasi sesi sendiri aktif pada hari pelayanan; appointment lain disembunyikan, walk-in HIBRIDA dibatasi ruang/sesi. Respons tidak memuat identitas pasien atau rahasia QR. Mutasi Queue tetap PETUGAS dan tidak diubah.
+
+Namespace `/doctor` memakai invalidasi setelah commit, autentikasi dan revalidasi sesi/akun/profil, pembatasan tanggal/ruang/sesi. USER `/patient`, PETUGAS `/queue` dan perangkat `/display` tetap memakai kontrak existing. Perubahan katalog terbaca pada rekonsiliasi REST; tidak ada broadcast data pasien. Kontrak/prosedur deployment: API_INTEGRATION_GUIDE.md Bagian 19. Laporan QA aktual: `docs/frontend/DOCTOR_PORTAL.md`.
+
+Migration baru `20261018_doctor_portal_identity` aditif: enum DOKTER, nullable unique dokter.pengguna_id dan FK RESTRICT. Hanya database test lokal tervalidasi yang dimigrasikan untuk QA. **Database development/produksi belum disentuh; deployment migration menunggu persetujuan Project Lead.** Tidak ada reset, perubahan migration lama, dependency baru atau penambahan domain klinis.
+
+
+QA final perluasan DOKTER: 589/589 unit (37 suite), 283/283 E2E (24 suite), type check, lint dan NestJS build PASS. Seluruh E2E menggunakan database test lokal tervalidasi; 13 record existing tetap utuh dan 0 fixture tersisa. Flutter 121 tes PASS, satu live opsional SKIP; Web nyata menerima lima invalidasi dokter untuk alur QR walk-in sampai COMPLETE, dan build Web release/APK debug PASS. Fixture waktu E2E H3.3 diperbaiki agar sesi relatif tidak melintasi tanggal pelayanan ketika dijalankan dekat tengah malam UTC; selector produksi tidak diubah. Detail batas perangkat dan bukti screenshot berada pada laporan Doctor Portal.

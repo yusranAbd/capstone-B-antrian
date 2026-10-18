@@ -111,6 +111,7 @@ class AdminDataView extends StatefulWidget {
     required this.onEdit,
     required this.onDeactivate,
     required this.onDoctorLinks,
+    this.onDoctorAccount,
     required this.detail,
     required this.revision,
   });
@@ -120,6 +121,7 @@ class AdminDataView extends StatefulWidget {
   final QueueApi api;
   final bool busy;
   final ValueChanged<Json> onEdit, onDeactivate, onDoctorLinks;
+  final ValueChanged<Json>? onDoctorAccount;
   final String Function(Json) detail;
   final int revision;
   @override
@@ -226,6 +228,16 @@ class _AdminDataViewState extends State<AdminDataView> {
         TextButton(
           onPressed: widget.busy ? null : () => widget.onDeactivate(row),
           child: const Text('Nonaktifkan'),
+        ),
+      if (path == '/dokter' && widget.onDoctorAccount != null)
+        OutlinedButton.icon(
+          onPressed: widget.busy || row['aktif'] != true
+              ? null
+              : () => widget.onDoctorAccount!(row),
+          icon: const Icon(Icons.manage_accounts_outlined),
+          label: Text(
+            row['penggunaId'] == null ? 'Akun dokter' : 'Akun ditautkan',
+          ),
         ),
       if (path == '/dokter')
         OutlinedButton(

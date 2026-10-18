@@ -40,6 +40,9 @@ typedef PatientSocketFactory = io.Socket Function(String, Map<String, dynamic>);
 class PatientUpdates extends ChangeNotifier with WidgetsBindingObserver {
   PatientUpdates({
     required this.api,
+    this.role = 'USER',
+    this.namespace = 'patient',
+    this.eventKinds = const ['TIKET', 'KATALOG'],
     PatientSocketFactory? socketFactory,
     this.debounce = const Duration(milliseconds: 250),
     this.fallbackInterval = const Duration(seconds: 30),
@@ -58,6 +61,8 @@ class PatientUpdates extends ChangeNotifier with WidgetsBindingObserver {
     });
   }
   final QueueApi api;
+  final String role, namespace;
+  final List<String> eventKinds;
   final PatientSocketFactory _factory;
   final Duration debounce, fallbackInterval, reconcileInterval;
   final status = ValueNotifier('Menghubungkan realtime…');
@@ -82,12 +87,12 @@ class PatientUpdates extends ChangeNotifier with WidgetsBindingObserver {
     if (_disposed ||
         !api.config.realtime ||
         _token == null ||
-        api.user?['peran'] != 'USER') {
+        api.user?['peran'] != role) {
       status.value = 'Sinkronisasi berkala aktif';
       return;
     }
     final socket = _socket = _factory(
-      '${api.config.socketOrigin}/patient',
+      '${api.config.socketOrigin}/$namespace',
       io.OptionBuilder()
           .setTransports(['websocket'])
           .disableAutoConnect()
@@ -97,17 +102,17 @@ class PatientUpdates extends ChangeNotifier with WidgetsBindingObserver {
           .build(),
     );
     bool current() => !_disposed && socket == _socket;
-    socket.on('patient:ready', (dynamic value) {
+    socket.on('$namespace:ready', (dynamic value) {
       if (!current() || object(value)['versiSkema'] != 1) return;
       _connected = true;
       status.value = 'Realtime terhubung';
       invalidate();
     });
-    socket.on('patient:updated', (dynamic value) {
+    socket.on('$namespace:updated', (dynamic value) {
       if (!current()) return;
       final event = object(value), id = object(value)['eventId'];
       if (event['versiSkema'] != 1 ||
-          !['TIKET', 'KATALOG'].contains(event['jenis']) ||
+          !eventKinds.contains(event['jenis']) ||
           id is! String ||
           id.isEmpty ||
           !_seen.add(id)) {

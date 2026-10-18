@@ -97,3 +97,8 @@ Tool Node/Playwright hanya QA Flutter Web, bukan aplikasi JavaScript. Browser de
 - Build Flutter Web release dengan resource lokal dan APK Android debug: PASS dari source final.
 - Database aktual: `127.0.0.1:5433/capstone_antrean_test`. Fingerprint 16 tabel: 13 record existing, 0 hilang, 0 berubah, 0 record baru tersisa.
 - Percobaan integrasi saat build paralel sempat timeout transaksi 5 detik. Verifikasi berurutan setelah build berhasil tanpa perubahan backend. Jalankan integrasi database setelah build untuk mengurangi kontensi resource lokal.
+
+
+## Doctor Portal (D1–D4)
+
+Role DOKTER diarahkan ke DoctorPage, memakai tema QueueB existing dan empat menu baca: Beranda Dokter, Jadwal Saya, Janji Temu Saya dan Monitoring Antrean. Login/pemulihan sesi/refresh/logout menggunakan QueueApi dan storage platform existing. Filter tanggal menggunakan kalender; data berasal dari empat GET `/portal-dokter`, tanpa dokterId arbitrer. Namespace `/doctor` memakai JWT DOKTER dan invalidasi untuk REST. Tidak menggunakan room PETUGAS atau token display. ADMIN dapat membuat/menautkan akun dari master Dokter, tanpa registrasi publik role dokter. Lihat [kontrak Bagian 19](../backend/API_INTEGRATION_GUIDE.md#19-doctor-portal--d1d4-18-oktober-2026) dan [hasil QA/panduan demo](DOCTOR_PORTAL.md). Migration development/produksi memerlukan persetujuan terpisah; belum diterapkan.
