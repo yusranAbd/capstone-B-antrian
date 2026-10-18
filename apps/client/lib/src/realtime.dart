@@ -40,7 +40,9 @@ class RealtimeFeed {
           .disableAutoConnect()
           .enableForceNew()
           .setAuth({'token': _usedToken, if (isDisplay) 'layananId': layananId})
-          .setReconnectionAttempts(8)
+          // TV reconnects after prolonged outages; denied tokens still stop
+          // explicitly in onConnectError. Staff behavior stays unchanged.
+          .setReconnectionAttempts(isDisplay ? double.infinity : 8)
           .build(),
     );
     socket.onConnect((_) {
@@ -62,8 +64,12 @@ class RealtimeFeed {
       }
     });
     if (isDisplay) {
-      socket.on('display:ready', (_) {
-        if (!_disposed) {
+      socket.on('display:ready', (dynamic event) {
+        final data = object(event);
+        if (!_disposed &&
+            socket == _socket &&
+            data['layananId'] == layananId &&
+            data['versiSkema'] == 1) {
           onStatus('Realtime terhubung');
           onRefresh();
         }

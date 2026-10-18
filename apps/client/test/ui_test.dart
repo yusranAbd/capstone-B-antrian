@@ -527,8 +527,13 @@ void main() {
       'a' * 64,
     );
     await press(tester, 'Hubungkan display');
-    expect(find.text('UM-001'), findsOneWidget);
-    expect(find.text('Menunggu: 1'), findsOneWidget);
+    expect(find.text('UM-001'), findsWidgets);
+    expect(
+      tester
+          .widget<Text>(find.byKey(const ValueKey('display-waiting-count')))
+          .data,
+      '1',
+    );
     expect(tester.takeException(), isNull);
   });
   testWidgets('ADMIN narrow navigation and profile remain usable', (

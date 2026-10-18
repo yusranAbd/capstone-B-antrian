@@ -5,22 +5,37 @@ import 'package:flutter_tts/flutter_tts.dart';
 
 import 'api.dart';
 import 'config.dart';
+import 'display_board.dart';
+import 'display_fullscreen.dart';
+import 'mobile_ui.dart';
 import 'realtime.dart';
 import 'widgets.dart';
 
 class AnnouncementGate {
   bool _initialized = false;
-  String? _last;
+  final _seen = <String>{};
+
+  /// Reconnect/resume/manual refresh establish a silent baseline, even if an
+  /// offline CALL is different from the last announcement seen before the gap.
+  void rebase() => _initialized = false;
+
   String? observe(Json? announcement, {required bool callSignal}) {
     final id = announcement?['peristiwaId'] as String?;
+    final seen = id != null && _seen.contains(id);
+    if (id != null) {
+      _seen.add(id);
+      if (_seen.length > 256) _seen.remove(_seen.first);
+    }
     if (!_initialized) {
       _initialized = true;
-      _last = id;
       return null;
     }
-    if (id == null || id == _last) return null;
-    _last = id;
-    return callSignal ? (announcement?['teks'] as String?) : null;
+    if (id == null || seen || !callSignal) return null;
+    if (announcement?['aksi'] != null &&
+        !['CALL', 'RECALL'].contains(announcement?['aksi'])) {
+      return null;
+    }
+    return announcement?['teks'] as String?;
   }
 }
 
@@ -36,24 +51,65 @@ class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
   final service = TextEditingController(), token = TextEditingController();
   final form = GlobalKey<FormState>();
   final tts = FlutterTts();
+  final fullscreen = DisplayFullscreen();
   AnnouncementGate gate = AnnouncementGate();
   SnapshotLoader? loader;
   RealtimeFeed? feed;
-  Timer? poll;
+  Timer? poll, clock;
   Json? snapshot;
   String? error, audioError;
   String status = 'Menghubungkan…';
-  bool connected = false, audio = false, audioBusy = false;
+  bool connected = false, audio = false, audioBusy = false, rejected = false;
+  int connectionEpoch = 0, fetchedEpoch = 0;
   int speechEpoch = 0;
   int callSignals = 0, fetchedSignals = 0, consumedSignals = 0;
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    fullscreen.addListener(fullscreenChanged);
+    clock = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted && connected) setState(() {});
+    });
     tts.setErrorHandler((message) {
       // Cancelling the preceding announcement is expected during RECALL/mute.
       if (!['canceled', 'interrupted'].contains('$message')) speechFailed();
     });
+  }
+
+  void fullscreenChanged() {
+    if (mounted) setState(() {});
+  }
+
+  Future<void> stopSpeech() async {
+    try {
+      await tts.stop();
+    } catch (_) {
+      // An optional/absent speech engine must not break visual display cleanup.
+    }
+  }
+
+  void rebase() {
+    connectionEpoch++;
+    gate.rebase();
+    callSignals = fetchedSignals = consumedSignals = 0;
+    speechEpoch++;
+    unawaited(stopSpeech());
+  }
+
+  void rejectDevice() {
+    rebase();
+    feed?.dispose();
+    loader?.dispose();
+    poll?.cancel();
+    if (mounted) {
+      setState(() {
+        rejected = true;
+        audio = false;
+        snapshot = null;
+        error = 'Token perangkat tidak valid atau akses layanan ditolak.';
+      });
+    }
   }
 
   void connect() {
@@ -65,12 +121,18 @@ class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
       error = null;
       audio = false;
       audioError = null;
+      rejected = false;
+      status = widget.api.config.realtime
+          ? 'Menghubungkan…'
+          : 'Sinkronisasi berkala';
+      connectionEpoch++;
       speechEpoch++;
       callSignals = fetchedSignals = consumedSignals = 0;
       gate = AnnouncementGate();
     });
     loader = SnapshotLoader(
       fetch: () async {
+        fetchedEpoch = connectionEpoch;
         fetchedSignals = callSignals;
         return object(
           await widget.api.request(
@@ -82,6 +144,11 @@ class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
         );
       },
       onData: (data) {
+        if (fetchedEpoch != connectionEpoch || !connected || rejected) return;
+        if (data['versiSkema'] != 1) {
+          setState(() => error = 'Versi snapshot tidak didukung.');
+          return;
+        }
         final announcement = data['pengumumanTerakhir'] == null
             ? null
             : object(data['pengumumanTerakhir']);
@@ -102,10 +169,15 @@ class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
         if (audio && speech != null) speak(speech);
       },
       onError: (e) {
-        if (mounted) setState(() => error = '$e');
+        if (!mounted || !connected || fetchedEpoch != connectionEpoch) return;
         if (e is ApiException && [401, 403].contains(e.status)) {
-          feed?.dispose();
-          poll?.cancel();
+          rejectDevice();
+        } else {
+          rebase();
+          setState(
+            () => error =
+                'Snapshot belum dapat dimuat. Periksa koneksi perangkat.',
+          );
         }
       },
     );
@@ -115,13 +187,18 @@ class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
       displayToken: credential,
       onRefresh: () => loader?.refresh(),
       onStatus: (s) {
+        if (!connected || rejected) return;
+        rebase();
         if (mounted) setState(() => status = s);
+        if (s.startsWith('Token perangkat ditolak')) rejectDevice();
       },
       onEvent: (e) {
         if (e['perluPeriksaPengumuman'] == true) callSignals++;
       },
     );
-    loader!.refresh();
+    // Live bootstrap waits for display:ready. REST polling remains available
+    // during a network outage, without announcing offline history.
+    if (!widget.api.config.realtime) loader!.refresh();
     poll = Timer.periodic(
       const Duration(seconds: 15),
       (_) => loader?.refresh(),
@@ -141,18 +218,25 @@ class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
 
   Future<bool> speak(String text) async {
     final epoch = ++speechEpoch;
+    bool current() => mounted && connected && !rejected && epoch == speechEpoch;
     try {
-      await tts.stop();
+      await stopSpeech();
+      if (!current()) return false;
       final available = await tts.isLanguageAvailable('id-ID');
+      if (!current()) return false;
       if (available != true && available != 1) {
         throw StateError('Indonesian voice is unavailable');
       }
-      await tts.setLanguage('id-ID');
+      final language = await tts.setLanguage('id-ID');
+      if (!current()) return false;
+      if (language == 0 || language == false) {
+        throw StateError('Speech language rejected');
+      }
       final result = await tts.speak(text);
       if (result == 0 || result == false) throw StateError('Speech rejected');
       return mounted && epoch == speechEpoch;
     } catch (_) {
-      speechFailed();
+      if (current()) speechFailed();
       return false;
     }
   }
@@ -163,7 +247,7 @@ class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
     try {
       if (audio) {
         speechEpoch++;
-        await tts.stop();
+        await stopSpeech();
         if (mounted) setState(() => audio = false);
       } else if (await speak('Suara pengumuman QueueB aktif.')) {
         if (mounted) {
@@ -185,18 +269,24 @@ class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
     feed?.dispose();
     loader?.dispose();
     poll?.cancel();
-    tts.stop();
+    unawaited(stopSpeech());
     setState(() {
       connected = false;
       snapshot = null;
       callSignals = fetchedSignals = consumedSignals = 0;
       audio = false;
+      rejected = false;
     });
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) loader?.refresh();
+    if (state == AppLifecycleState.resumed && connected && !rejected) {
+      rebase();
+      loader?.refresh();
+    } else if (state != AppLifecycleState.resumed && connected) {
+      rebase();
+    }
   }
 
   @override
@@ -206,152 +296,127 @@ class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
     feed?.dispose();
     loader?.dispose();
     poll?.cancel();
-    tts.stop();
+    clock?.cancel();
+    fullscreen.removeListener(fullscreenChanged);
+    fullscreen.dispose();
+    unawaited(stopSpeech());
     service.dispose();
     token.dispose();
     super.dispose();
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: const Text('QueueB · Public Display'),
-      leading: IconButton(
-        tooltip: 'Kembali ke login',
-        onPressed: widget.onExit,
-        icon: const Icon(Icons.arrow_back),
-      ),
-      actions: [
-        if (connected)
-          TextButton(
-            onPressed: disconnect,
-            child: const Text('Ganti perangkat'),
-          ),
-      ],
-    ),
-    body: !connected
-        ? Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: SizedBox(
-                width: 520,
-                child: Form(
-                  key: form,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Notice(
-                        'Gunakan ID layanan dan token perangkat dari pengelola server. Token tidak disimpan ke URL atau penyimpanan browser.',
-                      ),
-                      TextFormField(
-                        controller: service,
-                        decoration: const InputDecoration(
-                          labelText: 'ID layanan',
+  Widget build(BuildContext context) => Theme(
+    data: QueueBStyle.theme,
+    child: connected
+        ? Scaffold(
+            body: DisplayBoard(
+              snapshot: snapshot,
+              now: widget.api.config.now,
+              snapshotTime: widget.api.config
+                  .instantLabel(snapshot?['diperolehPada'])
+                  .split(' ')
+                  .last,
+              status: status,
+              error: error,
+              audioError: audioError,
+              rejected: rejected,
+              audio: audio,
+              audioBusy: audioBusy,
+              fullscreen: fullscreen.active,
+              fullscreenSupported: fullscreen.supported,
+              onRefresh: () {
+                rebase();
+                loader?.refresh();
+              },
+              onAudio: toggleAudio,
+              onConfigure: disconnect,
+              onFullscreen: () async {
+                try {
+                  await fullscreen.toggle();
+                } catch (_) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Fullscreen tidak tersedia. Gunakan mode layar penuh browser.',
                         ),
-                        validator: (v) =>
-                            v == null ||
-                                !RegExp(
-                                  r'^[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$',
-                                ).hasMatch(v.trim())
-                            ? 'ID layanan UUID wajib diisi.'
-                            : null,
                       ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: token,
-                        obscureText: true,
-                        enableSuggestions: false,
-                        autocorrect: false,
-                        decoration: const InputDecoration(
-                          labelText: 'Token perangkat',
+                    );
+                  }
+                }
+              },
+            ),
+          )
+        : Scaffold(
+            appBar: AppBar(
+              title: const Text('QueueB · Public Display'),
+              leading: IconButton(
+                tooltip: 'Kembali ke login',
+                onPressed: widget.onExit,
+                icon: const Icon(Icons.arrow_back),
+              ),
+              actions: [
+                if (connected)
+                  TextButton(
+                    onPressed: disconnect,
+                    child: const Text('Ganti perangkat'),
+                  ),
+              ],
+            ),
+            body: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: SizedBox(
+                  width: 520,
+                  child: Form(
+                    key: form,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Notice(
+                          'Gunakan ID layanan dan token perangkat dari pengelola server. Token tidak disimpan ke URL atau penyimpanan browser.',
                         ),
-                        validator: (v) =>
-                            v == null ||
-                                !RegExp(r'^[a-fA-F0-9]{64}$').hasMatch(v.trim())
-                            ? 'Token wajib 64 karakter heksadesimal.'
-                            : null,
-                      ),
-                      const SizedBox(height: 24),
-                      FilledButton(
-                        onPressed: connect,
-                        child: const Text('Hubungkan display'),
-                      ),
-                    ],
+                        TextFormField(
+                          controller: service,
+                          decoration: const InputDecoration(
+                            labelText: 'ID layanan',
+                          ),
+                          validator: (v) =>
+                              v == null ||
+                                  !RegExp(
+                                    r'^[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$',
+                                  ).hasMatch(v.trim())
+                              ? 'ID layanan UUID wajib diisi.'
+                              : null,
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: token,
+                          obscureText: true,
+                          enableSuggestions: false,
+                          autocorrect: false,
+                          decoration: const InputDecoration(
+                            labelText: 'Token perangkat',
+                          ),
+                          validator: (v) =>
+                              v == null ||
+                                  !RegExp(r'^[a-fA-F0-9]{64}$')
+                                      .hasMatch(v.trim())
+                              ? 'Token wajib 64 karakter heksadesimal.'
+                              : null,
+                        ),
+                        const SizedBox(height: 24),
+                        FilledButton(
+                          onPressed: connect,
+                          child: const Text('Hubungkan display'),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-          )
-        : ListView(
-            padding: const EdgeInsets.all(24),
-            children: [
-              Text(
-                label(object(snapshot?['layanan'])),
-                style: Theme.of(context).textTheme.headlineLarge,
-              ),
-              Text('$status · ${dateOnly(snapshot?['tanggalPelayanan'])}'),
-              if (error != null || audioError != null)
-                Notice(error ?? audioError!, error: true),
-              Wrap(
-                spacing: 16,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  Text(
-                    'Menunggu: ${snapshot?['totalMenunggu'] ?? '—'}',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: () => loader?.refresh(),
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Muat ulang'),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: audioBusy ? null : toggleAudio,
-                    icon: Icon(audio ? Icons.volume_up : Icons.volume_off),
-                    label: Text(audio ? 'Matikan suara' : 'Aktifkan suara'),
-                  ),
-                ],
-              ),
-              if (snapshot == null) const LinearProgressIndicator(),
-              if (snapshot?['pengumumanTerakhir'] != null)
-                Section(
-                  title: 'Pengumuman',
-                  child: Text(
-                    '${object(snapshot!['pengumumanTerakhir'])['teks']}',
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
-                ),
-              Wrap(
-                spacing: 20,
-                runSpacing: 20,
-                children: [
-                  for (final room in rows(snapshot?['loket']))
-                    SizedBox(
-                      width: 300,
-                      child: Section(
-                        title: label(room),
-                        subtitle: 'Loket ${room['kode']}',
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (rows(room['tiketAktif']).isEmpty)
-                              const Text('Siap melayani'),
-                            for (final t in rows(room['tiketAktif'])) ...[
-                              Text(
-                                '${t['nomorAntrean']}',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .displayMedium,
-                              ),
-                              stateChip(t['status']),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ],
           ),
   );
 }
