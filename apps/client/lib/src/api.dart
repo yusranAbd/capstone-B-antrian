@@ -257,7 +257,7 @@ class QueueApi extends ChangeNotifier {
 
   Json _identity(dynamic value) {
     final identity = object(value);
-    if (!['ADMIN', 'PETUGAS', 'USER'].contains(identity['peran']) ||
+    if (!['ADMIN', 'PETUGAS', 'USER', 'DOKTER'].contains(identity['peran']) ||
         identity['id'] is! String ||
         (identity['id'] as String).isEmpty) {
       throw const ApiException(403, 'Peran akun tidak didukung.');

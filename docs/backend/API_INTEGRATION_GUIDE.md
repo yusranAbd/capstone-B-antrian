@@ -1,8 +1,8 @@
 # QueueB | Panduan Integrasi REST API, Socket.IO, dan Public Display
 
 **Lokasi repository:** `docs/backend/API_INTEGRATION_GUIDE.md`
-**Versi dokumen:** 1.3 — kontrak Backend MVP Hospital dan realtime pasien
-**Tanggal penelaahan:** 17 Oktober 2026
+**Versi dokumen:** 1.4 — Doctor Portal read-only dan empat role
+**Tanggal penelaahan:** 18 Oktober 2026
 **Status:** Kontrak Authentication, Reservasi, Tiket/QR/Check-In, Queue, Realtime, Display, 20 endpoint Administrasi dan endpoint Hospital dipetakan terhadap source. Bagian 17 mencatat integrasi Hospital; Bagian 18 menyediakan urutan request untuk dua alur utama. Hasil QA dan batas MVP tersedia pada `MVP_BACKEND_FINAL.md`; checkpoint Milestone 2 tersedia pada `MILESTONE_2_INTEGRASI_HOSPITAL.md`. Resolusi manual HOSP-OPS-01 ditunda sesuai keputusan Project Lead. Deployment produksi tetap memerlukan konfigurasi dan penilaian risiko pada Bagian 14–15.
 **Basis:** `QueueController`, `QueueService` terbaru dan dua DTO Queue; source Display/Socket.IO termasuk `PatientRealtimeGateway` dan `PatientInvalidationInterceptor`; Authentication; Reservasi; Tiket/QR/Check-In; empat controller Administrasi; serta controller, DTO dan service Dokter, JadwalPraktik, SlotPraktik dan JanjiTemu. Isi branch/commit terbaru tetap merupakan sumber kebenaran jika ada perbedaan.
 
@@ -33,6 +33,8 @@ Contoh UUID, nomor tiket, tanggal, dan nama layanan di bawah merupakan **data il
 **Keamanan:** jangan menulis JWT atau token perangkat ke URL, log aplikasi, sistem analitik, atau berkas repository. Konfigurasi origin yang diizinkan harus disesuaikan untuk Web dan kiosk. CORS bukan autentikasi.
 
 ## 3. Matriks akses yang didukung sumber
+
+Matriks berikut mempertahankan tiga role existing; aturan role DOKTER baru, endpoint portal dan pengecualiannya dijelaskan pada Bagian 19.
 
 | Kanal/operasi                                                                         | PETUGAS                                            | ADMIN                   | USER                                | Perangkat Display                    |
 | ------------------------------------------------------------------------------------- | -------------------------------------------------- | ----------------------- | ----------------------------------- | ------------------------------------ |
@@ -399,7 +401,7 @@ const socket = io(`${API_ORIGIN}/queue`, {
 });
 ```
 
-Namespace `/queue` mengizinkan JWT role ADMIN/PETUGAS pada handshake. Bergabung ke room tetap memerlukan pemeriksaan kewenangan. Pengguna USER tidak boleh bergabung. Versi terbaru penerapan keamanan juga membatasi Origin dan percobaan handshake.
+Namespace `/queue` mengizinkan JWT role ADMIN/PETUGAS pada handshake. Bergabung ke room tetap memerlukan pemeriksaan kewenangan. Pengguna USER dan DOKTER tidak boleh bergabung. Versi terbaru penerapan keamanan juga membatasi Origin dan percobaan handshake.
 
 ### 6.2 Join dan leave
 
@@ -1322,7 +1324,7 @@ Hal yang masih perlu dituntaskan sebelum deployment produksi: empat temuan _high
 
 ## 17. Kontrak Hospital dan HOSP-OPS-01 (Milestone 2)
 
-Dokter adalah master data, bukan role JWT. `Layanan` tetap poli, `Loket` tetap ruang operasional, `JadwalPraktik` merupakan sesi bertanggal, `SlotPraktik` merupakan interval konsultasi, dan `JanjiTemu` terkait satu tiket. Status operasional tetap pada tiket. Semua path berikut memakai `/api/v1` dan JWT.
+Dokter tetap merupakan profil master yang dapat berdiri sendiri. Perluasan D1 menambahkan akun opsional dengan role JWT DOKTER; lihat Bagian 19. `Layanan` tetap poli, `Loket` tetap ruang operasional, `JadwalPraktik` merupakan sesi bertanggal, `SlotPraktik` merupakan interval konsultasi, dan `JanjiTemu` terkait satu tiket. Status operasional tetap pada tiket. Semua path berikut memakai `/api/v1` dan JWT.
 
 ### 17.1 Endpoint master dan appointment existing
 
@@ -1465,7 +1467,7 @@ Contoh body membuat poli yang menerima kedua alur:
 | Tiket digital | GET /tiket/saya atau GET /tiket/:tiketId | Status/nomorAntrean aktual; appointment detail melalui GET /janji-temu/:appointmentId |
 | QR pada hari pelayanan | POST /tiket/:tiketId/qr dengan JWT USER pemilik | qrPayload dan berlakuHingga; render payload persis, tanpa membangun token sendiri |
 
-Booking appointment harus sebelum awal slot; QR diterbitkan pada hari pelayanan dan berlaku 600 detik. USER tidak mengirim penggunaId atau role. Jika QR perlu diperbarui sebelum check-in, gunakan endpoint QR existing; payload lama menjadi tidak valid. Tidak ada pasien/rekam medis atau role dokter tambahan.
+Booking appointment harus sebelum awal slot; QR diterbitkan pada hari pelayanan dan berlaku 600 detik. USER tidak mengirim penggunaId atau role. Jika QR perlu diperbarui sebelum check-in, gunakan endpoint QR existing; payload lama menjadi tidak valid. Tidak ada pasien/rekam medis klinis. Role DOKTER read-only dijelaskan pada Bagian 19.
 
 ### 18.3 Check-in dan pelayanan oleh PETUGAS
 
@@ -1485,3 +1487,90 @@ Tidak ada kandidat layak menghasilkan 404, busy/conflict 409, otorisasi ruang 40
 ### 18.4 Revisi berikutnya yang tidak menghalangi dua alur utama
 
 Resolusi manual HOSP-OPS-01, perpanjangan sesi berisi slot, toleransi menit keterlambatan, fairness lanjutan, pagination/backlog historis dan perubahan mode poli existing belum tersedia. Jangan membuat aksi frontend yang mengasumsikan endpoint tersebut. Metadata ketidaklayakan dan filter baca sudah tersedia; tiket MENUNGGU setelah akhir sesi tetap dicatat tanpa auto-cancel. Kesiapan integrasi MVP dibedakan dari persetujuan deployment produksi.
+
+
+## 19. Doctor Portal — D1–D4 (18 Oktober 2026)
+
+Role efektif kini ADMIN, PETUGAS, USER, DOKTER. Register publik tetap USER dan menolak field peran. Login/refresh/auth/me memakai JWT, hash bcrypt dan sesi database existing; untuk DOKTER juga wajib ada profil Dokter aktif yang ditautkan ke akun aktif. Akun tanpa tautan/profil nonaktif ditolak 401. Penonaktifan akun/profil dan pencabutan sesi berlaku pada request berikutnya; klaim role token bukan sumber kewenangan mutlak.
+
+### 19.1 Provisioning ADMIN dan relasi opsional
+
+Tidak ada endpoint HTTP manajemen pengguna umum existing yang dapat dipakai untuk provisioning DOKTER. Tambahan minimal berada pada controller dokter existing:
+
+`POST /api/v1/dokter/:id/akun` — JWT ADMIN, sukses 201.
+
+Pilih **salah satu** body:
+
+```json
+{"email":"dokter@example.org","kataSandi":"contoh-kata-sandi-awal"}
+```
+
+atau `{"penggunaId":"UUID-akun-DOKTER-existing"}`. Pembuatan mengambil nama dari profil dokter, menormalkan email menjadi lowercase dan memakai PasswordService existing. Email valid maksimal 150 karakter; kata sandi 8–72 karakter, sama dengan fondasi autentikasi existing. Penautan hanya menerima akun DOKTER aktif, bukan promosi USER/PETUGAS/ADMIN. Profil harus aktif dan belum bertaut akun. Tidak ada penggantian tautan atau self-link. Jangan kirim kedua bentuk sekaligus (400).
+
+Respons: `{dokterId, akun:{id,nama,email,peran,aktif}}`, tanpa hash/password/token. Email, akun atau profil yang sudah bertaut mengakibatkan 409; profil/akun tidak aktif atau role akun salah 422; dokter tidak ditemukan 404. Unique constraint database dan update bersyarat dalam transaksi memastikan satu akun ↔ satu profil dan rollback akun baru bila perlombaan provisioning kalah.
+
+GET `/dokter` dan `/dokter/:id` memberi `penggunaId` nullable hanya kepada ADMIN sebagai indikator tautan. Katalog non-ADMIN tetap menghilangkan field tersebut. Penambahan ini tidak mengubah relasi dokter–poli, jadwal, slot, appointment, tiket atau kontrak booking.
+
+### 19.2 Endpoint baca DOKTER
+
+Semua endpoint berikut hanya JWT DOKTER. Backend menurunkan dokter dari akun terautentikasi; tidak menerima dokterId/penggunaId arbitrer. Query tambahan pada DTO ditolak 400.
+
+| Method | Path | Query | Respons |
+|---|---|---|---|
+| GET | `/portal-dokter/profil` | — | `{id,kode,nama,spesialisasi,aktif,poliklinik:[{id,kode,nama}]}` |
+| GET | `/portal-dokter/jadwal` | `tanggal=YYYY-MM-DD` opsional, default hari pelayanan | Array `{id,tanggal,mulaiPada,selesaiPada,aktif,ruang:{id,kode,nama,lokasi},poliklinik:{id,kode,nama}}` |
+| GET | `/portal-dokter/janji-temu` | tanggal seperti jadwal | Array `{nomorAntrean,tanggalPelayanan,mulaiPada,selesaiPada,status,poliklinik,ruang,jadwalPraktikId}` |
+| GET | `/portal-dokter/antrean/snapshot` | `jadwalPraktikId=UUID` wajib | Snapshot sesi aktif di bawah |
+
+Path berawalan `/api/v1`. Tanggal harus tanggal kalender nyata, bukan timestamp. Instan mulai/selesai memakai ISO 8601 UTC; tanggal pelayanan mengikuti SERVICE_TIME_ZONE. Jadwal sendiri termasuk jadwal nonaktif agar statusnya terlihat; appointment sendiri tetap menampilkan status tiket termasuk pembatalan. Daftar kosong ialah `[]`, bukan data ilustratif atau error. Tidak ada nama/ID pasien, email/telepon pasien, ID tiket, kode tiket, QR/hash QR atau data klinis pada respons portal.
+
+Snapshot hanya diizinkan untuk sesi **milik dokter, hari ini, sudah mulai dan belum berakhir**, dengan rantai profil/relasi/poli/ruang/sesi aktif. Sesi orang lain, ruang berbeda, tanggal lain, belum mulai, berakhir/nonaktif menghasilkan 403. Klien memilih ID dari jadwal sendiri, bukan ID ruang sembarang.
+
+```json
+{
+  "versiSkema": 1,
+  "diperolehPada": "2026-10-18T03:00:00.000Z",
+  "tanggalPelayanan": "2026-10-18",
+  "sesi": {"id":"UUID-sesi-sendiri","mulaiPada":"2026-10-18T01:00:00.000Z","selesaiPada":"2026-10-18T05:00:00.000Z"},
+  "ruang": {"id":"UUID-ruang","kode":"R1","nama":"Ruang 1","lokasi":null},
+  "poliklinik": {"id":"UUID-poli","kode":"MAT","nama":"Poli Mata"},
+  "totalMenunggu": 1,
+  "menunggu": [{"nomorAntrean":"A-001","status":"MENUNGGU","jenisAntrean":"JANJI_TEMU","layakDipanggil":true}],
+  "aktif": [{"nomorAntrean":"A-002","status":"DIPANGGIL"}]
+}
+```
+
+Contoh tersebut ilustratif. `aktif` memuat DIPANGGIL/DILAYANI. `totalMenunggu` adalah jumlah dalam **scope sesi dokter**; `menunggu` maksimal 100. Appointment harus terkait slot sesi sendiri; appointment dokter lain tetap disembunyikan meskipun tiket mengarah ke ruang yang sama. Walk-in HIBRIDA hanya metadata operasional minimum untuk ruang/tanggal/sesi aktif yang berwenang. Walk-in tidak diberi dokterId buatan. Status dan urutan bersumber dari tiket serta selector Hospital existing (termasuk urutan REQUEUE), tanpa perubahan Queue Engine atau kebijakan numerik.
+
+### 19.3 Matriks pembatasan DOKTER
+
+| Operasi | DOKTER |
+|---|---|
+| Empat GET portal milik sendiri | Diizinkan |
+| Katalog profesional non-ADMIN (dokter/poli/jadwal/slot aktif) | Mengikuti izin baca katalog existing; tanpa data appointment/pasien |
+| GET portal milik role lain / sesi tidak berwenang | Ditolak oleh guard/scope |
+| POST CHECK_IN, ENQUEUE, CALL, RECALL, SKIP, REQUEUE, START, COMPLETE | 403 |
+| Booking/QR pasien, appointment pasien lewat `/janji-temu` | 403 |
+| Master create/update/delete, provisioning akun, penugasan | 403 |
+| Snapshot PETUGAS `/queue/snapshot` dan namespace `/queue` | Ditolak |
+
+ADMIN/PETUGAS/USER tidak memperoleh empat GET portal DOKTER (403); ADMIN mengelola master melalui endpoint ADMIN existing. Tidak ada penambahan mutasi status antrean atau data medis untuk DOKTER.
+
+### 19.4 Socket.IO `/doctor`
+
+Handshake `io(socketOrigin + '/doctor', {transports:['websocket'],auth:{token:accessToken}})`. Token akses wajib, dibatasi Origin dan rate handshake existing, diverifikasi bersama sesi/akun/profil. Hanya DOKTER dapat terhubung. Tidak ada pesan join room atau parameter dokterId/loketId dari klien; tidak menggunakan room PETUGAS.
+
+- `doctor:ready {versiSkema:1}` → baca ulang REST.
+- `doctor:updated {versiSkema:1,eventId,jenis:'ANTREAN',terjadiPada:UTCISO}` → baca ulang REST.
+
+Event hanya invalidasi, tanpa nomor antrean, ID sesi/pasien/tiket atau identitas. QueueService mengirim setelah transaksi commit melalui broadcast existing. Booking/pembatalan appointment dan CHECK_IN sukses juga memicu invalidasi. Pada setiap event backend menghitung ulang sesi aktif hari pelayanan, dokter pemilik slot atau ruang walk-in HIBRIDA; sesi DB, akun, profil dan kedaluwarsa JWT diperiksa sebelum pengiriman. Dokter di ruang/sesi lain tidak mendapat invalidasi tiket tersebut. Socket sesi dicabut diputus ketika menjadi kandidat pengiriman; JWT kedaluwarsa diputus oleh timer.
+
+Flutter menggunakan satu feed per halaman dengan lifecycle/token rotation, dedup event, debounce dan REST RefreshGate existing. Reconnect/resume memuat ulang; saat socket terputus, rekonsiliasi berkala 30 detik, saat tersambung maksimal dua menit. Perubahan katalog/admin tidak disiarkan lewat `/doctor`: terbaca pada rekonsiliasi berkala atau Muat ulang. Ini kanal invalidasi best effort satu instance, tanpa replay/outbox/adapter multi-instance. HTTPS, reverse proxy dan topologi Socket.IO produksi tetap perlu konfigurasi.
+
+### 19.5 Migration dan urutan deployment
+
+Migration baru: `20261018_doctor_portal_identity`. Menambah nilai enum DOKTER, kolom `dokter.pengguna_id` nullable, unique index dan foreign key RESTRICT. Dokter existing tetap NULL dan dapat dipakai tanpa akun. Tidak ada migration historis diubah atau data master dihapus.
+
+**Database development/produksi belum dimigrasikan oleh pekerjaan ini. Penerapan memerlukan persetujuan Project Lead.** Setelah persetujuan: verifikasi DATABASE_URL dan database aktual secara privat, periksa status/pending migration, jalankan `prisma migrate deploy` memakai konfigurasi lingkungan tujuan, `prisma generate`, build/deploy backend, lalu deploy Flutter dan provision akun melalui ADMIN. Jangan menjalankan migrate reset/db push atau menurunkan enum dengan drop. Deploy migration sebelum backend baru karena query Prisma memakai schema baru. Dokter belum dapat login pada backend lama; tiga role existing tetap didukung.
+
+Runner QA `node test/run-doctor-portal.cjs --migrate-test-db` hanya mengizinkan satu migration baru tersebut pada koneksi paksa `127.0.0.1:5433/capstone_antrean_test`; `--all` menjalankan seluruh E2E. Port internal container ialah 5432, host tetap 5433. Fingerprint semua record existing dibandingkan setelah tes; cleanup hanya fixture unik. Hasil aktual dan panduan demo tercatat pada `docs/frontend/DOCTOR_PORTAL.md`.

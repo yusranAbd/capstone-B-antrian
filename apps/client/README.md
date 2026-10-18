@@ -1,6 +1,6 @@
 # QueueB Hospital — Flutter
 
-Satu aplikasi Dart untuk ADMIN, PETUGAS, USER dan Public Display. Target: Web dan Android. Backend tetap NestJS existing dengan prefix `/api/v1`.
+Satu aplikasi Dart untuk ADMIN, PETUGAS, USER, DOKTER dan Public Display. Target: Web dan Android. Backend tetap NestJS existing dengan prefix `/api/v1`.
 
 ```powershell
 flutter pub get
@@ -27,3 +27,5 @@ Pemulihan sesi Android, Secure Storage, offline dan logout: [PERSISTENT_LOGIN.md
 Informasi dokter, kalender praktik dari API, slot dan booking mobile: [DOCTOR_SCHEDULE_MOBILE.md](../../docs/frontend/DOCTOR_SCHEDULE_MOBILE.md).
 
 Pasangan token akun Android disimpan melalui Android Keystore/`flutter_secure_storage`; Web dan platform lain tetap di memori. Password dan token perangkat display tidak dipersistenkan aplikasi. Startup Android memvalidasi `/auth/me` sebelum membuka halaman role. Akun operasional/perangkat display disediakan pengelola server. Jangan masukkan token/kredensial ke dart-define, URL, source atau Git. Kanal pasien `/patient` memakai JWT USER; jangan memakai room PETUGAS atau token display untuk pasien. Backend menyediakan invalidasi setelah commit; respons dan endpoint REST existing tetap dipakai.
+
+Doctor Portal read-only (jadwal sendiri, appointment sendiri dan monitoring realtime): [DOCTOR_PORTAL.md](../../docs/frontend/DOCTOR_PORTAL.md). Akun dibuat/ditautkan ADMIN pada menu Dokter. Database utama perlu migration aditif dengan persetujuan Project Lead sebelum backend Doctor Portal dideploy. DOKTER tidak memiliki tombol atau izin mutasi antrean.

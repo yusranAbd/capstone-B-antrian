@@ -227,7 +227,14 @@ async function main() {
       scheduleId: schedule.id, slotId: slot.id, slotStart: slotStart.toISOString(), displayToken,
       extraServiceCodes: [],
     };
-    if (process.argv.includes('--android')) {
+    if (process.argv.includes('--doctor-portal')) {
+      const email = `flutter-doctor-${unique.toLowerCase()}@test.local`;
+      const provision = await post(`/dokter/${doctorId}/akun`, {email, kataSandi: password});
+      users.push(provision.akun.id);
+      fixture.doctorPortal = true;
+      fixture.doctor = {id: provision.akun.id, email, password};
+      code = 0;
+    } else if (process.argv.includes('--android')) {
       await require('./android-demo.cjs')(fixture, clientPath, async () => {
         const freshAdmin = await call('/auth/login', {email:accounts.admin.email,kataSandi:password});
         const start = new Date(Math.ceil(Date.now()/60000)*60000+2*60000);
@@ -265,7 +272,7 @@ async function main() {
       child.once('error', reject);
       child.once('exit', value => resolve(value ?? 1));
     });
-    if (code === 0 && (process.argv.includes('--browser') || process.argv.includes('--browser-only') || fixture.demoFull || fixture.adminSchedules || fixture.realtimeAdmin || fixture.doctorSchedule)) {
+    if (code === 0 && (process.argv.includes('--browser') || process.argv.includes('--browser-only') || fixture.demoFull || fixture.adminSchedules || fixture.realtimeAdmin || fixture.doctorSchedule || fixture.doctorPortal)) {
       await require('./browser-smoke.cjs')(fixture);
     }
   } catch (error) {
