@@ -178,25 +178,22 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     api.dispose();
   });
-  test(
-    'DOKTER persistent restore validates server identity',
-    () async {
-      final store = MemorySessionStore();
-      await store.write(const SessionCredentials('old', 'refresh'));
-      final api = QueueApi(
-        config: AppConfig(
-          apiBaseUrl: 'http://localhost:3000/api/v1',
-          realtime: false,
-        ),
-        sessionStore: store,
-        client: MockClient((r) async => reply(identity())),
-      );
-      await api.restoreSession();
-      expect(api.user?['peran'], 'DOKTER');
-      expect(api.accessToken, 'old');
-      api.dispose();
-    },
-  );
+  test('DOKTER persistent restore validates server identity', () async {
+    final store = MemorySessionStore();
+    await store.write(const SessionCredentials('old', 'refresh'));
+    final api = QueueApi(
+      config: AppConfig(
+        apiBaseUrl: 'http://localhost:3000/api/v1',
+        realtime: false,
+      ),
+      sessionStore: store,
+      client: MockClient((r) async => reply(identity())),
+    );
+    await api.restoreSession();
+    expect(api.user?['peran'], 'DOKTER');
+    expect(api.accessToken, 'old');
+    api.dispose();
+  });
   testWidgets(
     'doctor events refresh REST snapshot; duplicate ignored, pause/resume and dispose',
     (tester) async {
