@@ -168,8 +168,8 @@ async function main() {
     serviceId = (
       await post('/layanan', {
         kode: `W${unique}`,
-        nama: 'Poli Fixture Flutter',
-        prefixAntrean: 'WF',
+        nama: process.argv.includes('--display-v2') ? 'Poliklinik Mata' : 'Poli Fixture Flutter',
+        prefixAntrean: process.argv.includes('--display-v2') ? 'M' : 'WF',
         durasiDasarMenit: 15,
         modeReservasi: 'HIBRIDA',
       })
@@ -185,8 +185,8 @@ async function main() {
     });
     const room = await post('/loket', {
       layananId: serviceId,
-      kode: `R${unique}`,
-      nama: 'Ruang Fixture Flutter',
+      kode: process.argv.includes('--display-v2') ? 'LKT-01' : `R${unique}`,
+      nama: process.argv.includes('--display-v2') ? 'Ruang Pemeriksaan 1' : 'Ruang Fixture Flutter',
     });
     const assignment = await post('/penugasan-petugas', {
       petugasId: accounts.petugas.id,
@@ -223,11 +223,23 @@ async function main() {
       tokenHash: require('node:crypto').createHash('sha256').update(displayToken).digest('hex'),
     }});
     fixture = {
-      date, unique, serviceCode: `W${unique}`, ...accounts, roomId: room.id, serviceId, doctorId, assignmentId: assignment.id, extraDoctorIds: [],
+      date, unique, serviceCode: `W${unique}`, ...accounts, roomId: room.id, roomName: room.nama, serviceId, doctorId, assignmentId: assignment.id, extraDoctorIds: [],
       scheduleId: schedule.id, slotId: slot.id, slotStart: slotStart.toISOString(), displayToken,
       extraServiceCodes: [],
     };
-    if (process.argv.includes('--doctor-portal')) {
+    if (process.argv.includes('--display-v2')) {
+      fixture.displayV2 = true;
+      const { DisplayRealtimeGateway } = require(path.join(apiPath, 'dist/realtime/display-realtime.gateway.js'));
+      fixture.disconnectDisplay = () => {
+        // Close only this fixture's Engine.IO transport, like losing a cable.
+        // All other connected clients and all existing data stay untouched.
+        const namespace = app.get(DisplayRealtimeGateway).server;
+        for (const socket of namespace.sockets.values()) {
+          if (socket.handshake.auth?.layananId === serviceId) socket.conn.close();
+        }
+      };
+      code = 0;
+    } else if (process.argv.includes('--doctor-portal')) {
       const email = `flutter-doctor-${unique.toLowerCase()}@test.local`;
       const provision = await post(`/dokter/${doctorId}/akun`, {email, kataSandi: password});
       users.push(provision.akun.id);
@@ -272,7 +284,7 @@ async function main() {
       child.once('error', reject);
       child.once('exit', value => resolve(value ?? 1));
     });
-    if (code === 0 && (process.argv.includes('--browser') || process.argv.includes('--browser-only') || fixture.demoFull || fixture.adminSchedules || fixture.realtimeAdmin || fixture.doctorSchedule || fixture.doctorPortal)) {
+    if (code === 0 && (process.argv.includes('--browser') || process.argv.includes('--browser-only') || fixture.demoFull || fixture.adminSchedules || fixture.realtimeAdmin || fixture.doctorSchedule || fixture.doctorPortal || fixture.displayV2)) {
       await require('./browser-smoke.cjs')(fixture);
     }
   } catch (error) {
