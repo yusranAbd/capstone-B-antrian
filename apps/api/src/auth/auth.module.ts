@@ -27,6 +27,6 @@ import { PasswordService } from './password.service';
     JwtAuthGuard,
     RolesGuard,
   ],
-  exports: [JwtAuthGuard, RolesGuard, PassportModule, JwtModule, JwtStrategy],
+  exports: [PasswordService, JwtAuthGuard, RolesGuard, PassportModule, JwtModule, JwtStrategy],
 })
 export class AuthModule {}

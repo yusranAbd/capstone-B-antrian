@@ -43,6 +43,7 @@ const buatJwtMock = () => ({
 });
 
 const buatPrismaMock = () => ({
+  dokter: { findFirst: jest.fn() },
   sesiPengguna: {
     create: jest.fn(),
     findUnique: jest.fn(),
@@ -65,6 +66,24 @@ describe('AuthService', () => {
   let passwordMock: ReturnType<typeof buatPasswordMock>;
   let jwtMock: ReturnType<typeof buatJwtMock>;
   let prismaMock: ReturnType<typeof buatPrismaMock>;
+
+  it('menolak login DOKTER tanpa profil aktif sebelum sesi dibuat', async () => {
+    usersMock.findByEmail.mockResolvedValue({ ...penggunaUji, peran: PeranPengguna.DOKTER });
+    passwordMock.verify.mockResolvedValue(true);
+    prismaMock.dokter.findFirst.mockResolvedValue(null);
+    await expect(service.login({ email: penggunaUji.email, kataSandi: 'Rahasia123!' })).rejects.toThrow(UnauthorizedException);
+    expect(prismaMock.sesiPengguna.create).not.toHaveBeenCalled();
+  });
+
+  it('memakai rotasi dan sesi existing saat login DOKTER bertaut profil aktif', async () => {
+    usersMock.findByEmail.mockResolvedValue({ ...penggunaUji, peran: PeranPengguna.DOKTER });
+    passwordMock.verify.mockResolvedValue(true);
+    prismaMock.dokter.findFirst.mockResolvedValue({ id: 'dokter' });
+    jwtMock.signAsync.mockResolvedValue('token');
+    const result = await service.login({ email: penggunaUji.email, kataSandi: 'Rahasia123!' });
+    expect(result.user.peran).toBe('DOKTER');
+    expect(prismaMock.sesiPengguna.create).toHaveBeenCalledTimes(1);
+  });
 
   beforeEach(async () => {
     usersMock = buatUsersMock();

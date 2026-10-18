@@ -53,6 +53,16 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       throw new UnauthorizedException('Sesi tidak aktif atau telah berakhir');
     }
 
+    if (
+      user.peran === 'DOKTER' &&
+      !(await this.prisma.dokter.findFirst({
+        where: { penggunaId: user.id, aktif: true },
+        select: { id: true },
+      }))
+    ) {
+      throw new UnauthorizedException('Profil dokter tidak aktif atau belum ditautkan');
+    }
+
     return {
       id: user.id,
       nama: user.nama,

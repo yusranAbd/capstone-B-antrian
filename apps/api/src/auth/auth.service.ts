@@ -67,6 +67,16 @@ export class AuthService {
       throw new UnauthorizedException('Email atau kata sandi tidak valid');
     }
 
+    if (
+      user.peran === 'DOKTER' &&
+      !(await this.prisma.dokter.findFirst({
+        where: { penggunaId: user.id, aktif: true },
+        select: { id: true },
+      }))
+    ) {
+      throw new UnauthorizedException('Profil dokter tidak aktif atau belum ditautkan');
+    }
+
     const sessionId = randomUUID();
 
     const tokens = await this.generateTokens({
@@ -127,6 +137,16 @@ export class AuthService {
 
     if (!user || !user.aktif) {
       throw new UnauthorizedException('Pengguna tidak valid atau tidak aktif');
+    }
+
+    if (
+      user.peran === 'DOKTER' &&
+      !(await this.prisma.dokter.findFirst({
+        where: { penggunaId: user.id, aktif: true },
+        select: { id: true },
+      }))
+    ) {
+      throw new UnauthorizedException('Profil dokter tidak aktif atau belum ditautkan');
     }
 
     const tokens = await this.generateTokens({
