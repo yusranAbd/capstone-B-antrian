@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'admin_schema.dart';
 import 'admin_display.dart';
+import 'admin_practice_form.dart';
 import 'doctor_account.dart';
 import 'admin_data.dart';
 import 'admin_navigation.dart';
@@ -88,6 +89,8 @@ class _AdminPageState extends State<AdminPage> {
               api: widget.api,
               clinics: catalog['/layanan'] ?? [],
             )
+          : resource.path == '/jadwal-praktik'
+          ? PracticeScheduleEditor(api: widget.api, catalog: catalog, row: row)
           : _AdminEditor(
               api: widget.api,
               resource: resource,
