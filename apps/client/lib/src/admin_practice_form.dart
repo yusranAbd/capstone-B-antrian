@@ -9,8 +9,8 @@ import 'mobile_ui.dart';
 // Pre-emit critique: philosophy 5, hierarchy 5, execution 4, specificity 5,
 // restraint 5, variety 4. Native Material controls retain their interaction states.
 abstract final class _PracticeStyle {
-  static const accent = Color(0xff245cdb);
-  static const tint = Color(0xffeaf0ff);
+  static const accent = QueueBStyle.darkTeal;
+  static const tint = QueueBStyle.mint;
   static const paper = Colors.white;
   static const ink = QueueBStyle.navy;
   static const muted = QueueBStyle.muted;

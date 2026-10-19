@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'admin_schema.dart';
 import 'admin_schedules.dart';
+import 'admin_ui.dart';
 import 'api.dart';
 import 'config.dart';
 import 'widgets.dart';
@@ -136,6 +137,31 @@ class _AdminDataViewState extends State<AdminDataView> {
       from = '',
       until = '';
   String? dateError;
+  final fromController = TextEditingController(),
+      untilController = TextEditingController();
+  @override
+  void dispose() {
+    fromController.dispose();
+    untilController.dispose();
+    super.dispose();
+  }
+
+  Future<void> pickFilterDate(bool first) async {
+    final chosen = await showDatePicker(
+      context: context,
+      initialDate:
+          DateTime.tryParse(first ? from : until) ??
+          DateTime.parse(widget.api.config.today),
+      firstDate: DateTime(1000),
+      lastDate: DateTime(9999, 12, 31),
+      initialEntryMode: DatePickerEntryMode.calendarOnly,
+    );
+    if (!mounted || chosen == null) return;
+    final value = calendarDate(chosen);
+    (first ? fromController : untilController).text = value;
+    changeDate(value, first);
+  }
+
   String get path => widget.resource.path;
   bool get sessions => ['/jadwal-praktik', '/slot-praktik'].contains(path);
   List<Json> get source => path == '/slot-praktik'
@@ -214,11 +240,11 @@ class _AdminDataViewState extends State<AdminDataView> {
     });
   }
 
-  Widget actions(Json row) => Wrap(
+  Widget actions(Json row, {bool showStatus = true}) => Wrap(
     spacing: 8,
     crossAxisAlignment: WrapCrossAlignment.center,
     children: [
-      stateChip(row['aktif'] == true ? 'AKTIF' : 'NONAKTIF'),
+      if (showStatus) stateChip(row['aktif'] == true ? 'AKTIF' : 'NONAKTIF'),
       TextButton.icon(
         onPressed: widget.busy ? null : () => widget.onEdit(row),
         icon: const Icon(Icons.edit_outlined),
@@ -254,6 +280,104 @@ class _AdminDataViewState extends State<AdminDataView> {
     },
     subtitle: widget.detail(r),
     child: actions(r),
+  );
+
+  Widget table(List<Json> items) => AdminTable(
+    key: ValueKey('$path:$search:$status:$clinic:$doctor:$from:$until'),
+    rows: items,
+    columns: [
+      if (path == '/jadwal-praktik') ...[
+        AdminColumn('Tanggal', (r) => dateOnly(r['tanggal'])),
+        AdminColumn('Dokter', (r) => label(doctorOf(r))),
+        AdminColumn('Poliklinik', clinicName),
+        AdminColumn(
+          'Ruang',
+          (r) =>
+              '${object(r['loket'])['kode'] ?? ''} · ${label(object(r['loket']))}',
+        ),
+        AdminColumn(
+          'Jam praktik',
+          (r) =>
+              '${clockOnly(widget.api.config.localInput(r['mulaiPada']))} – ${clockOnly(widget.api.config.localInput(r['selesaiPada']))}',
+        ),
+      ] else if (path == '/penugasan-petugas') ...[
+        AdminColumn('Petugas', (r) => label(object(r['petugas']))),
+        AdminColumn('Poliklinik', clinicName),
+        AdminColumn(
+          'Ruang / Loket',
+          (r) =>
+              '${object(r['loket'])['kode'] ?? ''} · ${label(object(r['loket']))}',
+        ),
+        AdminColumn('Mulai', (r) => dateOnly(r['tanggalMulai'])),
+        AdminColumn(
+          'Selesai',
+          (r) => r['tanggalSelesai'] == null
+              ? 'Tanpa akhir'
+              : dateOnly(r['tanggalSelesai']),
+        ),
+      ] else ...[
+        AdminColumn('Nama', label),
+        AdminColumn('Kode', (r) => r['kode']),
+        if (path == '/dokter') ...[
+          AdminColumn('Spesialisasi', (r) => r['spesialisasi'] ?? '—'),
+          AdminColumn(
+            'Poliklinik',
+            (r) =>
+                rows(r['dokterLayanan'])
+                    .where((l) => l['aktif'] == true)
+                    .map((l) => label(object(l['layanan'])))
+                    .join(', '),
+          ),
+          AdminColumn(
+            'Akun DOKTER',
+            (r) => r['penggunaId'] == null ? 'Belum ditautkan' : 'Tertaut',
+          ),
+        ],
+        if (path == '/layanan') ...[
+          AdminColumn(
+            'Mode reservasi',
+            (r) => switch (r['modeReservasi']) {
+              'HIBRIDA' => 'Hibrida',
+              'ANTREAN_HARIAN' => 'Walk-in',
+              'JANJI_TEMU_DOKTER' => 'Janji temu dokter',
+              _ => r['modeReservasi'] ?? '—',
+            },
+          ),
+          AdminColumn(
+            'Dokter terkait',
+            (r) => (widget.catalog['/dokter'] ?? [])
+                .where(
+                  (d) => rows(
+                    d['dokterLayanan'],
+                  ).any((l) => l['layananId'] == r['id'] && l['aktif'] == true),
+                )
+                .length,
+            numeric: true,
+          ),
+          AdminColumn(
+            'Ruang',
+            (r) => (widget.catalog['/loket'] ?? [])
+                .where((l) => l['layananId'] == r['id'])
+                .length,
+            numeric: true,
+          ),
+        ],
+        if (path == '/loket') AdminColumn('Lokasi', (r) => r['lokasi'] ?? '—'),
+      ],
+      AdminColumn(
+        'Status',
+        (r) => r['aktif'] == true ? 'Aktif' : 'Nonaktif',
+        cell: (r) => stateChip(r['aktif'] == true ? 'AKTIF' : 'NONAKTIF'),
+      ),
+      AdminColumn(
+        'Aksi',
+        (_) => '',
+        cell: (r) => SizedBox(
+          width: path == '/dokter' ? 530 : 220,
+          child: actions(r, showStatus: false),
+        ),
+      ),
+    ],
   );
   List<Widget> groups(
     List<Json> data,
@@ -393,8 +517,14 @@ class _AdminDataViewState extends State<AdminDataView> {
               SizedBox(
                 width: 220,
                 child: TextField(
-                  decoration: const InputDecoration(
+                  controller: fromController,
+                  decoration: InputDecoration(
                     labelText: 'Dari tanggal (YYYY-MM-DD)',
+                    suffixIcon: IconButton(
+                      tooltip: 'Pilih tanggal mulai filter',
+                      onPressed: () => pickFilterDate(true),
+                      icon: const Icon(Icons.calendar_month_outlined),
+                    ),
                   ),
                   onChanged: (v) => changeDate(v, true),
                 ),
@@ -402,8 +532,14 @@ class _AdminDataViewState extends State<AdminDataView> {
               SizedBox(
                 width: 220,
                 child: TextField(
-                  decoration: const InputDecoration(
+                  controller: untilController,
+                  decoration: InputDecoration(
                     labelText: 'Sampai tanggal (YYYY-MM-DD)',
+                    suffixIcon: IconButton(
+                      tooltip: 'Pilih tanggal akhir filter',
+                      onPressed: () => pickFilterDate(false),
+                      icon: const Icon(Icons.calendar_month_outlined),
+                    ),
                   ),
                   onChanged: (v) => changeDate(v, false),
                 ),
@@ -420,20 +556,19 @@ class _AdminDataViewState extends State<AdminDataView> {
         ),
         if (filtered.isEmpty && !widget.busy)
           const AdminNotice('Tidak ada data yang sesuai filter.'),
-        if (['/layanan', '/dokter'].contains(path))
-          AdminPagedRows(
-            key: ValueKey('$search:$status:$clinic'),
-            rows: filtered,
-            builder: rowCard,
-          )
+        if ([
+          '/layanan',
+          '/dokter',
+          '/jadwal-praktik',
+          '/penugasan-petugas',
+        ].contains(path))
+          table(filtered)
         else
           ...groups(
             filtered,
             clinicId,
             clinicName,
-            (items) => sessions
-                ? doctorGroups(items)
-                : [AdminPagedRows(rows: items, builder: rowCard)],
+            (items) => sessions ? doctorGroups(items) : [table(items)],
             'clinic',
           ),
       ],
@@ -529,33 +664,67 @@ class _AdminSlotSessionState extends State<AdminSlotSession> {
                 ),
                 if (slots != null && visible.isEmpty)
                   const AdminNotice('Tidak ada slot yang sesuai filter.'),
-                AdminPagedRows(
+                AdminTable(
                   rows: visible,
-                  builder: (s) => Section(
-                    title:
-                        '${widget.api.config.instantLabel(s['mulaiPada'])} – ${widget.api.config.localInput(s['selesaiPada']).split('T').last}',
-                    subtitle:
-                        '${s['jumlahJanjiTemu']} terisi / ${s['kapasitas']} · ${s['tersedia'] == true ? 'Tersedia' : 'Tidak tersedia'}',
-                    child: Wrap(
-                      spacing: 8,
-                      children: [
-                        stateChip(s['aktif'] == true ? 'AKTIF' : 'NONAKTIF'),
-                        TextButton(
-                          onPressed: widget.busy
-                              ? null
-                              : () => widget.onEdit(s),
-                          child: const Text('Ubah'),
-                        ),
-                        if (s['aktif'] == true)
-                          TextButton(
-                            onPressed: widget.busy
-                                ? null
-                                : () => widget.onDeactivate(s),
-                            child: const Text('Nonaktifkan'),
-                          ),
-                      ],
+                  columns: [
+                    AdminColumn(
+                      'Jam slot',
+                      (s) =>
+                          '${clockOnly(widget.api.config.localInput(s['mulaiPada']))} – ${clockOnly(widget.api.config.localInput(s['selesaiPada']))}',
                     ),
-                  ),
+                    AdminColumn(
+                      'Kapasitas',
+                      (s) => s['kapasitas'],
+                      numeric: true,
+                    ),
+                    AdminColumn(
+                      'Terisi',
+                      (s) => s['jumlahJanjiTemu'] ?? '—',
+                      numeric: true,
+                    ),
+                    AdminColumn(
+                      'Sisa',
+                      (s) => s['sisaKapasitas'] ?? '—',
+                      numeric: true,
+                    ),
+                    AdminColumn(
+                      'Ketersediaan',
+                      (s) =>
+                          s['tersedia'] == true ? 'Tersedia' : 'Tidak tersedia',
+                    ),
+                    AdminColumn(
+                      'Status',
+                      (s) => s['aktif'] == true ? 'Aktif' : 'Nonaktif',
+                    ),
+                    AdminColumn(
+                      'Aksi',
+                      (_) => '',
+                      cell: (s) => SizedBox(
+                        width: 220,
+                        child: Wrap(
+                          spacing: 8,
+                          children: [
+                            stateChip(
+                              s['aktif'] == true ? 'AKTIF' : 'NONAKTIF',
+                            ),
+                            TextButton(
+                              onPressed: widget.busy
+                                  ? null
+                                  : () => widget.onEdit(s),
+                              child: const Text('Ubah'),
+                            ),
+                            if (s['aktif'] == true)
+                              TextButton(
+                                onPressed: widget.busy
+                                    ? null
+                                    : () => widget.onDeactivate(s),
+                                child: const Text('Nonaktifkan'),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
       ),

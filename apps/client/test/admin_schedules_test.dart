@@ -80,7 +80,7 @@ void main() {
       addTearDown(api.dispose);
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(body: AdminPage(api: api)),
+          home: Scaffold(body: AdminPage(api: api, initialSection: 0)),
         ),
       );
       await tester.pumpAndSettle();

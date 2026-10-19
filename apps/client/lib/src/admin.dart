@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'admin_schema.dart';
 import 'admin_display.dart';
@@ -6,30 +7,37 @@ import 'admin_practice_form.dart';
 import 'doctor_account.dart';
 import 'admin_data.dart';
 import 'admin_navigation.dart';
+import 'admin_ui.dart';
+import 'admin_dashboard.dart';
 import 'admin_schedules.dart';
 import 'api.dart';
 import 'config.dart';
 import 'widgets.dart';
 
 class AdminPage extends StatefulWidget {
-  const AdminPage({super.key, required this.api});
+  const AdminPage({super.key, required this.api, this.initialSection = -1})
+    : assert(initialSection >= -1 && initialSection < 8);
   final QueueApi api;
+  final int initialSection;
   @override
   State<AdminPage> createState() => _AdminPageState();
 }
 
 class _AdminPageState extends State<AdminPage> {
-  int selected = 0;
+  int selected = -1;
+  bool collapsed = false;
   Map<String, List<Json>> catalog = {};
   List<Json> data = [];
   String? session, error, message;
   String scheduleSearch = '';
   bool loading = true;
   int revision = 0;
-  AdminResource get resource => resources[selected];
+  AdminResource get resource =>
+      resources[selected >= 0 && selected < resources.length ? selected : 0];
   @override
   void initState() {
     super.initState();
+    selected = widget.initialSection;
     load();
   }
 
@@ -41,7 +49,7 @@ class _AdminPageState extends State<AdminPage> {
       error = null;
     });
     try {
-      final paths = catalog.isEmpty || reloadCatalog
+      final paths = catalog.isEmpty || reloadCatalog || selected == -1
           ? resources
                 .where((r) => r.path != '/slot-praktik')
                 .map((r) => r.path)
@@ -197,6 +205,46 @@ class _AdminPageState extends State<AdminPage> {
   Widget build(BuildContext context) {
     final content = selected == 7
         ? AdminDisplayPage(api: widget.api)
+        : selected == -1
+        ? ListView(
+            padding: const EdgeInsets.all(24),
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Dashboard',
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(fontWeight: FontWeight.w800),
+                        ),
+                        Text(
+                          '${widget.api.config.today} · ${widget.api.config.serviceTimeZone}',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Muat ulang dashboard',
+                    onPressed: loading ? null : () => load(reloadCatalog: true),
+                    icon: const Icon(Icons.refresh),
+                  ),
+                ],
+              ),
+              if (loading) const LinearProgressIndicator(),
+              if (error != null) AdminNotice(error!, error: true),
+              const SizedBox(height: 12),
+              AdminDashboard(
+                catalog: catalog,
+                config: widget.api.config,
+                loading: loading,
+                onSelect: selectResource,
+              ),
+            ],
+          )
         : ListView(
             padding: const EdgeInsets.all(20),
             children: [
@@ -265,51 +313,65 @@ class _AdminPageState extends State<AdminPage> {
                 ),
             ],
           );
-    return LayoutBuilder(
-      builder: (context, box) => box.maxWidth >= 960
-          ? Row(
-              children: [
-                SizedBox(
-                  width: 252,
-                  child: AdminNavigation(
-                    selected: selected,
-                    onSelect: loading ? null : selectResource,
-                  ),
-                ),
-                const VerticalDivider(width: 1),
-                Expanded(child: content),
-              ],
-            )
-          : Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                  child: Row(
-                    children: [
-                      Tooltip(
-                        message: 'Menu administrasi',
-                        child: OutlinedButton.icon(
-                          onPressed: loading ? null : openMenu,
-                          icon: const Icon(Icons.menu),
-                          label: Text(
-                            box.maxWidth < 375 ? 'Menu' : 'Menu administrasi',
+    return Theme(
+      data: AdminStyle.theme,
+      child: Material(
+        color: AdminStyle.theme.scaffoldBackgroundColor,
+        child: LayoutBuilder(
+          builder: (context, box) => box.maxWidth >= 960
+              ? Row(
+                  children: [
+                    SizedBox(
+                      width: collapsed ? 80 : 236,
+                      child: AdminNavigation(
+                        selected: selected,
+                        onSelect: loading ? null : selectResource,
+                        collapsed: collapsed,
+                        onToggle: () => setState(() => collapsed = !collapsed),
+                      ),
+                    ),
+                    const VerticalDivider(width: 1),
+                    Expanded(child: content),
+                  ],
+                )
+              : Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                      child: Row(
+                        children: [
+                          Tooltip(
+                            message: 'Menu administrasi',
+                            child: OutlinedButton.icon(
+                              onPressed: loading ? null : openMenu,
+                              icon: const Icon(Icons.menu),
+                              label: Text(
+                                box.maxWidth < 375
+                                    ? 'Menu'
+                                    : 'Menu administrasi',
+                              ),
+                            ),
                           ),
-                        ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              selected == -1
+                                  ? 'Dashboard'
+                                  : selected == 7
+                                  ? 'Manajemen Display'
+                                  : resource.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          selected == 7 ? 'Manajemen Display' : resource.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                    Expanded(child: content),
+                  ],
                 ),
-                Expanded(child: content),
-              ],
-            ),
+        ),
+      ),
     );
   }
 }
@@ -402,6 +464,215 @@ class _AdminEditorState extends State<_AdminEditor> {
     return [];
   }
 
+  Future<void> pick(AdminField f) async {
+    if (busy) return;
+    var input = values[f.key] ?? '';
+    final session = (widget.catalog['/jadwal-praktik'] ?? [])
+        .where((s) => s['id'] == values['jadwalPraktikId'])
+        .firstOrNull;
+    var day =
+        DateTime.tryParse(input.split('T').first) ??
+        DateTime.tryParse(dateOnly(session?['tanggal'])) ??
+        DateTime.parse(widget.api.config.today);
+    if (f.kind != FieldKind.clock) {
+      final chosen = await showDatePicker(
+        context: context,
+        initialDate: day,
+        firstDate: DateTime(1000),
+        lastDate: DateTime(9999, 12, 31),
+        initialEntryMode: DatePickerEntryMode.calendarOnly,
+      );
+      if (!mounted || chosen == null) return;
+      day = chosen;
+      if (f.kind == FieldKind.date) {
+        setState(() {
+          values[f.key] = calendarDate(day);
+          controllers[f.key]!.text = values[f.key]!;
+        });
+        return;
+      }
+    }
+    if (!mounted) return;
+    final clock = f.kind == FieldKind.clock ? input : input.split('T').last;
+    final valid = RegExp(r'^([01]\d|2[0-3]):[0-5]\d$').hasMatch(clock);
+    final chosen = await showTimePicker(
+      context: context,
+      initialTime: valid
+          ? TimeOfDay(
+              hour: int.parse(clock.substring(0, 2)),
+              minute: int.parse(clock.substring(3, 5)),
+            )
+          : const TimeOfDay(hour: 8, minute: 0),
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+        child: child!,
+      ),
+    );
+    if (!mounted || chosen == null) return;
+    setState(() {
+      values[f.key] =
+          '${f.kind == FieldKind.instant ? '${calendarDate(day)}T' : ''}${two(chosen.hour)}:${two(chosen.minute)}';
+      controllers[f.key]!.text = values[f.key]!;
+    });
+  }
+
+  Widget input(AdminField f) => TextFormField(
+    controller: controllers[f.key],
+    enabled: !busy,
+    readOnly: [
+      FieldKind.date,
+      FieldKind.clock,
+      FieldKind.instant,
+    ].contains(f.kind),
+    onTap: [FieldKind.date, FieldKind.clock, FieldKind.instant].contains(f.kind)
+        ? () => pick(f)
+        : null,
+    decoration: InputDecoration(
+      labelText: f.title,
+      suffixIcon:
+          [FieldKind.date, FieldKind.clock, FieldKind.instant].contains(f.kind)
+          ? IconButton(
+              tooltip: 'Pilih ${f.title}',
+              onPressed: busy ? null : () => pick(f),
+              icon: Icon(
+                f.kind == FieldKind.clock
+                    ? Icons.schedule
+                    : Icons.calendar_month_outlined,
+              ),
+            )
+          : null,
+    ),
+    keyboardType: f.kind == FieldKind.integer
+        ? TextInputType.number
+        : TextInputType.text,
+    onChanged: (v) => values[f.key] = v.trim(),
+    validator: (v) {
+      final invalid = validateAdminField(f, v?.trim() ?? '', widget.api.config);
+      if (invalid != null) return invalid;
+      if (f.key == 'jamTutup' &&
+          !scheduleClosesAfter(
+            values['jamBuka'] ?? '',
+            values['jamTutup'] ?? '',
+          )) {
+        return 'Jam tutup harus sesudah jam buka.';
+      }
+      if (f.key == 'selesaiPada' &&
+          (values['mulaiPada'] ?? '').isNotEmpty &&
+          (values['selesaiPada'] ?? '').compareTo(values['mulaiPada']!) <= 0) {
+        return 'Jam selesai harus sesudah jam mulai.';
+      }
+      return null;
+    },
+  );
+
+  Widget staffField(AdminField f) {
+    final known = <String, String>{
+      for (final a in widget.catalog['/penugasan-petugas'] ?? <Json>[])
+        if (a['petugasId'] is String)
+          '${a['petugasId']}': label(object(a['petugas'])),
+    };
+    final id = values[f.key] ?? '';
+    if (id.isNotEmpty) {
+      known.putIfAbsent(id, () => label(object(widget.row?['petugas'])));
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AdminSearchChoice(
+          label: 'Petugas dari penugasan existing',
+          choices: known.entries.map((e) => (e.key, e.value)).toList(),
+          value: id.isEmpty ? null : id,
+          required: false,
+          onChanged: busy
+              ? null
+              : (v) => setState(() {
+                  values[f.key] = v ?? '';
+                  controllers[f.key]!.text = v ?? '';
+                }),
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: busy
+              ? null
+              : () async {
+                  final imported =
+                      (await Clipboard.getData(Clipboard.kTextPlain))?.text
+                          ?.trim() ??
+                      '';
+                  if (!mounted) return;
+                  if (validateAdminField(f, imported, widget.api.config) !=
+                      null) {
+                    setState(
+                      () => error = 'Salin ID akun PETUGAS yang valid dari profil petugas terlebih dahulu.',
+                    );
+                    return;
+                  }
+                  setState(() {
+                    values[f.key] = imported;
+                    controllers[f.key]!.text = imported;
+                    error = null;
+                  });
+                },
+          icon: const Icon(Icons.content_paste),
+          label: const Text('Tempel ID dari profil petugas'),
+        ),
+        TextFormField(
+          controller: controllers[f.key],
+          readOnly: true,
+          decoration: const InputDecoration(
+            labelText: 'ID akun PETUGAS',
+            helperText: 'API belum menyediakan direktori akun petugas. Validasi role tetap dilakukan server.',
+          ),
+          validator: (v) =>
+              validateAdminField(f, v?.trim() ?? '', widget.api.config),
+        ),
+      ],
+    );
+  }
+
+  Widget field(AdminField f) => f.key == 'petugasId'
+      ? staffField(f)
+      : switch (f.kind) {
+          FieldKind.flag => SwitchListTile(
+            title: Text(f.title),
+            value: values[f.key] == 'true',
+            onChanged: busy
+                ? null
+                : (v) => setState(() => values[f.key] = '$v'),
+          ),
+          FieldKind.choice =>
+            options(f).length > 10
+                ? AdminSearchChoice(
+                    label: f.title,
+                    choices: options(f),
+                    value: values[f.key],
+                    required: f.required,
+                    onChanged: busy
+                        ? null
+                        : (v) => setState(() {
+                            values[f.key] = v ?? '';
+                            if (f.key == 'dokterLayananId') {
+                              values['loketId'] = '';
+                            }
+                          }),
+                  )
+                : ChoiceField(
+                    label: f.title,
+                    choices: options(f),
+                    value: values[f.key],
+                    required: f.required,
+                    onChanged: busy
+                        ? null
+                        : (v) => setState(() {
+                            values[f.key] = v ?? '';
+                            if (f.key == 'dokterLayananId') {
+                              values['loketId'] = '';
+                            }
+                          }),
+                  ),
+          _ => input(f),
+        };
+
   Future<void> save() async {
     if (busy || !form.currentState!.validate()) return;
     setState(() {
@@ -442,7 +713,17 @@ class _AdminEditorState extends State<_AdminEditor> {
   Widget build(BuildContext context) => PopScope(
     canPop: !busy,
     child: AlertDialog(
-      title: Text('${editing ? 'Ubah' : 'Tambah'} ${widget.resource.title}'),
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('${editing ? 'Ubah' : 'Tambah'} ${widget.resource.title}'),
+          const SizedBox(height: 8),
+          const Text(
+            'Kelola data layanan rumah sakit. Periksa isian sebelum menyimpan.',
+            style: TextStyle(fontSize: 13),
+          ),
+        ],
+      ),
       content: SizedBox(
         width: 520,
         child: SingleChildScrollView(
@@ -456,55 +737,7 @@ class _AdminEditorState extends State<_AdminEditor> {
                 for (final f in fields)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: switch (f.kind) {
-                      FieldKind.flag => SwitchListTile(
-                        title: Text(f.title),
-                        value: values[f.key] == 'true',
-                        onChanged: busy
-                            ? null
-                            : (v) => setState(() => values[f.key] = '$v'),
-                      ),
-                      FieldKind.choice => ChoiceField(
-                        label: f.title,
-                        choices: options(f),
-                        value: values[f.key],
-                        required: f.required,
-                        onChanged: busy
-                            ? null
-                            : (v) => setState(() {
-                                values[f.key] = v ?? '';
-                                if (f.key == 'dokterLayananId') {
-                                  values['loketId'] = '';
-                                }
-                              }),
-                      ),
-                      _ => TextFormField(
-                        controller: controllers[f.key],
-                        enabled: !busy,
-                        decoration: InputDecoration(labelText: f.title),
-                        keyboardType: f.kind == FieldKind.integer
-                            ? TextInputType.number
-                            : TextInputType.text,
-                        onChanged: (v) => values[f.key] = v.trim(),
-                        validator: (v) {
-                          final invalid = validateAdminField(
-                            f,
-                            v?.trim() ?? '',
-                            widget.api.config,
-                          );
-                          if (invalid != null) return invalid;
-                          if (widget.resource.path == '/jadwal-layanan' &&
-                              f.key == 'jamTutup' &&
-                              !scheduleClosesAfter(
-                                values['jamBuka'] ?? '',
-                                values['jamTutup'] ?? '',
-                              )) {
-                            return 'Jam tutup harus sesudah jam buka.';
-                          }
-                          return null;
-                        },
-                      ),
-                    },
+                    child: field(f),
                   ),
               ],
             ),
