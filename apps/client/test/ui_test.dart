@@ -466,9 +466,7 @@ void main() {
     final server = FakeBackend('USER', mode: 'ANTREAN_HARIAN');
     await launch(tester, server, size: const Size(390, 844));
     await press(tester, 'Pendaftaran');
-    await tester.tap(find.byType(DropdownButtonFormField<String>).first);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('UM · Poli Umum').last);
+    await tester.tap(find.byType(ClinicCard).first);
     await tester.pumpAndSettle();
     await press(tester, 'Reservasi walk-in');
     await press(tester, 'Lanjutkan');
@@ -485,15 +483,14 @@ void main() {
       final server = FakeBackend('USER');
       await launch(tester, server);
       await press(tester, 'Pendaftaran');
-      await tester.tap(find.byType(DropdownButtonFormField<String>).first);
+      await tester.tap(find.byType(ClinicCard).first);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('UM · Poli Umum').last);
-      await tester.pumpAndSettle();
-      await press(tester, 'Lihat Jadwal');
+      await press(tester, 'Lihat Detail Dokter');
+      await press(tester, 'Buat Janji Temu');
       await press(tester, 'Lihat slot');
       await press(tester, 'Sisa slot 2');
-      await press(tester, 'Booking janji temu');
       await press(tester, 'Lanjutkan');
+      await press(tester, 'Konfirmasi Janji Temu');
       expect(
         server.requests
             .where((r) => r.$1 == 'POST' && r.$2 == '/janji-temu')
@@ -654,15 +651,16 @@ void main() {
       await press(tester, 'Janji Temu Dokter');
       await tester.tap(find.byType(ClinicCard).first);
       await tester.pumpAndSettle();
-      await press(tester, 'Lihat Jadwal');
-      expect(find.byTooltip('Kembali ke dokter'), findsOneWidget);
+      await press(tester, 'Lihat Detail Dokter');
+      await press(tester, 'Buat Janji Temu');
+      expect(find.byTooltip('Kembali'), findsOneWidget);
       await press(tester, 'Lihat slot');
       final unavailable = tester.widget<OutlinedButton>(
         find.widgetWithText(OutlinedButton, 'Sisa slot 0'),
       );
       expect(unavailable.onPressed, isNull);
       final book = tester.widget<FilledButton>(
-        find.widgetWithText(FilledButton, 'Booking janji temu'),
+        find.widgetWithText(FilledButton, 'Lanjutkan'),
       );
       expect(book.onPressed, isNull);
       expect(

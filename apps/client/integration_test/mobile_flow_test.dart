@@ -130,20 +130,9 @@ void main() {
         await tester.pumpAndSettle();
       }
 
-      Future<void> select(String text) async {
-        await tester.ensureVisible(find.text(text).last);
-        await tester.tap(find.text(text).last);
-        await tester.pumpAndSettle();
-      }
-
       Future<void> clinic() async {
         await press('Pendaftaran');
-        final dropdown = find.byType(DropdownButtonFormField<String>).first;
-        await tester.ensureVisible(dropdown);
-        await tester.pumpAndSettle();
-        await tester.tap(dropdown);
-        await tester.pumpAndSettle();
-        await select('${fixture['serviceCode']} · Poli Fixture Flutter');
+        await press('Poli Fixture Flutter');
       }
 
       Future<(Json, String)> ticketAndQR() async {
@@ -174,14 +163,16 @@ void main() {
       await login('patient2');
       await clinic();
       await capture('03-poliklinik-dokter');
-      await press('Lihat Jadwal');
+      await press('Lihat Detail Dokter');
       await capture('07-detail-dokter');
+      await press('Buat Janji Temu');
       await press('Lihat slot');
       await press('Sisa slot 2');
       await tester.ensureVisible(find.text('Slot konsultasi'));
       await capture('04-booking-slot');
-      await press('Booking janji temu');
       await press('Lanjutkan');
+      await capture('08-konfirmasi');
+      await press('Konfirmasi Janji Temu');
       final (appointment, appointmentQR) = await ticketAndQR();
       await capture('05-tiket-qr');
       await press('Tutup');
