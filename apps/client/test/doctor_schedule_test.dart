@@ -106,8 +106,11 @@ void main() {
     return api;
   }
 
-  Future<void> detail(WidgetTester tester) =>
-      press(tester, find.text('Lihat Jadwal'));
+  Future<void> detail(WidgetTester tester) async {
+    await press(tester, find.text('Lihat Detail Dokter'));
+    await press(tester, find.text('Buat Janji Temu'));
+  }
+
   Future<void> slot(WidgetTester tester) async {
     await detail(tester);
     await press(tester, find.text('Lihat slot'));
@@ -150,7 +153,7 @@ void main() {
       expect(
         tester
             .widget<FilledButton>(
-              find.widgetWithText(FilledButton, 'Booking janji temu'),
+              find.widgetWithText(FilledButton, 'Lanjutkan'),
             )
             .onPressed,
         isNotNull,
@@ -172,7 +175,7 @@ void main() {
     await open(tester, DoctorBackend());
     await tester.enterText(find.byType(TextField).first, 'Poli Umum');
     await tester.pumpAndSettle();
-    await press(tester, find.text('Lihat Jadwal'));
+    await press(tester, find.text('Lihat Detail Dokter'));
     expect(find.byType(DoctorProfileCard), findsOneWidget);
   });
 
@@ -193,7 +196,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(backend.queries.last['tanggal'], backend.tomorrow);
       expect(find.byType(ConsultationSlotGrid), findsNothing);
-      await press(tester, find.text('Booking janji temu'));
+      await press(tester, find.text('Lanjutkan'));
       expect(
         backend.requests.where((r) => r.$1 == 'POST' && r.$2 == '/janji-temu'),
         isEmpty,
@@ -309,7 +312,7 @@ void main() {
       expect(
         tester
             .widget<FilledButton>(
-              find.widgetWithText(FilledButton, 'Booking janji temu'),
+              find.widgetWithText(FilledButton, 'Lanjutkan'),
             )
             .onPressed,
         isNull,
@@ -324,8 +327,8 @@ void main() {
       final backend = DoctorBackend();
       await open(tester, backend);
       backend.scheduleGate = Completer<void>();
-      await tester.ensureVisible(find.text('Lihat Jadwal'));
-      await tester.tap(find.text('Lihat Jadwal'));
+      await tester.ensureVisible(find.text('Lihat Detail Dokter'));
+      await tester.tap(find.text('Lihat Detail Dokter'));
       await tester.pump();
       backend.emptyDoctors = true;
       for (final state in [
@@ -356,8 +359,8 @@ void main() {
       await open(tester, backend);
       await slot(tester);
       await press(tester, find.text('Sisa slot 2'));
-      await press(tester, find.text('Booking janji temu'));
       await press(tester, find.text('Lanjutkan'));
+      await press(tester, find.text('Konfirmasi Janji Temu').last);
       expect(
         backend.requests
             .where((r) => r.$1 == 'POST' && r.$2 == '/janji-temu')
@@ -377,7 +380,7 @@ void main() {
       expect(
         tester
             .widget<FilledButton>(
-              find.widgetWithText(FilledButton, 'Booking janji temu'),
+              find.widgetWithText(FilledButton, 'Lanjutkan'),
             )
             .onPressed,
         isNull,
