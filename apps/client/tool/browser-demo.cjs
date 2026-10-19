@@ -147,7 +147,7 @@ module.exports = async function demo({fixture:f, root}) {
       window.__qaSpeech=[]; const speak=window.speechSynthesis.speak.bind(window.speechSynthesis);
       window.speechSynthesis.speak=utterance=>{const item={text:utterance.text,lang:utterance.lang,voiceLang:utterance.voice?.lang,events:[]};window.__qaSpeech.push(item);for(const name of ['start','end','error'])utterance.addEventListener(name,e=>item.events.push(e.error||name));speak(utterance);};
     });
-    await button(display,'Buka Public Display'); await enter(display,'ID layanan',f.serviceId); await enter(display,'Token perangkat',f.displayToken);await button(display,'Hubungkan display');
+    await button(display,'Buka Public Display'); await button(display,'Konfigurasi lanjutan (token existing)'); await enter(display,'ID layanan',f.serviceId); await enter(display,'Token perangkat',f.displayToken);await button(display,'Hubungkan display');
     await expect(display.getByText('Realtime terhubung',{exact:false})).toBeVisible(); await button(display,'Aktifkan suara');
     const voices=await display.evaluate(()=>window.speechSynthesis.getVoices().map(v=>v.lang));
     report.tts={voices,requests:await display.evaluate(()=>window.__qaSpeech),audioEnabled:await display.getByRole('button',{name:'Matikan suara',exact:true}).count()===1};
@@ -161,7 +161,7 @@ module.exports = async function demo({fixture:f, root}) {
       speechSynthesis.cancel=()=>clearTimeout(timer);
       speechSynthesis.speak=u=>{window.__qaSpeech.push({text:u.text,lang:u.lang,voiceLang:u.voice?.lang});u.dispatchEvent(new Event('start'));timer=setTimeout(()=>u.dispatchEvent(new Event('end')),30);};
     });
-    await button(soundLogic,'Buka Public Display');await enter(soundLogic,'ID layanan',f.serviceId);await enter(soundLogic,'Token perangkat',f.displayToken);await button(soundLogic,'Hubungkan display');
+    await button(soundLogic,'Buka Public Display');await button(soundLogic,'Konfigurasi lanjutan (token existing)');await enter(soundLogic,'ID layanan',f.serviceId);await enter(soundLogic,'Token perangkat',f.displayToken);await button(soundLogic,'Hubungkan display');
     await expect(soundLogic.getByText('Realtime terhubung',{exact:false})).toBeVisible();await button(soundLogic,'Aktifkan suara');await expect(soundLogic.getByRole('button',{name:'Matikan suara',exact:true})).toBeVisible();
 
     // Open and stop the real laptop camera without storing any frames/photos.

@@ -1,3 +1,5 @@
+import { DisplayDeviceController, DisplayPairingController } from '../display/display-device.controller';
+import { DisplayDeviceService } from '../display/display-device.service';
 import { Module } from '@nestjs/common';
 
 import { DisplayController } from '../display/display.controller';
@@ -9,8 +11,8 @@ import { QueueService } from './queue.service';
 
 @Module({
   imports: [PrismaModule, RealtimeModule],
-  controllers: [QueueController, DisplayController],
-  providers: [QueueService, DisplayService],
+  controllers: [QueueController, DisplayController, DisplayDeviceController, DisplayPairingController],
+  providers: [QueueService, DisplayService, DisplayDeviceService],
   exports: [QueueService],
 })
 export class QueueModule {}

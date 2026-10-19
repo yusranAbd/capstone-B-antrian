@@ -7,7 +7,7 @@ export function configureApp(app: INestApplication): void {
 
   // Origin HTTP khusus browser. Autentikasi dan otorisasi tetap di endpoint.
   // Socket.IO memerlukan pemeriksaan origin terpisah pada kedua gateway.
-  app.enableCors({ origin: allowedOrigins });
+  app.enableCors({ origin: allowedOrigins, credentials: true });
 
   app.setGlobalPrefix('api/v1');
 

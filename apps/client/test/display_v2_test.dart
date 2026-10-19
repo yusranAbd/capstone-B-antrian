@@ -285,6 +285,9 @@ void main() {
           realtime: false,
         ),
         client: MockClient((r) async {
+          if (r.url.path.endsWith('/display/sesi')) {
+            return http.Response('{}', 401);
+          }
           requests++;
           expect(r.headers['x-display-token'], 'a' * 64);
           expect(r.url.hasQuery, isFalse);
@@ -296,6 +299,9 @@ void main() {
           home: DisplayPage(api: api, onExit: () {}),
         ),
       );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Konfigurasi lanjutan (token existing)'));
+      await tester.pumpAndSettle();
       await tester.enterText(
         find.widgetWithText(TextFormField, 'ID layanan'),
         _service,

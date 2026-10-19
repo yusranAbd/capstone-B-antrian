@@ -227,8 +227,9 @@ async function main() {
       scheduleId: schedule.id, slotId: slot.id, slotStart: slotStart.toISOString(), displayToken,
       extraServiceCodes: [],
     };
-    if (process.argv.includes('--display-v2')) {
-      fixture.displayV2 = true;
+    if (process.argv.includes('--display-v2') || process.argv.includes('--display-pairing')) {
+      fixture.displayV2 = !process.argv.includes('--display-pairing');
+      fixture.displayPairing = process.argv.includes('--display-pairing');
       const { DisplayRealtimeGateway } = require(path.join(apiPath, 'dist/realtime/display-realtime.gateway.js'));
       fixture.disconnectDisplay = () => {
         // Close only this fixture's Engine.IO transport, like losing a cable.
@@ -284,7 +285,7 @@ async function main() {
       child.once('error', reject);
       child.once('exit', value => resolve(value ?? 1));
     });
-    if (code === 0 && (process.argv.includes('--browser') || process.argv.includes('--browser-only') || fixture.demoFull || fixture.adminSchedules || fixture.realtimeAdmin || fixture.doctorSchedule || fixture.doctorPortal || fixture.displayV2)) {
+    if (code === 0 && (process.argv.includes('--browser') || process.argv.includes('--browser-only') || fixture.demoFull || fixture.adminSchedules || fixture.realtimeAdmin || fixture.doctorSchedule || fixture.doctorPortal || fixture.displayV2 || fixture.displayPairing)) {
       await require('./browser-smoke.cjs')(fixture);
     }
   } catch (error) {

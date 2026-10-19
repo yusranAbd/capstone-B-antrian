@@ -105,7 +105,7 @@ describe('DisplayService - snapshot publik berbasis token perangkat', () => {
     await service.snapshot(layananId, token);
     expect(tx.perangkatTampilan.findUnique).toHaveBeenCalledWith({
       where: { tokenHash },
-      select: { aktif: true, layananId: true, layanan: { select: { aktif: true } } },
+      select: { sesiBerakhirPada: true, aktif: true, layananId: true, layanan: { select: { aktif: true } } },
     });
   });
 

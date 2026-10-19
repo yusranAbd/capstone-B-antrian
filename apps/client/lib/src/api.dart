@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import 'config.dart';
+import 'display_client.dart';
 import 'session_store.dart';
 
 enum SessionPhase { ready, restoring, offline, storageError, signingOut }
@@ -21,12 +22,15 @@ class QueueApi extends ChangeNotifier {
   QueueApi({
     required this.config,
     http.Client? client,
+    http.Client? displayClient,
     SessionStore? sessionStore,
     this.requestTimeout = const Duration(seconds: 20),
   }) : _client = client ?? http.Client(),
+       _displayClient =
+           displayClient ?? client ?? createDisplayClient(config.apiBase),
        _store = sessionStore ?? MemorySessionStore();
   final AppConfig config;
-  final http.Client _client;
+  final http.Client _client, _displayClient;
   final Duration requestTimeout;
   final SessionStore _store;
   SessionPhase sessionPhase = SessionPhase.ready;
@@ -113,7 +117,10 @@ class QueueApi extends ChangeNotifier {
     if (body != null) request.body = jsonEncode(body);
     try {
       return await (() async {
-        final response = await _client.send(request);
+        final transport = path.startsWith('/display/') && displayToken == null
+            ? _displayClient
+            : _client;
+        final response = await transport.send(request);
         return http.Response.fromStream(response);
       })().timeout(requestTimeout);
     } on TimeoutException {
@@ -488,6 +495,7 @@ class QueueApi extends ChangeNotifier {
     _generation++;
     _renew?.cancel();
     _client.close();
+    if (!identical(_client, _displayClient)) _displayClient.close();
     super.dispose();
   }
 }

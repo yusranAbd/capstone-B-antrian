@@ -38,9 +38,9 @@ export class DisplayService {
       async (tx) => {
         const perangkat = await tx.perangkatTampilan.findUnique({
           where: { tokenHash: hashToken },
-          select: { aktif: true, layananId: true, layanan: { select: { aktif: true } } },
+          select: { sesiBerakhirPada: true, aktif: true, layananId: true, layanan: { select: { aktif: true } } },
         });
-        if (!perangkat) {
+        if (!perangkat || (perangkat.sesiBerakhirPada && perangkat.sesiBerakhirPada <= new Date())) {
           throw new UnauthorizedException('Token perangkat display tidak valid');
         }
         if (!perangkat.aktif || !perangkat.layanan.aktif || perangkat.layananId !== layananId) {
