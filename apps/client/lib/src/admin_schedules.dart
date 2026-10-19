@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'admin_schema.dart';
+import 'admin_ui.dart';
 import 'api.dart';
 import 'config.dart';
 import 'widgets.dart';
@@ -96,6 +97,65 @@ class GroupedClinicSchedules extends StatelessWidget {
   final ValueChanged<String> onSearch;
   final ValueChanged<Json> onEdit, onDeactivate;
   final bool busy;
+
+  Widget dayRow(BuildContext context, String day, Json? row) => LayoutBuilder(
+    builder: (context, box) {
+      final summary = Row(
+        children: [
+          SizedBox(
+            width: 82,
+            child: Text(
+              dayLabel(day),
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              row == null
+                  ? 'Belum dikonfigurasi'
+                  : '${clockOnly(row['jamBuka'])}–${clockOnly(row['jamTutup'])} · Kuota ${row['kapasitasHarian']}',
+            ),
+          ),
+        ],
+      );
+      final actions = row == null
+          ? const SizedBox()
+          : Wrap(
+              spacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                stateChip(row['aktif'] == true ? 'AKTIF' : 'NONAKTIF'),
+                TextButton.icon(
+                  onPressed: busy ? null : () => onEdit(row),
+                  icon: const Icon(Icons.edit_outlined, size: 18),
+                  label: const Text('Ubah'),
+                ),
+                if (row['aktif'] == true)
+                  TextButton(
+                    onPressed: busy ? null : () => onDeactivate(row),
+                    child: const Text('Nonaktifkan'),
+                  ),
+              ],
+            );
+      return Column(
+        children: [
+          if (box.maxWidth >= 680)
+            Row(
+              children: [
+                Expanded(child: summary),
+                actions,
+              ],
+            )
+          else
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [summary, actions],
+            ),
+          if (day != scheduleDays.last) const Divider(height: 1),
+        ],
+      );
+    },
+  );
   @override
   Widget build(BuildContext context) {
     final groups = groupClinicSchedules(clinics, schedules, search);
@@ -144,51 +204,7 @@ class GroupedClinicSchedules extends StatelessWidget {
                         final row = group.schedules
                             .where((r) => r['hari'] == day)
                             .firstOrNull;
-                        return Semantics(
-                          container: true,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                dayLabel(day),
-                                style: Theme.of(context).textTheme.titleSmall,
-                              ),
-                              if (row == null)
-                                const Text('Belum dikonfigurasi')
-                              else ...[
-                                Text(
-                                  '${clockOnly(row['jamBuka'])}–${clockOnly(row['jamTutup'])} | Kuota ${row['kapasitasHarian']}',
-                                ),
-                                Wrap(
-                                  spacing: 8,
-                                  crossAxisAlignment: WrapCrossAlignment.center,
-                                  children: [
-                                    stateChip(
-                                      row['aktif'] == true
-                                          ? 'AKTIF'
-                                          : 'NONAKTIF',
-                                    ),
-                                    TextButton.icon(
-                                      onPressed: busy
-                                          ? null
-                                          : () => onEdit(row),
-                                      icon: const Icon(Icons.edit_outlined),
-                                      label: const Text('Ubah'),
-                                    ),
-                                    if (row['aktif'] == true)
-                                      TextButton(
-                                        onPressed: busy
-                                            ? null
-                                            : () => onDeactivate(row),
-                                        child: const Text('Nonaktifkan'),
-                                      ),
-                                  ],
-                                ),
-                              ],
-                              if (day != scheduleDays.last) const Divider(),
-                            ],
-                          ),
-                        );
+                        return dayRow(context, day, row);
                       },
                     ),
                   ),
@@ -363,17 +379,29 @@ class _BulkScheduleEditorState extends State<BulkScheduleEditor> {
               children: [
                 Text('Zona pelayanan: ${widget.api.config.serviceTimeZone}'),
                 const SizedBox(height: 16),
-                ChoiceField(
-                  label: 'Poliklinik',
-                  choices: choicesOf(
-                    widget.clinics.where((c) => c['aktif'] == true).toList(),
+                if (widget.clinics.length > 10)
+                  AdminSearchChoice(
+                    label: 'Poliklinik',
+                    choices: choicesOf(
+                      widget.clinics.where((c) => c['aktif'] == true).toList(),
+                    ),
+                    value: clinic,
+                    onChanged: locked
+                        ? null
+                        : (value) => setState(() => clinic = value),
+                  )
+                else
+                  ChoiceField(
+                    label: 'Poliklinik',
+                    choices: choicesOf(
+                      widget.clinics.where((c) => c['aktif'] == true).toList(),
+                    ),
+                    value: clinic,
+                    required: true,
+                    onChanged: locked
+                        ? null
+                        : (value) => setState(() => clinic = value),
                   ),
-                  value: clinic,
-                  required: true,
-                  onChanged: locked
-                      ? null
-                      : (value) => setState(() => clinic = value),
-                ),
                 const SizedBox(height: 16),
                 Text(
                   'Pilih hari',
@@ -432,7 +460,49 @@ class _BulkScheduleEditorState extends State<BulkScheduleEditor> {
                     child: TextFormField(
                       controller: controller,
                       enabled: !locked,
-                      decoration: InputDecoration(labelText: title),
+                      decoration: InputDecoration(
+                        labelText: title,
+                        suffixIcon: key == 'kapasitasHarian'
+                            ? null
+                            : IconButton(
+                                tooltip: 'Pilih $title',
+                                onPressed: locked
+                                    ? null
+                                    : () async {
+                                        final parts = controller.text.split(
+                                          ':',
+                                        );
+                                        final hour =
+                                                int.tryParse(parts.first) ?? 8,
+                                            minute = parts.length > 1
+                                                ? int.tryParse(parts[1]) ?? 0
+                                                : 0;
+                                        final chosen = await showTimePicker(
+                                          context: context,
+                                          initialTime: TimeOfDay(
+                                            hour: hour.clamp(0, 23),
+                                            minute: minute.clamp(0, 59),
+                                          ),
+                                          builder: (context, child) =>
+                                              MediaQuery(
+                                                data: MediaQuery.of(context)
+                                                    .copyWith(
+                                                      alwaysUse24HourFormat:
+                                                          true,
+                                                    ),
+                                                child: child!,
+                                              ),
+                                        );
+                                        if (chosen != null && mounted) {
+                                          setState(
+                                            () => controller.text =
+                                                '${two(chosen.hour)}:${two(chosen.minute)}',
+                                          );
+                                        }
+                                      },
+                                icon: const Icon(Icons.schedule),
+                              ),
+                      ),
                       keyboardType: key == 'kapasitasHarian'
                           ? TextInputType.number
                           : TextInputType.datetime,

@@ -9,6 +9,7 @@ import 'package:queueb_client/src/admin.dart';
 import 'package:queueb_client/src/admin_data.dart';
 import 'package:queueb_client/src/admin_navigation.dart';
 import 'package:queueb_client/src/admin_schema.dart';
+import 'package:queueb_client/src/admin_ui.dart';
 import 'package:queueb_client/src/api.dart';
 import 'package:queueb_client/src/config.dart';
 
@@ -122,7 +123,7 @@ void main() {
     });
   }
   testWidgets(
-    'hundreds of practice rows stay lazy with clinic doctor date grouping and filters',
+    'hundreds of practice rows use bounded table pagination and clinic doctor date filters',
     (tester) async {
       final api = QueueApi(
         config: AppConfig(
@@ -151,23 +152,32 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.byType(AdminDataGroup), findsNWidgets(11));
-      expect(find.text('Ubah'), findsNothing);
+      expect(find.byType(AdminTable), findsOneWidget);
+      expect(
+        tester
+            .widget<PaginatedDataTable>(find.byType(PaginatedDataTable))
+            .source
+            .rowCount,
+        440,
+      );
+      expect(find.text('Ubah'), findsNWidgets(10));
       await tester.enterText(
         find.widgetWithText(TextField, 'Cari nama atau kode'),
         'Dokter 21',
       );
       await tester.pumpAndSettle();
-      expect(find.byType(AdminDataGroup), findsOneWidget);
-      await tester.tap(find.text('Poliklinik 10'));
-      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<PaginatedDataTable>(find.byType(PaginatedDataTable))
+            .source
+            .rowCount,
+        20,
+      );
       expect(
         find.byWidgetPredicate((w) => w is Text && w.data == 'Dokter 21'),
-        findsOneWidget,
+        findsNWidgets(10),
       );
-      await tester.tap(find.text('Dokter 21').last);
-      await tester.pumpAndSettle();
-      expect(find.text('2026-10-17'), findsOneWidget);
+      expect(find.text('Poliklinik 10'), findsNWidgets(10));
       await tester.enterText(
         find.widgetWithText(TextField, 'Dari tanggal (YYYY-MM-DD)'),
         '2026-02-30',
@@ -229,7 +239,7 @@ void main() {
       await tester.tap(find.byType(ExpansionTile));
       await tester.pumpAndSettle();
       expect(requests, 1);
-      expect(find.text('NONAKTIF'), findsOneWidget);
+      expect(find.text('Nonaktif'), findsOneWidget);
       expect(find.text('Ubah'), findsOneWidget);
       expect(find.text('Nonaktifkan'), findsNothing);
       await tester.pumpWidget(const SizedBox());

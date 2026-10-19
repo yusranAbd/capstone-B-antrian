@@ -250,6 +250,16 @@ void main() {
       await tester.ensureVisible(find.widgetWithText(FilledButton, 'Masuk'));
       await tester.tap(find.widgetWithText(FilledButton, 'Masuk'));
       await tester.pumpAndSettle();
+      if (backend.role == 'ADMIN') {
+        if (size.width < 960) {
+          await tester.tap(find.byTooltip('Menu administrasi'));
+          await tester.pumpAndSettle();
+        }
+        await tester.tap(find.text('Master data'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(ListTile, 'Poliklinik'));
+        await tester.pumpAndSettle();
+      }
     }
     addTearDown(() async {
       await tester.pumpWidget(const SizedBox());

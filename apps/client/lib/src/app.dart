@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'admin.dart';
+import 'admin_ui.dart';
 import 'api.dart';
 import 'display.dart';
 import 'doctor.dart';
@@ -99,13 +100,26 @@ class _RootState extends State<_Root> {
       }
       final role = api.user!['peran'];
       return Theme(
-        data: role == 'ADMIN' ? Theme.of(context) : QueueBStyle.theme,
+        data: role == 'ADMIN' ? AdminStyle.theme : QueueBStyle.theme,
         child: Scaffold(
           appBar: AppBar(
-            title: role == 'ADMIN'
-                ? const Text('QueueB · ADMIN')
-                : const QueueBBrand(compact: true),
+            title: const QueueBBrand(compact: true),
             actions: [
+              if (role == 'ADMIN' && MediaQuery.sizeOf(context).width >= 700)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Center(
+                    child: SizedBox(
+                      width: 140,
+                      child: Text(
+                        '${api.user!['nama']} · ADMIN',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ),
+                  ),
+                ),
               IconButton(
                 tooltip: 'Profil akun',
                 icon: const Icon(Icons.account_circle_outlined),

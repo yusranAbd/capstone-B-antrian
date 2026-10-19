@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'api.dart';
+import 'admin_ui.dart';
 import 'config.dart';
 import 'widgets.dart';
 
@@ -221,6 +222,12 @@ class _AdminDisplayPageState extends State<AdminDisplayPage> {
               'Belum ada perangkat yang sesuai. Tambahkan perangkat untuk memulai aktivasi.',
             ),
           ),
+        const Padding(
+          padding: EdgeInsets.only(top: 12),
+          child: Text(
+            'Status aktif adalah izin perangkat, bukan indikator online.',
+          ),
+        ),
         for (final group in groups.values) ...[
           Padding(
             padding: const EdgeInsets.only(top: 24, bottom: 8),
@@ -229,64 +236,51 @@ class _AdminDisplayPageState extends State<AdminDisplayPage> {
               style: Theme.of(context).textTheme.titleLarge,
             ),
           ),
-          for (final d in group)
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.tv_rounded),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            '${d['nama']}',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
+          AdminTable(
+            key: ValueKey('$clinic:$search:${group.first['layananId']}'),
+            rows: group,
+            columns: [
+              AdminColumn('Nama perangkat', (d) => d['nama']),
+              AdminColumn(
+                'Status akses',
+                (d) => d['aktif'] == true ? 'Aktif' : 'Nonaktif',
+              ),
+              AdminColumn(
+                'Terakhir terhubung',
+                (d) => d['terakhirAktifPada'] == null
+                    ? 'Belum tersedia'
+                    : widget.api.config.instantLabel(d['terakhirAktifPada']),
+              ),
+              AdminColumn(
+                'Aksi',
+                (_) => '',
+                cell: (d) => SizedBox(
+                  width: 340,
+                  child: Wrap(
+                    spacing: 8,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: busy || object(d['layanan'])['aktif'] != true
+                            ? null
+                            : () => activateDevice(d),
+                        icon: const Icon(Icons.key),
+                        label: Text(
+                          d['aktif'] == true
+                              ? 'Kode aktivasi / rotasi'
+                              : 'Reaktivasi',
                         ),
-                        Chip(
-                          label: Text(
-                            d['aktif'] == true ? 'Aktif' : 'Nonaktif',
-                          ),
+                      ),
+                      if (d['aktif'] == true)
+                        TextButton(
+                          onPressed: busy ? null : () => deactivateDevice(d),
+                          child: const Text('Nonaktifkan'),
                         ),
-                      ],
-                    ),
-                    Text(
-                      'Terakhir terhubung: ${d['terakhirAktifPada'] == null ? 'Belum tersedia' : widget.api.config.instantLabel(d['terakhirAktifPada'])}',
-                    ),
-                    const Text(
-                      'Status aktif adalah izin perangkat, bukan indikator online.',
-                    ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        OutlinedButton.icon(
-                          onPressed:
-                              busy || object(d['layanan'])['aktif'] != true
-                              ? null
-                              : () => activateDevice(d),
-                          icon: const Icon(Icons.key),
-                          label: Text(
-                            d['aktif'] == true
-                                ? 'Kode aktivasi / rotasi'
-                                : 'Reaktivasi',
-                          ),
-                        ),
-                        if (d['aktif'] == true)
-                          TextButton(
-                            onPressed: busy ? null : () => deactivateDevice(d),
-                            child: const Text('Nonaktifkan'),
-                          ),
-                      ],
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
+            ],
+          ),
         ],
       ],
     );
