@@ -118,15 +118,17 @@ void main() {
             ..accessToken = 'access';
       await tester.pumpWidget(QueueBApp(api: api));
       await tester.pumpAndSettle();
-      expect(find.text('Beranda Dokter'), findsOneWidget);
+      expect(find.text('Dashboard Dokter'), findsOneWidget);
       expect(find.text('Dokter Satu'), findsOneWidget);
-      await tester.tap(find.byIcon(Icons.event_available_outlined));
-      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('M-001'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text('M-001'), findsOneWidget);
-      await tester.tap(find.byIcon(Icons.monitor_heart_outlined));
-      await tester.pumpAndSettle();
-      expect(find.text('M-002'), findsOneWidget);
-      expect(find.text('Menunggu: 2'), findsOneWidget);
+      expect(find.byType(NavigationBar), findsNothing);
+      expect(find.text('M-002'), findsWidgets);
+      expect(find.text('Dalam Antrean'), findsOneWidget);
       expect(find.text('Panggil berikutnya'), findsNothing);
       expect(find.text('Check-In QR'), findsNothing);
       expect(requests.every((m) => m == 'GET'), true);
@@ -164,12 +166,20 @@ void main() {
     fail = false;
     await tester.tap(find.byTooltip('Muat ulang portal'));
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Tidak ada jadwal untuk tanggal pilihan.'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(
       find.text('Tidak ada jadwal untuk tanggal pilihan.'),
       findsOneWidget,
     );
-    await tester.tap(find.byIcon(Icons.monitor_heart_outlined));
-    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.textContaining('Monitoring tersedia selama sesi'),
+      -300,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(
       find.textContaining('Monitoring tersedia selama sesi'),
       findsOneWidget,
@@ -250,7 +260,12 @@ void main() {
       });
       await tester.pump(const Duration(milliseconds: 260));
       await tester.pumpAndSettle();
-      expect(find.text('M-009'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('M-009').first,
+        250,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('M-009'), findsWidgets);
       final count = reads;
       socket.fire('doctor:updated', {
         'versiSkema': 1,
