@@ -325,6 +325,7 @@ void main() {
     );
     await launch(tester, FakeBackend('USER'), login: false);
     await press(tester, 'Buka Public Display');
+    await press(tester, 'Konfigurasi lanjutan (token existing)');
     await tester.enterText(
       find.widgetWithText(TextFormField, 'ID layanan'),
       uid,
@@ -518,6 +519,7 @@ void main() {
     final server = FakeBackend('USER');
     await launch(tester, server, login: false);
     await press(tester, 'Buka Public Display');
+    await press(tester, 'Konfigurasi lanjutan (token existing)');
     await tester.enterText(
       find.widgetWithText(TextFormField, 'ID layanan'),
       uid,

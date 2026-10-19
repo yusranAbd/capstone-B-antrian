@@ -60,11 +60,12 @@ module.exports = async function ({fixture: f, root}) {
         }
       });
       p.on('request', request => {
-        if (new URL(request.url()).pathname.startsWith('/api/v1/')) requests.push({url: request.url(), method: request.method(), token: request.headers()['x-display-token']});
+        if (new URL(request.url()).pathname.startsWith('/api/v1/')) requests.push({url: request.url(), method: request.method(), token: request.headers()['x-display-token'], authorization: request.headers().authorization});
       });
     }
     await p.goto('http://127.0.0.1:8080/');
     await button(p, 'Buka Public Display');
+    await button(p, 'Konfigurasi lanjutan (token existing)');
     await enter(p, 'ID layanan', f.serviceId);
     await enter(p, 'Token perangkat', token);
     await button(p, 'Hubungkan display');
@@ -137,7 +138,8 @@ module.exports = async function ({fixture: f, root}) {
     await button(fresh, 'Aktifkan suara');
     assert.equal(await speechCount(fresh), 1);
     await fresh.reload();
-    await button(fresh, 'Buka Public Display');
+    await expect(fresh.getByText('Aktivasi Public Display', {exact: true})).toBeVisible();
+    await button(fresh, 'Konfigurasi lanjutan (token existing)');
     await expect(fresh.getByRole('textbox', {name: 'Token perangkat', exact: true})).toHaveValue('');
     await fresh.context().close();
     await page.bringToFront();
@@ -181,8 +183,11 @@ module.exports = async function ({fixture: f, root}) {
     report.invalidToken = true;
     await denied.context().close();
 
-    assert.ok(requests.length > 5 && requests.every(r => r.method === 'GET' && new URL(r.url).pathname === `/api/v1/display/${f.serviceId}/snapshot`));
-    assert.ok(requests.every(r => r.token === f.displayToken && !r.url.includes(f.displayToken)));
+    const snapshots = requests.filter(r => new URL(r.url).pathname === `/api/v1/display/${f.serviceId}/snapshot`);
+    assert.ok(snapshots.length > 5 && requests.every(r => r.method === 'GET' && [`/api/v1/display/${f.serviceId}/snapshot`, '/api/v1/display/sesi'].includes(new URL(r.url).pathname)));
+    assert.ok(snapshots.every(r => r.token === f.displayToken));
+    assert.ok(requests.filter(r => new URL(r.url).pathname === '/api/v1/display/sesi').every(r => !r.token));
+    assert.ok(requests.every(r => !r.authorization && !r.url.includes(f.displayToken)));
     const storage = await page.evaluate(() => JSON.stringify({local: {...localStorage}, session: {...sessionStorage}}));
     assert.ok(!storage.includes(f.displayToken));
     const visible = await page.locator('flt-semantics').allTextContents();

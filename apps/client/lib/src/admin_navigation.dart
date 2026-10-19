@@ -6,6 +6,7 @@ const adminCategories = <(String, List<int>)>[
   ('Master data', [0, 1, 2]),
   ('Manajemen jadwal', [3, 4, 5]),
   ('Manajemen petugas', [6]),
+  ('Perangkat display', [7]),
 ];
 IconData adminIcon(int index) => switch (index) {
   1 => Icons.medical_services_outlined,
@@ -14,6 +15,7 @@ IconData adminIcon(int index) => switch (index) {
   4 => Icons.calendar_month_outlined,
   5 => Icons.event_available,
   6 => Icons.badge_outlined,
+  7 => Icons.tv_outlined,
   _ => Icons.local_hospital_outlined,
 };
 
@@ -56,7 +58,7 @@ class AdminNavigation extends StatelessWidget {
                   ),
                   leading: Icon(adminIcon(i), size: 22),
                   title: Text(
-                    resources[i].title,
+                    i == 7 ? 'Manajemen Display' : resources[i].title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),

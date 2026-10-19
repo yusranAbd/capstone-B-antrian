@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'admin_schema.dart';
+import 'admin_display.dart';
 import 'doctor_account.dart';
 import 'admin_data.dart';
 import 'admin_navigation.dart';
@@ -165,7 +166,7 @@ class _AdminPageState extends State<AdminPage> {
       error = null;
       data = [];
     });
-    load();
+    if (value != 7) load();
   }
 
   Future<void> openMenu() async {
@@ -191,69 +192,76 @@ class _AdminPageState extends State<AdminPage> {
 
   @override
   Widget build(BuildContext context) {
-    final content = ListView(
-      padding: const EdgeInsets.all(20),
-      children: [
-        Text(resource.title, style: Theme.of(context).textTheme.headlineSmall),
-        Text('Zona pelayanan: ${widget.api.config.serviceTimeZone}'),
-        if (error != null) AdminNotice(error!, error: true),
-        if (message != null) AdminNotice(message!),
-        if (resource.path == '/penugasan-petugas')
-          const AdminNotice(
-            'Akun ADMIN/PETUGAS disediakan pengelola server. Gunakan ID akun dari profil petugas untuk memberikan penugasan.',
-          ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 12,
-          runSpacing: 8,
-          children: [
-            FilledButton.icon(
-              onPressed: loading ? null : () => edit(),
-              icon: const Icon(Icons.add),
-              label: const Text('Tambah'),
-            ),
-            OutlinedButton.icon(
-              onPressed: loading ? null : () => load(reloadCatalog: true),
-              icon: const Icon(Icons.refresh),
-              label: const Text('Muat ulang'),
-            ),
-          ],
-        ),
-        if (loading) const LinearProgressIndicator(),
-        if (resource.path == '/jadwal-layanan')
-          GroupedClinicSchedules(
-            clinics: catalog['/layanan'] ?? [],
-            schedules: data,
-            search: scheduleSearch,
-            onSearch: (value) => setState(() => scheduleSearch = value),
-            onEdit: edit,
-            onDeactivate: deactivateRow,
-            busy: loading,
-          )
-        else
-          AdminDataView(
-            key: ValueKey(resource.path),
-            resource: resource,
-            data: data,
-            catalog: catalog,
-            api: widget.api,
-            busy: loading,
-            revision: revision,
-            onEdit: edit,
-            onDeactivate: deactivateRow,
-            onDoctorAccount: (doctor) async {
-              final changed = await showDialog<bool>(
-                context: context,
-                builder: (_) =>
-                    DoctorAccountDialog(api: widget.api, doctor: doctor),
-              );
-              if (changed == true && mounted) await load(reloadCatalog: true);
-            },
-            onDoctorLinks: doctorLinks,
-            detail: detail,
-          ),
-      ],
-    );
+    final content = selected == 7
+        ? AdminDisplayPage(api: widget.api)
+        : ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
+              Text(
+                resource.title,
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              Text('Zona pelayanan: ${widget.api.config.serviceTimeZone}'),
+              if (error != null) AdminNotice(error!, error: true),
+              if (message != null) AdminNotice(message!),
+              if (resource.path == '/penugasan-petugas')
+                const AdminNotice(
+                  'Akun ADMIN/PETUGAS disediakan pengelola server. Gunakan ID akun dari profil petugas untuk memberikan penugasan.',
+                ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 12,
+                runSpacing: 8,
+                children: [
+                  FilledButton.icon(
+                    onPressed: loading ? null : () => edit(),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Tambah'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: loading ? null : () => load(reloadCatalog: true),
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Muat ulang'),
+                  ),
+                ],
+              ),
+              if (loading) const LinearProgressIndicator(),
+              if (resource.path == '/jadwal-layanan')
+                GroupedClinicSchedules(
+                  clinics: catalog['/layanan'] ?? [],
+                  schedules: data,
+                  search: scheduleSearch,
+                  onSearch: (value) => setState(() => scheduleSearch = value),
+                  onEdit: edit,
+                  onDeactivate: deactivateRow,
+                  busy: loading,
+                )
+              else
+                AdminDataView(
+                  key: ValueKey(resource.path),
+                  resource: resource,
+                  data: data,
+                  catalog: catalog,
+                  api: widget.api,
+                  busy: loading,
+                  revision: revision,
+                  onEdit: edit,
+                  onDeactivate: deactivateRow,
+                  onDoctorAccount: (doctor) async {
+                    final changed = await showDialog<bool>(
+                      context: context,
+                      builder: (_) =>
+                          DoctorAccountDialog(api: widget.api, doctor: doctor),
+                    );
+                    if (changed == true && mounted) {
+                      await load(reloadCatalog: true);
+                    }
+                  },
+                  onDoctorLinks: doctorLinks,
+                  detail: detail,
+                ),
+            ],
+          );
     return LayoutBuilder(
       builder: (context, box) => box.maxWidth >= 960
           ? Row(
@@ -288,7 +296,7 @@ class _AdminPageState extends State<AdminPage> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          resource.title,
+                          selected == 7 ? 'Manajemen Display' : resource.title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),

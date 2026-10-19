@@ -36,6 +36,7 @@ module.exports = async function browserSmoke(fixture) {
   await new Promise(resolve => server.listen(8080, '127.0.0.1', resolve));
   let browser, lastPage;
   try {
+    if (fixture.displayPairing) return await require('./browser-display-pairing.cjs')({fixture, root});
     if (fixture.displayV2) return await require('./browser-display-v2.cjs')({fixture, root});
     if (fixture.doctorPortal) return await require('./browser-doctor-portal.cjs')({fixture, root});
     if (fixture.doctorSchedule) return await require('./browser-doctor-schedule.cjs')({fixture, root});
@@ -64,6 +65,7 @@ module.exports = async function browserSmoke(fixture) {
     const context = await browser.newContext(); const page = lastPage = await context.newPage();
     await page.goto('http://127.0.0.1:8080/');
     await page.getByRole('button', {name:'Buka Public Display', exact:true}).click();
+    await page.getByRole('button', {name:'Konfigurasi lanjutan (token existing)', exact:true}).click();
     await enter(page, 'ID layanan', fixture.serviceId);
     await enter(page, 'Token perangkat', fixture.displayToken);
     await page.getByRole('button', {name:'Hubungkan display', exact:true}).click();

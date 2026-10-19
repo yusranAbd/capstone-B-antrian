@@ -49,6 +49,11 @@ class DisplayPage extends StatefulWidget {
 
 class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
   final service = TextEditingController(), token = TextEditingController();
+  final activation = TextEditingController();
+  bool legacy = false,
+      activating = false,
+      restoringDevice = true,
+      pairedSession = false;
   final form = GlobalKey<FormState>();
   final tts = FlutterTts();
   final fullscreen = DisplayFullscreen();
@@ -68,6 +73,7 @@ class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     fullscreen.addListener(fullscreenChanged);
+    restoreDevice();
     clock = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted && connected) setState(() {});
     });
@@ -75,6 +81,74 @@ class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
       // Cancelling the preceding announcement is expected during RECALL/mute.
       if (!['canceled', 'interrupted'].contains('$message')) speechFailed();
     });
+  }
+
+  Future<void> restoreDevice() async {
+    try {
+      final device = object(
+        await widget.api.request('GET', '/display/sesi', authenticated: false),
+      );
+      if (!mounted) return;
+      if (device['id'] is String && device['layananId'] is String) {
+        pairedSession = true;
+        service.text = device['layananId'];
+        connectDevice(service.text, null);
+      }
+    } catch (e) {
+      if (mounted && !(e is ApiException && e.status == 401)) {
+        setState(
+          () => error = 'Sesi perangkat belum dapat diperiksa. Periksa koneksi lalu coba lagi.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => restoringDevice = false);
+    }
+  }
+
+  Future<void> pairDevice() async {
+    if (activating || restoringDevice || !form.currentState!.validate()) return;
+    setState(() {
+      activating = true;
+      error = null;
+    });
+    try {
+      final device = object(
+        await widget.api.request(
+          'POST',
+          '/display/pairing',
+          authenticated: false,
+          body: {'kode': activation.text.trim()},
+        ),
+      );
+      if (!mounted) return;
+      activation.clear();
+      try {
+        final stored = object(
+          await widget.api.request(
+            'GET',
+            '/display/sesi',
+            authenticated: false,
+          ),
+        );
+        if (stored['id'] != device['id']) {
+          throw const ApiException(401, 'Sesi perangkat tidak cocok.');
+        }
+      } on ApiException catch (e) {
+        if (e.status != 401) rethrow;
+        throw const ApiException(
+          401,
+          'Sesi TV tidak tersimpan. Gunakan host/situs yang sama untuk Web dan API, HTTPS di production, lalu minta kode baru dari ADMIN.',
+        );
+      }
+      if (!mounted) return;
+      pairedSession = true;
+      service.text = device['layananId'];
+      connectDevice(service.text, null);
+    } catch (e) {
+      if (mounted) setState(() => error = '$e');
+    } finally {
+      if (mounted) setState(() => activating = false);
+    }
   }
 
   void fullscreenChanged() {
@@ -115,6 +189,11 @@ class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
   void connect() {
     if (!form.currentState!.validate()) return;
     final id = service.text.trim(), credential = token.text.trim();
+    pairedSession = false;
+    connectDevice(id, credential);
+  }
+
+  void connectDevice(String id, String? credential) {
     setState(() {
       connected = true;
       snapshot = null;
@@ -185,6 +264,7 @@ class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
       api: widget.api,
       layananId: id,
       displayToken: credential,
+      displaySession: pairedSession,
       onRefresh: () => loader?.refresh(),
       onStatus: (s) {
         if (!connected || rejected) return;
@@ -264,7 +344,25 @@ class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
     }
   }
 
-  void disconnect() {
+  Future<void> disconnect() async {
+    if (pairedSession) {
+      try {
+        await widget.api.request(
+          'POST',
+          '/display/putuskan',
+          authenticated: false,
+        );
+      } catch (e) {
+        if (mounted) {
+          setState(
+            () => error = 'Belum dapat mencabut sesi perangkat. Periksa koneksi lalu coba Ganti perangkat lagi.',
+          );
+        }
+        return;
+      }
+    }
+    if (!mounted) return;
+    pairedSession = false;
     speechEpoch++;
     feed?.dispose();
     loader?.dispose();
@@ -300,6 +398,7 @@ class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
     fullscreen.removeListener(fullscreenChanged);
     fullscreen.dispose();
     unawaited(stopSpeech());
+    activation.dispose();
     service.dispose();
     token.dispose();
     super.dispose();
@@ -374,43 +473,105 @@ class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Notice(
-                          'Gunakan ID layanan dan token perangkat dari pengelola server. Token tidak disimpan ke URL atau penyimpanan browser.',
-                        ),
-                        TextFormField(
-                          controller: service,
-                          decoration: const InputDecoration(
-                            labelText: 'ID layanan',
-                          ),
-                          validator: (v) =>
-                              v == null ||
-                                  !RegExp(
-                                    r'^[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$',
-                                  ).hasMatch(v.trim())
-                              ? 'ID layanan UUID wajib diisi.'
-                              : null,
-                        ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: token,
-                          obscureText: true,
-                          enableSuggestions: false,
-                          autocorrect: false,
-                          decoration: const InputDecoration(
-                            labelText: 'Token perangkat',
-                          ),
-                          validator: (v) =>
-                              v == null ||
-                                  !RegExp(r'^[a-fA-F0-9]{64}$')
-                                      .hasMatch(v.trim())
-                              ? 'Token wajib 64 karakter heksadesimal.'
-                              : null,
+                        const Icon(
+                          Icons.local_hospital_rounded,
+                          size: 56,
+                          color: QueueBStyle.teal,
                         ),
                         const SizedBox(height: 24),
-                        FilledButton(
-                          onPressed: connect,
-                          child: const Text('Hubungkan display'),
+                        Text(
+                          'Aktivasi Public Display',
+                          style: Theme.of(context).textTheme.headlineMedium,
                         ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Satu layar untuk satu poliklinik. Minta kode sekali pakai dari ADMIN melalui Manajemen Display.',
+                        ),
+                        if (restoringDevice || activating)
+                          const LinearProgressIndicator(),
+                        if (error != null) Notice(error!, error: true),
+                        if (!legacy) ...[
+                          const SizedBox(height: 24),
+                          TextFormField(
+                            controller: activation,
+                            keyboardType: TextInputType.number,
+                            enableSuggestions: false,
+                            autocorrect: false,
+                            decoration: const InputDecoration(
+                              labelText: 'Kode Aktivasi',
+                              hintText: '12 digit dari ADMIN',
+                              prefixIcon: Icon(Icons.key_outlined),
+                            ),
+                            validator: (v) =>
+                                RegExp(r'^\d{12}$').hasMatch(v?.trim() ?? '')
+                                ? null
+                                : 'Masukkan 12 digit kode aktivasi.',
+                            onFieldSubmitted: (_) => pairDevice(),
+                          ),
+                          const SizedBox(height: 24),
+                          FilledButton.icon(
+                            onPressed: activating || restoringDevice
+                                ? null
+                                : pairDevice,
+                            icon: const Icon(Icons.tv),
+                            label: const Text('Hubungkan Perangkat'),
+                          ),
+                          const SizedBox(height: 12),
+                          TextButton(
+                            onPressed: restoringDevice ? null : restoreDevice,
+                            child: const Text('Periksa sesi tersimpan'),
+                          ),
+                        ],
+                        TextButton(
+                          onPressed: () => setState(() {
+                            legacy = !legacy;
+                            error = null;
+                          }),
+                          child: Text(
+                            legacy
+                                ? 'Gunakan kode aktivasi'
+                                : 'Konfigurasi lanjutan (token existing)',
+                          ),
+                        ),
+                        if (legacy) ...[
+                          const Notice(
+                            'Gunakan ID layanan dan token perangkat dari pengelola server. Token tidak disimpan ke URL atau penyimpanan browser.',
+                          ),
+                          TextFormField(
+                            controller: service,
+                            decoration: const InputDecoration(
+                              labelText: 'ID layanan',
+                            ),
+                            validator: (v) =>
+                                v == null ||
+                                    !RegExp(
+                                      r'^[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$',
+                                    ).hasMatch(v.trim())
+                                ? 'ID layanan UUID wajib diisi.'
+                                : null,
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: token,
+                            obscureText: true,
+                            enableSuggestions: false,
+                            autocorrect: false,
+                            decoration: const InputDecoration(
+                              labelText: 'Token perangkat',
+                            ),
+                            validator: (v) =>
+                                v == null ||
+                                    !RegExp(r'^[a-fA-F0-9]{64}$')
+                                        .hasMatch(v.trim())
+                                ? 'Token wajib 64 karakter heksadesimal.'
+                                : null,
+                          ),
+                          const SizedBox(height: 24),
+                          FilledButton(
+                            onPressed: connect,
+                            child: const Text('Hubungkan display'),
+                          ),
+                        ],
                       ],
                     ),
                   ),

@@ -1,0 +1,34 @@
+{
+  "database": "127.0.0.1:5433/capstone_antrean_test",
+  "transport": "Flutter Web → real NestJS + /display + REST snapshot",
+  "speechEngine": "controlled Web Speech id-ID; no claim of audible hardware synthesis",
+  "sizes": [
+    {
+      "width": 1280,
+      "height": 720
+    },
+    {
+      "width": 1920,
+      "height": 1080
+    }
+  ],
+  "singleRoom": true,
+  "multipleRooms": true,
+  "zeroWaiting": true,
+  "call": true,
+  "recall": true,
+  "start": true,
+  "complete": true,
+  "reconnect": true,
+  "noHistoricalSpeech": true,
+  "invalidToken": true,
+  "missingVoice": true,
+  "fullscreen": true,
+  "privacy": true,
+  "browser": "156.0.8078.4",
+  "realtime": {
+    "readyFrames": 2,
+    "updateFrames": 6,
+    "snapshotReads": 12
+  }
+}

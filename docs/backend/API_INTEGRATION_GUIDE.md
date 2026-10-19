@@ -1,9 +1,9 @@
 # QueueB | Panduan Integrasi REST API, Socket.IO, dan Public Display
 
 **Lokasi repository:** `docs/backend/API_INTEGRATION_GUIDE.md`
-**Versi dokumen:** 1.4 — Doctor Portal read-only dan empat role
-**Tanggal penelaahan:** 18 Oktober 2026
-**Status:** Kontrak Authentication, Reservasi, Tiket/QR/Check-In, Queue, Realtime, Display, 20 endpoint Administrasi dan endpoint Hospital dipetakan terhadap source. Bagian 17 mencatat integrasi Hospital; Bagian 18 menyediakan urutan request untuk dua alur utama. Hasil QA dan batas MVP tersedia pada `MVP_BACKEND_FINAL.md`; checkpoint Milestone 2 tersedia pada `MILESTONE_2_INTEGRASI_HOSPITAL.md`. Resolusi manual HOSP-OPS-01 ditunda sesuai keputusan Project Lead. Deployment produksi tetap memerlukan konfigurasi dan penilaian risiko pada Bagian 14–15.
+**Versi dokumen:** 1.5 — pairing Public Display dan sesi kiosk HttpOnly
+**Tanggal penelaahan:** 19 Oktober 2026
+**Status:** Kontrak Authentication, Reservasi, Tiket/QR/Check-In, Queue, Realtime, Display, 20 endpoint Administrasi existing, empat endpoint manajemen display baru dan endpoint Hospital dipetakan terhadap source. Bagian 20 mencatat pairing dan sesi kiosk; Bagian 17 mencatat integrasi Hospital; Bagian 18 menyediakan urutan request untuk dua alur utama. Hasil QA dan batas MVP tersedia pada `MVP_BACKEND_FINAL.md`; checkpoint Milestone 2 tersedia pada `MILESTONE_2_INTEGRASI_HOSPITAL.md`. Resolusi manual HOSP-OPS-01 ditunda sesuai keputusan Project Lead. Deployment produksi tetap memerlukan konfigurasi dan penilaian risiko pada Bagian 14–15.
 **Basis:** `QueueController`, `QueueService` terbaru dan dua DTO Queue; source Display/Socket.IO termasuk `PatientRealtimeGateway` dan `PatientInvalidationInterceptor`; Authentication; Reservasi; Tiket/QR/Check-In; empat controller Administrasi; serta controller, DTO dan service Dokter, JadwalPraktik, SlotPraktik dan JanjiTemu. Isi branch/commit terbaru tetap merupakan sumber kebenaran jika ada perbedaan.
 
 ## 1. Ruang lingkup dan batas dokumentasi
@@ -22,7 +22,7 @@ Contoh UUID, nomor tiket, tanggal, dan nama layanan di bawah merupakan **data il
 | Global prefix                    | `/api/v1`                                                                     |
 | Konten request operasi           | JSON dengan `Content-Type: application/json`                                  |
 | Endpoint antrean PETUGAS         | Access token JWT pada `Authorization: Bearer <access_token>`                  |
-| Endpoint Public Display          | Token perangkat pada `x-display-token: <token_perangkat>`                     |
+| Endpoint Public Display          | Cookie perangkat HttpOnly (Bagian 20) atau token pada `x-display-token: <token_perangkat>`                     |
 | Namespace Socket.IO operasional  | `/queue`                                                                      |
 | Namespace Socket.IO monitor      | `/display`                                                                    |
 | Namespace Socket.IO pasien       | `/patient` — JWT USER dan sesi aktif, tanpa join dari klien                     |
@@ -338,6 +338,8 @@ Mutasi berlangsung dalam Prisma `$transaction` dengan isolation `Serializable`; 
 
 ### 5.1 Endpoint
 
+Alur utama TV kini aktivasi kode sekali pakai dan cookie HttpOnly pada Bagian 20. Header berikut tetap didukung sebagai kompatibilitas token existing; bentuk snapshot tidak berubah.
+
 ```http
 GET /api/v1/display/:layananId/snapshot HTTP/1.1
 x-display-token: <token_perangkat>
@@ -487,6 +489,8 @@ Koneksi yang sah bergabung ke room layanan secara otomatis. Tidak ada event `dis
 ```
 
 Nama event: **`display:ready`**.
+
+**Alternatif sesi kiosk (Bagian 20):** `io(API_ORIGIN + '/display', {transports:['websocket'], withCredentials:true, auth:{layananId}})`. Browser mengirim cookie host API secara otomatis; jangan membaca cookie atau memasukkan token ke URL/auth JavaScript. Namespace, room, `display:ready` dan `display:updated` sama seperti jalur token existing.
 
 ### 7.2 Event `display:updated`
 
@@ -713,7 +717,7 @@ JWT library menambahkan klaim waktu seperti `iat`/`exp` sesuai operasi tanda tan
 
 **Penyimpanan kredensial yang dianjurkan:**
 
-- Web: pertimbangkan pola BFF atau cookie `HttpOnly`, `Secure`, `SameSite` dengan proteksi CSRF bila arsitektur diubah untuk mendukung cookie. **Backend saat ini mengirim token melalui JSON, bukan cookie yang dibuat oleh controller/service ini.** Untuk frontend yang memakai mekanisme sekarang, hindari menyimpan refresh token dalam `localStorage` jika memungkinkan.
+- Web: pertimbangkan pola BFF atau cookie `HttpOnly`, `Secure`, `SameSite` dengan proteksi CSRF bila arsitektur diubah untuk mendukung cookie. **Authentication pengguna tetap mengirim JWT melalui JSON; cookie HttpOnly pada Bagian 20 khusus perangkat display, tidak mengubah sesi akun.** Untuk frontend yang memakai mekanisme sekarang, hindari menyimpan refresh token dalam `localStorage` jika memungkinkan.
 - Android Flutter: gunakan penyimpanan rahasia platform, misalnya Keychain/Keystore melalui paket secure storage yang ditinjau keamanannya. Jangan tulis JWT ke log, analytics, atau URL.
 - Setelah refresh token diputar, buat ulang autentikasi Socket.IO `/queue` bila token akses lama kedaluwarsa atau socket perlu reconnect.
 - Pesan `401` dari login/refresh bukan bukti pengguna tidak berwenang pada layanan. Bedakan kegagalan autentikasi dengan `403` akses penugasan atau layanan.
@@ -1574,3 +1578,45 @@ Migration baru: `20261018_doctor_portal_identity`. Menambah nilai enum DOKTER, k
 **Database development/produksi belum dimigrasikan oleh pekerjaan ini. Penerapan memerlukan persetujuan Project Lead.** Setelah persetujuan: verifikasi DATABASE_URL dan database aktual secara privat, periksa status/pending migration, jalankan `prisma migrate deploy` memakai konfigurasi lingkungan tujuan, `prisma generate`, build/deploy backend, lalu deploy Flutter dan provision akun melalui ADMIN. Jangan menjalankan migrate reset/db push atau menurunkan enum dengan drop. Deploy migration sebelum backend baru karena query Prisma memakai schema baru. Dokter belum dapat login pada backend lama; tiga role existing tetap didukung.
 
 Runner QA `node test/run-doctor-portal.cjs --migrate-test-db` hanya mengizinkan satu migration baru tersebut pada koneksi paksa `127.0.0.1:5433/capstone_antrean_test`; `--all` menjalankan seluruh E2E. Port internal container ialah 5432, host tetap 5433. Fingerprint semua record existing dibandingkan setelah tes; cleanup hanya fixture unik. Hasil aktual dan panduan demo tercatat pada `docs/frontend/DOCTOR_PORTAL.md`.
+
+
+## 20. Manajemen perangkat Public Display dan pairing (v1.5)
+
+Satu perangkat terikat satu layanan/poliklinik; beberapa perangkat boleh memakai layanan sama. Semua path di bawah berprefix `/api/v1`. Endpoint manajemen wajib JWT **ADMIN** dengan sesi aktif; TV tidak login akun. UI ADMIN menampilkan nama dan kategori poliklinik, bukan UUID/hash sebagai label utama.
+
+| Method | Path | Input | Sukses |
+| --- | --- | --- | --- |
+| GET | `/perangkat-display` | JWT ADMIN | 200 array metadata perangkat |
+| POST | `/perangkat-display` | `{nama,layananId}` | 201 metadata perangkat baru |
+| POST | `/perangkat-display/:id/aktivasi` | JWT ADMIN, UUID v4 | 200 `{kode,berlakuHingga}`; kode hanya ditampilkan sekali |
+| POST | `/perangkat-display/:id/nonaktifkan` | JWT ADMIN, UUID v4 | 200 `{id,aktif:false}` |
+| POST | `/display/pairing` | `{kode}` string tepat 12 digit | 200 metadata + Set-Cookie HttpOnly, tanpa token dalam JSON |
+| GET | `/display/sesi` | Cookie perangkat | 200 metadata perangkat aktif; 401 jika perlu aktivasi |
+| POST | `/display/putuskan` | Cookie perangkat | 200 `{ok:true}`, mencabut kredensial dan menghapus cookie |
+| GET | `/display/:layananId/snapshot` | Cookie perangkat atau x-display-token existing | 200 `DisplaySnapshot` existing |
+
+Metadata: `{id,nama,layananId,aktif,terakhirAktifPada,dibuatPada,diperbaruiPada,layanan:{id,kode,nama,aktif}}`. Tidak mengandung token, hash, kode aktivasi, session secret, identitas atau tiket pasien. `aktif` menunjukkan izin administratif, **bukan online presence**. `terakhirAktifPada` nullable, diperbarui saat pairing/pemeriksaan sesi (maksimal sekali per menit), bukan jaminan heartbeat realtime. Daftar belum memakai pagination; pencarian/kategori dilakukan Flutter. Nama perangkat 3–100 karakter dengan karakter nonspasi; poliklinik harus aktif. Binding poliklinik tetap sepanjang umur perangkat; untuk memindah TV, nonaktifkan identitas lama lalu buat identitas di poliklinik tujuan.
+
+### 20.1 Keamanan dan lifecycle
+
+- Kode acak kriptografis 12 digit (pertahankan nol di depan), berlaku **5 menit**, sekali pakai. Hanya HMAC-SHA256 dengan domain `queueb:display:activation:v1:` yang tersimpan; kunci berasal dari `JWT_REFRESH_SECRET` server existing. Rotasi secret server membatalkan kode yang masih pending, tidak membuka kode asli. Kredensial perangkat acak 32 byte disimpan sebagai SHA256 pada `tokenHash` existing.
+- Klaim kode memakai transaksi dan `updateMany` bersyarat kode/expiry/belum digunakan/perangkat/layanan aktif. Balapan hanya menghasilkan satu sukses. Kode salah/diganti/nonaktif 401; kedaluwarsa/sudah digunakan 410; kalah balapan atau layanan nonaktif 409. Kode yang diganti/nonaktifkan sengaja memakai pesan umum karena kode lama tak lagi tersimpan. Validasi format 400, rate limit 429; gangguan jaringan ditangani tanpa retry mutasi otomatis. Sesudah respons pairing hilang, periksa `/display/sesi` sebelum meminta kode baru.
+- Exception database/driver pada route display ditangani filter khusus: tidak mencetak detail constraint yang dapat memuat hash, mengembalikan pesan aman 503. Error HTTP domain/validasi mempertahankan status dan pesan publik.
+- Pairing dibatasi **5 percobaan/IP/60 detik**; penerbitan kode ADMIN **20/IP/60 detik**, memakai Throttler existing. Handshake Socket.IO tetap memakai limiter existing. Limiter memori per proses; production multi-instance perlu storage/edge limiter bersama dan konfigurasi proxy yang ditinjau. Jangan mempercayai X-Forwarded-For dari klien secara langsung.
+- Sesi cookie `queueb_display`: **HttpOnly**, **SameSite=Strict**, host-only, `Path=/` agar berlaku untuk REST dan `/socket.io`, umur **30 hari**, expiry juga diperiksa server pada REST dan socket. `Secure` wajib saat NODE_ENV=production. Development HTTP localhost memakai cookie tanpa Secure untuk demo lokal. Jangan memakai HTTP terbuka untuk pemasangan produksi.
+- Flutter Web memakai client HTTP khusus display dengan `withCredentials=true`, Socket.IO WebSocket juga memakai cookie; token tidak masuk localStorage/sessionStorage/URL/log. Android memakai secure storage terenkripsi existing untuk cookie perangkat, terpisah dari sesi akun dan terikat API_BASE_URL; native lain hanya memori proses. Token manual existing hanya memori dan tetap didukung.
+- `/display/pairing` dan `/display/putuskan` memeriksa Origin browser terhadap daftar CORS persis sebelum mutasi. Cookie Strict dan request JSON/CORS ikut mencegah CSRF; klien native tanpa Origin tetap harus memiliki kode atau cookie. Null/untrusted Origin ditolak. Endpoint cookie tidak menyediakan mutasi antrean.
+- Menghasilkan kode baru merupakan **rotasi/reaktivasi**: kredensial dan kode lama langsung tidak berlaku, perangkat menjadi aktif; socket lama diputus. Penonaktifan juga menghapus pending code dan memutar token. Mengaktifkan kembali tidak memulihkan token lama. Ganti perangkat memanggil putuskan, bukan sekadar membersihkan UI. Pencabutan berlaku REST dan socket, tanpa menunggu CALL.
+- Instance tunggal memutus socket segera; deployment beberapa instance tetap memerlukan adapter/invalidation lintas instance. Pemeriksaan kewenangan sebelum emit dan REST snapshot menolak token dicabut, tetapi pemutusan segera di instance lain bukan jaminan tanpa infrastruktur tersebut.
+
+### 20.2 Origin, deployment dan pemulihan TV
+
+Prioritas deployment: Web dan API **satu origin HTTPS** melalui reverse proxy (termasuk upgrade `/socket.io`), atau satu situs HTTPS pada subdomain yang sama dengan CORS origin Web yang spesifik dan credentials diaktifkan. Cookie Strict tidak mendukung Web/API lintas situs. Untuk localhost gunakan host yang sama pada kedua URL, misalnya `http://127.0.0.1:8080` → `http://127.0.0.1:3001/api/v1`; jangan campur localhost/127.0.0.1. Origin CORS harus termasuk port Web. Native tidak bergantung CORS tetapi produksi tetap HTTPS. Satu profil browser menyimpan satu identitas TV per host API; gunakan profil terpisah untuk TV berbeda.
+
+Buka `/#/display` untuk kiosk: sesi cookie dipulihkan tanpa memasukkan kode lagi. Browser private/clear cookies/expiry meminta aktivasi ulang; mode token manual tetap meminta token setelah reload. Bootstrap, refresh, resume dan reconnect **senyap**; hanya CALL/RECALL baru dari snapshot diumumkan setelah event, deduplikasi berdasarkan peristiwaId. Audio browser perlu aktivasi pengguna lagi setelah reload. Fullscreen dan suara id-ID tetap bergantung browser/OS. Tidak ada perubahan Queue Engine, status tiket, prioritas atau payload snapshot.
+
+### 20.3 Migration dan urutan pemasangan
+
+Migration **`20261019_display_device_pairing`** hanya menambah empat kolom nullable pada `perangkat_tampilan`: kode_aktivasi_hash (unique), kode_berlaku_hingga, kode_digunakan_pada dan sesi_berakhir_pada. Token/perangkat existing tetap berfungsi karena expiry null berarti jalur token lama. Tidak ada perubahan migration historis atau penghapusan data.
+
+**Database development utama belum diberi migration ini. Persetujuan Project Lead diperlukan sebelum memasangnya.** Review SQL dan backup, validasi DATABASE_URL dan current_database(), periksa seluruh migration pending, baru `prisma migrate deploy` sesuai persetujuan; kemudian generate client, deploy API baru, deploy Flutter. Query Prisma baru memerlukan kolom tersebut, sehingga migration harus mendahului deployment API. Jangan reset/db push/restore/drop. Runner `node test/run-display-pairing.cjs --deploy-test-migration` hanya menerima kredensial lokal dan memaksa target `127.0.0.1:5433/capstone_antrean_test`, memeriksa pending migration dan fingerprint data existing; tidak dapat memasang ke development utama.

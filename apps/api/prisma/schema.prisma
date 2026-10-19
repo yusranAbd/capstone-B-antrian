@@ -243,6 +243,10 @@ model PerangkatTampilan {
   layananId         String    @map("layanan_id") @db.Uuid
   nama              String    @db.VarChar(100)
   tokenHash         String    @unique @map("token_hash") @db.VarChar(255)
+  kodeAktivasiHash String? @unique @map("kode_aktivasi_hash") @db.VarChar(64)
+  kodeBerlakuHingga DateTime? @map("kode_berlaku_hingga") @db.Timestamptz(6)
+  kodeDigunakanPada DateTime? @map("kode_digunakan_pada") @db.Timestamptz(6)
+  sesiBerakhirPada DateTime? @map("sesi_berakhir_pada") @db.Timestamptz(6)
   pengaturanAudio   Json?     @map("pengaturan_audio") @db.JsonB
   aktif             Boolean   @default(true)
   terakhirAktifPada DateTime? @map("terakhir_aktif_pada") @db.Timestamptz(6)

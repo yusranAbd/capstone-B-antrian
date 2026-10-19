@@ -31,6 +31,12 @@ class QueueBApp extends StatelessWidget {
       ),
       cardTheme: const CardThemeData(elevation: 0, color: Colors.white),
     ),
+    routes: {
+      '/display': (context) => DisplayPage(
+        api: api,
+        onExit: () => Navigator.of(context).popUntil((r) => r.isFirst),
+      ),
+    },
     home: _Root(api: api),
   );
 }
@@ -43,7 +49,6 @@ class _Root extends StatefulWidget {
 }
 
 class _RootState extends State<_Root> {
-  bool display = false;
   @override
   void initState() {
     super.initState();
@@ -85,17 +90,11 @@ class _RootState extends State<_Root> {
     builder: (context, _) {
       final api = widget.api;
       if (api.sessionPhase != SessionPhase.ready) return _SessionGate(api: api);
-      if (display) {
-        return DisplayPage(
-          api: api,
-          onExit: () => setState(() => display = false),
-        );
-      }
       if (api.user == null) {
         return LoginPage(
           api: api,
           notice: api.sessionMessage,
-          onDisplay: () => setState(() => display = true),
+          onDisplay: () => Navigator.of(context).pushNamed('/display'),
         );
       }
       final role = api.user!['peran'];
@@ -158,7 +157,7 @@ class _RootState extends State<_Root> {
                 'DOKTER' => DoctorPage(api: api),
                 _ => PatientPage(
                   api: api,
-                  onDisplay: () => setState(() => display = true),
+                  onDisplay: () => Navigator.of(context).pushNamed('/display'),
                 ),
               },
             ),

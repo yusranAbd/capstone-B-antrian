@@ -26,12 +26,12 @@ export class DisplayRealtimeAccessService {
     const perangkat = await this.prisma.perangkatTampilan.findUnique({
       where: { tokenHash },
       select: {
-        id: true, tokenHash: true, aktif: true, layananId: true,
+        sesiBerakhirPada: true, id: true, tokenHash: true, aktif: true, layananId: true,
         layanan: { select: { aktif: true } },
       },
     });
     if (
-      !perangkat || !perangkat.aktif || !perangkat.layanan.aktif ||
+      !perangkat || (perangkat.sesiBerakhirPada && perangkat.sesiBerakhirPada <= new Date()) || !perangkat.aktif || !perangkat.layanan.aktif ||
       perangkat.layananId !== layananId
     ) throw new Error('UNAUTHORIZED');
 
@@ -43,12 +43,12 @@ export class DisplayRealtimeAccessService {
     const perangkat = await this.prisma.perangkatTampilan.findUnique({
       where: { id: identitas.perangkatId },
       select: {
-        aktif: true, layananId: true, tokenHash: true,
+        sesiBerakhirPada: true, aktif: true, layananId: true, tokenHash: true,
         layanan: { select: { aktif: true } },
       },
     });
     return Boolean(
-      perangkat && perangkat.aktif && perangkat.layanan.aktif &&
+      perangkat && (!perangkat.sesiBerakhirPada || perangkat.sesiBerakhirPada > new Date()) && perangkat.aktif && perangkat.layanan.aktif &&
       perangkat.layananId === identitas.layananId &&
       perangkat.tokenHash === identitas.tokenHash,
     );

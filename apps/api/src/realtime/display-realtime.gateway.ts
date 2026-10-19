@@ -1,3 +1,4 @@
+import { cookieToken } from '../display/display-cookie';
 import { Logger } from '@nestjs/common';
 import {
   OnGatewayConnection,
@@ -35,7 +36,7 @@ export class DisplayRealtimeGateway
         return;
       }
       void this.akses
-        .autentikasi(client.handshake.auth?.token, client.handshake.auth?.layananId)
+        .autentikasi(client.handshake.auth?.token ?? cookieToken(client.handshake.headers.cookie), client.handshake.auth?.layananId)
         .then((identitas) => {
           client.data.display = identitas;
           next();
@@ -96,6 +97,12 @@ export class DisplayRealtimeGateway
         client.disconnect(true);
         this.logger.warn('Broadcast display ditahan karena pemeriksaan akses gagal');
       }
+    }
+  }
+
+  cabutPerangkat(perangkatId: string): void {
+    for (const client of this.server?.sockets.values() ?? []) {
+      if (this.ambilIdentitas(client)?.perangkatId === perangkatId) client.disconnect(true);
     }
   }
 

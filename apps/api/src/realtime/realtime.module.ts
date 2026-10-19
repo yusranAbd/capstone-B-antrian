@@ -26,6 +26,6 @@ import { PatientInvalidationInterceptor } from './patient-invalidation.intercept
     PatientRealtimeGateway,
     { provide: APP_INTERCEPTOR, useClass: PatientInvalidationInterceptor },
   ],
-  exports: [RealtimeBroadcastService],
+  exports: [RealtimeBroadcastService, DisplayRealtimeGateway],
 })
 export class RealtimeModule {}

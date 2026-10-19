@@ -1,3 +1,5 @@
+> **Pembaruan 19 Oktober 2026:** konfigurasi utama sekarang memakai kode aktivasi dari ADMIN. Lihat [manajemen dan pairing perangkat](PUBLIC_DISPLAY_DEVICE_PAIRING.md). Instruksi UUID/token berikut tetap berlaku untuk kompatibilitas lanjutan.
+
 # Public Display V2 — satu layar untuk satu poliklinik
 
 Flutter existing di `apps/client`, namespace Socket.IO `/display`, kontrak [Public Display dan TTS](../backend/API_INTEGRATION_GUIDE.md#5-rest-public-display). Tidak ada perubahan backend, database, Queue Engine, atau role.
@@ -18,7 +20,7 @@ Flutter existing di `apps/client`, namespace Socket.IO `/display`, kontrak [Publ
 3. Setiap `display:updated` meminta snapshot ulang. Fetch diserialkan dan digabung dengan dirty flag agar event yang tiba saat fetch tidak hilang. Respons sebelum pergantian koneksi tidak menimpa koneksi baru.
 4. Polling REST 15 detik menjadi fallback. Koneksi display mencoba pulih dengan backoff Socket.IO selama token tidak ditolak; kebijakan reconnect PETUGAS tetap existing.
 5. Suara hanya menggunakan `pengumumanTerakhir.teks` dari snapshot setelah sinyal CALL/RECALL, dengan deduplikasi **peristiwaId**, bukan eventId. Riwayat 256 ID berada di memori; tidak menyimpan token.
-6. Bootstrap, muat ulang manual, resume dan reconnect membentuk baseline senyap. Pengumuman yang terlewat ketika offline tidak diputar ulang. Reload browser meminta konfigurasi perangkat lagi dan snapshot pertama tetap senyap.
+6. Bootstrap, muat ulang manual, resume dan reconnect membentuk baseline senyap. Pengumuman yang terlewat ketika offline tidak diputar ulang. Pada mode token manual, reload browser meminta konfigurasi lagi. Pada mode pairing, cookie HttpOnly memulihkan perangkat otomatis; snapshot pertama tetap senyap.
 7. Pengumuman baru membatalkan suara sebelumnya supaya tidak menumpuk. Mute/putus/keluar halaman membatalkan pekerjaan suara; hasil async yang sudah kedaluwarsa tidak mengaktifkan suara kembali.
 8. Klik **Aktifkan suara** untuk membuka audio browser dan memeriksa suara `id-ID`. Bila tidak tersedia atau mesin gagal, pengumuman visual tetap berfungsi dan audio ditandai nonaktif. Ketersediaan/pelafalan suara TV tetap perlu diperiksa pada perangkat tujuan.
 

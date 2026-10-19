@@ -2,6 +2,7 @@ import 'package:socket_io_client/socket_io_client.dart' as io;
 
 import 'api.dart';
 import 'config.dart';
+import 'display_socket_headers.dart';
 
 class RealtimeFeed {
   RealtimeFeed({
@@ -11,13 +12,17 @@ class RealtimeFeed {
     required this.onStatus,
     this.onEvent,
     this.displayToken,
+    this.displaySession = false,
   }) {
-    if (displayToken == null) api.addListener(_credentialsChanged);
+    if (displayToken == null && !displaySession) {
+      api.addListener(_credentialsChanged);
+    }
     _connect();
   }
   final QueueApi api;
   final String layananId;
   final String? displayToken;
+  final bool displaySession;
   final void Function() onRefresh;
   final void Function(String) onStatus;
   final void Function(Json)? onEvent;
@@ -28,22 +33,42 @@ class RealtimeFeed {
     if (!_disposed && api.accessToken != _usedToken) _connect();
   }
 
-  void _connect() {
+  void _connect() async {
     _socket?.dispose();
     _usedToken = displayToken ?? api.accessToken;
-    if (_usedToken == null || !api.config.realtime || _disposed) return;
-    final isDisplay = displayToken != null;
+    if ((!displaySession && _usedToken == null) ||
+        !api.config.realtime ||
+        _disposed) {
+      return;
+    }
+    final isDisplay = displayToken != null || displaySession;
+    var headers = <String, String>{};
+    try {
+      if (displaySession) {
+        headers = await displaySocketHeaders(api.config.apiBase);
+      }
+    } catch (_) {
+      if (!_disposed) {
+        onStatus(
+          'Realtime belum tersedia. Penyimpanan aman perangkat tidak dapat dibaca.',
+        );
+      }
+      return;
+    }
+    if (_disposed) return;
+    final options = io.OptionBuilder()
+        .setTransports(['websocket'])
+        .disableAutoConnect()
+        .enableForceNew()
+        .setAuth({
+          if (!displaySession) 'token': _usedToken,
+          if (isDisplay) 'layananId': layananId,
+        })
+        .setReconnectionAttempts(isDisplay ? double.infinity : 8);
+    if (isDisplay) options.setExtraHeaders(headers).enableWithCredentials();
     final socket = _socket = io.io(
       '${api.config.socketOrigin}/${isDisplay ? 'display' : 'queue'}',
-      io.OptionBuilder()
-          .setTransports(['websocket'])
-          .disableAutoConnect()
-          .enableForceNew()
-          .setAuth({'token': _usedToken, if (isDisplay) 'layananId': layananId})
-          // TV reconnects after prolonged outages; denied tokens still stop
-          // explicitly in onConnectError. Staff behavior stays unchanged.
-          .setReconnectionAttempts(isDisplay ? double.infinity : 8)
-          .build(),
+      options.build(),
     );
     socket.onConnect((_) {
       if (!isDisplay) {
@@ -82,9 +107,13 @@ class RealtimeFeed {
       onEvent?.call(data);
       onRefresh();
     });
-    socket.onDisconnect((_) {
+    socket.onDisconnect((reason) {
       if (!_disposed && socket == _socket) {
-        onStatus('Realtime terputus · sinkronisasi berkala aktif');
+        onStatus(
+          isDisplay && reason == 'io server disconnect'
+              ? 'Token perangkat ditolak. Aktifkan ulang dari ADMIN.'
+              : 'Realtime terputus · sinkronisasi berkala aktif',
+        );
       }
     });
     socket.onConnectError((dynamic error) async {
@@ -118,7 +147,9 @@ class RealtimeFeed {
 
   void dispose() {
     _disposed = true;
-    if (displayToken == null) api.removeListener(_credentialsChanged);
+    if (displayToken == null && !displaySession) {
+      api.removeListener(_credentialsChanged);
+    }
     _socket?.dispose();
   }
 }
