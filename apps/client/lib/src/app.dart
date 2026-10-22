@@ -315,7 +315,8 @@ class _LoginPageState extends State<LoginPage> {
         backgroundColor: LoginStyle.paper,
         body: SafeArea(
           child: LoginLayout(
-            child: LoginFormCard(
+            builder: (context, sizing) => LoginFormCard(
+              sizing: sizing,
               child: AutofillGroup(
                 child: Form(
                   key: form,
@@ -327,7 +328,9 @@ class _LoginPageState extends State<LoginPage> {
                         register ? 'Daftar' : 'Masuk',
                         style: Theme.of(context).textTheme.headlineLarge
                             ?.copyWith(
-                              fontSize: MediaQuery.sizeOf(context).width < 600
+                              fontSize: sizing.compact
+                                  ? 34
+                                  : MediaQuery.sizeOf(context).width < 600
                                   ? 32
                                   : 42,
                               fontWeight: FontWeight.w800,
@@ -337,13 +340,13 @@ class _LoginPageState extends State<LoginPage> {
                       const SizedBox(height: 8),
                       Text(
                         register ? 'Daftar akun pasien' : 'Masuk untuk mengelola pelayanan atau tiket Anda.',
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: QueueBStyle.muted,
-                          fontSize: 17,
+                          fontSize: sizing.compact ? 15 : 17,
                           height: 1.5,
                         ),
                       ),
-                      const SizedBox(height: 28),
+                      SizedBox(height: sizing.compact ? 18 : 28),
                       if (widget.notice != null)
                         Semantics(
                           container: true,
@@ -379,7 +382,7 @@ class _LoginPageState extends State<LoginPage> {
                               ? 'Nama 3–150 karakter.'
                               : null,
                         ),
-                        const SizedBox(height: 24),
+                        SizedBox(height: sizing.fieldGap),
                       ],
                       TextFormField(
                         key: const ValueKey('login-email'),
@@ -400,7 +403,7 @@ class _LoginPageState extends State<LoginPage> {
                             ? 'Masukkan email yang valid.'
                             : null,
                       ),
-                      const SizedBox(height: 24),
+                      SizedBox(height: sizing.fieldGap),
                       TextFormField(
                         key: const ValueKey('login-password'),
                         controller: password,
@@ -437,10 +440,10 @@ class _LoginPageState extends State<LoginPage> {
                             ? 'Kata sandi 8–72 karakter.'
                             : null,
                       ),
-                      const SizedBox(height: 30),
+                      SizedBox(height: sizing.compact ? 20 : 30),
                       FilledButton(
                         style: FilledButton.styleFrom(
-                          minimumSize: const Size(48, 56),
+                          minimumSize: Size(48, sizing.compact ? 48 : 56),
                         ),
                         onPressed: busy ? null : submit,
                         child: Row(
@@ -472,9 +475,11 @@ class _LoginPageState extends State<LoginPage> {
                           ],
                         ),
                       ),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 24),
-                        child: Row(
+                      Padding(
+                        padding: EdgeInsets.symmetric(
+                          vertical: sizing.dividerGap,
+                        ),
+                        child: const Row(
                           children: [
                             Expanded(child: Divider(color: LoginStyle.rule)),
                             Padding(
@@ -492,7 +497,7 @@ class _LoginPageState extends State<LoginPage> {
                         style: OutlinedButton.styleFrom(
                           foregroundColor: QueueBStyle.darkTeal,
                           side: const BorderSide(color: QueueBStyle.darkTeal),
-                          minimumSize: const Size(48, 54),
+                          minimumSize: Size(48, sizing.compact ? 48 : 54),
                           padding: const EdgeInsets.symmetric(horizontal: 10),
                           textStyle: const TextStyle(
                             fontWeight: FontWeight.w700,
@@ -506,7 +511,7 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         label: const Text('Masuk ke Public Display'),
                       ),
-                      const SizedBox(height: 12),
+                      SizedBox(height: sizing.compact ? 8 : 12),
                       const Text(
                         'Lihat antrean langsung di layar publik rumah sakit tanpa perlu login.',
                         textAlign: TextAlign.center,
@@ -516,9 +521,11 @@ class _LoginPageState extends State<LoginPage> {
                           height: 1.5,
                         ),
                       ),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 22),
-                        child: Divider(color: LoginStyle.rule),
+                      Padding(
+                        padding: EdgeInsets.symmetric(
+                          vertical: sizing.compact ? 12 : 22,
+                        ),
+                        child: const Divider(color: LoginStyle.rule),
                       ),
                       TextButton(
                         onPressed: busy
