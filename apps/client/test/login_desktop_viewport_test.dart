@@ -16,19 +16,12 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(() async {
     tz.initializeTimeZones();
-    // Measure with the actual Material font, rather than the test-only Ahem
-    // monospace font. The SDK ships these files on Windows and CI Linux.
-    final config = File('.dart_tool/package_config.json').absolute;
-    final packages =
-        jsonDecode(await config.readAsString())['packages'] as List;
-    final flutter = packages.singleWhere((p) => p['name'] == 'flutter');
-    final root = Directory.fromUri(
-      config.uri.resolve(flutter['rootUri'] as String),
-    ).parent.parent.path;
+    // Use pinned, licensed Material font fixtures, not Ahem or an optional SDK
+    // cache. These are test-only files and are not bundled in the application.
     final font = FontLoader('Roboto');
     for (final weight in ['regular', 'medium', 'bold']) {
       font.addFont(
-        File('$root/bin/cache/artifacts/material_fonts/roboto-$weight.ttf')
+        File('test/fixtures/fonts/roboto-$weight.ttf')
             .readAsBytes()
             .then((b) => ByteData.sublistView(b)),
       );

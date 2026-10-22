@@ -19,11 +19,12 @@ Kartu login sebelumnya memakai minimum 740 logical px. Padding luar 2 x 28, padd
 - `apps/client/lib/src/login_ui.dart`: budget viewport dan panel desktop adaptif.
 - `apps/client/lib/src/app.dart`: parameter spacing/input/tombol khusus compact desktop.
 - `apps/client/test/login_desktop_viewport_test.dart`: tes extent scroll, bounds kontrol, error/loading/registrasi, DPR dan fallback pendek.
+- `apps/client/test/fixtures/fonts/`: Roboto regular/medium/bold dan LICENSE, khusus tes.
 - Laporan ini dan screenshot viewport.
 
 ## Pengujian
 
-Tes viewport memuat font Material Roboto yang dikirim Flutter SDK. Font Ahem bawaan widget test bersifat monospace dengan metrik berbeda dari produksi; regresi existing tetap berjalan dengan font test-nya untuk memeriksa fallback tanpa overflow. Tes baru mengukur ScrollPosition.maxScrollExtent dan bounds semua kontrol penting, bukan hanya ukuran HTML canvas.
+Tes viewport memuat fixture font Material Roboto dari Flutter SDK 3.47.5 yang disertakan di `test/fixtures/fonts/` beserta lisensi Apache 2.0. Fixture hanya dipakai tes; tidak didaftarkan pada pubspec atau dimasukkan ke aplikasi. Cache SDK pada runner CI tidak selalu menyediakan font ini, sehingga tes tidak bergantung pada path/cache SDK. Font Ahem bawaan widget test bersifat monospace dengan metrik berbeda dari produksi; regresi existing tetap berjalan dengan font test-nya untuk memeriksa fallback tanpa overflow. Tes baru mengukur ScrollPosition.maxScrollExtent dan bounds semua kontrol penting, bukan hanya ukuran HTML canvas.
 
 Target: 1280x720, 1366x768, 1440x900, 1536x864, 1920x1080 serta breakpoint 1024x768. Kondisi: awal, validasi kosong, error login, registrasi, loading, DPR 1.25, dan desktop pendek 1280x500. DPR 1.25 mempertahankan viewport logis 1366x768; pengaturan skala Windows global tidak diubah. Screenshot 375 px adalah layout Flutter mobile pada browser, bukan bukti perangkat Android fisik.
 
