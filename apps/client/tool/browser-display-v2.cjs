@@ -64,7 +64,7 @@ module.exports = async function ({fixture: f, root}) {
       });
     }
     await p.goto('http://127.0.0.1:8080/');
-    await button(p, 'Buka Public Display');
+    await button(p, 'Masuk ke Public Display');
     await button(p, 'Konfigurasi lanjutan (token existing)');
     await enter(p, 'ID layanan', f.serviceId);
     await enter(p, 'Token perangkat', token);
