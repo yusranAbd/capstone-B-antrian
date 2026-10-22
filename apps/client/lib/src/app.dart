@@ -7,6 +7,7 @@ import 'admin_ui.dart';
 import 'api.dart';
 import 'display.dart';
 import 'doctor.dart';
+import 'doctor_visual.dart';
 import 'patient.dart';
 import 'queue.dart';
 import 'mobile_ui.dart';
@@ -101,11 +102,18 @@ class _RootState extends State<_Root> {
       }
       final role = api.user!['peran'];
       return Theme(
-        data: role == 'ADMIN' ? AdminStyle.theme : QueueBStyle.theme,
+        data: role == 'ADMIN'
+            ? AdminStyle.theme
+            : role == 'DOKTER'
+            ? DoctorStyle.theme
+            : QueueBStyle.theme,
         child: Scaffold(
           appBar: AppBar(
+            toolbarHeight: role == 'DOKTER' ? 64 : null,
             title: const QueueBBrand(compact: true),
             actions: [
+              if (role == 'DOKTER')
+                DoctorHeaderIdentity(name: '${api.user!['nama'] ?? ''}'),
               if (role == 'ADMIN' && MediaQuery.sizeOf(context).width >= 700)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8),

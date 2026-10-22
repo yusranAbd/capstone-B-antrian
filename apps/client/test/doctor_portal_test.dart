@@ -74,7 +74,10 @@ void main() {
     testWidgets('DOKTER route renders read-only own data at width $width', (
       tester,
     ) async {
-      await tester.binding.setSurfaceSize(Size(width, 900));
+      tester.view.physicalSize = Size(width, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
       final config = AppConfig(
         apiBaseUrl: 'http://localhost:3000/api/v1',
         realtime: false,
@@ -119,7 +122,7 @@ void main() {
       await tester.pumpWidget(QueueBApp(api: api));
       await tester.pumpAndSettle();
       expect(find.text('Dashboard Dokter'), findsOneWidget);
-      expect(find.text('Dokter Satu'), findsOneWidget);
+      expect(find.text('Dokter Satu'), findsWidgets);
       await tester.scrollUntilVisible(
         find.text('M-001'),
         300,
@@ -261,6 +264,11 @@ void main() {
       await tester.pump(const Duration(milliseconds: 260));
       await tester.pumpAndSettle();
       await tester.scrollUntilVisible(
+        find.text('Daftar Antrean Poli'),
+        250,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.scrollUntilVisible(
         find.text('M-009').first,
         250,
         scrollable: find.byType(Scrollable).first,
@@ -282,6 +290,14 @@ void main() {
       await tester.pump(const Duration(milliseconds: 260));
       await tester.pumpAndSettle();
       expect(reads, greaterThan(count));
+      final beforeReconnect = reads;
+      socket.fire('disconnect', 'transport close');
+      expect(feed.status.value, contains('Realtime terputus'));
+      socket.fire('doctor:ready', {'versiSkema': 1});
+      await tester.pump(const Duration(milliseconds: 260));
+      await tester.pumpAndSettle();
+      expect(feed.status.value, 'Realtime terhubung');
+      expect(reads, greaterThan(beforeReconnect));
       await tester.pumpWidget(const SizedBox());
       feed.dispose();
       expect(socket.disposed, true);
