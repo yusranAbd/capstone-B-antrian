@@ -5,8 +5,21 @@ import 'mobile_ui.dart';
 
 // Hallmark · ADMIN workbench · QueueB tokens · P5 H5 E4 S5 R5 V4.
 abstract final class AdminStyle {
+  static const canvas = Color(0xfff2f9fc);
+  static const sky = Color(0xffe0f2ff);
+  static const blue = Color(0xff087bd4);
+  static const rule = Color(0xffe2edf3);
+  static const shadow = Color(0x080c637d);
+  static BoxDecoration get panel => BoxDecoration(
+    color: Colors.white,
+    borderRadius: BorderRadius.circular(22),
+    border: Border.all(color: rule),
+    boxShadow: const [
+      BoxShadow(color: shadow, blurRadius: 22, offset: Offset(0, 6)),
+    ],
+  );
   static ThemeData get theme => QueueBStyle.theme.copyWith(
-    scaffoldBackgroundColor: QueueBStyle.background,
+    scaffoldBackgroundColor: canvas,
     cardTheme: const CardThemeData(
       color: Colors.white,
       elevation: 0,
@@ -36,12 +49,75 @@ abstract final class AdminStyle {
   );
 }
 
+/// Session identity only; the existing profile and logout actions remain in app.dart.
+class AdminIdentity extends StatelessWidget {
+  const AdminIdentity({super.key, required this.name});
+  final String name;
+  @override
+  Widget build(BuildContext context) {
+    final displayName = name.trim().isEmpty ? 'Administrator' : name.trim();
+    final initials = displayName
+        .split(RegExp(r'\s+'))
+        .where((s) => s.isNotEmpty)
+        .take(2)
+        .map((s) => String.fromCharCode(s.runes.first).toUpperCase())
+        .join();
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CircleAvatar(
+            backgroundColor: AdminStyle.sky,
+            foregroundColor: QueueBStyle.darkTeal,
+            child: Text(
+              initials,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 220,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  displayName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: QueueBStyle.navy,
+                    fontSize: 14,
+                  ),
+                ),
+                const Text(
+                  'Administrator',
+                  style: TextStyle(color: QueueBStyle.muted, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class AdminColumn {
-  const AdminColumn(this.title, this.value, {this.cell, this.numeric = false});
+  const AdminColumn(
+    this.title,
+    this.value, {
+    this.cell,
+    this.numeric = false,
+    this.icon,
+  });
   final String title;
   final Object? Function(Json) value;
   final Widget Function(Json)? cell;
   final bool numeric;
+  final IconData? icon;
 }
 
 /// Client pagination for existing REST arrays. Only one page creates row widgets.
@@ -52,11 +128,14 @@ class AdminTable extends StatefulWidget {
     required this.columns,
     this.title,
     this.pageSize = 10,
+    this.compact = false,
+    this.decorated = true,
   });
   final List<Json> rows;
   final List<AdminColumn> columns;
   final String? title;
   final int pageSize;
+  final bool compact, decorated;
   @override
   State<AdminTable> createState() => _AdminTableState();
 }
@@ -108,12 +187,14 @@ class _AdminTableState extends State<AdminTable> {
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, box) => DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: QueueBStyle.border),
-        borderRadius: BorderRadius.circular(16),
-      ),
+    builder: (context, box) => Container(
+      decoration: !widget.decorated
+          ? null
+          : BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: QueueBStyle.border),
+              borderRadius: BorderRadius.circular(16),
+            ),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: SizedBox(
@@ -131,8 +212,9 @@ class _AdminTableState extends State<AdminTable> {
                   ),
             showCheckboxColumn: false,
             showEmptyRows: false,
-            dataRowMinHeight: 58,
-            dataRowMaxHeight: 112,
+            dataRowMinHeight: widget.compact ? 52 : 58,
+            dataRowMaxHeight: widget.compact ? 60 : 112,
+            headingRowHeight: widget.compact ? 52 : 56,
             rowsPerPage: widget.rows.length.clamp(1, size),
             availableRowsPerPage: [
               if (widget.rows.length < 10) widget.rows.length.clamp(1, 10),
@@ -146,7 +228,20 @@ class _AdminTableState extends State<AdminTable> {
             columns: [
               for (var i = 0; i < widget.columns.length; i++)
                 DataColumn(
-                  label: Text(widget.columns[i].title),
+                  label: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (widget.columns[i].icon != null) ...[
+                        Icon(
+                          widget.columns[i].icon,
+                          size: 18,
+                          color: QueueBStyle.muted,
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                      Text(widget.columns[i].title),
+                    ],
+                  ),
                   numeric: widget.columns[i].numeric,
                   onSort: widget.columns[i].title == 'Aksi'
                       ? null
@@ -169,6 +264,13 @@ class _AdminTableSource extends DataTableSource {
   _AdminTableSource(this.owner);
   final _AdminTableState owner;
   List<Json> rows = [];
+  int? hoveredRow;
+  void hover(int? index) {
+    if (hoveredRow == index) return;
+    hoveredRow = index;
+    notifyListeners();
+  }
+
   void refresh() => notifyListeners();
   @override
   DataRow? getRow(int index) {
@@ -176,21 +278,29 @@ class _AdminTableSource extends DataTableSource {
     final row = rows[index];
     return DataRow.byIndex(
       index: index,
+      color: owner.widget.compact && hoveredRow == index
+          ? const WidgetStatePropertyAll(QueueBStyle.mint)
+          : null,
       cells: [
         for (final col in owner.widget.columns)
           DataCell(
-            col.cell?.call(row) ??
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 220),
-                  child: Tooltip(
-                    message: '${col.value(row) ?? '—'}',
-                    child: Text(
-                      '${col.value(row) ?? '—'}',
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
+            MouseRegion(
+              onEnter: owner.widget.compact ? (_) => hover(index) : null,
+              onExit: owner.widget.compact ? (_) => hover(null) : null,
+              child:
+                  col.cell?.call(row) ??
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 220),
+                    child: Tooltip(
+                      message: '${col.value(row) ?? '—'}',
+                      child: Text(
+                        '${col.value(row) ?? '—'}',
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ),
-                ),
+            ),
           ),
       ],
     );

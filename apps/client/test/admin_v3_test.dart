@@ -122,7 +122,7 @@ void main() {
       expect(find.text('0 aktif'), findsOneWidget);
       expect(find.text('128'), findsNothing);
       expect(find.textContaining('14 menit'), findsNothing);
-      expect(find.textContaining('Statistik pasien'), findsOneWidget);
+      expect(find.textContaining('Statistik pasien'), findsNothing);
       await press(tester, find.byTooltip('Ciutkan sidebar'));
       expect(
         tester.widget<AdminNavigation>(find.byType(AdminNavigation)).collapsed,

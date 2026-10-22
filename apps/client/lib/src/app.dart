@@ -104,23 +104,13 @@ class _RootState extends State<_Root> {
         data: role == 'ADMIN' ? AdminStyle.theme : QueueBStyle.theme,
         child: Scaffold(
           appBar: AppBar(
-            title: const QueueBBrand(compact: true),
+            toolbarHeight: role == 'ADMIN' ? 76 : null,
+            title: role == 'ADMIN' && MediaQuery.sizeOf(context).width >= 960
+                ? const SizedBox(width: 230, child: QueueBBrand())
+                : const QueueBBrand(compact: true),
             actions: [
               if (role == 'ADMIN' && MediaQuery.sizeOf(context).width >= 700)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: Center(
-                    child: SizedBox(
-                      width: 140,
-                      child: Text(
-                        '${api.user!['nama']} · ADMIN',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                    ),
-                  ),
-                ),
+                AdminIdentity(name: '${api.user!['nama'] ?? ''}'),
               IconButton(
                 tooltip: 'Profil akun',
                 icon: const Icon(Icons.account_circle_outlined),

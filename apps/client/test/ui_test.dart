@@ -255,8 +255,10 @@ void main() {
           await tester.tap(find.byTooltip('Menu administrasi'));
           await tester.pumpAndSettle();
         }
-        await tester.tap(find.text('Master data'));
-        await tester.pumpAndSettle();
+        if (find.widgetWithText(ListTile, 'Poliklinik').evaluate().isEmpty) {
+          await tester.tap(find.text('Master data'));
+          await tester.pumpAndSettle();
+        }
         await tester.tap(find.widgetWithText(ListTile, 'Poliklinik'));
         await tester.pumpAndSettle();
       }
