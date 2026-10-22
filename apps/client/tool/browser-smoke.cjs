@@ -64,7 +64,7 @@ module.exports = async function browserSmoke(fixture) {
     }
     const context = await browser.newContext(); const page = lastPage = await context.newPage();
     await page.goto('http://127.0.0.1:8080/');
-    await page.getByRole('button', {name:'Buka Public Display', exact:true}).click();
+    await page.getByRole('button', {name:'Masuk ke Public Display', exact:true}).click();
     await page.getByRole('button', {name:'Konfigurasi lanjutan (token existing)', exact:true}).click();
     await enter(page, 'ID layanan', fixture.serviceId);
     await enter(page, 'Token perangkat', fixture.displayToken);

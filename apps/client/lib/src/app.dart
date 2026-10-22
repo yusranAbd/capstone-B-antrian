@@ -10,6 +10,7 @@ import 'doctor.dart';
 import 'patient.dart';
 import 'queue.dart';
 import 'mobile_ui.dart';
+import 'login_ui.dart';
 
 class QueueBApp extends StatelessWidget {
   const QueueBApp({super.key, required this.api});
@@ -311,148 +312,229 @@ class _LoginPageState extends State<LoginPage> {
     data: QueueBStyle.theme,
     child: Builder(
       builder: (context) => Scaffold(
-        backgroundColor: QueueBStyle.mint,
+        backgroundColor: LoginStyle.paper,
         body: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 440),
-                child: AutofillGroup(
-                  child: Form(
-                    key: form,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const QueueBBrand(),
+          child: LoginLayout(
+            child: LoginFormCard(
+              child: AutofillGroup(
+                child: Form(
+                  key: form,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        register ? 'Daftar' : 'Masuk',
+                        style: Theme.of(context).textTheme.headlineLarge
+                            ?.copyWith(
+                              fontSize: MediaQuery.sizeOf(context).width < 600
+                                  ? 32
+                                  : 42,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -.8,
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        register ? 'Daftar akun pasien' : 'Masuk untuk mengelola pelayanan atau tiket Anda.',
+                        style: const TextStyle(
+                          color: QueueBStyle.muted,
+                          fontSize: 17,
+                          height: 1.5,
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+                      if (widget.notice != null)
+                        Semantics(
+                          container: true,
+                          liveRegion: true,
+                          label: widget.notice!,
+                          excludeSemantics: true,
+                          child: MobileNotice(widget.notice!),
+                        ),
+                      if (error != null)
+                        Semantics(
+                          liveRegion: true,
+                          child: MobileNotice(error!, error: true),
+                        ),
+                      if (message != null)
+                        Semantics(
+                          liveRegion: true,
+                          child: MobileNotice(message!),
+                        ),
+                      if (register) ...[
+                        TextFormField(
+                          key: const ValueKey('login-name'),
+                          controller: name,
+                          enabled: !busy,
+                          textInputAction: TextInputAction.next,
+                          autofillHints: const [AutofillHints.name],
+                          decoration: const InputDecoration(
+                            labelText: 'Nama lengkap',
+                            prefixIcon: Icon(Icons.person_outline),
+                            alignLabelWithHint: true,
+                          ),
+                          validator: (v) =>
+                              v == null || v.trim().length < 3 || v.length > 150
+                              ? 'Nama 3–150 karakter.'
+                              : null,
+                        ),
                         const SizedBox(height: 24),
-                        Text(
-                          'Akses mudah untuk\npelayanan lebih baik',
-                          style: Theme.of(context).textTheme.headlineSmall
-                              ?.copyWith(fontWeight: FontWeight.w800),
-                        ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Daftar, dapatkan tiket, dan ikuti antrean rumah sakit dalam satu aplikasi.',
-                          style: TextStyle(color: QueueBStyle.muted),
-                        ),
-                        const HospitalVisual(),
-                        Text(
-                          register ? 'Daftar akun pasien' : 'Masuk untuk mengelola pelayanan atau tiket Anda.',
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 20),
-                        Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(24),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              if (widget.notice != null)
-                                Semantics(
-                                  container: true,
-                                  liveRegion: true,
-                                  label: widget.notice!,
-                                  excludeSemantics: true,
-                                  child: MobileNotice(widget.notice!),
-                                ),
-                              if (error != null)
-                                MobileNotice(error!, error: true),
-                              if (message != null) MobileNotice(message!),
-                              if (register)
-                                Padding(
-                                  padding: const EdgeInsets.only(bottom: 16),
-                                  child: TextFormField(
-                                    controller: name,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Nama lengkap',
-                                    ),
-                                    validator: (v) =>
-                                        v == null ||
-                                            v.trim().length < 3 ||
-                                            v.length > 150
-                                        ? 'Nama 3–150 karakter.'
-                                        : null,
-                                  ),
-                                ),
-                              TextFormField(
-                                controller: email,
-                                keyboardType: TextInputType.emailAddress,
-                                autofillHints: const [AutofillHints.username],
-                                decoration: const InputDecoration(
-                                  labelText: 'Email',
-                                ),
-                                validator: (v) =>
-                                    v == null ||
-                                        !RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
-                                            .hasMatch(v.trim())
-                                    ? 'Masukkan email yang valid.'
-                                    : null,
-                              ),
-                              const SizedBox(height: 16),
-                              TextFormField(
-                                controller: password,
-                                obscureText: obscure,
-                                autofillHints: const [AutofillHints.password],
-                                decoration: InputDecoration(
-                                  labelText: 'Kata sandi',
-                                  suffixIcon: IconButton(
-                                    tooltip: 'Tampilkan kata sandi',
-                                    onPressed: () =>
-                                        setState(() => obscure = !obscure),
-                                    icon: Icon(
-                                      obscure
-                                          ? Icons.visibility
-                                          : Icons.visibility_off,
-                                    ),
-                                  ),
-                                ),
-                                onFieldSubmitted: (_) => submit(),
-                                validator: (v) => v == null || v.isEmpty
-                                    ? 'Kata sandi wajib diisi.'
-                                    : register &&
-                                          (v.length < 8 || v.length > 72)
-                                    ? 'Kata sandi 8–72 karakter.'
-                                    : null,
-                              ),
-                              const SizedBox(height: 24),
-                              FilledButton(
-                                onPressed: busy ? null : submit,
-                                child: Text(
-                                  busy
-                                      ? 'Memproses…'
-                                      : register
-                                      ? 'Daftar pasien'
-                                      : 'Masuk',
-                                ),
-                              ),
-                              TextButton(
-                                onPressed: busy
-                                    ? null
-                                    : () => setState(() {
-                                        register = !register;
-                                        error = null;
-                                      }),
-                                child: Text(
-                                  register
-                                      ? 'Sudah punya akun? Masuk'
-                                      : 'Pasien baru? Daftar',
-                                ),
-                              ),
-                              const Divider(),
-                              TextButton.icon(
-                                onPressed: busy ? null : widget.onDisplay,
-                                icon: const Icon(Icons.tv),
-                                label: const Text('Buka Public Display'),
-                              ),
-                            ],
-                          ),
-                        ),
                       ],
-                    ),
+                      TextFormField(
+                        key: const ValueKey('login-email'),
+                        controller: email,
+                        enabled: !busy,
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
+                        autofillHints: const [AutofillHints.username],
+                        decoration: const InputDecoration(
+                          labelText: 'Email',
+                          hintText: 'nama@email.com',
+                          prefixIcon: Icon(Icons.mail_outline),
+                        ),
+                        validator: (v) =>
+                            v == null ||
+                                !RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
+                                    .hasMatch(v.trim())
+                            ? 'Masukkan email yang valid.'
+                            : null,
+                      ),
+                      const SizedBox(height: 24),
+                      TextFormField(
+                        key: const ValueKey('login-password'),
+                        controller: password,
+                        enabled: !busy,
+                        obscureText: obscure,
+                        textInputAction: TextInputAction.done,
+                        autofillHints: [
+                          register
+                              ? AutofillHints.newPassword
+                              : AutofillHints.password,
+                        ],
+                        decoration: InputDecoration(
+                          labelText: 'Kata sandi',
+                          hintText: 'Masukkan kata sandi',
+                          prefixIcon: const Icon(Icons.lock_outline),
+                          suffixIcon: IconButton(
+                            tooltip: obscure
+                                ? 'Tampilkan kata sandi'
+                                : 'Sembunyikan kata sandi',
+                            onPressed: busy
+                                ? null
+                                : () => setState(() => obscure = !obscure),
+                            icon: Icon(
+                              obscure
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
+                            ),
+                          ),
+                        ),
+                        onFieldSubmitted: (_) => submit(),
+                        validator: (v) => v == null || v.isEmpty
+                            ? 'Kata sandi wajib diisi.'
+                            : register && (v.length < 8 || v.length > 72)
+                            ? 'Kata sandi 8–72 karakter.'
+                            : null,
+                      ),
+                      const SizedBox(height: 30),
+                      FilledButton(
+                        style: FilledButton.styleFrom(
+                          minimumSize: const Size(48, 56),
+                        ),
+                        onPressed: busy ? null : submit,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            if (busy) ...[
+                              const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                            ],
+                            Flexible(
+                              child: Text(
+                                busy
+                                    ? 'Memproses…'
+                                    : register
+                                    ? 'Daftar pasien'
+                                    : 'Masuk',
+                              ),
+                            ),
+                            if (!busy) ...[
+                              const SizedBox(width: 16),
+                              const Icon(Icons.arrow_forward_rounded, size: 21),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 24),
+                        child: Row(
+                          children: [
+                            Expanded(child: Divider(color: LoginStyle.rule)),
+                            Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 14),
+                              child: Text(
+                                'atau',
+                                style: TextStyle(color: QueueBStyle.muted),
+                              ),
+                            ),
+                            Expanded(child: Divider(color: LoginStyle.rule)),
+                          ],
+                        ),
+                      ),
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: QueueBStyle.darkTeal,
+                          side: const BorderSide(color: QueueBStyle.darkTeal),
+                          minimumSize: const Size(48, 54),
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          textStyle: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                          ),
+                        ),
+                        onPressed: busy ? null : widget.onDisplay,
+                        icon: const Icon(
+                          Icons.desktop_windows_outlined,
+                          size: 23,
+                        ),
+                        label: const Text('Masuk ke Public Display'),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Lihat antrean langsung di layar publik rumah sakit tanpa perlu login.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: QueueBStyle.muted,
+                          fontSize: 13,
+                          height: 1.5,
+                        ),
+                      ),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 22),
+                        child: Divider(color: LoginStyle.rule),
+                      ),
+                      TextButton(
+                        onPressed: busy
+                            ? null
+                            : () => setState(() {
+                                register = !register;
+                                error = null;
+                                message = null;
+                              }),
+                        child: Text(
+                          register
+                              ? 'Sudah punya akun? Masuk'
+                              : 'Pasien baru? Daftar',
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
