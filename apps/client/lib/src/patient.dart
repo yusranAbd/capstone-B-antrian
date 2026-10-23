@@ -10,6 +10,7 @@ import 'mobile_ui.dart';
 import 'patient_sync.dart';
 import 'doctor_schedule_ui.dart';
 import 'patient_ui.dart';
+import 'patient_home.dart';
 
 String appointmentDetails(Json appointment, AppConfig config) {
   final slot = object(appointment['slotPraktik']);
@@ -19,9 +20,16 @@ String appointmentDetails(Json appointment, AppConfig config) {
 }
 
 class PatientPage extends StatefulWidget {
-  const PatientPage({super.key, required this.api, this.onDisplay});
+  const PatientPage({
+    super.key,
+    required this.api,
+    this.onDisplay,
+    this.headerBuilder,
+  });
   final QueueApi api;
   final VoidCallback? onDisplay;
+  final PreferredSizeWidget Function(bool home, VoidCallback activity)?
+  headerBuilder;
   @override
   State<PatientPage> createState() => _PatientPageState();
 }
@@ -35,7 +43,8 @@ class _PatientPageState extends State<PatientPage> {
   bool appointment = true, bookingStage = false, doctorDetail = false;
   bool reviewing = false;
   String search = '', channel = 'Semua';
-  List<Json> clinicSchedules = [];
+  List<Json> clinicSchedules = [], homeSchedules = [];
+  String? homeScheduleError;
   final Map<String, String> clinicAvailability = {};
   List<Json> services = [],
       doctors = [],
@@ -231,6 +240,25 @@ class _PatientPageState extends State<PatientPage> {
           }
         } catch (e) {
           errors.add('$e');
+        }
+      })(),
+      (() async {
+        try {
+          final result = rows(
+            await widget.api.request('GET', '/jadwal-praktik'),
+          );
+          if (mounted) {
+            setState(() {
+              homeSchedules = result;
+              homeScheduleError = null;
+            });
+          }
+        } catch (_) {
+          if (mounted) {
+            setState(
+              () => homeScheduleError = 'Jadwal praktik belum dapat dimuat.',
+            );
+          }
         }
       })(),
       readCatalog().catchError((Object e) {
@@ -545,7 +573,7 @@ class _PatientPageState extends State<PatientPage> {
     super.dispose();
   }
 
-  void selectService(String? value) {
+  Future<void> selectService(String? value) {
     setState(() {
       catalogRevision++;
       serviceId = value;
@@ -564,7 +592,7 @@ class _PatientPageState extends State<PatientPage> {
         appointment = false;
       }
     });
-    loadClinicSchedules();
+    return loadClinicSchedules();
   }
 
   void startRegistration(bool isAppointment) {
@@ -652,36 +680,6 @@ class _PatientPageState extends State<PatientPage> {
     ];
   }
 
-  Widget _quickAction(
-    String title,
-    String subtitle,
-    IconData icon,
-    VoidCallback onTap,
-  ) => Card(
-    child: InkWell(
-      borderRadius: BorderRadius.circular(20),
-      onTap: busy ? null : onTap,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: QueueBStyle.darkTeal, size: 30),
-            const SizedBox(height: 12),
-            Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: const TextStyle(fontSize: 12, color: QueueBStyle.muted),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
-
   List<Json> get visibleClinics => services
       .where(
         (clinic) =>
@@ -701,127 +699,151 @@ class _PatientPageState extends State<PatientPage> {
       .toList();
 
   Widget _home(BuildContext context) {
-    final active = tickets
-        .where(
-          (t) =>
-              !['SELESAI', 'DIBATALKAN'].contains(t['status']) &&
-              dateOnly(t['tanggalPelayanan'] ?? t['tanggalAntrean'])
-                      .compareTo(widget.api.config.today) >=
-                  0,
-        )
+    final active = nearestHomeTicket(
+      tickets,
+      appointments,
+      widget.api.config.today,
+    );
+    final visit = appointments
+        .where((a) => object(a['tiket'])['id'] == active?['id'])
         .firstOrNull;
+    final doctor = object(
+      object(
+        object(object(visit?['slotPraktik'])['jadwalPraktik'])['dokterLayanan'],
+      )['dokter'],
+    );
+    final previews = homeDoctorPreviews(
+      doctors,
+      services,
+      homeSchedules,
+      widget.api.config,
+      search,
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        PatientWelcome(
+        PatientHomeWelcome(
           name: '${widget.api.user?['nama'] ?? 'Pasien'}',
           onSearch: (v) => setState(() => search = v.toLowerCase().trim()),
         ),
-        if (active != null) ...[
-          const SizedBox(height: 16),
-          AppCard(
-            color: QueueBStyle.mint,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text(
-                  'Antrean aktif',
-                  style: TextStyle(color: QueueBStyle.muted),
-                ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        '${active['nomorAntrean']}',
-                        style: Theme.of(context).textTheme.headlineMedium
-                            ?.copyWith(fontWeight: FontWeight.w800),
-                      ),
-                    ),
-                    StatusBadge(active['status']),
-                  ],
-                ),
-                Text(label(object(active['layanan']))),
-                Text(
-                  patientDate(
-                    '${active['tanggalPelayanan'] ?? active['tanggalAntrean']}',
-                  ),
-                ),
-                TextButton(
-                  onPressed: busy ? null : () => openTicket(active),
-                  child: const Text('Lihat tiket / QR'),
-                ),
-              ],
+        const SizedBox(height: 16),
+        PatientHomeBanner(
+          onRegister: busy ? null : () => startRegistration(true),
+        ),
+        const SizedBox(height: 16),
+        PatientHomeShortcuts(
+          enabled: !busy,
+          onClinics: () {
+            startRegistration(true);
+            setState(() => channel = 'Semua');
+          },
+          onAppointment: () => startRegistration(true),
+          onTickets: () => setState(() => tab = 1),
+          onHistory: () => setState(() => tab = 4),
+        ),
+        const SizedBox(height: 20),
+        const PatientHomeSectionTitle('Kunjungan terdekat'),
+        const SizedBox(height: 8),
+        if (loading)
+          const PatientHomeLoading()
+        else if (active != null)
+          PatientHomeVisit(
+            ticket: active,
+            doctor: doctor,
+            onTicket: busy ? null : () => openTicket(active),
+          )
+        else
+          PatientHomeEmpty(
+            text: error != null
+                ? 'Kunjungan belum dapat dimuat. Silakan coba lagi.'
+                : 'Belum ada kunjungan mendatang.',
+            action: error != null ? 'Coba lagi' : 'Buat Janji Temu',
+            onPressed: busy
+                ? null
+                : error != null
+                ? load
+                : () => startRegistration(true),
+          ),
+        const SizedBox(height: 16),
+        PatientHomeSectionTitle(
+          'Poliklinik tersedia',
+          action: 'Lihat Semua',
+          onPressed: busy
+              ? null
+              : () {
+                  startRegistration(true);
+                  setState(() => channel = 'Semua');
+                },
+        ),
+        if (loading)
+          const PatientHomeLoading()
+        else if (visibleClinics.isEmpty)
+          PatientHomeEmpty(
+            text: error != null
+                ? 'Poliklinik belum dapat dimuat.'
+                : 'Tidak ada poliklinik yang sesuai pencarian.',
+          )
+        else
+          PatientHomeSurface(
+            child: PatientClinicGrid(
+              clinics: visibleClinics,
+              enabled: !busy,
+              onSelected: (clinic) => selectService('${clinic['id']}'),
             ),
           ),
-        ],
-        const SizedBox(height: 20),
-        Text(
-          'Akses cepat',
-          style: Theme.of(context).textTheme.titleMedium
-              ?.copyWith(fontWeight: FontWeight.w800),
+        const SizedBox(height: 16),
+        PatientHomeSectionTitle(
+          'Dokter & Jadwal',
+          action: 'Lihat Semua',
+          onPressed: busy
+              ? null
+              : () {
+                  startRegistration(true);
+                  setState(() => channel = 'Semua');
+                },
         ),
-        const SizedBox(height: 8),
-        LayoutBuilder(
-          builder: (context, box) => Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final item in <(String, String, IconData, VoidCallback)>[
-                (
-                  'Poliklinik',
-                  'Cari layanan dokter',
-                  Icons.local_hospital_outlined,
-                  () => startRegistration(true),
-                ),
-                (
-                  'Janji Temu Dokter',
-                  'Pilih jadwal praktik',
-                  Icons.calendar_month_outlined,
-                  () => startRegistration(true),
-                ),
-                (
-                  'Tiket Saya',
-                  'Status dan QR',
-                  Icons.confirmation_number_outlined,
-                  () => setState(() => tab = 1),
-                ),
-                (
-                  'Riwayat',
-                  'Kunjungan sebelumnya',
-                  Icons.history,
-                  () => setState(() => tab = 4),
-                ),
-              ])
-                SizedBox(
-                  width: (box.maxWidth - 8) / 2,
-                  child: _quickAction(item.$1, item.$2, item.$3, item.$4),
-                ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
-        Row(
-          children: [
-            Expanded(
+        if (loading)
+          const PatientHomeLoading()
+        else if (previews.isEmpty)
+          const PatientHomeEmpty(
+            text: 'Belum ada dokter yang sesuai pencarian.',
+          )
+        else ...[
+          if (homeScheduleError != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
               child: Text(
-                'Poliklinik tersedia',
-                style: Theme.of(context).textTheme.titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w800),
+                homeScheduleError!,
+                style: const TextStyle(color: QueueBStyle.muted, fontSize: 12),
               ),
             ),
-            TextButton(
-              onPressed: busy ? null : () => startRegistration(true),
-              child: const Text('Lihat semua'),
+          for (final preview in previews.take(3))
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: PatientHomeDoctor(
+                preview: preview,
+                config: widget.api.config,
+                scheduleUnavailable: homeScheduleError != null,
+                onTap: busy || loading
+                    ? null
+                    : () async {
+                        final pending = selectService(
+                          '${preview.clinic['id']}',
+                        );
+                        final revision = catalogRevision;
+                        await pending;
+                        if (mounted &&
+                            revision == catalogRevision &&
+                            error == null &&
+                            tab == 2) {
+                          await chooseDoctor(preview.doctor);
+                        }
+                      },
+              ),
             ),
-          ],
-        ),
-        if (visibleClinics.isEmpty && !loading)
-          const EmptyState(text: 'Tidak ada poliklinik yang sesuai pencarian.'),
-        PatientClinicGrid(
-          clinics: visibleClinics,
-          enabled: !busy && !loading,
-          onSelected: (clinic) => selectService('${clinic['id']}'),
-        ),
+        ],
+        const SizedBox(height: 8),
+        const PatientHomeTip(),
         const SizedBox(height: 16),
         OutlinedButton.icon(
           onPressed: busy ? null : () => startRegistration(false),
@@ -863,72 +885,84 @@ class _PatientPageState extends State<PatientPage> {
   @override
   Widget build(BuildContext context) => Column(
     children: [
+      if (widget.headerBuilder != null)
+        SizedBox(
+          height: kToolbarHeight + MediaQuery.paddingOf(context).top,
+          child: widget.headerBuilder!(tab == 0, () => setState(() => tab = 1)),
+        ),
       Expanded(
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 760),
-            child: ListView(
-              key: ValueKey('$tab:$serviceId:$bookingStage:$doctorDetail'),
-              padding: const EdgeInsets.all(16),
-              children: [
-                ValueListenableBuilder<String>(
-                  valueListenable: updates.status,
-                  builder: (context, value, _) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Text(
-                      value,
-                      style: Theme.of(context).textTheme.bodySmall,
+        child: ColoredBox(
+          color: tab == 0
+              ? PatientHomeStyle.background
+              : QueueBStyle.background,
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 760),
+              child: ListView(
+                key: ValueKey('$tab:$serviceId:$bookingStage:$doctorDetail'),
+                padding: const EdgeInsets.all(16),
+                children: [
+                  ValueListenableBuilder<String>(
+                    valueListenable: updates.status,
+                    builder: (context, value, _) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Text(
+                        value,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
                     ),
                   ),
-                ),
-                if (error != null) ...[
-                  MobileNotice(error!, error: true),
-                  TextButton.icon(
-                    onPressed: busy || loading ? null : load,
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Coba lagi'),
-                  ),
-                ],
-                if (message != null) MobileNotice(message!),
-                if (loading)
-                  const LinearProgressIndicator(
-                    semanticsLabel: 'Memuat data pelayanan',
-                  ),
-                if (tab == 0) _home(context),
-                if (tab == 2) _registration(context),
-                if (tab == 1) _tickets(context),
-                if (tab == 4) _history(context),
-                if (tab == 3)
-                  Section(
-                    title: 'Janji temu saya',
-                    action: IconButton(
-                      tooltip: 'Muat ulang janji temu',
+                  if (error != null) ...[
+                    MobileNotice(error!, error: true),
+                    TextButton.icon(
                       onPressed: busy || loading ? null : load,
                       icon: const Icon(Icons.refresh),
+                      label: const Text('Coba lagi'),
                     ),
-                    child: Column(
-                      children: [
-                        if (appointments.isEmpty && !loading)
-                          const EmptyState(text: 'Belum ada janji temu.'),
-                        for (final a in appointments)
-                          AppCard(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(appointmentDetails(a, widget.api.config)),
-                                StatusBadge(object(a['tiket'])['status']),
-                                TextButton(
-                                  onPressed: () => setState(() => tab = 1),
-                                  child: const Text('Lihat tiket'),
-                                ),
-                              ],
+                  ],
+                  if (message != null) MobileNotice(message!),
+                  if (loading)
+                    const LinearProgressIndicator(
+                      semanticsLabel: 'Memuat data pelayanan',
+                    ),
+                  if (tab == 0) _home(context),
+                  if (tab == 2) _registration(context),
+                  if (tab == 1) _tickets(context),
+                  if (tab == 4) _history(context),
+                  if (tab == 3)
+                    Section(
+                      title: 'Janji temu saya',
+                      action: IconButton(
+                        tooltip: 'Muat ulang janji temu',
+                        onPressed: busy || loading ? null : load,
+                        icon: const Icon(Icons.refresh),
+                      ),
+                      child: Column(
+                        children: [
+                          if (appointments.isEmpty && !loading)
+                            const EmptyState(text: 'Belum ada janji temu.'),
+                          for (final a in appointments)
+                            AppCard(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    appointmentDetails(a, widget.api.config),
+                                  ),
+                                  StatusBadge(object(a['tiket'])['status']),
+                                  TextButton(
+                                    onPressed: () => setState(() => tab = 1),
+                                    child: const Text('Lihat tiket'),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

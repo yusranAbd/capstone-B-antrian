@@ -9,6 +9,7 @@ import 'display.dart';
 import 'doctor.dart';
 import 'doctor_visual.dart';
 import 'patient.dart';
+import 'patient_home.dart';
 import 'queue.dart';
 import 'mobile_ui.dart';
 import 'login_ui.dart';
@@ -101,6 +102,78 @@ class _RootState extends State<_Root> {
         );
       }
       final role = api.user!['peran'];
+      AppBar header({
+        bool patientHome = false,
+        VoidCallback? onActivity,
+      }) => AppBar(
+        toolbarHeight: role == 'ADMIN'
+            ? 58
+            : role == 'DOKTER'
+            ? 64
+            : null,
+        title: patientHome
+            ? const PatientHomeBrand()
+            : const QueueBBrand(compact: true),
+        actions: [
+          if (patientHome)
+            IconButton(
+              tooltip: 'Aktivitas tiket',
+              onPressed: onActivity,
+              icon: const Icon(Icons.notifications_none_rounded),
+            ),
+
+          if (role == 'DOKTER')
+            DoctorHeaderIdentity(name: '${api.user!['nama'] ?? ''}'),
+          if (role == 'ADMIN' && MediaQuery.sizeOf(context).width >= 700)
+            AdminIdentity(name: '${api.user!['nama'] ?? ''}'),
+          IconButton(
+            tooltip: 'Profil akun',
+            icon: patientHome
+                ? const CircleAvatar(
+                    radius: 16,
+                    backgroundColor: QueueBStyle.mint,
+                    foregroundColor: QueueBStyle.darkTeal,
+                    child: Icon(Icons.person_outline_rounded, size: 22),
+                  )
+                : const Icon(Icons.account_circle_outlined),
+            onPressed: () => showDialog<void>(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: Text('${api.user!['nama']}'),
+                content: SelectableText(
+                  '${api.user!['email']}\nPeran: $role\nID akun: ${api.user!['id']}',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () async {
+                      await Clipboard.setData(
+                        ClipboardData(text: '${api.user!['id']}'),
+                      );
+                      if (context.mounted) Navigator.pop(context);
+                    },
+                    child: const Text('Salin ID akun'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Tutup'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          IconButton(
+            tooltip: 'Keluar akun',
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              try {
+                await api.logout();
+              } catch (_) {
+                /* Session gate reports cleanup failures and server confirmation. */
+              }
+            },
+          ),
+        ],
+      );
       return Theme(
         data: role == 'ADMIN'
             ? AdminStyle.theme
@@ -108,59 +181,7 @@ class _RootState extends State<_Root> {
             ? DoctorStyle.theme
             : QueueBStyle.theme,
         child: Scaffold(
-          appBar: AppBar(
-            toolbarHeight: role == 'ADMIN'
-                ? 58
-                : role == 'DOKTER'
-                ? 64
-                : null,
-            title: const QueueBBrand(compact: true),
-            actions: [
-              if (role == 'DOKTER')
-                DoctorHeaderIdentity(name: '${api.user!['nama'] ?? ''}'),
-              if (role == 'ADMIN' && MediaQuery.sizeOf(context).width >= 700)
-                AdminIdentity(name: '${api.user!['nama'] ?? ''}'),
-              IconButton(
-                tooltip: 'Profil akun',
-                icon: const Icon(Icons.account_circle_outlined),
-                onPressed: () => showDialog<void>(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: Text('${api.user!['nama']}'),
-                    content: SelectableText(
-                      '${api.user!['email']}\nPeran: $role\nID akun: ${api.user!['id']}',
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () async {
-                          await Clipboard.setData(
-                            ClipboardData(text: '${api.user!['id']}'),
-                          );
-                          if (context.mounted) Navigator.pop(context);
-                        },
-                        child: const Text('Salin ID akun'),
-                      ),
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Tutup'),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              IconButton(
-                tooltip: 'Keluar akun',
-                icon: const Icon(Icons.logout),
-                onPressed: () async {
-                  try {
-                    await api.logout();
-                  } catch (_) {
-                    /* Session gate reports cleanup failures and server confirmation. */
-                  }
-                },
-              ),
-            ],
-          ),
+          appBar: role == 'USER' ? null : header(),
           body: SafeArea(
             top: false,
             child: KeyedSubtree(
@@ -171,6 +192,8 @@ class _RootState extends State<_Root> {
                 'DOKTER' => DoctorPage(api: api),
                 _ => PatientPage(
                   api: api,
+                  headerBuilder: (home, activity) =>
+                      header(patientHome: home, onActivity: activity),
                   onDisplay: () => Navigator.of(context).pushNamed('/display'),
                 ),
               },

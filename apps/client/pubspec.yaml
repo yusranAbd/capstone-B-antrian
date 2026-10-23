@@ -72,6 +72,8 @@ flutter:
     - assets/illustrations/login_hospital.png
     - assets/illustrations/admin_welcome.png
     - assets/illustrations/doctor_avatar.png
+    - assets/illustrations/patient_hospital.png
+    - assets/illustrations/patient_ticket.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:
