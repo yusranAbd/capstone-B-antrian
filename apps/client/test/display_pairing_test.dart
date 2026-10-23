@@ -1,3 +1,5 @@
+import 'package:queueb_client/src/admin_ui.dart';
+
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -203,9 +205,66 @@ void main() {
       await cleanup(tester, api);
     },
   );
+  testWidgets(
+    'admin compact device table preserves activation rotation and revocation',
+    (tester) async {
+      tester.view.physicalSize = const Size(1440, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final posts = <String>[];
+      var active = true;
+      final api = apiFor((r) async {
+        if (r.method == 'POST') {
+          posts.add(r.url.path);
+          if (r.url.path.endsWith('/aktivasi')) {
+            return reply({
+              'kode': '123456',
+              'berlakuHingga': '2026-10-23T08:05:00Z',
+            });
+          }
+          active = false;
+          return reply({'ok': true});
+        }
+        return reply(
+          r.url.path.endsWith('/layanan')
+              ? [clinic]
+              : [
+                  {...device, 'aktif': active},
+                ],
+        );
+      });
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AdminStyle.theme,
+          home: Scaffold(body: AdminDisplayPage(api: api)),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Kode aktivasi / rotasi'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Lanjutkan'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('Kode aktivasi sekali pakai'), findsOneWidget);
+      await tester.tap(find.text('Selesai'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Nonaktifkan'));
+      await tester.tap(find.text('Nonaktifkan'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Lanjutkan'));
+      await tester.pumpAndSettle();
+      expect(posts.length, 2);
+      expect(posts[0], endsWith('/aktivasi'));
+      expect(posts[1], endsWith('/nonaktifkan'));
+      expect(find.text('Reaktivasi'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await cleanup(tester, api);
+    },
+  );
   for (final width in [375.0, 1440.0]) {
     testWidgets(
-      'admin groups/searches device cards without credentials at $width',
+      'admin searches compact device table without credentials at $width',
       (tester) async {
         tester.view.physicalSize = Size(width, 1000);
         tester.view.devicePixelRatio = 1;

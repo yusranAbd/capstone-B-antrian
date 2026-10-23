@@ -530,7 +530,7 @@ class _PracticeScheduleEditorState extends State<PracticeScheduleEditor> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -539,7 +539,7 @@ class _PracticeScheduleEditorState extends State<PracticeScheduleEditor> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -573,17 +573,17 @@ class _PracticeScheduleEditorState extends State<PracticeScheduleEditor> {
             vertical: 24,
           ),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(16),
           ),
           clipBehavior: Clip.antiAlias,
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 960),
+            constraints: const BoxConstraints(maxWidth: 840),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 24, 12, 20),
+                  padding: const EdgeInsets.fromLTRB(16, 16, 8, 12),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -609,7 +609,7 @@ class _PracticeScheduleEditorState extends State<PracticeScheduleEditor> {
                               child: Text(
                                 '${editing ? 'Ubah' : 'Tambah'} Jadwal Praktik',
                                 style: const TextStyle(
-                                  fontSize: 24,
+                                  fontSize: 20,
                                   fontWeight: FontWeight.w700,
                                   color: _PracticeStyle.ink,
                                 ),
@@ -656,7 +656,7 @@ class _PracticeScheduleEditorState extends State<PracticeScheduleEditor> {
                 const Divider(height: 1, color: _PracticeStyle.border),
                 Flexible(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(24),
+                    padding: const EdgeInsets.all(16),
                     child: Form(
                       key: form,
                       child: Column(
@@ -673,9 +673,9 @@ class _PracticeScheduleEditorState extends State<PracticeScheduleEditor> {
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
                                   _doctorField(),
-                                  const SizedBox(height: 20),
+                                  const SizedBox(height: 12),
                                   _roomField(),
-                                  const SizedBox(height: 20),
+                                  const SizedBox(height: 12),
                                   _dateField(),
                                 ],
                               );
@@ -685,7 +685,7 @@ class _PracticeScheduleEditorState extends State<PracticeScheduleEditor> {
                                           CrossAxisAlignment.start,
                                       children: [
                                         Expanded(child: identity),
-                                        const SizedBox(width: 28),
+                                        const SizedBox(width: 16),
                                         Expanded(child: _practiceTimes()),
                                       ],
                                     )
@@ -694,7 +694,7 @@ class _PracticeScheduleEditorState extends State<PracticeScheduleEditor> {
                                           CrossAxisAlignment.stretch,
                                       children: [
                                         identity,
-                                        const SizedBox(height: 24),
+                                        const SizedBox(height: 12),
                                         _practiceTimes(),
                                       ],
                                     );
@@ -707,7 +707,7 @@ class _PracticeScheduleEditorState extends State<PracticeScheduleEditor> {
                 ),
                 const Divider(height: 1, color: _PracticeStyle.border),
                 Padding(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(14),
                   child: LayoutBuilder(
                     builder: (context, box) {
                       final cancel = OutlinedButton(

@@ -203,15 +203,26 @@ class _AdminPageState extends State<AdminPage> {
 
   @override
   Widget build(BuildContext context) {
+    final toolbarActions = <Widget>[
+      FilledButton.icon(
+        onPressed: loading ? null : () => edit(),
+        icon: const Icon(Icons.add, size: 18),
+        label: const Text('Tambah'),
+      ),
+      OutlinedButton.icon(
+        onPressed: loading ? null : () => load(reloadCatalog: true),
+        icon: const Icon(Icons.refresh, size: 18),
+        label: const Text('Muat ulang'),
+      ),
+    ];
     final content = selected == 7
         ? AdminDisplayPage(api: widget.api)
         : selected == -1
         ? ListView(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(AdminStyle.pagePadding),
             children: [
               if (loading) const LinearProgressIndicator(),
               if (error != null) AdminNotice(error!, error: true),
-              const SizedBox(height: 12),
               AdminDashboard(
                 administratorName: widget.api.user?['nama'] as String?,
                 onRefresh: () => load(reloadCatalog: true),
@@ -223,7 +234,7 @@ class _AdminPageState extends State<AdminPage> {
             ],
           )
         : ListView(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(AdminStyle.pagePadding),
             children: [
               Text(
                 resource.title,
@@ -237,25 +248,10 @@ class _AdminPageState extends State<AdminPage> {
                   'Akun ADMIN/PETUGAS disediakan pengelola server. Gunakan ID akun dari profil petugas untuk memberikan penugasan.',
                 ),
               const SizedBox(height: 12),
-              Wrap(
-                spacing: 12,
-                runSpacing: 8,
-                children: [
-                  FilledButton.icon(
-                    onPressed: loading ? null : () => edit(),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Tambah'),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: loading ? null : () => load(reloadCatalog: true),
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Muat ulang'),
-                  ),
-                ],
-              ),
               if (loading) const LinearProgressIndicator(),
               if (resource.path == '/jadwal-layanan')
                 GroupedClinicSchedules(
+                  toolbarActions: toolbarActions,
                   clinics: catalog['/layanan'] ?? [],
                   schedules: data,
                   search: scheduleSearch,
@@ -266,6 +262,7 @@ class _AdminPageState extends State<AdminPage> {
                 )
               else
                 AdminDataView(
+                  toolbarActions: toolbarActions,
                   key: ValueKey(resource.path),
                   resource: resource,
                   data: data,
@@ -299,7 +296,7 @@ class _AdminPageState extends State<AdminPage> {
               ? Row(
                   children: [
                     SizedBox(
-                      width: collapsed ? 80 : 256,
+                      width: collapsed ? 64 : 216,
                       child: Material(
                         color: Colors.white,
                         child: AdminNavigation(
