@@ -33,7 +33,7 @@ class AdminNavigation extends StatelessWidget {
   final VoidCallback? onToggle;
   @override
   Widget build(BuildContext context) => ListView(
-    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 14),
     children: [
       Row(
         children: [
@@ -45,7 +45,7 @@ class AdminNavigation extends StatelessWidget {
                   'Administrasi',
                   style: TextStyle(
                     fontWeight: FontWeight.w700,
-                    color: QueueBStyle.muted,
+                    color: QueueBStyle.navy,
                   ),
                 ),
               ),
@@ -85,20 +85,32 @@ class AdminNavigation extends StatelessWidget {
             onPressed: onSelect == null ? null : () => onSelect!(i),
           ),
       ] else
-        for (final (category, indices) in adminCategories)
+        for (final (category, indices) in adminCategories) ...[
+          const Divider(color: QueueBStyle.border, height: 24),
           ExpansionTile(
             key: PageStorageKey('admin-category-$category'),
-            initiallyExpanded: indices.contains(selected),
+            initiallyExpanded: selected == -1 || indices.contains(selected),
+            shape: const Border(),
+            collapsedShape: const Border(),
+            iconColor: QueueBStyle.darkTeal,
+            collapsedIconColor: QueueBStyle.darkTeal,
+            childrenPadding: const EdgeInsets.only(bottom: 12),
             title: Text(
               category,
-              style: Theme.of(context).textTheme.titleSmall,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: QueueBStyle.muted,
+              ),
             ),
             children: [
               for (final i in indices)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 2),
                   child: ListTile(
-                    dense: true,
+                    dense: false,
+                    visualDensity: VisualDensity.compact,
+                    selectedColor: QueueBStyle.darkTeal,
                     selected: i == selected,
                     selectedTileColor: QueueBStyle.mint,
                     shape: RoundedRectangleBorder(
@@ -107,6 +119,7 @@ class AdminNavigation extends StatelessWidget {
                     leading: Icon(adminIcon(i), size: 22),
                     title: Text(
                       i == 7 ? 'Manajemen Display' : resources[i].title,
+                      style: const TextStyle(fontSize: 14),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -115,6 +128,7 @@ class AdminNavigation extends StatelessWidget {
                 ),
             ],
           ),
+        ],
     ],
   );
 }

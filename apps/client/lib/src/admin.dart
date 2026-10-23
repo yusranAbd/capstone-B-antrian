@@ -209,35 +209,12 @@ class _AdminPageState extends State<AdminPage> {
         ? ListView(
             padding: const EdgeInsets.all(24),
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Dashboard',
-                          style: Theme.of(context).textTheme.headlineSmall
-                              ?.copyWith(fontWeight: FontWeight.w800),
-                        ),
-                        Text(
-                          '${widget.api.config.today} · ${widget.api.config.serviceTimeZone}',
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: 'Muat ulang dashboard',
-                    onPressed: loading ? null : () => load(reloadCatalog: true),
-                    icon: const Icon(Icons.refresh),
-                  ),
-                ],
-              ),
               if (loading) const LinearProgressIndicator(),
               if (error != null) AdminNotice(error!, error: true),
               const SizedBox(height: 12),
               AdminDashboard(
+                administratorName: widget.api.user?['nama'] as String?,
+                onRefresh: () => load(reloadCatalog: true),
                 catalog: catalog,
                 config: widget.api.config,
                 loading: loading,
@@ -322,12 +299,16 @@ class _AdminPageState extends State<AdminPage> {
               ? Row(
                   children: [
                     SizedBox(
-                      width: collapsed ? 80 : 236,
-                      child: AdminNavigation(
-                        selected: selected,
-                        onSelect: loading ? null : selectResource,
-                        collapsed: collapsed,
-                        onToggle: () => setState(() => collapsed = !collapsed),
+                      width: collapsed ? 80 : 256,
+                      child: Material(
+                        color: Colors.white,
+                        child: AdminNavigation(
+                          selected: selected,
+                          onSelect: loading ? null : selectResource,
+                          collapsed: collapsed,
+                          onToggle: () =>
+                              setState(() => collapsed = !collapsed),
+                        ),
                       ),
                     ),
                     const VerticalDivider(width: 1),
