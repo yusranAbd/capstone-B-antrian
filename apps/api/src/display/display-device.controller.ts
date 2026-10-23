@@ -7,6 +7,7 @@ import {
   Header,
   HttpCode,
   Param,
+  Patch,
   ParseUUIDPipe,
   Post,
   Req,
@@ -24,7 +25,11 @@ import {
   cookieToken,
   displayCookie,
 } from './display-cookie';
-import { CreateDisplayDeviceDto, PairDisplayDto } from './display-device.dto';
+import {
+  CreateDisplayDeviceDto,
+  PairDisplayDto,
+  UpdateDisplayDeviceDto,
+} from './display-device.dto';
 import { DisplayDeviceService } from './display-device.service';
 @Controller('perangkat-display')
 @UseFilters(DisplayErrorFilter)
@@ -37,6 +42,13 @@ export class DisplayDeviceController {
   }
   @Post() create(@Body() dto: CreateDisplayDeviceDto) {
     return this.devices.create(dto);
+  }
+  @Patch(':id')
+  rename(
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Body() dto: UpdateDisplayDeviceDto,
+  ) {
+    return this.devices.rename(id, dto);
   }
   @Post(':id/aktivasi')
   @HttpCode(200)

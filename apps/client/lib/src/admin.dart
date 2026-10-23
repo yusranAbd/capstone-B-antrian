@@ -1,3 +1,5 @@
+import 'admin_delete.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -119,6 +121,29 @@ class _AdminPageState extends State<AdminPage> {
     }
   }
 
+  Future<void> deleteRow(Json row) async {
+    final result = await showAdminDelete(
+      context,
+      widget.api,
+      resource.path,
+      row,
+      name: resource.path == '/jadwal-layanan'
+          ? '${label(object(row['layanan']))} · ${dayLabel('${row['hari']}')}'
+          : resource.path == '/penugasan-petugas'
+          ? label(object(row['petugas']))
+          : null,
+    );
+    if (!mounted) return;
+    if (result == AdminDeleteResult.deactivate) {
+      await deactivateRow(row);
+      return;
+    }
+    if (result == AdminDeleteResult.deleted) {
+      setState(() => message = 'Data berhasil dihapus permanen.');
+      await load(reloadCatalog: true);
+    }
+  }
+
   Future<void> deactivateRow(Json row) async {
     if (!await confirm(
       context,
@@ -221,8 +246,13 @@ class _AdminPageState extends State<AdminPage> {
         ? ListView(
             padding: const EdgeInsets.all(AdminStyle.pagePadding),
             children: [
-              if (loading) const LinearProgressIndicator(),
-              if (error != null) AdminNotice(error!, error: true),
+              SizedBox(
+                height: loading ? 4 : 0,
+                child: loading ? const LinearProgressIndicator() : null,
+              ),
+              error != null
+                  ? AdminNotice(error!, error: true)
+                  : const SizedBox.shrink(),
               AdminDashboard(
                 administratorName: widget.api.user?['nama'] as String?,
                 onRefresh: () => load(reloadCatalog: true),
@@ -241,14 +271,19 @@ class _AdminPageState extends State<AdminPage> {
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               Text('Zona pelayanan: ${widget.api.config.serviceTimeZone}'),
-              if (error != null) AdminNotice(error!, error: true),
-              if (message != null) AdminNotice(message!),
+              error != null
+                  ? AdminNotice(error!, error: true)
+                  : const SizedBox.shrink(),
+              message != null ? AdminNotice(message!) : const SizedBox.shrink(),
               if (resource.path == '/penugasan-petugas')
                 const AdminNotice(
                   'Akun ADMIN/PETUGAS disediakan pengelola server. Gunakan ID akun dari profil petugas untuk memberikan penugasan.',
                 ),
               const SizedBox(height: 12),
-              if (loading) const LinearProgressIndicator(),
+              SizedBox(
+                height: loading ? 4 : 0,
+                child: loading ? const LinearProgressIndicator() : null,
+              ),
               if (resource.path == '/jadwal-layanan')
                 GroupedClinicSchedules(
                   toolbarActions: toolbarActions,
@@ -258,6 +293,7 @@ class _AdminPageState extends State<AdminPage> {
                   onSearch: (value) => setState(() => scheduleSearch = value),
                   onEdit: edit,
                   onDeactivate: deactivateRow,
+                  onDelete: deleteRow,
                   busy: loading,
                 )
               else
@@ -272,6 +308,7 @@ class _AdminPageState extends State<AdminPage> {
                   revision: revision,
                   onEdit: edit,
                   onDeactivate: deactivateRow,
+                  onDelete: deleteRow,
                   onDoctorAccount: (doctor) async {
                     final changed = await showDialog<bool>(
                       context: context,
@@ -711,7 +748,9 @@ class _AdminEditorState extends State<_AdminEditor> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text('Zona waktu: ${widget.api.config.serviceTimeZone}'),
-                if (error != null) AdminNotice(error!, error: true),
+                error != null
+                    ? AdminNotice(error!, error: true)
+                    : const SizedBox.shrink(),
                 for (final f in fields)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8),

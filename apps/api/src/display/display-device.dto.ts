@@ -6,3 +6,7 @@ export class CreateDisplayDeviceDto {
 export class PairDisplayDto {
   @IsString() @Matches(/^\d{12}$/) kode: string;
 }
+
+export class UpdateDisplayDeviceDto {
+  @IsString() @Length(3, 100) @Matches(/\S/) nama: string;
+}

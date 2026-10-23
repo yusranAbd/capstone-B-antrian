@@ -1,3 +1,4 @@
+import { AdminDeleteModule } from './admin-delete/admin-delete.module';
 import { PortalDokterModule } from './portal-dokter/portal-dokter.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
@@ -36,6 +37,7 @@ import { SlotPraktikModule } from './slot-praktik/slot-praktik.module';
       },
     ]),
 
+    AdminDeleteModule,
     PortalDokterModule,
     HealthModule,
     AuthModule,

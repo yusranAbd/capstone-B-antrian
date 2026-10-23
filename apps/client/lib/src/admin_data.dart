@@ -1,3 +1,5 @@
+import 'admin_delete.dart';
+
 import 'package:flutter/material.dart';
 
 import 'admin_schema.dart';
@@ -117,6 +119,7 @@ class AdminDataView extends StatefulWidget {
     required this.busy,
     required this.onEdit,
     required this.onDeactivate,
+    this.onDelete,
     required this.onDoctorLinks,
     this.onDoctorAccount,
     this.toolbarActions = const [],
@@ -130,6 +133,7 @@ class AdminDataView extends StatefulWidget {
   final QueueApi api;
   final bool busy;
   final ValueChanged<Json> onEdit, onDeactivate, onDoctorLinks;
+  final ValueChanged<Json>? onDelete;
   final ValueChanged<Json>? onDoctorAccount;
   final String Function(Json) detail;
   final int revision;
@@ -266,6 +270,10 @@ class _AdminDataViewState extends State<AdminDataView> {
           padding: EdgeInsets.zero,
           onPressed: widget.busy ? null : () => widget.onDeactivate(row),
           icon: const Icon(Icons.block_outlined, size: 20),
+        ),
+      if (widget.onDelete != null)
+        AdminDeleteButton(
+          onPressed: widget.busy ? null : () => widget.onDelete!(row),
         ),
       if (path == '/dokter' && widget.onDoctorAccount != null)
         IconButton(
@@ -455,6 +463,7 @@ class _AdminDataViewState extends State<AdminDataView> {
                 busy: widget.busy,
                 onEdit: widget.onEdit,
                 onDeactivate: widget.onDeactivate,
+                onDelete: widget.onDelete,
               ),
             ),
           ],
@@ -606,6 +615,7 @@ class AdminSlotSession extends StatefulWidget {
     required this.busy,
     required this.onEdit,
     required this.onDeactivate,
+    this.onDelete,
   });
   final Json session;
   final QueueApi api;
@@ -613,6 +623,7 @@ class AdminSlotSession extends StatefulWidget {
   final int revision;
   final bool busy;
   final ValueChanged<Json> onEdit, onDeactivate;
+  final ValueChanged<Json>? onDelete;
   @override
   State<AdminSlotSession> createState() => _AdminSlotSessionState();
 }
@@ -725,18 +736,26 @@ class _AdminSlotSessionState extends State<AdminSlotSession> {
                         mainAxisSize: MainAxisSize.min,
                         spacing: 8,
                         children: [
-                          TextButton(
+                          TextButton.icon(
+                            icon: const Icon(Icons.edit_outlined, size: 18),
                             onPressed: widget.busy
                                 ? null
                                 : () => widget.onEdit(s),
-                            child: const Text('Ubah'),
+                            label: const Text('Ubah'),
                           ),
+                          if (widget.onDelete != null)
+                            AdminDeleteButton(
+                              onPressed: widget.busy
+                                  ? null
+                                  : () => widget.onDelete!(s),
+                            ),
                           if (s['aktif'] == true)
-                            TextButton(
+                            TextButton.icon(
+                              icon: const Icon(Icons.block_outlined, size: 18),
                               onPressed: widget.busy
                                   ? null
                                   : () => widget.onDeactivate(s),
-                              child: const Text('Nonaktifkan'),
+                              label: const Text('Nonaktifkan'),
                             ),
                         ],
                       ),
