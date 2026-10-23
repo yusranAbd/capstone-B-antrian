@@ -11,7 +11,10 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { DisplayRealtimeGateway } from '../realtime/display-realtime.gateway';
 import { DISPLAY_SESSION_MS } from './display-cookie';
-import { CreateDisplayDeviceDto } from './display-device.dto';
+import {
+  CreateDisplayDeviceDto,
+  UpdateDisplayDeviceDto,
+} from './display-device.dto';
 const hash = (v: string) => createHash('sha256').update(v).digest('hex');
 const metadata = {
   id: true,
@@ -57,6 +60,18 @@ export class DisplayDeviceService {
         layananId: dto.layananId,
         tokenHash: hash(randomBytes(32).toString('hex')),
       },
+      select: metadata,
+    });
+  }
+  async rename(id: string, dto: UpdateDisplayDeviceDto) {
+    const changed = await this.prisma.perangkatTampilan.updateMany({
+      where: { id },
+      data: { nama: dto.nama.trim() },
+    });
+    if (changed.count !== 1)
+      throw new NotFoundException('Perangkat tidak ditemukan');
+    return this.prisma.perangkatTampilan.findUnique({
+      where: { id },
       select: metadata,
     });
   }

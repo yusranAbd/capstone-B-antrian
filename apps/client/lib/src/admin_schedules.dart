@@ -1,3 +1,5 @@
+import 'admin_delete.dart';
+
 import 'package:flutter/material.dart';
 
 import 'admin_schema.dart';
@@ -90,6 +92,7 @@ class GroupedClinicSchedules extends StatelessWidget {
     required this.onSearch,
     required this.onEdit,
     required this.onDeactivate,
+    this.onDelete,
     this.busy = false,
     this.toolbarActions = const [],
   });
@@ -97,6 +100,7 @@ class GroupedClinicSchedules extends StatelessWidget {
   final String search;
   final ValueChanged<String> onSearch;
   final ValueChanged<Json> onEdit, onDeactivate;
+  final ValueChanged<Json>? onDelete;
   final bool busy;
   final List<Widget> toolbarActions;
 
@@ -132,10 +136,15 @@ class GroupedClinicSchedules extends StatelessWidget {
                   icon: const Icon(Icons.edit_outlined, size: 18),
                   label: const Text('Ubah'),
                 ),
+                if (onDelete != null)
+                  AdminDeleteButton(
+                    onPressed: busy ? null : () => onDelete!(row),
+                  ),
                 if (row['aktif'] == true)
-                  TextButton(
+                  TextButton.icon(
+                    icon: const Icon(Icons.block_outlined, size: 18),
                     onPressed: busy ? null : () => onDeactivate(row),
-                    child: const Text('Nonaktifkan'),
+                    label: const Text('Nonaktifkan'),
                   ),
               ],
             );

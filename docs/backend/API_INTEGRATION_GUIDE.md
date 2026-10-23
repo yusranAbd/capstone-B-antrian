@@ -1620,3 +1620,36 @@ Buka `/#/display` untuk kiosk: sesi cookie dipulihkan tanpa memasukkan kode lagi
 Migration **`20261019_display_device_pairing`** hanya menambah empat kolom nullable pada `perangkat_tampilan`: kode_aktivasi_hash (unique), kode_berlaku_hingga, kode_digunakan_pada dan sesi_berakhir_pada. Token/perangkat existing tetap berfungsi karena expiry null berarti jalur token lama. Tidak ada perubahan migration historis atau penghapusan data.
 
 **Database development utama belum diberi migration ini. Persetujuan Project Lead diperlukan sebelum memasangnya.** Review SQL dan backup, validasi DATABASE_URL dan current_database(), periksa seluruh migration pending, baru `prisma migrate deploy` sesuai persetujuan; kemudian generate client, deploy API baru, deploy Flutter. Query Prisma baru memerlukan kolom tersebut, sehingga migration harus mendahului deployment API. Jangan reset/db push/restore/drop. Runner `node test/run-display-pairing.cjs --deploy-test-migration` hanya menerima kredensial lokal dan memaksa target `127.0.0.1:5433/capstone_antrean_test`, memeriksa pending migration dan fingerprint data existing; tidak dapat memasang ke development utama.
+
+
+## Penghapusan permanen data ADMIN
+
+Endpoint Nonaktifkan existing tetap berlaku. `DELETE /:id` pada layanan, dokter, loket, jadwal layanan, jadwal praktik, slot dan penugasan **tidak berubah menjadi hard delete**. Perangkat display tetap memakai `POST /perangkat-display/:id/nonaktifkan` untuk mencabut akses tanpa menghapus perangkat.
+
+Endpoint aditif berikut membutuhkan JWT role **ADMIN**:
+
+| Metode | Path relatif `/api/v1` | Fungsi |
+|---|---|---|
+| DELETE | `/layanan/:id/permanen` | Hapus poliklinik yang belum dipakai dan tidak memiliki konfigurasi turunan |
+| DELETE | `/dokter/:id/permanen` | Hapus profil dokter tanpa jadwal dan akun; relasi poliklinik konfigurasi yang belum dipakai ikut dibersihkan secara eksplisit |
+| DELETE | `/loket/:id/permanen` | Hapus ruang tanpa tiket, jadwal atau penugasan |
+| DELETE | `/jadwal-layanan/:id/permanen` | Hapus jam/kapasitas bila poliklinik belum memiliki tiket atau sesi praktik |
+| DELETE | `/jadwal-praktik/:id/permanen` | Hapus sesi tanpa appointment, slot, atau tiket terkait tanggal/ruang |
+| DELETE | `/slot-praktik/:id/permanen` | Hapus slot tanpa appointment, termasuk appointment dibatalkan |
+| DELETE | `/penugasan-petugas/:id/permanen` | Hapus penugasan bila belum ada tiket di loket dalam periodenya |
+| DELETE | `/perangkat-display/:id/permanen` | Hapus perangkat dan cabut koneksi/kode/kredensialnya |
+| PATCH | `/perangkat-display/:id` | Ubah nama perangkat, body `{ "nama": "TV Ruang Tunggu" }`; tidak memindahkan poliklinik atau merotasi akses |
+
+DELETE tidak memerlukan body. ID harus UUID v4. Sukses `200`: `{ "id": "UUID", "dihapus": true }`. Tidak ada token, profil pasien, atau row database lengkap dalam respons hapus.
+
+- `401`: sesi belum sah/berakhir. `403`: role selain ADMIN. `400`: format ID tidak valid. `404`: data tidak ada/sudah dihapus.
+- `409 DATA_MASIH_DIGUNAKAN`: `message` dan `alasan` menyebut relasi penghalang, serta `bolehNonaktifkan: true`. Frontend menampilkan alasan dan menawarkan Nonaktifkan untuk data aktif.
+- `409 KONFLIK_PERUBAHAN`: ada transaksi paralel, deadlock atau batas tunggu lock. Muat ulang status sebelum mencoba lagi; jangan retry operasi destruktif otomatis.
+
+Semua status historis diperhitungkan, termasuk record nonaktif dan appointment dibatalkan. Relasi konfigurasi turunan poliklinik harus dihapus dahulu jika belum digunakan; tidak ada cascade terhadap booking, tiket, audit atau pengguna. Dokter yang sudah ditautkan ke akun tetap dilindungi; akun tidak dihapus.
+
+Transaksi Serializable memakai row lock dan FK PostgreSQL. Penghapusan jam/kapasitas serta penugasan memakai lock tabel singkat karena keterkaitan operasional tidak memiliki FK langsung; lock timeout 5 detik dan transaksi maksimum 10 detik. Konflik Prisma maupun SQLSTATE adapter dipetakan ke 409, bukan 500. Socket perangkat diputus melalui gateway existing setelah commit; pemeriksaan kredensial REST/realtime tetap membaca database.
+
+Audit antrean di database dipertahankan. Karena belum tersedia tabel audit master-data generik, keberhasilan hapus dicatat melalui logger `AdminDeleteAudit` berisi aksi, resource, id, aktorId dan timestamp, tanpa nama pasien/token/hash. Pengelola deployment perlu mempertahankan log tersebut pada penyimpanan log server. Tidak ada perubahan schema/migration.
+
+Flutter menampilkan dialog **Hapus Data?**, tombol **Batal** dan **Hapus Permanen**; poliklinik/dokter memerlukan pengetikan kode atau nama yang tepat. Konfirmasi tidak menggantikan pemeriksaan RBAC/referensi backend. Sesudah sukses, daftar dimuat ulang dengan pencarian/filter yang masih aktif. Tombol Nonaktifkan tetap tersedia terpisah.

@@ -1,3 +1,5 @@
+import 'admin_delete.dart';
+
 import 'package:flutter/material.dart';
 
 import 'api.dart';
@@ -54,7 +56,9 @@ class _AdminDisplayPageState extends State<AdminDisplayPage> {
         clinics: clinics.where((c) => c['aktif'] == true).toList(),
       ),
     );
-    if (mounted && changed == true) await load();
+    if (mounted && changed == true) {
+      await load();
+    }
   }
 
   Future<void> activateDevice(Json device) async {
@@ -144,6 +148,39 @@ class _AdminDisplayPageState extends State<AdminDisplayPage> {
           error = '$e';
           busy = false;
         });
+      }
+    }
+  }
+
+  Future<void> editDevice(Json device) async {
+    final changed = await showDialog<bool>(
+      context: context,
+      builder: (_) =>
+          _DeviceEditor(api: widget.api, clinics: clinics, device: device),
+    );
+    if (mounted && changed == true) {
+      await load();
+    }
+  }
+
+  Future<void> deleteDevice(Json device) async {
+    final result = await showAdminDelete(
+      context,
+      widget.api,
+      '/perangkat-display',
+      device,
+    );
+    if (!mounted) return;
+    if (result == AdminDeleteResult.deactivate) {
+      await deactivateDevice(device);
+      return;
+    }
+    if (result == AdminDeleteResult.deleted) {
+      await load();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Perangkat berhasil dihapus permanen.')),
+        );
       }
     }
   }
@@ -277,10 +314,19 @@ class _AdminDisplayPageState extends State<AdminDisplayPage> {
                           : 'Reaktivasi',
                     ),
                   ),
+                  IconButton(
+                    tooltip: 'Ubah',
+                    onPressed: busy ? null : () => editDevice(d),
+                    icon: const Icon(Icons.edit_outlined, size: 20),
+                  ),
+                  AdminDeleteButton(
+                    onPressed: busy ? null : () => deleteDevice(d),
+                  ),
                   if (d['aktif'] == true)
-                    TextButton(
+                    TextButton.icon(
+                      icon: const Icon(Icons.block_outlined, size: 18),
                       onPressed: busy ? null : () => deactivateDevice(d),
-                      child: const Text('Nonaktifkan'),
+                      label: const Text('Nonaktifkan'),
                     ),
                 ],
               ),
@@ -293,9 +339,10 @@ class _AdminDisplayPageState extends State<AdminDisplayPage> {
 }
 
 class _DeviceEditor extends StatefulWidget {
-  const _DeviceEditor({required this.api, required this.clinics});
+  const _DeviceEditor({required this.api, required this.clinics, this.device});
   final QueueApi api;
   final List<Json> clinics;
+  final Json? device;
   @override
   State<_DeviceEditor> createState() => _DeviceEditorState();
 }
@@ -305,6 +352,12 @@ class _DeviceEditorState extends State<_DeviceEditor> {
   final name = TextEditingController();
   String? clinic, error;
   bool busy = false;
+  @override
+  void initState() {
+    super.initState();
+    name.text = widget.device?['nama'] as String? ?? '';
+  }
+
   @override
   void dispose() {
     name.dispose();
@@ -319,9 +372,14 @@ class _DeviceEditorState extends State<_DeviceEditor> {
     });
     try {
       await widget.api.request(
-        'POST',
-        '/perangkat-display',
-        body: {'nama': name.text.trim(), 'layananId': clinic},
+        widget.device == null ? 'POST' : 'PATCH',
+        widget.device == null
+            ? '/perangkat-display'
+            : '/perangkat-display/${widget.device!['id']}',
+        body: {
+          'nama': name.text.trim(),
+          if (widget.device == null) 'layananId': clinic,
+        },
       );
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
@@ -336,7 +394,11 @@ class _DeviceEditorState extends State<_DeviceEditor> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Tambah perangkat display'),
+    title: Text(
+      widget.device == null
+          ? 'Tambah perangkat display'
+          : 'Ubah nama perangkat display',
+    ),
     content: SizedBox(
       width: 440,
       child: Form(
@@ -354,19 +416,21 @@ class _DeviceEditorState extends State<_DeviceEditor> {
                     ? 'Nama minimal 3 karakter.'
                     : null,
               ),
-              DropdownButtonFormField<String>(
-                isExpanded: true,
-                decoration: const InputDecoration(labelText: 'Poliklinik'),
-                items: [
-                  for (final c in widget.clinics)
-                    DropdownMenuItem(
-                      value: '${c['id']}',
-                      child: Text(label(c)),
-                    ),
-                ],
-                onChanged: busy ? null : (v) => clinic = v,
-                validator: (v) => v == null ? 'Pilih poliklinik aktif.' : null,
-              ),
+              if (widget.device == null)
+                DropdownButtonFormField<String>(
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'Poliklinik'),
+                  items: [
+                    for (final c in widget.clinics)
+                      DropdownMenuItem(
+                        value: '${c['id']}',
+                        child: Text(label(c)),
+                      ),
+                  ],
+                  onChanged: busy ? null : (v) => clinic = v,
+                  validator: (v) =>
+                      v == null ? 'Pilih poliklinik aktif.' : null,
+                ),
             ],
           ),
         ),
