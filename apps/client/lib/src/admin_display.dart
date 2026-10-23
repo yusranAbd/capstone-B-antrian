@@ -159,129 +159,134 @@ class _AdminDisplayPageState extends State<AdminDisplayPage> {
                   .contains(search.toLowerCase()),
         )
         .toList();
-    final groups = <String, List<Json>>{};
-    for (final device in filtered) {
-      groups.putIfAbsent('${device['layananId']}', () => []).add(device);
-    }
     return ListView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(AdminStyle.pagePadding),
       children: [
         Text(
           'Manajemen Display',
           style: Theme.of(context).textTheme.headlineSmall,
         ),
+        const SizedBox(height: 4),
         const Text(
           'Siapkan satu TV untuk satu poliklinik. Beberapa TV dapat menggunakan poliklinik yang sama.',
         ),
-        const SizedBox(height: 16),
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: [
-            FilledButton.icon(
-              onPressed: busy ? null : addDevice,
-              icon: const Icon(Icons.add),
-              label: const Text('Tambah perangkat'),
-            ),
-            OutlinedButton.icon(
-              onPressed: busy ? null : load,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Muat ulang'),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          decoration: const InputDecoration(
-            labelText: 'Cari perangkat atau poliklinik',
-            prefixIcon: Icon(Icons.search),
-          ),
-          onChanged: (v) => setState(() => search = v),
-        ),
         const SizedBox(height: 12),
-        DropdownButtonFormField<String>(
-          initialValue: clinic,
-          isExpanded: true,
-          decoration: const InputDecoration(labelText: 'Poliklinik display'),
-          items: [
-            const DropdownMenuItem<String>(
-              value: null,
-              child: Text('Semua poliklinik'),
-            ),
-            for (final c in clinics)
-              DropdownMenuItem(value: '${c['id']}', child: Text(label(c))),
-          ],
-          onChanged: (v) => setState(() => clinic = v),
-        ),
-        if (busy) const LinearProgressIndicator(),
-        if (error != null) Notice(error!, error: true),
-        if (!busy && error == null && filtered.isEmpty)
-          const Padding(
-            padding: EdgeInsets.all(24),
-            child: Text(
-              'Belum ada perangkat yang sesuai. Tambahkan perangkat untuk memulai aktivasi.',
-            ),
-          ),
-        const Padding(
-          padding: EdgeInsets.only(top: 12),
-          child: Text(
-            'Status aktif adalah izin perangkat, bukan indikator online.',
-          ),
-        ),
-        for (final group in groups.values) ...[
-          Padding(
-            padding: const EdgeInsets.only(top: 24, bottom: 8),
-            child: Text(
-              label(object(group.first['layanan'])),
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-          ),
-          AdminTable(
-            key: ValueKey('$clinic:$search:${group.first['layananId']}'),
-            rows: group,
-            columns: [
-              AdminColumn('Nama perangkat', (d) => d['nama']),
-              AdminColumn(
-                'Status akses',
-                (d) => d['aktif'] == true ? 'Aktif' : 'Nonaktif',
-              ),
-              AdminColumn(
-                'Terakhir terhubung',
-                (d) => d['terakhirAktifPada'] == null
-                    ? 'Belum tersedia'
-                    : widget.api.config.instantLabel(d['terakhirAktifPada']),
-              ),
-              AdminColumn(
-                'Aksi',
-                (_) => '',
-                cell: (d) => SizedBox(
-                  width: 340,
-                  child: Wrap(
-                    spacing: 8,
-                    children: [
-                      OutlinedButton.icon(
-                        onPressed: busy || object(d['layanan'])['aktif'] != true
-                            ? null
-                            : () => activateDevice(d),
-                        icon: const Icon(Icons.key),
-                        label: Text(
-                          d['aktif'] == true
-                              ? 'Kode aktivasi / rotasi'
-                              : 'Reaktivasi',
-                        ),
-                      ),
-                      if (d['aktif'] == true)
-                        TextButton(
-                          onPressed: busy ? null : () => deactivateDevice(d),
-                          child: const Text('Nonaktifkan'),
-                        ),
-                    ],
+        LayoutBuilder(
+          builder: (context, box) => Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              SizedBox(
+                width: box.maxWidth < 560 ? box.maxWidth : 280,
+                child: TextField(
+                  decoration: const InputDecoration(
+                    labelText: 'Cari perangkat atau poliklinik',
+                    prefixIcon: Icon(Icons.search),
                   ),
+                  onChanged: (v) => setState(() => search = v),
                 ),
+              ),
+              SizedBox(
+                width: box.maxWidth < 560 ? box.maxWidth : 220,
+                child: DropdownButtonFormField<String>(
+                  initialValue: clinic,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Poliklinik display',
+                  ),
+                  items: [
+                    const DropdownMenuItem<String>(
+                      value: null,
+                      child: Text('Semua poliklinik'),
+                    ),
+                    for (final c in clinics)
+                      DropdownMenuItem(
+                        value: '${c['id']}',
+                        child: Text(label(c)),
+                      ),
+                  ],
+                  onChanged: (v) => setState(() => clinic = v),
+                ),
+              ),
+              FilledButton.icon(
+                onPressed: busy ? null : addDevice,
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Tambah perangkat'),
+              ),
+              OutlinedButton.icon(
+                onPressed: busy ? null : load,
+                icon: const Icon(Icons.refresh, size: 18),
+                label: const Text('Muat ulang'),
               ),
             ],
           ),
-        ],
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: busy ? 4 : 0,
+          child: busy ? const LinearProgressIndicator() : null,
+        ),
+        error != null ? Notice(error!, error: true) : const SizedBox.shrink(),
+        !busy && error == null && filtered.isEmpty
+            ? const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Text(
+                  'Belum ada perangkat yang sesuai. Tambahkan perangkat untuk memulai aktivasi.',
+                ),
+              )
+            : const SizedBox.shrink(),
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 8),
+          child: Text(
+            'Status aktif adalah izin perangkat, bukan indikator online.',
+            style: TextStyle(fontSize: 12),
+          ),
+        ),
+        AdminTable(
+          key: ValueKey('$clinic:$search'),
+          rows: filtered,
+          columns: [
+            AdminColumn('Nama perangkat', (d) => d['nama']),
+            AdminColumn('Poliklinik', (d) => label(object(d['layanan']))),
+            AdminColumn(
+              'Status akses',
+              (d) => d['aktif'] == true ? 'Aktif' : 'Nonaktif',
+            ),
+            AdminColumn(
+              'Terakhir terhubung',
+              (d) => d['terakhirAktifPada'] == null
+                  ? 'Belum tersedia'
+                  : widget.api.config.instantLabel(d['terakhirAktifPada']),
+            ),
+            AdminColumn(
+              'Aksi',
+              (_) => '',
+              cell: (d) => Row(
+                mainAxisSize: MainAxisSize.min,
+                spacing: 4,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: busy || object(d['layanan'])['aktif'] != true
+                        ? null
+                        : () => activateDevice(d),
+                    icon: const Icon(Icons.key, size: 18),
+                    label: Text(
+                      d['aktif'] == true
+                          ? 'Kode aktivasi / rotasi'
+                          : 'Reaktivasi',
+                    ),
+                  ),
+                  if (d['aktif'] == true)
+                    TextButton(
+                      onPressed: busy ? null : () => deactivateDevice(d),
+                      child: const Text('Nonaktifkan'),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }

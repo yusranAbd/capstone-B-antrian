@@ -613,10 +613,6 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      if (find.text('Jadwal praktik').evaluate().isEmpty) {
-        await tester.tap(find.text('Manajemen jadwal'));
-        await tester.pumpAndSettle();
-      }
       await tester.tap(find.text('Jadwal praktik'));
       await tester.pumpAndSettle();
       final before = listReads;

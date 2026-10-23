@@ -5,6 +5,8 @@ import 'mobile_ui.dart';
 
 // Hallmark · ADMIN workbench · QueueB tokens · P5 H5 E4 S5 R5 V4.
 abstract final class AdminStyle {
+  static const radius = 16.0;
+  static const pagePadding = 16.0;
   static const canvas = Color(0xfff2f9fc);
   static const sky = Color(0xffe0f2ff);
   static const blue = Color(0xff087bd4);
@@ -12,7 +14,7 @@ abstract final class AdminStyle {
   static const shadow = Color(0x080c637d);
   static BoxDecoration get panel => BoxDecoration(
     color: Colors.white,
-    borderRadius: BorderRadius.circular(22),
+    borderRadius: BorderRadius.circular(radius),
     border: Border.all(color: rule),
     boxShadow: const [
       BoxShadow(color: shadow, blurRadius: 22, offset: Offset(0, 6)),
@@ -23,7 +25,7 @@ abstract final class AdminStyle {
     cardTheme: const CardThemeData(
       color: Colors.white,
       elevation: 0,
-      margin: EdgeInsets.symmetric(vertical: 6),
+      margin: EdgeInsets.symmetric(vertical: 4),
     ),
     appBarTheme: const AppBarTheme(
       backgroundColor: Colors.white,
@@ -39,12 +41,33 @@ abstract final class AdminStyle {
         fontSize: 12,
       ),
       dataTextStyle: TextStyle(color: QueueBStyle.navy, fontSize: 13),
-      horizontalMargin: 16,
-      columnSpacing: 24,
+      horizontalMargin: 12,
+      columnSpacing: 16,
       dividerThickness: .5,
     ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        minimumSize: const Size(44, 40),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(44, 40),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        textStyle: const TextStyle(fontSize: 13),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        minimumSize: const Size(44, 36),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        textStyle: const TextStyle(fontSize: 13),
+      ),
+    ),
     inputDecorationTheme: QueueBStyle.theme.inputDecorationTheme.copyWith(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
     ),
   );
 }
@@ -68,6 +91,7 @@ class AdminIdentity extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           CircleAvatar(
+            radius: 16,
             backgroundColor: AdminStyle.sky,
             foregroundColor: QueueBStyle.darkTeal,
             child: Text(
@@ -128,7 +152,7 @@ class AdminTable extends StatefulWidget {
     required this.columns,
     this.title,
     this.pageSize = 10,
-    this.compact = false,
+    this.compact = true,
     this.decorated = true,
   });
   final List<Json> rows;
@@ -198,7 +222,7 @@ class _AdminTableState extends State<AdminTable> {
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: SizedBox(
-          width: (widget.columns.length * 160.0)
+          width: (widget.columns.length * 135.0)
               .clamp(box.maxWidth, double.infinity)
               .toDouble(),
           child: PaginatedDataTable(
@@ -212,9 +236,14 @@ class _AdminTableState extends State<AdminTable> {
                   ),
             showCheckboxColumn: false,
             showEmptyRows: false,
-            dataRowMinHeight: widget.compact ? 52 : 58,
-            dataRowMaxHeight: widget.compact ? 60 : 112,
-            headingRowHeight: widget.compact ? 52 : 56,
+            dataRowMinHeight: widget.compact ? 44 : 58,
+            dataRowMaxHeight: widget.compact
+                ? (MediaQuery.textScalerOf(context).scale(32) + 16).clamp(
+                    48,
+                    double.infinity,
+                  )
+                : 112,
+            headingRowHeight: widget.compact ? 44 : 56,
             rowsPerPage: widget.rows.length.clamp(1, size),
             availableRowsPerPage: [
               if (widget.rows.length < 10) widget.rows.length.clamp(1, 10),
@@ -295,7 +324,7 @@ class _AdminTableSource extends DataTableSource {
                       message: '${col.value(row) ?? '—'}',
                       child: Text(
                         '${col.value(row) ?? '—'}',
-                        maxLines: 3,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),

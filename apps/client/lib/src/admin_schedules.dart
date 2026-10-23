@@ -91,12 +91,14 @@ class GroupedClinicSchedules extends StatelessWidget {
     required this.onEdit,
     required this.onDeactivate,
     this.busy = false,
+    this.toolbarActions = const [],
   });
   final List<Json> clinics, schedules;
   final String search;
   final ValueChanged<String> onSearch;
   final ValueChanged<Json> onEdit, onDeactivate;
   final bool busy;
+  final List<Widget> toolbarActions;
 
   Widget dayRow(BuildContext context, String day, Json? row) => LayoutBuilder(
     builder: (context, box) {
@@ -163,25 +165,41 @@ class GroupedClinicSchedules extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          child: Semantics(
-            container: true,
-            child: TextFormField(
-              initialValue: search,
-              decoration: const InputDecoration(
-                labelText: 'Cari poliklinik',
-                prefixIcon: Icon(Icons.search),
-              ),
-              onChanged: onSearch,
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: LayoutBuilder(
+            builder: (context, box) => Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                SizedBox(
+                  width: box.maxWidth < 560 ? box.maxWidth : 320,
+                  child: Semantics(
+                    container: true,
+                    child: TextFormField(
+                      initialValue: search,
+                      decoration: const InputDecoration(
+                        labelText: 'Cari poliklinik',
+                        prefixIcon: Icon(Icons.search),
+                      ),
+                      onChanged: onSearch,
+                    ),
+                  ),
+                ),
+                ...toolbarActions,
+              ],
             ),
           ),
         ),
         if (groups.isEmpty) const Notice('Tidak ada poliklinik yang sesuai.'),
         for (final group in groups)
           Card(
-            margin: const EdgeInsets.symmetric(vertical: 8),
+            margin: const EdgeInsets.symmetric(vertical: 4),
             clipBehavior: Clip.antiAlias,
             child: ExpansionTile(
+              dense: true,
+              visualDensity: VisualDensity.compact,
+              tilePadding: const EdgeInsets.symmetric(horizontal: 12),
               key: PageStorageKey('clinic-schedules-${group.clinic['id']}'),
               expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
               initiallyExpanded: groups.length == 1,
@@ -196,8 +214,8 @@ class GroupedClinicSchedules extends StatelessWidget {
                 for (final day in scheduleDays)
                   Padding(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 10,
+                      horizontal: 12,
+                      vertical: 4,
                     ),
                     child: Builder(
                       builder: (context) {
@@ -456,7 +474,7 @@ class _BulkScheduleEditorState extends State<BulkScheduleEditor> {
                   (capacity, 'kapasitasHarian', 'Kapasitas harian'),
                 ])
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    padding: const EdgeInsets.symmetric(vertical: 4),
                     child: TextFormField(
                       controller: controller,
                       enabled: !locked,

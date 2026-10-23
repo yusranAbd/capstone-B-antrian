@@ -86,7 +86,7 @@ void main() {
         final table = tester.widget<PaginatedDataTable>(
           find.byType(PaginatedDataTable),
         );
-        expect(table.dataRowMaxHeight, lessThanOrEqualTo(60));
+        expect(table.dataRowMaxHeight, 48);
         expect(table.source.rowCount, 1);
         expect(tester.takeException(), isNull);
       },
@@ -124,7 +124,7 @@ void main() {
     },
   );
   testWidgets(
-    'Dashboard sidebar exposes all supported groups; collapsed groups remain interactive',
+    'Dashboard sidebar exposes direct modules without category controls',
     (tester) async {
       var selected = -1;
       await tester.pumpWidget(
@@ -140,12 +140,10 @@ void main() {
       expect(find.text('Slot konsultasi'), findsOneWidget);
       await tester.scrollUntilVisible(find.text('Manajemen Display'), 150);
       expect(find.text('Manajemen Display'), findsOneWidget);
-      await tester.scrollUntilVisible(find.text('Master data'), -150);
-      await tester.tap(find.text('Master data'));
-      await tester.pumpAndSettle();
-      expect(find.text('Dokter'), findsNothing);
-      await tester.tap(find.text('Master data'));
-      await tester.pumpAndSettle();
+      expect(find.text('Master data'), findsNothing);
+      expect(find.text('Manajemen jadwal'), findsNothing);
+      expect(find.text('Operasional'), findsNothing);
+      expect(find.byType(ExpansionTile), findsNothing);
       await tester.tap(find.text('Dokter'));
       expect(selected, 1);
     },
@@ -183,6 +181,32 @@ void main() {
       expect(source.getRow(0)!.color, isNull);
     },
   );
+  testWidgets('compact rows grow with accessible text scaling', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AdminStyle.theme,
+        home: Scaffold(
+          body: MediaQuery(
+            data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+            child: AdminTable(
+              rows: const [
+                {'nama': 'Klinik QA'},
+              ],
+              columns: [AdminColumn('Poliklinik', (r) => r['nama'])],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<PaginatedDataTable>(find.byType(PaginatedDataTable))
+          .dataRowMaxHeight,
+      greaterThan(48),
+    );
+    expect(tester.takeException(), isNull);
+  });
   testWidgets(
     'Identity renders only the supplied session name and safe initials',
     (tester) async {

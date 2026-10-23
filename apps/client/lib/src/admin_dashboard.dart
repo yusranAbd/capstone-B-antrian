@@ -35,7 +35,7 @@ class AdminDashboard extends StatelessWidget {
           name: administratorName,
           onRefresh: loading ? null : onRefresh,
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 12),
         LayoutBuilder(
           builder: (context, box) {
             final columns = box.maxWidth >= 900
@@ -73,10 +73,10 @@ class AdminDashboard extends StatelessWidget {
             );
           },
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 12),
         Container(
           decoration: AdminStyle.panel,
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 4),
+          padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -95,7 +95,7 @@ class AdminDashboard extends StatelessWidget {
                         Text(
                           'Layanan per poliklinik',
                           style: TextStyle(
-                            fontSize: 22,
+                            fontSize: 18,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
@@ -109,7 +109,7 @@ class AdminDashboard extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 12),
               if (clinics.isEmpty && !loading && catalog.isNotEmpty)
                 const Notice(
                   'Belum ada poliklinik. Tambahkan master data untuk memulai.',
@@ -209,166 +209,68 @@ class _DashboardWelcome extends StatelessWidget {
   final String? name;
   final VoidCallback? onRefresh;
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, box) {
-      final intro = Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  'Dashboard',
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -.6,
-                  ),
-                ),
-              ),
-              IconButton(
-                tooltip: 'Muat ulang dashboard',
-                onPressed: onRefresh,
-                icon: const Icon(Icons.refresh_rounded, size: 21),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 16,
-            runSpacing: 8,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.calendar_month_outlined, size: 18),
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: Text(
-                      adminDateLabel(config),
-                      style: const TextStyle(color: QueueBStyle.muted),
-                    ),
-                  ),
-                ],
-              ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.location_on_outlined, size: 18),
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: Text(
-                      config.serviceTimeZone,
-                      style: const TextStyle(color: QueueBStyle.muted),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          const Text(
-            'Ringkasan master data dan kesiapan layanan rumah sakit.',
-            style: TextStyle(color: QueueBStyle.muted, height: 1.5),
-          ),
-        ],
-      );
-      final welcome = _WelcomeBanner(name: name);
-      return box.maxWidth >= 900
-          ? Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Expanded(flex: 4, child: intro),
-                const SizedBox(width: 24),
-                Expanded(flex: 6, child: welcome),
-              ],
-            )
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [intro, const SizedBox(height: 20), welcome],
-            );
-    },
-  );
-}
-
-class _WelcomeBanner extends StatelessWidget {
-  const _WelcomeBanner({this.name});
-  final String? name;
-  @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, box) {
-      final displayName = name == null || name!.trim().isEmpty
-          ? 'Administrator'
-          : name!.trim();
-      final compact = box.maxWidth < 440;
-      return Container(
-        key: const ValueKey('admin-welcome'),
-        constraints: const BoxConstraints(minHeight: 160),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(22),
-          gradient: const LinearGradient(
-            colors: [AdminStyle.canvas, AdminStyle.sky],
-          ),
-        ),
-        child: Stack(
+  Widget build(BuildContext context) {
+    final displayName = name == null || name!.trim().isEmpty
+        ? 'Administrator'
+        : name!.trim();
+    return Wrap(
+      alignment: WrapAlignment.spaceBetween,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 16,
+      runSpacing: 10,
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Positioned(
-              right: 6,
-              bottom: 0,
-              width: box.maxWidth * (compact ? .30 : .40),
-              height: 156,
-              child: ExcludeSemantics(
-                child: Image.asset(
-                  'assets/illustrations/admin_welcome.png',
-                  fit: BoxFit.contain,
-                  alignment: Alignment.bottomRight,
-                ),
+            const Text(
+              'Dashboard',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -.5,
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(22),
-              child: SizedBox(
-                width: box.maxWidth * (compact ? .60 : .55),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      'Selamat datang,',
-                      style: TextStyle(
-                        fontSize: 21,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    Text(
-                      '$displayName!',
-                      style: const TextStyle(
-                        fontSize: 21,
-                        fontWeight: FontWeight.w800,
-                        color: QueueBStyle.darkTeal,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      compact
-                          ? 'Kelola poliklinik, dokter, ruang, dan jadwal layanan.'
-                          : 'Kelola data poliklinik, dokter, ruang, dan jadwal untuk memastikan pelayanan rumah sakit berjalan dengan tertib dan optimal.',
-                      style: const TextStyle(
-                        color: QueueBStyle.muted,
-                        height: 1.45,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
+            const SizedBox(height: 4),
+            Wrap(
+              children: [
+                const Text(
+                  'Selamat datang, ',
+                  style: TextStyle(color: QueueBStyle.muted),
                 ),
-              ),
+                Text(
+                  '$displayName!',
+                  style: const TextStyle(
+                    color: QueueBStyle.darkTeal,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
-      );
-    },
-  );
+        Wrap(
+          spacing: 12,
+          runSpacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Text(
+              adminDateLabel(config),
+              style: const TextStyle(fontSize: 13, color: QueueBStyle.muted),
+            ),
+            Text(
+              config.serviceTimeZone,
+              style: const TextStyle(fontSize: 13, color: QueueBStyle.muted),
+            ),
+            IconButton(
+              tooltip: 'Muat ulang dashboard',
+              onPressed: onRefresh,
+              icon: const Icon(Icons.refresh_rounded, size: 20),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 }
 
 class _MasterMetric extends StatelessWidget {
@@ -391,21 +293,21 @@ class _MasterMetric extends StatelessWidget {
     decoration: AdminStyle.panel,
     child: Material(
       color: Colors.transparent,
-      borderRadius: BorderRadius.circular(22),
+      borderRadius: BorderRadius.circular(AdminStyle.radius),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(AdminStyle.radius),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 22),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
           child: Row(
             children: [
               CircleAvatar(
-                radius: 27,
+                radius: 20,
                 backgroundColor: blue ? AdminStyle.sky : QueueBStyle.mint,
                 foregroundColor: blue ? AdminStyle.blue : QueueBStyle.darkTeal,
-                child: Icon(icon, size: 30),
+                child: Icon(icon, size: 23),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -418,7 +320,7 @@ class _MasterMetric extends StatelessWidget {
                     Text(
                       count == null ? '—' : '$count',
                       style: const TextStyle(
-                        fontSize: 34,
+                        fontSize: 28,
                         height: 1.1,
                         fontWeight: FontWeight.w800,
                       ),
@@ -459,10 +361,10 @@ class _ClinicName extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         CircleAvatar(
-          radius: 18,
+          radius: 14,
           backgroundColor: QueueBStyle.mint,
           foregroundColor: QueueBStyle.darkTeal,
-          child: Icon(icon, size: 21),
+          child: Icon(icon, size: 18),
         ),
         const SizedBox(width: 12),
         ConstrainedBox(
@@ -484,7 +386,7 @@ class _ClinicStatus extends StatelessWidget {
   final bool active;
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
     decoration: BoxDecoration(
       color: active ? QueueBStyle.mint : QueueBStyle.background,
       borderRadius: BorderRadius.circular(20),

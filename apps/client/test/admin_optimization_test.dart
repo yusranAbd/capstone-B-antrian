@@ -58,7 +58,7 @@ void main() {
       },
   ];
   testWidgets(
-    'category navigation exposes only backed modules and collapses groups',
+    'direct navigation exposes all backed modules without category accordions',
     (tester) async {
       int selected = -1;
       await tester.pumpWidget(
@@ -68,16 +68,77 @@ void main() {
           ),
         ),
       );
-      expect(find.text('Master data'), findsOneWidget);
+      expect(find.text('Master data'), findsNothing);
+      expect(find.byType(ExpansionTile), findsNothing);
+      expect(find.byType(ListTile), findsNWidgets(9));
       expect(find.text('Dokter'), findsOneWidget);
-      expect(find.text('Slot konsultasi'), findsNothing);
-      await tester.tap(find.text('Manajemen jadwal'));
-      await tester.pumpAndSettle();
+      expect(find.text('Slot konsultasi'), findsOneWidget);
       await tester.tap(find.text('Slot konsultasi'));
       expect(selected, 5);
-      await tester.tap(find.text('Master data'));
+      await tester.tap(find.text('Dokter'));
+      expect(selected, 1);
+    },
+  );
+  testWidgets(
+    'compact doctor actions keep all existing callbacks and filters',
+    (tester) async {
+      tester.view.physicalSize = const Size(1366, 768);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final api = QueueApi(
+        config: AppConfig(
+          apiBaseUrl: 'http://localhost/api/v1',
+          realtime: false,
+        ),
+      );
+      addTearDown(api.dispose);
+      var edit = 0, deactivate = 0, account = 0, links = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AdminStyle.theme,
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: AdminDataView(
+                resource: resources[1],
+                data: doctors,
+                catalog: {'/layanan': clinics},
+                api: api,
+                busy: false,
+                revision: 1,
+                detail: (_) => '',
+                onEdit: (_) => edit++,
+                onDeactivate: (_) => deactivate++,
+                onDoctorAccount: (_) => account++,
+                onDoctorLinks: (_) => links++,
+                toolbarActions: [
+                  FilledButton(onPressed: () {}, child: const Text('Tambah')),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
-      expect(find.text('Dokter'), findsNothing);
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Cari dokter atau spesialisasi'),
+        'Dokter 21',
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<PaginatedDataTable>(find.byType(PaginatedDataTable))
+            .source
+            .rowCount,
+        1,
+      );
+      await tester.tap(find.text('Ubah'));
+      await tester.tap(find.byTooltip('Nonaktifkan'));
+      await tester.tap(find.byTooltip('Akun dokter'));
+      await tester.ensureVisible(find.byTooltip('Hubungkan poliklinik'));
+      await tester.tap(find.byTooltip('Hubungkan poliklinik'));
+      expect([edit, deactivate, account, links], [1, 1, 1, 1]);
+      expect(tester.takeException(), isNull);
     },
   );
   for (final width in [320.0, 375.0, 414.0, 768.0, 1440.0]) {

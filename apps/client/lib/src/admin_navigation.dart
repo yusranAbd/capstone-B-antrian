@@ -3,11 +3,6 @@ import 'package:flutter/material.dart';
 import 'admin_schema.dart';
 import 'mobile_ui.dart';
 
-const adminCategories = <(String, List<int>)>[
-  ('Master data', [0, 1, 2]),
-  ('Manajemen jadwal', [3, 4, 5]),
-  ('Operasional', [6, 7]),
-];
 IconData adminIcon(int index) => switch (index) {
   1 => Icons.medical_services_outlined,
   2 => Icons.meeting_room_outlined,
@@ -33,19 +28,20 @@ class AdminNavigation extends StatelessWidget {
   final VoidCallback? onToggle;
   @override
   Widget build(BuildContext context) => ListView(
-    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 14),
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
     children: [
       Row(
         children: [
           if (!collapsed)
             const Expanded(
               child: Padding(
-                padding: EdgeInsets.all(12),
+                padding: EdgeInsets.only(left: 12),
                 child: Text(
                   'Administrasi',
                   style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: QueueBStyle.navy,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: QueueBStyle.muted,
                   ),
                 ),
               ),
@@ -58,77 +54,56 @@ class AdminNavigation extends StatelessWidget {
             ),
         ],
       ),
-      if (collapsed)
-        IconButton(
-          tooltip: 'Dashboard',
-          isSelected: selected == -1,
-          onPressed: onSelect == null ? null : () => onSelect!(-1),
-          icon: const Icon(Icons.dashboard_outlined),
-        )
-      else
-        ListTile(
-          selected: selected == -1,
-          selectedTileColor: QueueBStyle.mint,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-          leading: const Icon(Icons.dashboard_outlined),
-          title: collapsed ? null : const Text('Dashboard'),
-          onTap: onSelect == null ? null : () => onSelect!(-1),
-        ),
-      if (collapsed) ...[
-        for (var i = 0; i < 8; i++)
+      for (final i in [-1, 0, 1, 2, 3, 4, 5, 6, 7])
+        if (collapsed)
           IconButton(
-            tooltip: i == 7 ? 'Manajemen Display' : resources[i].title,
+            tooltip: i == -1
+                ? 'Dashboard'
+                : i == 7
+                ? 'Manajemen Display'
+                : resources[i].title,
             isSelected: selected == i,
-            icon: Icon(adminIcon(i)),
             onPressed: onSelect == null ? null : () => onSelect!(i),
-          ),
-      ] else
-        for (final (category, indices) in adminCategories) ...[
-          const Divider(color: QueueBStyle.border, height: 24),
-          ExpansionTile(
-            key: PageStorageKey('admin-category-$category'),
-            initiallyExpanded: selected == -1 || indices.contains(selected),
-            shape: const Border(),
-            collapsedShape: const Border(),
-            iconColor: QueueBStyle.darkTeal,
-            collapsedIconColor: QueueBStyle.darkTeal,
-            childrenPadding: const EdgeInsets.only(bottom: 12),
-            title: Text(
-              category,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: QueueBStyle.muted,
-              ),
+            icon: Icon(
+              i == -1 ? Icons.dashboard_outlined : adminIcon(i),
+              size: 20,
             ),
-            children: [
-              for (final i in indices)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2),
-                  child: ListTile(
-                    dense: false,
-                    visualDensity: VisualDensity.compact,
-                    selectedColor: QueueBStyle.darkTeal,
-                    selected: i == selected,
-                    selectedTileColor: QueueBStyle.mint,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    leading: Icon(adminIcon(i), size: 22),
-                    title: Text(
-                      i == 7 ? 'Manajemen Display' : resources[i].title,
-                      style: const TextStyle(fontSize: 14),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    onTap: onSelect == null ? null : () => onSelect!(i),
-                  ),
+          )
+        else
+          Padding(
+            padding: const EdgeInsets.only(bottom: 2),
+            child: ListTile(
+              minTileHeight: 44,
+              dense: true,
+              minLeadingWidth: 20,
+              horizontalTitleGap: 10,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+              selected: selected == i,
+              selectedColor: QueueBStyle.darkTeal,
+              selectedTileColor: QueueBStyle.mint,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              leading: Icon(
+                i == -1 ? Icons.dashboard_outlined : adminIcon(i),
+                size: 20,
+              ),
+              title: Text(
+                i == -1
+                    ? 'Dashboard'
+                    : i == 7
+                    ? 'Manajemen Display'
+                    : resources[i].title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: selected == i ? FontWeight.w700 : FontWeight.w500,
                 ),
-            ],
+              ),
+              onTap: onSelect == null ? null : () => onSelect!(i),
+            ),
           ),
-        ],
     ],
   );
 }

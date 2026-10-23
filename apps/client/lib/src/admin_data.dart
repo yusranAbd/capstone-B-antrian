@@ -91,8 +91,14 @@ class _AdminDataGroupState extends State<AdminDataGroup> {
   @override
   Widget build(BuildContext context) => Card(
     child: ExpansionTile(
-      title: Text(widget.title),
-      subtitle: Text(widget.subtitle),
+      dense: true,
+      visualDensity: VisualDensity.compact,
+      tilePadding: const EdgeInsets.symmetric(horizontal: 12),
+      title: Text(
+        widget.title,
+        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+      ),
+      subtitle: Text(widget.subtitle, style: const TextStyle(fontSize: 12)),
       expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
       onExpansionChanged: (value) => setState(() => expanded = value),
       childrenPadding: const EdgeInsets.symmetric(horizontal: 12),
@@ -113,9 +119,11 @@ class AdminDataView extends StatefulWidget {
     required this.onDeactivate,
     required this.onDoctorLinks,
     this.onDoctorAccount,
+    this.toolbarActions = const [],
     required this.detail,
     required this.revision,
   });
+  final List<Widget> toolbarActions;
   final AdminResource resource;
   final List<Json> data;
   final Map<String, List<Json>> catalog;
@@ -240,9 +248,10 @@ class _AdminDataViewState extends State<AdminDataView> {
     });
   }
 
-  Widget actions(Json row, {bool showStatus = true}) => Wrap(
-    spacing: 8,
-    crossAxisAlignment: WrapCrossAlignment.center,
+  Widget actions(Json row, {bool showStatus = true}) => Row(
+    mainAxisSize: MainAxisSize.min,
+    spacing: 4,
+    crossAxisAlignment: CrossAxisAlignment.center,
     children: [
       if (showStatus) stateChip(row['aktif'] == true ? 'AKTIF' : 'NONAKTIF'),
       TextButton.icon(
@@ -251,24 +260,30 @@ class _AdminDataViewState extends State<AdminDataView> {
         label: const Text('Ubah'),
       ),
       if (row['aktif'] == true)
-        TextButton(
+        IconButton(
+          tooltip: 'Nonaktifkan',
+          constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+          padding: EdgeInsets.zero,
           onPressed: widget.busy ? null : () => widget.onDeactivate(row),
-          child: const Text('Nonaktifkan'),
+          icon: const Icon(Icons.block_outlined, size: 20),
         ),
       if (path == '/dokter' && widget.onDoctorAccount != null)
-        OutlinedButton.icon(
+        IconButton(
+          tooltip: row['penggunaId'] == null ? 'Akun dokter' : 'Akun ditautkan',
+          constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+          padding: EdgeInsets.zero,
           onPressed: widget.busy || row['aktif'] != true
               ? null
               : () => widget.onDoctorAccount!(row),
-          icon: const Icon(Icons.manage_accounts_outlined),
-          label: Text(
-            row['penggunaId'] == null ? 'Akun dokter' : 'Akun ditautkan',
-          ),
+          icon: const Icon(Icons.manage_accounts_outlined, size: 20),
         ),
       if (path == '/dokter')
-        OutlinedButton(
+        IconButton(
+          tooltip: 'Hubungkan poliklinik',
+          constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+          padding: EdgeInsets.zero,
           onPressed: widget.busy ? null : () => widget.onDoctorLinks(row),
-          child: const Text('Hubungkan poliklinik'),
+          icon: const Icon(Icons.link_outlined, size: 20),
         ),
     ],
   );
@@ -372,10 +387,7 @@ class _AdminDataViewState extends State<AdminDataView> {
       AdminColumn(
         'Aksi',
         (_) => '',
-        cell: (r) => SizedBox(
-          width: path == '/dokter' ? 530 : 220,
-          child: actions(r, showStatus: false),
-        ),
+        cell: (r) => actions(r, showStatus: false),
       ),
     ],
   );
@@ -455,101 +467,108 @@ class _AdminDataViewState extends State<AdminDataView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SizedBox(height: 16),
-        Semantics(
-          container: true,
-          child: TextField(
-            decoration: InputDecoration(
-              labelText: path == '/dokter'
-                  ? 'Cari dokter atau spesialisasi'
-                  : 'Cari nama atau kode',
-              prefixIcon: const Icon(Icons.search),
-            ),
-            onChanged: (value) =>
-                setState(() => search = value.trim().toLowerCase()),
-          ),
-        ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: [
-            SizedBox(
-              width: 210,
-              child: ChoiceField(
-                label: 'Status data',
-                choices: const [
-                  ('', 'Semua status'),
-                  ('true', 'Aktif'),
-                  ('false', 'Nonaktif'),
-                ],
-                value: status,
-                onChanged: (value) => setState(() => status = value ?? ''),
-              ),
-            ),
-            if (path != '/layanan')
+        LayoutBuilder(
+          builder: (context, box) => Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
               SizedBox(
-                width: 250,
-                child: ChoiceField(
-                  label: 'Filter poliklinik',
-                  choices: [
-                    ('', 'Semua poliklinik'),
-                    ...choicesOf(widget.catalog['/layanan'] ?? []),
-                  ],
-                  value: clinic,
-                  onChanged: (value) => setState(() => clinic = value ?? ''),
-                ),
-              ),
-            if (sessions)
-              SizedBox(
-                width: 250,
-                child: ChoiceField(
-                  label: 'Filter dokter',
-                  choices: [
-                    ('', 'Semua dokter'),
-                    ...choicesOf(widget.catalog['/dokter'] ?? []),
-                  ],
-                  value: doctor,
-                  onChanged: (value) => setState(() => doctor = value ?? ''),
-                ),
-              ),
-            if (sessions) ...[
-              SizedBox(
-                width: 220,
-                child: TextField(
-                  controller: fromController,
-                  decoration: InputDecoration(
-                    labelText: 'Dari tanggal (YYYY-MM-DD)',
-                    suffixIcon: IconButton(
-                      tooltip: 'Pilih tanggal mulai filter',
-                      onPressed: () => pickFilterDate(true),
-                      icon: const Icon(Icons.calendar_month_outlined),
+                width: box.maxWidth < 560 ? box.maxWidth : 280,
+                child: Semantics(
+                  container: true,
+                  child: TextField(
+                    decoration: InputDecoration(
+                      labelText: path == '/dokter'
+                          ? 'Cari dokter atau spesialisasi'
+                          : 'Cari nama atau kode',
+                      prefixIcon: const Icon(Icons.search),
                     ),
+                    onChanged: (value) =>
+                        setState(() => search = value.trim().toLowerCase()),
                   ),
-                  onChanged: (v) => changeDate(v, true),
                 ),
               ),
+
               SizedBox(
-                width: 220,
-                child: TextField(
-                  controller: untilController,
-                  decoration: InputDecoration(
-                    labelText: 'Sampai tanggal (YYYY-MM-DD)',
-                    suffixIcon: IconButton(
-                      tooltip: 'Pilih tanggal akhir filter',
-                      onPressed: () => pickFilterDate(false),
-                      icon: const Icon(Icons.calendar_month_outlined),
-                    ),
-                  ),
-                  onChanged: (v) => changeDate(v, false),
+                width: 160,
+                child: ChoiceField(
+                  label: 'Status data',
+                  choices: const [
+                    ('', 'Semua status'),
+                    ('true', 'Aktif'),
+                    ('false', 'Nonaktif'),
+                  ],
+                  value: status,
+                  onChanged: (value) => setState(() => status = value ?? ''),
                 ),
               ),
+              if (path != '/layanan')
+                SizedBox(
+                  width: 200,
+                  child: ChoiceField(
+                    label: 'Filter poliklinik',
+                    choices: [
+                      ('', 'Semua poliklinik'),
+                      ...choicesOf(widget.catalog['/layanan'] ?? []),
+                    ],
+                    value: clinic,
+                    onChanged: (value) => setState(() => clinic = value ?? ''),
+                  ),
+                ),
+              if (sessions)
+                SizedBox(
+                  width: 200,
+                  child: ChoiceField(
+                    label: 'Filter dokter',
+                    choices: [
+                      ('', 'Semua dokter'),
+                      ...choicesOf(widget.catalog['/dokter'] ?? []),
+                    ],
+                    value: doctor,
+                    onChanged: (value) => setState(() => doctor = value ?? ''),
+                  ),
+                ),
+              if (sessions) ...[
+                SizedBox(
+                  width: 200,
+                  child: TextField(
+                    controller: fromController,
+                    decoration: InputDecoration(
+                      labelText: 'Dari tanggal (YYYY-MM-DD)',
+                      suffixIcon: IconButton(
+                        tooltip: 'Pilih tanggal mulai filter',
+                        onPressed: () => pickFilterDate(true),
+                        icon: const Icon(Icons.calendar_month_outlined),
+                      ),
+                    ),
+                    onChanged: (v) => changeDate(v, true),
+                  ),
+                ),
+                SizedBox(
+                  width: 200,
+                  child: TextField(
+                    controller: untilController,
+                    decoration: InputDecoration(
+                      labelText: 'Sampai tanggal (YYYY-MM-DD)',
+                      suffixIcon: IconButton(
+                        tooltip: 'Pilih tanggal akhir filter',
+                        onPressed: () => pickFilterDate(false),
+                        icon: const Icon(Icons.calendar_month_outlined),
+                      ),
+                    ),
+                    onChanged: (v) => changeDate(v, false),
+                  ),
+                ),
+              ],
+
+              ...widget.toolbarActions,
             ],
-          ],
+          ),
         ),
         if (dateError != null) AdminNotice(dateError!, error: true),
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
+          padding: const EdgeInsets.symmetric(vertical: 8),
           child: Text(
             '${filtered.length} dari ${source.length} ${path == '/slot-praktik' ? 'sesi praktik' : 'data'}',
           ),
@@ -641,6 +660,9 @@ class _AdminSlotSessionState extends State<AdminSlotSession> {
         .toList();
     return Card(
       child: ExpansionTile(
+        dense: true,
+        visualDensity: VisualDensity.compact,
+        tilePadding: const EdgeInsets.symmetric(horizontal: 12),
         title: Text(
           '${dateOnly(widget.session['tanggal'])} · ${widget.api.config.instantLabel(widget.session['mulaiPada']).split(' ').last}–${widget.api.config.instantLabel(widget.session['selesaiPada']).split(' ').last}',
         ),
@@ -699,29 +721,24 @@ class _AdminSlotSessionState extends State<AdminSlotSession> {
                     AdminColumn(
                       'Aksi',
                       (_) => '',
-                      cell: (s) => SizedBox(
-                        width: 220,
-                        child: Wrap(
-                          spacing: 8,
-                          children: [
-                            stateChip(
-                              s['aktif'] == true ? 'AKTIF' : 'NONAKTIF',
-                            ),
+                      cell: (s) => Row(
+                        mainAxisSize: MainAxisSize.min,
+                        spacing: 8,
+                        children: [
+                          TextButton(
+                            onPressed: widget.busy
+                                ? null
+                                : () => widget.onEdit(s),
+                            child: const Text('Ubah'),
+                          ),
+                          if (s['aktif'] == true)
                             TextButton(
                               onPressed: widget.busy
                                   ? null
-                                  : () => widget.onEdit(s),
-                              child: const Text('Ubah'),
+                                  : () => widget.onDeactivate(s),
+                              child: const Text('Nonaktifkan'),
                             ),
-                            if (s['aktif'] == true)
-                              TextButton(
-                                onPressed: widget.busy
-                                    ? null
-                                    : () => widget.onDeactivate(s),
-                                child: const Text('Nonaktifkan'),
-                              ),
-                          ],
-                        ),
+                        ],
                       ),
                     ),
                   ],

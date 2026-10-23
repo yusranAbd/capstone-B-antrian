@@ -110,13 +110,11 @@ class _RootState extends State<_Root> {
         child: Scaffold(
           appBar: AppBar(
             toolbarHeight: role == 'ADMIN'
-                ? 76
+                ? 58
                 : role == 'DOKTER'
                 ? 64
                 : null,
-            title: role == 'ADMIN' && MediaQuery.sizeOf(context).width >= 960
-                ? const SizedBox(width: 230, child: QueueBBrand())
-                : const QueueBBrand(compact: true),
+            title: const QueueBBrand(compact: true),
             actions: [
               if (role == 'DOKTER')
                 DoctorHeaderIdentity(name: '${api.user!['nama'] ?? ''}'),
