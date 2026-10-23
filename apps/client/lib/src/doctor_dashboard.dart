@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import 'config.dart';
 import 'mobile_ui.dart';
+import 'doctor_visual.dart';
 
 // Hallmark · doctor web workbench · existing QueueB tokens · P5 H5 E4 S5 R5 V4.
 /// Presentation model only. Waiting order and eligibility come from REST.
@@ -104,11 +105,7 @@ class DoctorPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(20),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      border: Border.all(color: QueueBStyle.border),
-      borderRadius: BorderRadius.circular(18),
-    ),
+    decoration: DoctorStyle.panel,
     child: child,
   );
 }
@@ -142,8 +139,6 @@ class DoctorDashboard extends StatelessWidget {
   Widget build(BuildContext context) {
     final data = DoctorDashboardData(appointments, snapshots);
     final current = date == config.today;
-    final titleStyle = Theme.of(context).textTheme.titleLarge
-        ?.copyWith(fontWeight: FontWeight.w700);
     return RefreshIndicator(
       onRefresh: onRefresh,
       child: ListView(
@@ -160,8 +155,11 @@ class DoctorDashboard extends StatelessWidget {
                 children: [
                   Text(
                     'Dashboard Dokter',
-                    style: Theme.of(context).textTheme.headlineSmall
-                        ?.copyWith(fontWeight: FontWeight.w800),
+                    style: const TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -.5,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -174,15 +172,46 @@ class DoctorDashboard extends StatelessWidget {
               ),
               Wrap(
                 spacing: 8,
+                runSpacing: 10,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   ValueListenableBuilder<String>(
                     valueListenable: status,
-                    builder: (context, value, _) => doctorBadge(
-                      value,
-                      color: value == 'Realtime terhubung'
-                          ? QueueBStyle.success
-                          : QueueBStyle.muted,
+                    builder: (context, value, _) => Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        color: value == 'Realtime terhubung'
+                            ? QueueBStyle.mint
+                            : QueueBStyle.background,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            value == 'Realtime terhubung'
+                                ? Icons.wifi
+                                : Icons.wifi_off,
+                            size: 20,
+                            color: value == 'Realtime terhubung'
+                                ? QueueBStyle.success
+                                : QueueBStyle.muted,
+                          ),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              value,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   OutlinedButton.icon(
@@ -243,31 +272,27 @@ class DoctorDashboard extends StatelessWidget {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: m.$5.withValues(alpha: .08),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(m.$4, color: m.$5),
-                        ),
+                        DoctorIconTile(icon: m.$4, color: m.$5, size: 52),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                m.$2,
-                                style: const TextStyle(
-                                  fontSize: 30,
-                                  fontWeight: FontWeight.w800,
-                                  color: QueueBStyle.navy,
-                                ),
-                              ),
-                              Text(
                                 m.$1,
                                 style: const TextStyle(
                                   fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                m.$2,
+                                style: const TextStyle(
+                                  fontSize: 34,
+                                  height: 1.1,
+                                  fontWeight: FontWeight.w800,
+                                  color: QueueBStyle.navy,
                                 ),
                               ),
                               const SizedBox(height: 4),
@@ -284,7 +309,7 @@ class DoctorDashboard extends StatelessWidget {
                       ],
                     ),
                   );
-              if (box.maxWidth >= 1250) {
+              if (box.maxWidth >= 1152) {
                 return IntrinsicHeight(
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -310,8 +335,10 @@ class DoctorDashboard extends StatelessWidget {
                     children: [
                       for (final m in metrics)
                         SizedBox(
-                          width: box.maxWidth < 600
+                          width: box.maxWidth < 560
                               ? box.maxWidth
+                              : box.maxWidth < 850
+                              ? (box.maxWidth - 12) / 2
                               : (box.maxWidth - 24) / 3,
                           child: kpi(m),
                         ),
@@ -338,10 +365,10 @@ class DoctorDashboard extends StatelessWidget {
                 loading: loading,
                 status: status,
               );
-              if (box.maxWidth < 1050) {
+              if (box.maxWidth < 1100) {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [live, const SizedBox(height: 16), queue],
+                  children: [queue, const SizedBox(height: 16), live],
                 );
               }
               return Row(
@@ -361,17 +388,23 @@ class DoctorDashboard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      current
+                    DoctorSectionTitle(
+                      icon: Icons.calendar_month_outlined,
+                      title: current
                           ? 'Jadwal Praktik Hari Ini'
                           : 'Jadwal Praktik Tanggal Pilihan',
-                      style: titleStyle,
                     ),
                     const SizedBox(height: 12),
                     if (!available)
                       const Text('Data jadwal belum tersedia.')
                     else if (schedules.isEmpty)
-                      const Text('Tidak ada jadwal untuk tanggal pilihan.')
+                      const DoctorInfoBlock(
+                        icon: Icons.calendar_month_outlined,
+                        child: Text(
+                          'Tidak ada jadwal untuk tanggal pilihan.',
+                          style: TextStyle(color: QueueBStyle.muted),
+                        ),
+                      )
                     else
                       for (final s in schedules) _schedule(context, s),
                   ],
@@ -381,27 +414,32 @@ class DoctorDashboard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Catatan Klinis Dokter', style: titleStyle),
-                    const SizedBox(height: 20),
-                    const Icon(
-                      Icons.description_outlined,
-                      size: 34,
-                      color: QueueBStyle.muted,
+                    const DoctorSectionTitle(
+                      title: 'Catatan Klinis Dokter',
+                      icon: Icons.description_outlined,
                     ),
                     const SizedBox(height: 12),
-                    const Text(
-                      'Pencatatan klinis belum tersedia di QueueB.',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Portal ini tidak menyediakan data SOAP atau rekam medis. Tidak ada catatan yang disimpan dari halaman ini.',
-                      style: TextStyle(color: QueueBStyle.muted),
+                    const DoctorInfoBlock(
+                      icon: Icons.info_outline,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Pencatatan klinis belum tersedia di QueueB.',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            'Portal ini tidak menyediakan data SOAP atau rekam medis. Tidak ada catatan yang disimpan dari halaman ini.',
+                            style: TextStyle(color: QueueBStyle.muted),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               );
-              if (box.maxWidth < 1050) {
+              if (box.maxWidth < 1000) {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [practice, const SizedBox(height: 16), notes],
@@ -410,9 +448,9 @@ class DoctorDashboard extends StatelessWidget {
               return Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(flex: 7, child: practice),
+                  Expanded(flex: 6, child: practice),
                   const SizedBox(width: 16),
-                  Expanded(flex: 4, child: notes),
+                  Expanded(flex: 5, child: notes),
                 ],
               );
             },
@@ -433,15 +471,7 @@ class DoctorDashboard extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const CircleAvatar(
-          radius: 28,
-          backgroundColor: QueueBStyle.mint,
-          child: Icon(
-            Icons.medical_services_outlined,
-            color: QueueBStyle.darkTeal,
-            size: 28,
-          ),
-        ),
+        DoctorAvatar(size: MediaQuery.sizeOf(context).width < 600 ? 64 : 96),
         const SizedBox(width: 16),
         Expanded(
           child: Column(
@@ -450,7 +480,7 @@ class DoctorDashboard extends StatelessWidget {
               Text(
                 name,
                 style: const TextStyle(
-                  fontSize: 18,
+                  fontSize: 20,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -604,65 +634,72 @@ class _DoctorQueuePanelState extends State<DoctorQueuePanel> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            'Daftar Antrean Poli',
-            style: Theme.of(context).textTheme.titleLarge
-                ?.copyWith(fontWeight: FontWeight.w700),
+          DoctorSectionTitle(
+            title: 'Daftar Antrean Poli',
+            icon: Icons.calendar_month_outlined,
+            subtitle: widget.date,
           ),
-          const SizedBox(height: 4),
-          Text(widget.date, style: const TextStyle(color: QueueBStyle.muted)),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 12,
-            runSpacing: 10,
-            children: [
-              SizedBox(
-                width: 280,
-                child: TextField(
-                  decoration: const InputDecoration(
-                    prefixIcon: Icon(Icons.search),
-                    hintText: 'Cari nomor antrean, poli, atau ruang',
-                    isDense: true,
-                  ),
-                  onChanged: (v) => setState(() {
-                    search = v.trim().toLowerCase();
-                    page = 0;
-                  }),
-                ),
-              ),
-              SizedBox(
-                width: 180,
-                child: DropdownButtonFormField<String>(
-                  initialValue: '',
-                  isExpanded: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Status antrean',
-                    isDense: true,
-                  ),
-                  items: [
-                    const DropdownMenuItem(
-                      value: '',
-                      child: Text('Semua status'),
+          const SizedBox(height: 18),
+          LayoutBuilder(
+            builder: (context, box) => Wrap(
+              spacing: 12,
+              runSpacing: 10,
+              children: [
+                SizedBox(
+                  width: box.maxWidth >= 620
+                      ? (box.maxWidth - 12) * .67
+                      : box.maxWidth,
+                  child: TextField(
+                    decoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.search),
+                      hintText: 'Cari nomor antrean, poli, atau ruang',
+                      isDense: true,
                     ),
-                    for (final s in [
-                      'DIPESAN',
-                      'CHECK_IN',
-                      'MENUNGGU',
-                      'DIPANGGIL',
-                      'DILAYANI',
-                      'SELESAI',
-                      'DILEWATI',
-                      'DIBATALKAN',
-                    ])
-                      DropdownMenuItem(value: s, child: Text(doctorStatus(s))),
-                  ],
-                  onChanged: (v) => setState(() {
-                    status = v ?? '';
-                    page = 0;
-                  }),
+                    onChanged: (v) => setState(() {
+                      search = v.trim().toLowerCase();
+                      page = 0;
+                    }),
+                  ),
                 ),
-              ),
-            ],
+                SizedBox(
+                  width: box.maxWidth >= 620
+                      ? (box.maxWidth - 12) * .33
+                      : box.maxWidth,
+                  child: DropdownButtonFormField<String>(
+                    initialValue: '',
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Status antrean',
+                      isDense: true,
+                    ),
+                    items: [
+                      const DropdownMenuItem(
+                        value: '',
+                        child: Text('Semua status'),
+                      ),
+                      for (final s in [
+                        'DIPESAN',
+                        'CHECK_IN',
+                        'MENUNGGU',
+                        'DIPANGGIL',
+                        'DILAYANI',
+                        'SELESAI',
+                        'DILEWATI',
+                        'DIBATALKAN',
+                      ])
+                        DropdownMenuItem(
+                          value: s,
+                          child: Text(doctorStatus(s)),
+                        ),
+                    ],
+                    onChanged: (v) => setState(() {
+                      status = v ?? '';
+                      page = 0;
+                    }),
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 12),
           if (!widget.available)
@@ -671,10 +708,7 @@ class _DoctorQueuePanelState extends State<DoctorQueuePanel> {
               child: Text('Data antrean belum tersedia.'),
             )
           else if (shown.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: Text('Belum ada antrean yang sesuai.'),
-            )
+            const DoctorQueueEmpty()
           else
             LayoutBuilder(
               builder: (context, box) => SingleChildScrollView(
@@ -858,11 +892,11 @@ class _DoctorLivePanelState extends State<DoctorLivePanel> {
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [QueueBStyle.navy, Color(0xff0b4652)],
+          colors: [DoctorStyle.deepNavy, DoctorStyle.deepTeal],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
       ),
       child: DefaultTextStyle(
         style: const TextStyle(color: Colors.white, fontSize: 14),
@@ -871,8 +905,12 @@ class _DoctorLivePanelState extends State<DoctorLivePanel> {
           children: [
             const Row(
               children: [
-                Icon(Icons.monitor_heart_outlined, color: Colors.white),
-                SizedBox(width: 10),
+                Icon(
+                  Icons.connected_tv_outlined,
+                  color: Colors.white,
+                  size: 30,
+                ),
+                SizedBox(width: 14),
                 Expanded(
                   child: Text(
                     'Pemanggilan Antrean Live',
@@ -886,7 +924,10 @@ class _DoctorLivePanelState extends State<DoctorLivePanel> {
               valueListenable: widget.status,
               builder: (context, value, _) => Text(
                 value,
-                style: const TextStyle(color: Color(0xffb9eae4), fontSize: 12),
+                style: const TextStyle(
+                  color: DoctorStyle.liveMuted,
+                  fontSize: 12,
+                ),
               ),
             ),
             const SizedBox(height: 24),
@@ -894,16 +935,52 @@ class _DoctorLivePanelState extends State<DoctorLivePanel> {
               widget.loading ? 'MEMPERBARUI SNAPSHOT' : 'ANTREAN SAAT INI',
               style: const TextStyle(
                 fontSize: 12,
-                color: Color(0xffb9eae4),
+                color: DoctorStyle.liveMuted,
                 letterSpacing: 1,
               ),
             ),
             const SizedBox(height: 10),
             if (ticket == null) ...[
-              const Text(
-                '—',
-                style: TextStyle(fontSize: 52, fontWeight: FontWeight.w800),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: .12),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 25,
+                      backgroundColor: Colors.white24,
+                      child: Icon(
+                        Icons.person_outline,
+                        color: Colors.white,
+                        size: 30,
+                      ),
+                    ),
+                    SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '—',
+                            style: TextStyle(
+                              fontSize: 30,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          Text(
+                            'Belum ada antrean',
+                            style: TextStyle(color: DoctorStyle.liveMuted),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(height: 14),
               Text(
                 !widget.available
                     ? 'Monitoring tersedia selama sesi praktik Anda berlangsung pada hari pelayanan.'
@@ -915,7 +992,7 @@ class _DoctorLivePanelState extends State<DoctorLivePanel> {
                 style: const TextStyle(
                   fontSize: 48,
                   fontWeight: FontWeight.w800,
-                  color: Color(0xff8eefd5),
+                  color: DoctorStyle.liveNumber,
                 ),
               ),
               Text(
@@ -963,11 +1040,18 @@ class _DoctorLivePanelState extends State<DoctorLivePanel> {
               padding: EdgeInsets.symmetric(vertical: 14),
               child: Divider(color: Colors.white24),
             ),
-            Text(
-              next == null
-                  ? 'Belum ada antrean berikutnya yang layak dipanggil pada snapshot.'
-                  : 'Berikutnya yang layak: ${next['nomorAntrean']}',
-              style: const TextStyle(color: Color(0xffb9eae4)),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: .1),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Text(
+                next == null
+                    ? 'Belum ada antrean berikutnya yang layak dipanggil pada snapshot.'
+                    : 'Berikutnya yang layak: ${next['nomorAntrean']}',
+                style: const TextStyle(color: DoctorStyle.liveMuted),
+              ),
             ),
             const SizedBox(height: 14),
             const Text(
