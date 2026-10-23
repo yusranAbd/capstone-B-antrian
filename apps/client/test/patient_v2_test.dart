@@ -324,9 +324,10 @@ void main() {
     });
     backend.tickets.add(backend.ticket);
     await launch(tester, backend);
-    expect(find.text('Antrean aktif'), findsOneWidget);
+    await tester.ensureVisible(find.text('Kunjungan terdekat'));
+    expect(find.text('Kunjungan terdekat'), findsOneWidget);
     expect(find.text('UM-001'), findsOneWidget);
-    await press(tester, find.text('Riwayat'));
+    await press(tester, find.text('Riwayat Kunjungan'));
     expect(find.text('Riwayat kunjungan'), findsOneWidget);
     expect(find.text('UM-004 · Poli Umum'), findsOneWidget);
     expect(find.text('UM-001 · Poli Umum'), findsNothing);

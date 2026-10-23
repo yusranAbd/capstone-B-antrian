@@ -1,0 +1,13 @@
+{
+  "generator": "imagegen built-in",
+  "assets": [
+    {
+      "file": "patient_hospital.png",
+      "prompt": "Use case: stylized-concept. Asset type: small decorative cutout for QueueB Hospital patient mobile welcome header. Create a friendly polished 3D illustration of a compact modern white hospital building, blue glass windows, a simple teal medical plus above the entrance, two lush green trees, soft rounded forms and gentle daylight. Three-quarter frontal view, entire building visible, centered, no ground rectangle or background scene, transparent background. Palette white, pale sky blue, teal #009F9A and natural green. No people, no text, no logos, no watermark. Must read clearly at 150 pixels wide."
+    },
+    {
+      "file": "patient_ticket.png",
+      "prompt": "Use case: stylized-concept. Asset type: decorative transparent cutout for QueueB Hospital teal mobile registration banner. A friendly polished 3D illustration of a hand holding a smartphone, a white digital ticket card on its screen with a large teal checkmark, and a small pale blue calendar beside it. Tilt phone slightly toward viewer, entire hand and phone visible. Soft rounded forms, clean healthcare app aesthetic, teal #009F9A, white, pale blue, warm natural skin. Transparent background, no text, no numbers, no QR pattern, no logos, no watermark. Clear compact composition readable at 140px wide."
+    }
+  ]
+}
