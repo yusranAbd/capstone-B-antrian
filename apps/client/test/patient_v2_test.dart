@@ -142,13 +142,8 @@ void main() {
     'home clinic grid contains all eleven API clinics and omits inactive entries',
     (tester) async {
       await launch(tester, PatientV2Backend()..manyClinics = true);
-      await tester.ensureVisible(find.byType(PatientClinicGrid));
-      expect(
-        tester
-            .widget<PatientClinicGrid>(find.byType(PatientClinicGrid))
-            .clinics,
-        hasLength(11),
-      );
+      await tester.ensureVisible(find.byType(ChoiceChip).first);
+      expect(find.byType(ChoiceChip), findsNWidgets(12));
       expect(find.text('Poliklinik Nonaktif'), findsNothing);
     },
   );
@@ -164,14 +159,9 @@ void main() {
       );
       await tester.enterText(find.byType(TextField).first, 'Penyakit Dalam');
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.byType(PatientClinicGrid));
-      expect(
-        tester
-            .widget<PatientClinicGrid>(find.byType(PatientClinicGrid))
-            .clinics
-            .single['id'],
-        uid,
-      );
+      await tester.ensureVisible(find.byType(ChoiceChip).first);
+      expect(find.byType(ChoiceChip), findsNWidgets(2));
+      expect(find.widgetWithText(ChoiceChip, 'Poli Umum'), findsOneWidget);
     },
   );
 
@@ -324,8 +314,8 @@ void main() {
     });
     backend.tickets.add(backend.ticket);
     await launch(tester, backend);
-    await tester.ensureVisible(find.text('Kunjungan terdekat'));
-    expect(find.text('Kunjungan terdekat'), findsOneWidget);
+    await tester.ensureVisible(find.text('Kunjungan Terdekat'));
+    expect(find.text('Kunjungan Terdekat'), findsOneWidget);
     expect(find.text('UM-001'), findsOneWidget);
     await press(tester, find.text('Riwayat Kunjungan'));
     expect(find.text('Riwayat kunjungan'), findsOneWidget);

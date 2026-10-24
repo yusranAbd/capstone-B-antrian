@@ -12,6 +12,7 @@ import 'doctor_schedule_ui.dart';
 import 'doctor_professional.dart';
 import 'patient_ui.dart';
 import 'patient_home.dart';
+import 'user_profile.dart';
 
 String appointmentDetails(Json appointment, AppConfig config) {
   final slot = object(appointment['slotPraktik']);
@@ -44,6 +45,7 @@ class _PatientPageState extends State<PatientPage> {
   bool appointment = true, bookingStage = false, doctorDetail = false;
   bool reviewing = false;
   String search = '', channel = 'Semua';
+  String? homeClinicId;
   List<Json> clinicSchedules = [], homeSchedules = [];
   String? homeScheduleError;
   final Map<String, String> clinicAvailability = {};
@@ -708,17 +710,24 @@ class _PatientPageState extends State<PatientPage> {
     final visit = appointments
         .where((a) => object(a['tiket'])['id'] == active?['id'])
         .firstOrNull;
-    final doctor = object(
+    final bookedDoctor = object(
       object(
         object(object(visit?['slotPraktik'])['jadwalPraktik'])['dokterLayanan'],
       )['dokter'],
     );
+    final doctor = {
+      ...?doctors.where((d) => d['id'] == bookedDoctor['id']).firstOrNull,
+      ...bookedDoctor,
+    };
     final previews = homeDoctorPreviews(
       doctors,
       services,
       homeSchedules,
       widget.api.config,
       search,
+      clinicId: services.any((c) => c['id'] == homeClinicId)
+          ? homeClinicId
+          : null,
     );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -726,48 +735,27 @@ class _PatientPageState extends State<PatientPage> {
         PatientHomeWelcome(
           name: '${widget.api.user?['nama'] ?? 'Pasien'}',
           onSearch: (v) => setState(() => search = v.toLowerCase().trim()),
+          avatar: AccountAvatar(api: widget.api, radius: 23),
         ),
         const SizedBox(height: 16),
-        PatientHomeBanner(
-          onRegister: busy ? null : () => startRegistration(true),
-        ),
-        const SizedBox(height: 16),
-        PatientHomeShortcuts(
-          enabled: !busy,
-          onClinics: () {
-            startRegistration(true);
-            setState(() => channel = 'Semua');
-          },
-          onAppointment: () => startRegistration(true),
-          onTickets: () => setState(() => tab = 1),
-          onHistory: () => setState(() => tab = 4),
-        ),
-        const SizedBox(height: 20),
-        const PatientHomeSectionTitle('Kunjungan terdekat'),
-        const SizedBox(height: 8),
-        if (loading)
-          const PatientHomeLoading()
-        else if (active != null)
+        if (active != null) ...[
+          PatientHomeSectionTitle(
+            'Kunjungan Terdekat',
+            action: 'Lihat Semua',
+            onPressed: busy ? null : () => setState(() => tab = 1),
+          ),
+          const SizedBox(height: 8),
           PatientHomeVisit(
             ticket: active,
             doctor: doctor,
+            appointment: visit,
+            config: widget.api.config,
             onTicket: busy ? null : () => openTicket(active),
-          )
-        else
-          PatientHomeEmpty(
-            text: error != null
-                ? 'Kunjungan belum dapat dimuat. Silakan coba lagi.'
-                : 'Belum ada kunjungan mendatang.',
-            action: error != null ? 'Coba lagi' : 'Buat Janji Temu',
-            onPressed: busy
-                ? null
-                : error != null
-                ? load
-                : () => startRegistration(true),
           ),
-        const SizedBox(height: 16),
+          const SizedBox(height: 20),
+        ],
         PatientHomeSectionTitle(
-          'Poliklinik tersedia',
+          'Cari Dokter Spesialis',
           action: 'Lihat Semua',
           onPressed: busy
               ? null
@@ -776,25 +764,40 @@ class _PatientPageState extends State<PatientPage> {
                   setState(() => channel = 'Semua');
                 },
         ),
-        if (loading)
-          const PatientHomeLoading()
-        else if (visibleClinics.isEmpty)
-          PatientHomeEmpty(
-            text: error != null
-                ? 'Poliklinik belum dapat dimuat.'
-                : 'Tidak ada poliklinik yang sesuai pencarian.',
-          )
-        else
-          PatientHomeSurface(
-            child: PatientClinicGrid(
-              clinics: visibleClinics,
-              enabled: !busy,
-              onSelected: (clinic) => selectService('${clinic['id']}'),
-            ),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              for (final clinic in <Json>[
+                {'nama': 'Semua'},
+                ...visibleClinics,
+              ])
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ChoiceChip(
+                    label: Text(label(clinic)),
+                    selected: clinic['id'] == homeClinicId,
+                    showCheckmark: false,
+                    selectedColor: QueueBStyle.teal,
+                    labelStyle: TextStyle(
+                      color: clinic['id'] == homeClinicId
+                          ? Colors.white
+                          : QueueBStyle.navy,
+                      fontSize: 12,
+                    ),
+                    onSelected: busy
+                        ? null
+                        : (_) => setState(
+                            () => homeClinicId = clinic['id'] as String?,
+                          ),
+                  ),
+                ),
+            ],
           ),
+        ),
         const SizedBox(height: 16),
         PatientHomeSectionTitle(
-          'Dokter & Jadwal',
+          'Dokter Pilihan',
           action: 'Lihat Semua',
           onPressed: busy
               ? null
@@ -843,8 +846,17 @@ class _PatientPageState extends State<PatientPage> {
               ),
             ),
         ],
-        const SizedBox(height: 8),
-        const PatientHomeTip(),
+        const SizedBox(height: 12),
+        PatientHomeShortcuts(
+          enabled: !busy,
+          onClinics: () {
+            startRegistration(true);
+            setState(() => channel = 'Semua');
+          },
+          onAppointment: () => startRegistration(true),
+          onTickets: () => setState(() => tab = 1),
+          onHistory: () => setState(() => tab = 4),
+        ),
         const SizedBox(height: 16),
         OutlinedButton.icon(
           onPressed: busy ? null : () => startRegistration(false),
@@ -971,6 +983,7 @@ class _PatientPageState extends State<PatientPage> {
       SafeArea(
         top: false,
         child: NavigationBar(
+          height: tab == 0 ? 68 : null,
           selectedIndex: tab == 4 ? 0 : [0, 2, 1, 3].indexOf(tab),
           onDestinationSelected: busy
               ? null

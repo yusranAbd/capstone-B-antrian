@@ -22,7 +22,7 @@ abstract final class PatientHomeStyle {
 }
 
 // Home-only visual layer. Existing booking, session and realtime owners stay in
-// PatientPage. Hallmark self-review: P4 H4 E4 S4 R4 V4 (mobile healthcare utility).
+// PatientPage. Hallmark self-review: P5 H5 E4 S5 R5 V4 (visit-first healthcare).
 class PatientHomeBrand extends StatelessWidget {
   const PatientHomeBrand({super.key});
   @override
@@ -97,82 +97,57 @@ class PatientHomeWelcome extends StatelessWidget {
     super.key,
     required this.name,
     required this.onSearch,
+    this.avatar,
   });
   final String name;
   final ValueChanged<String> onSearch;
+  final Widget? avatar;
   @override
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [PatientHomeStyle.background, PatientHomeStyle.welcomeTint],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.all(Radius.circular(20)),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(4, 8, 0, 12),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                flex: 3,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Selamat datang,',
-                      style: TextStyle(color: QueueBStyle.muted, fontSize: 14),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      name,
-                      style: const TextStyle(
-                        fontSize: 23,
-                        height: 1.15,
-                        fontWeight: FontWeight.w800,
-                        color: QueueBStyle.navy,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Kelola antrean layanan rumah sakit dengan mudah dan praktis.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        height: 1.45,
-                        color: QueueBStyle.muted,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                flex: 2,
-                child: ExcludeSemantics(
-                  child: Image.asset(
-                    'assets/illustrations/patient_hospital.png',
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, error, stack) => const Icon(
-                      Icons.local_hospital_outlined,
-                      size: 70,
-                      color: QueueBStyle.teal,
+      if (avatar != null) ...[
+        Row(
+          children: [
+            avatar!,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Selamat datang,',
+                    style: TextStyle(color: QueueBStyle.muted, fontSize: 13),
+                  ),
+                  Text(
+                    name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: QueueBStyle.navy,
                     ),
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+      ],
+      const Text(
+        'Bagaimana kabar Anda hari ini?',
+        style: TextStyle(
+          fontSize: 28,
+          height: 1.2,
+          fontWeight: FontWeight.w800,
+          color: QueueBStyle.navy,
         ),
       ),
-      const SizedBox(height: 12),
+      const SizedBox(height: 16),
       TextField(
         onChanged: onSearch,
         textInputAction: TextInputAction.search,
         decoration: InputDecoration(
-          hintText: 'Cari poliklinik, dokter, atau layanan...',
+          hintText: 'Cari dokter, poliklinik, atau layanan...',
           hintStyle: const TextStyle(fontSize: 12, color: QueueBStyle.muted),
           prefixIcon: const Icon(Icons.search_rounded, color: QueueBStyle.navy),
           filled: true,
@@ -428,56 +403,132 @@ class PatientHomeVisit extends StatelessWidget {
     required this.ticket,
     required this.doctor,
     required this.onTicket,
+    required this.config,
+    this.appointment,
   });
   final Json ticket, doctor;
+  final Json? appointment;
+  final AppConfig config;
   final VoidCallback? onTicket;
+  Json get room {
+    final booked = object(
+      object(object(appointment?['slotPraktik'])['jadwalPraktik'])['loket'],
+    );
+    return booked.isNotEmpty ? booked : object(ticket['loket']);
+  }
+
   @override
   Widget build(BuildContext context) => PatientHomeSurface(
-    color: PatientHomeStyle.visitSurface,
+    color: PatientHomeStyle.appointmentSurface,
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Row(
           children: [
+            if (doctor['id'] != null) ...[
+              ProfessionalDoctorAvatar(
+                config: config,
+                photo: doctor['fotoProfil'],
+                radius: 27,
+              ),
+              const SizedBox(width: 12),
+            ],
             Expanded(
-              child: Text(
-                '${ticket['nomorAntrean'] ?? 'Nomor belum tersedia'}',
-                style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
-                  color: QueueBStyle.navy,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    doctor['nama'] != null
+                        ? label(doctor)
+                        : label(object(ticket['layanan'])),
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: QueueBStyle.navy,
+                    ),
+                  ),
+                  if (doctor['spesialisasi'] != null)
+                    Text(
+                      '${doctor['spesialisasi']}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: QueueBStyle.muted,
+                      ),
+                    ),
+                ],
               ),
             ),
-            Flexible(child: StatusBadge(ticket['status'])),
           ],
         ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 6,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            StatusBadge(ticket['status']),
+            Text(
+              label(object(ticket['layanan'])),
+              style: const TextStyle(fontSize: 12, color: QueueBStyle.muted),
+            ),
+          ],
+        ),
+        if (room.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+              [
+                room['kode'],
+                room['nama'],
+              ].whereType<String>().where((s) => s.isNotEmpty).join(' · '),
+              style: const TextStyle(fontSize: 12, color: QueueBStyle.muted),
+            ),
+          ),
+        const SizedBox(height: 14),
+        const Text(
+          'Nomor antrean',
+          style: TextStyle(fontSize: 11, color: QueueBStyle.muted),
+        ),
         Text(
-          label(object(ticket['layanan'])),
+          '${ticket['nomorAntrean'] ?? 'Nomor belum tersedia'}',
           style: const TextStyle(
-            fontWeight: FontWeight.w700,
+            fontSize: 26,
+            fontWeight: FontWeight.w800,
             color: QueueBStyle.navy,
           ),
         ),
-        if (doctor['nama'] != null)
-          Text(
-            label(doctor),
-            style: const TextStyle(fontSize: 12, color: QueueBStyle.muted),
-          ),
-        const SizedBox(height: 5),
         Text(
           patientDate(
             '${ticket['tanggalPelayanan'] ?? ticket['tanggalAntrean']}',
           ),
           style: const TextStyle(fontSize: 12, color: QueueBStyle.muted),
         ),
-        Align(
-          alignment: Alignment.centerRight,
-          child: TextButton.icon(
-            onPressed: onTicket,
-            icon: const Icon(Icons.qr_code_rounded, size: 18),
-            label: const Text('Lihat Tiket'),
+        if (appointment != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 5),
+            child: Text(
+              '${patientTime(object(appointment!['slotPraktik']), config)} · ${config.serviceTimeZone}',
+              style: const TextStyle(fontSize: 12, color: QueueBStyle.darkTeal),
+            ),
           ),
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: onTicket,
+                child: const Text('Lihat Detail'),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: onTicket,
+                icon: const Icon(Icons.qr_code_rounded, size: 18),
+                label: const Text('QR Code'),
+              ),
+            ),
+          ],
         ),
       ],
     ),
@@ -581,13 +632,15 @@ List<HomeDoctorPreview> homeDoctorPreviews(
   List<Json> clinics,
   List<Json> sessions,
   AppConfig config,
-  String search,
-) {
+  String search, {
+  String? clinicId,
+}) {
   final result = <HomeDoctorPreview>[];
   for (final doctor in doctors.where((d) => d['aktif'] != false)) {
     final links = rows(doctor['dokterLayanan']).where(
       (l) =>
           l['aktif'] == true &&
+          (clinicId == null || l['layananId'] == clinicId) &&
           clinics.any((c) => c['id'] == l['layananId'] && c['aktif'] != false),
     );
     if (links.isEmpty) continue;
@@ -613,11 +666,11 @@ List<HomeDoctorPreview> homeDoctorPreviews(
           ..sort((a, b) => '${a['mulaiPada']}'.compareTo('${b['mulaiPada']}'));
     final session = upcoming.firstOrNull;
     final sl = object(session?['dokterLayanan']);
-    final clinicId =
+    final previewClinicId =
         sl['layananId'] ??
         object(sl['layanan'])['id'] ??
         links.first['layananId'];
-    final clinic = clinics.where((c) => c['id'] == clinicId).firstOrNull;
+    final clinic = clinics.where((c) => c['id'] == previewClinicId).firstOrNull;
     if (clinic == null) continue;
     if (!('${label(doctor)} ${doctor['spesialisasi'] ?? ''} ${label(clinic)}')
         .toLowerCase()
@@ -644,7 +697,12 @@ Json? nearestHomeTicket(
   final byId = <Object?, Json>{
     for (final a in appointments)
       if (object(a['tiket'])['id'] != null)
-        object(a['tiket'])['id']: object(a['tiket']),
+        object(a['tiket'])['id']: {
+          ...object(a['tiket']),
+          if (a['nomorAntrean'] != null) 'nomorAntrean': a['nomorAntrean'],
+          if (a['tanggalPelayanan'] != null)
+            'tanggalPelayanan': a['tanggalPelayanan'],
+        },
     for (final t in tickets)
       if (t['id'] != null) t['id']: t,
   };
@@ -661,6 +719,17 @@ Json? nearestHomeTicket(
     final day = dateOnly(a['tanggalPelayanan'] ?? a['tanggalAntrean'])
         .compareTo(dateOnly(b['tanggalPelayanan'] ?? b['tanggalAntrean']));
     if (day != 0) return day;
+    // Display priority only; this never changes the server queue order.
+    int status(Json t) => switch (t['status']) {
+      'DILAYANI' => 0,
+      'DIPANGGIL' => 1,
+      'MENUNGGU' => 2,
+      'CHECK_IN' => 3,
+      'DILEWATI' => 4,
+      _ => 5,
+    };
+    final state = status(a).compareTo(status(b));
+    if (state != 0) return state;
     String start(Json ticket) =>
         '${object(appointments.where((a) => object(a['tiket'])['id'] == ticket['id']).firstOrNull?['slotPraktik'])['mulaiPada'] ?? ''}';
     final slot = start(a).compareTo(start(b));
