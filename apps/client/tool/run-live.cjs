@@ -240,6 +240,18 @@ async function main() {
         }
       };
       code = 0;
+    } else if (process.argv.includes('--staff-v3')) {
+      fixture.staffV3 = true;
+      fixture.staffBefore = process.argv.includes('--before');
+      const { RealtimeGateway } = require(path.join(apiPath, 'dist/realtime/realtime.gateway.js'));
+      fixture.disconnectStaff = () => {
+        // Only transport connections authenticated as this run's staff fixture.
+        for (const socket of app.get(RealtimeGateway).server.sockets.values()) {
+          if (socket.data?.authenticatedUser?.id === accounts.petugas.id)
+            socket.conn.close();
+        }
+      };
+      code = 0;
     } else if (process.argv.includes('--admin-p0')) {
       fixture.adminP0 = true;
       code = 0;
@@ -288,7 +300,7 @@ async function main() {
       child.once('error', reject);
       child.once('exit', value => resolve(value ?? 1));
     });
-    if (code === 0 && (process.argv.includes('--browser') || process.argv.includes('--browser-only') || fixture.adminP0 || fixture.demoFull || fixture.adminSchedules || fixture.realtimeAdmin || fixture.doctorSchedule || fixture.doctorPortal || fixture.displayV2 || fixture.displayPairing)) {
+    if (code === 0 && (process.argv.includes('--browser') || process.argv.includes('--browser-only') || fixture.staffV3 || fixture.adminP0 || fixture.demoFull || fixture.adminSchedules || fixture.realtimeAdmin || fixture.doctorSchedule || fixture.doctorPortal || fixture.displayV2 || fixture.displayPairing)) {
       await require('./browser-smoke.cjs')(fixture);
     }
   } catch (error) {

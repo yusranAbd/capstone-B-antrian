@@ -218,4 +218,4 @@ module.exports = async function demo({fixture:f, root}) {
     throw new Error('Demo browser gagal; lihat diagnostik QA teredaksi.');
   }finally{clearTimeout(watchdog);for(const c of contexts)await c.close().catch(()=>{});for(const b of browsers)await b.close();if(fs.existsSync(videoFile))fs.unlinkSync(videoFile);}
 };
-module.exports.helpers={enter,button,choose,mutation,nav,card,reveal};
+module.exports.helpers={enter,button,choose,mutation,nav,card,reveal,cameraVideo};
