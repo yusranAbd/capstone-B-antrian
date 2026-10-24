@@ -74,7 +74,9 @@ export class AuthService {
         select: { id: true },
       }))
     ) {
-      throw new UnauthorizedException('Profil dokter tidak aktif atau belum ditautkan');
+      throw new UnauthorizedException(
+        'Profil dokter tidak aktif atau belum ditautkan',
+      );
     }
 
     const sessionId = randomUUID();
@@ -86,15 +88,30 @@ export class AuthService {
       sessionId,
     });
 
-    await this.prisma.sesiPengguna.create({
-      data: {
-        id: sessionId,
-        penggunaId: user.id,
-        tokenRefreshHash: this.hashRefreshToken(tokens.refreshToken),
-        namaPerangkat: dto.namaPerangkat ?? null,
-        kedaluwarsaPada: this.getRefreshExpirationDate(),
+    // Serialize session creation with a password change on the same user row.
+    // A password verified before revocation must not create a surviving session.
+    await this.prisma.$transaction(
+      async (tx) => {
+        await tx.$executeRaw`SET LOCAL lock_timeout = '5s'`;
+        const current = await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM pengguna WHERE id=${user.id}::uuid
+        AND aktif=true AND kata_sandi_hash=${user.kataSandiHash} FOR UPDATE`;
+        if (!current.length)
+          throw new UnauthorizedException(
+            'Kredensial berubah. Silakan masuk kembali',
+          );
+        await tx.sesiPengguna.create({
+          data: {
+            id: sessionId,
+            penggunaId: user.id,
+            tokenRefreshHash: this.hashRefreshToken(tokens.refreshToken),
+            namaPerangkat: dto.namaPerangkat ?? null,
+            kedaluwarsaPada: this.getRefreshExpirationDate(),
+          },
+        });
       },
-    });
+      { timeout: 10000 },
+    );
 
     return {
       ...tokens,
@@ -146,7 +163,9 @@ export class AuthService {
         select: { id: true },
       }))
     ) {
-      throw new UnauthorizedException('Profil dokter tidak aktif atau belum ditautkan');
+      throw new UnauthorizedException(
+        'Profil dokter tidak aktif atau belum ditautkan',
+      );
     }
 
     const tokens = await this.generateTokens({

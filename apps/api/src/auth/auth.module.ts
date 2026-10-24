@@ -9,6 +9,14 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { JwtStrategy } from './jwt.strategy';
 import { PasswordService } from './password.service';
+import { resolve } from 'node:path';
+import { ProfileController } from './profile/profile.controller';
+import { ProfileService } from './profile/profile.service';
+import { ProfileThrottleGuard } from './profile/profile-throttle.guard';
+import {
+  USER_AVATAR_ROOT,
+  UserAvatarService,
+} from './profile/user-avatar.service';
 
 @Module({
   imports: [
@@ -19,14 +27,29 @@ import { PasswordService } from './password.service';
     }),
     JwtModule.register({}),
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, ProfileController],
   providers: [
+    ProfileService,
+    ProfileThrottleGuard,
+    UserAvatarService,
+    {
+      provide: USER_AVATAR_ROOT,
+      useFactory: () =>
+        resolve(process.env.USER_AVATAR_DIR?.trim() || '.queueb-media/avatar'),
+    },
     AuthService,
     PasswordService,
     JwtStrategy,
     JwtAuthGuard,
     RolesGuard,
   ],
-  exports: [PasswordService, JwtAuthGuard, RolesGuard, PassportModule, JwtModule, JwtStrategy],
+  exports: [
+    PasswordService,
+    JwtAuthGuard,
+    RolesGuard,
+    PassportModule,
+    JwtModule,
+    JwtStrategy,
+  ],
 })
 export class AuthModule {}
