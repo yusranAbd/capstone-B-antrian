@@ -165,7 +165,6 @@ export class PortalDokterService {
         const tickets = await tx.tiketAntrean.findMany({
           where: {
             layananId: s.dokterLayanan.layananId,
-            loketId: s.loketId,
             tanggalAntrean: today.tanggalDb,
             status: {
               in: [
@@ -175,10 +174,25 @@ export class PortalDokterService {
               ],
             },
             OR: [
-              { janjiTemu: { slotPraktik: { jadwalPraktikId: s.id } } },
+              {
+                loketId: s.loketId,
+                janjiTemu: { slotPraktik: { jadwalPraktikId: s.id } },
+              },
               ...(layanan.modeReservasi === ModeReservasi.HIBRIDA
-                ? [{ janjiTemu: { is: null } }]
-                : []),
+                ? [{ loketId: s.loketId, janjiTemu: { is: null } }]
+                : layanan.modeReservasi === ModeReservasi.ANTREAN_HARIAN
+                  ? [
+                      {
+                        janjiTemu: { is: null },
+                        // Daily waiting is shared across the clinic; CALL assigns its room.
+                        // Active tickets remain visible only in the authorized session room.
+                        OR: [
+                          { status: StatusTiket.MENUNGGU },
+                          { loketId: s.loketId },
+                        ],
+                      },
+                    ]
+                  : []),
             ],
           },
           select: {
@@ -204,13 +218,22 @@ export class PortalDokterService {
           (t) =>
             t.status === StatusTiket.MENUNGGU && t.urutanMasukAntrean !== null,
         );
-        const ordered = urutkanKandidatHospital(
-          waiting,
-          layanan.modeReservasi,
-          s.loketId,
-          now,
-          layanan.modeReservasi === ModeReservasi.HIBRIDA,
-        );
+        const ordered =
+          layanan.modeReservasi === ModeReservasi.ANTREAN_HARIAN
+            ? // Already ordered by queue entry sequence + id, exactly like daily CALL.
+              // Hospital slot/check-in ranking must not replace daily FIFO.
+              waiting.map((tiket) => ({
+                tiket,
+                jenisAntrean: 'WALK_IN' as const,
+                layakDipanggil: true,
+              }))
+            : urutkanKandidatHospital(
+                waiting,
+                layanan.modeReservasi,
+                s.loketId,
+                now,
+                layanan.modeReservasi === ModeReservasi.HIBRIDA,
+              );
         return {
           versiSkema: 1,
           diperolehPada: now.toISOString(),

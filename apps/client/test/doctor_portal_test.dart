@@ -10,6 +10,7 @@ import 'package:queueb_client/src/api.dart';
 import 'package:queueb_client/src/app.dart';
 import 'package:queueb_client/src/config.dart';
 import 'package:queueb_client/src/doctor.dart';
+import 'package:queueb_client/src/doctor_dashboard.dart';
 import 'package:queueb_client/src/doctor_account.dart';
 import 'package:queueb_client/src/patient_sync.dart';
 import 'package:queueb_client/src/session_store.dart';
@@ -301,6 +302,99 @@ void main() {
       await tester.pumpWidget(const SizedBox());
       feed.dispose();
       expect(socket.disposed, true);
+      api.dispose();
+    },
+  );
+  testWidgets(
+    'daily walk-in with no appointments appears from snapshot and doctor events refresh it',
+    (tester) async {
+      tester.view.physicalSize = const Size(1366, 768);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final config = AppConfig(apiBaseUrl: 'http://localhost:3000/api/v1');
+      final calls = <String>[];
+      final snapshotRequests = <Uri>[];
+      var called = false;
+      final api =
+          QueueApi(
+              config: config,
+              client: MockClient((r) async {
+                calls.add(r.method);
+                if (r.url.path.endsWith('/profil')) return reply(profile());
+                if (r.url.path.endsWith('/jadwal')) {
+                  return reply([session(config)]);
+                }
+                if (r.url.path.endsWith('/janji-temu')) return reply([]);
+                snapshotRequests.add(r.url);
+                final ticket = {
+                  'nomorAntrean': 'AN-001',
+                  'status': called ? 'DIPANGGIL' : 'MENUNGGU',
+                  'jenisAntrean': 'WALK_IN',
+                  'layakDipanggil': true,
+                };
+                return reply({
+                  'sesi': session(config),
+                  'ruang': {'nama': 'Ruang Anak 1'},
+                  'poliklinik': {'nama': 'Anak'},
+                  'totalMenunggu': called ? 0 : 1,
+                  'menunggu': called ? [] : [ticket],
+                  'aktif': called ? [ticket] : [],
+                });
+              }),
+            )
+            ..user = identity()
+            ..accessToken = 'access';
+      final socket = DoctorSocket();
+      final updates = PatientUpdates(
+        api: api,
+        role: 'DOKTER',
+        namespace: 'doctor',
+        eventKinds: const ['ANTREAN'],
+        socketFactory: (url, options) {
+          expect(url, 'http://localhost:3000/doctor');
+          return socket;
+        },
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: DoctorPage(api: api, updates: updates),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('AN-001'), findsWidgets);
+      expect(find.text('Belum ada antrean yang sesuai.'), findsNothing);
+      called = true;
+      socket.fire('doctor:updated', {
+        'versiSkema': 1,
+        'jenis': 'ANTREAN',
+        'eventId': 'daily-call',
+      });
+      await tester.pump(const Duration(milliseconds: 260));
+      await tester.pumpAndSettle();
+      final dashboard = tester.widget<DoctorDashboard>(
+        find.byType(DoctorDashboard),
+      );
+      expect(dashboard.error, isNull);
+      expect(dashboard.snapshots.single['aktif'], isNotEmpty);
+      await tester.scrollUntilVisible(
+        find.text('Daftar Antrean Poli'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('AN-001'), findsWidgets);
+      expect(find.text('Dipanggil'), findsWidgets);
+      expect(snapshotRequests.length, greaterThanOrEqualTo(2));
+      for (final uri in snapshotRequests) {
+        expect(uri.path, '/api/v1/portal-dokter/antrean/snapshot');
+        expect(uri.queryParameters, {'jadwalPraktikId': 'own-session'});
+      }
+      expect(calls.every((method) => method == 'GET'), isTrue);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      updates.dispose();
       api.dispose();
     },
   );
