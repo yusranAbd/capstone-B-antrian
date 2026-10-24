@@ -26,6 +26,11 @@ export class UpdateDokterDto {
   @MaxLength(150)
   spesialisasi?: string | null;
 
+  @IsOptional()
+  @IsString()
+  @MaxLength(1500)
+  tentangDokter?: string | null;
+
   @ValidateIf((_, value: unknown) => value !== undefined)
   @IsBoolean()
   aktif?: boolean;

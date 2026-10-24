@@ -9,6 +9,7 @@ import 'widgets.dart';
 import 'mobile_ui.dart';
 import 'patient_sync.dart';
 import 'doctor_schedule_ui.dart';
+import 'doctor_professional.dart';
 import 'patient_ui.dart';
 import 'patient_home.dart';
 
@@ -1086,6 +1087,7 @@ class _PatientPageState extends State<PatientPage> {
               for (final d in visibleDoctors)
                 PatientDoctorCard(
                   doctor: d,
+                  config: widget.api.config,
                   schedule: doctorAvailability(d),
                   onDetails: busy || loading ? null : () => chooseDoctor(d),
                 ),
@@ -1093,7 +1095,13 @@ class _PatientPageState extends State<PatientPage> {
           ],
         ],
         if (bookingStage && doctorDetail) ...[
-          DoctorProfileCard(doctor: doctor, clinics: clinicName, detail: true),
+          DoctorProfileCard(
+            doctor: doctor,
+            config: widget.api.config,
+            clinics: clinicName,
+            detail: true,
+          ),
+          DoctorBiography(text: doctor['tentangDokter']),
           const SizedBox(height: 16),
           Text(
             'Jadwal praktik mendatang',

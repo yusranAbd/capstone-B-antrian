@@ -8,7 +8,14 @@ import {
   Patch,
   Post,
   UseGuards,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import {
+  DoctorPhotoService,
+  MAX_DOCTOR_PHOTO_BYTES,
+} from './doctor-photo.service';
 
 import type { AuthenticatedUser } from '../auth/auth.types';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -26,7 +33,39 @@ import { DokterService } from './dokter.service';
 @Controller('dokter')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class DokterController {
-  constructor(private readonly dokterService: DokterService) {}
+  constructor(
+    private readonly dokterService: DokterService,
+    private readonly photos: DoctorPhotoService,
+  ) {}
+
+  @Post(':id/foto')
+  @Roles(PeranPengguna.ADMIN)
+  @UseInterceptors(
+    FileInterceptor('foto', {
+      limits: {
+        fileSize: MAX_DOCTOR_PHOTO_BYTES,
+        files: 1,
+        fields: 0,
+        parts: 1,
+      },
+    }),
+  )
+  uploadPhoto(
+    @Param('id', ParseUUIDPipe) id: string,
+    @UploadedFile() file: { buffer: Buffer } | undefined,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.photos.upload(id, file?.buffer, user.id);
+  }
+
+  @Delete(':id/foto')
+  @Roles(PeranPengguna.ADMIN)
+  removePhoto(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.photos.remove(id, user.id);
+  }
 
   @Post()
   @Roles(PeranPengguna.ADMIN)

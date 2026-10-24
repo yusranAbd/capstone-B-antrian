@@ -101,6 +101,9 @@ export class DokterService {
           kode: dto.kode,
           nama: dto.nama.trim(),
           spesialisasi: dto.spesialisasi?.trim() || null,
+          ...(dto.tentangDokter !== undefined
+            ? { tentangDokter: dto.tentangDokter?.trim() || null }
+            : {}),
           aktif: true,
         },
       });
@@ -190,6 +193,10 @@ export class DokterService {
               ? undefined
               : dto.spesialisasi?.trim() || null,
           aktif: dto.aktif,
+          tentangDokter:
+            dto.tentangDokter === undefined
+              ? undefined
+              : dto.tentangDokter?.trim() || null,
         },
       });
     } catch (error: unknown) {

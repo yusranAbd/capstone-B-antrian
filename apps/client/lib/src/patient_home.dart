@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'config.dart';
 import 'mobile_ui.dart';
 import 'patient_ui.dart';
+import 'doctor_professional.dart';
 
 abstract final class PatientHomeStyle {
   static const background = Color(0xfff7fafc);
@@ -694,11 +695,10 @@ class PatientHomeDoctor extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         child: Row(
           children: [
-            const CircleAvatar(
+            ProfessionalDoctorAvatar(
+              config: config,
+              photo: preview.doctor['fotoProfil'],
               radius: 24,
-              backgroundColor: QueueBStyle.mint,
-              foregroundColor: QueueBStyle.darkTeal,
-              child: Icon(Icons.person_outline_rounded, size: 30),
             ),
             const SizedBox(width: 12),
             Expanded(

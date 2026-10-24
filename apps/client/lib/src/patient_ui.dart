@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'config.dart';
 import 'mobile_ui.dart';
+import 'doctor_professional.dart';
 
 // Hallmark · scoped patient journey · QueueB reference · P5 H5 E4 S5 R5 V4.
 // Tokens remain in QueueBStyle; no changes to shared themes or other roles.
@@ -206,10 +207,12 @@ class PatientDoctorCard extends StatelessWidget {
   const PatientDoctorCard({
     super.key,
     required this.doctor,
+    required this.config,
     required this.schedule,
     required this.onDetails,
   });
   final Json doctor;
+  final AppConfig config;
   final String schedule;
   final VoidCallback? onDetails;
 
@@ -221,11 +224,9 @@ class PatientDoctorCard extends StatelessWidget {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const CircleAvatar(
-              radius: 28,
-              backgroundColor: QueueBStyle.mint,
-              foregroundColor: QueueBStyle.darkTeal,
-              child: Icon(Icons.person_outline_rounded, size: 32),
+            ProfessionalDoctorAvatar(
+              config: config,
+              photo: doctor['fotoProfil'],
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -253,6 +254,13 @@ class PatientDoctorCard extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
+        Text(
+          rows(doctor['dokterLayanan'])
+              .where((link) => link['aktif'] != false)
+              .map((link) => label(object(link['layanan'])))
+              .join(', '),
+          style: const TextStyle(color: QueueBStyle.muted, fontSize: 12),
+        ),
         Text(
           schedule,
           style: const TextStyle(color: QueueBStyle.darkTeal, fontSize: 12),

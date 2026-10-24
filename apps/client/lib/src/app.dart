@@ -7,6 +7,7 @@ import 'admin_ui.dart';
 import 'api.dart';
 import 'display.dart';
 import 'doctor.dart';
+import 'doctor_professional.dart';
 import 'doctor_visual.dart';
 import 'patient.dart';
 import 'patient_home.dart';
@@ -154,6 +155,14 @@ class _RootState extends State<_Root> {
                   '${api.user!['email']}\nPeran: $role\nID akun: ${api.user!['id']}',
                 ),
                 actions: [
+                  if (role == 'DOKTER')
+                    TextButton(
+                      onPressed: () => showDialog<void>(
+                        context: context,
+                        builder: (_) => DoctorProfessionalDialog(api: api),
+                      ),
+                      child: const Text('Profil profesional'),
+                    ),
                   TextButton(
                     onPressed: () async {
                       await Clipboard.setData(

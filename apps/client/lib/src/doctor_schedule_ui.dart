@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'config.dart';
 import 'mobile_ui.dart';
+import 'doctor_professional.dart';
 
 // QueueB existing tokens and navigation; reference: doctor profile + calendar.
 // Hallmark · pre-emit critique: P4 H4 E4 S5 R5 V4.
@@ -9,12 +10,14 @@ class DoctorProfileCard extends StatelessWidget {
   const DoctorProfileCard({
     super.key,
     required this.doctor,
+    required this.config,
     required this.clinics,
     this.availability,
     this.onSchedule,
     this.detail = false,
   });
   final Json doctor;
+  final AppConfig config;
   final String clinics;
   final String? availability;
   final VoidCallback? onSchedule;
@@ -29,11 +32,10 @@ class DoctorProfileCard extends StatelessWidget {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CircleAvatar(
-              radius: detail ? 30 : 24,
-              backgroundColor: detail ? Colors.white : QueueBStyle.mint,
-              foregroundColor: QueueBStyle.darkTeal,
-              child: const Icon(Icons.person_outline_rounded, size: 32),
+            ProfessionalDoctorAvatar(
+              config: config,
+              photo: doctor['fotoProfil'],
+              radius: detail ? 36 : 24,
             ),
             const SizedBox(width: 12),
             Expanded(

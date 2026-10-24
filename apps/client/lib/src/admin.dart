@@ -1,4 +1,5 @@
 import 'admin_delete.dart';
+import 'admin_doctor_profile.dart';
 
 import 'package:flutter/material.dart';
 
@@ -103,6 +104,8 @@ class _AdminPageState extends State<AdminPage> {
             )
           : resource.path == '/jadwal-praktik'
           ? PracticeScheduleEditor(api: widget.api, catalog: catalog, row: row)
+          : resource.path == '/dokter'
+          ? AdminDoctorEditor(api: widget.api, row: row)
           : _AdminEditor(
               api: widget.api,
               resource: resource,
@@ -111,7 +114,7 @@ class _AdminPageState extends State<AdminPage> {
               initialSession: session,
             ),
     );
-    if (mounted && (changed == true || bulk)) {
+    if (mounted && (changed == true || bulk || resource.path == '/dokter')) {
       setState(
         () => message = changed != true
             ? null
