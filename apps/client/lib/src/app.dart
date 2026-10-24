@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'admin.dart';
@@ -7,7 +6,7 @@ import 'admin_ui.dart';
 import 'api.dart';
 import 'display.dart';
 import 'doctor.dart';
-import 'doctor_professional.dart';
+import 'user_profile.dart';
 import 'doctor_visual.dart';
 import 'patient.dart';
 import 'patient_home.dart';
@@ -133,51 +132,14 @@ class _RootState extends State<_Root> {
               icon: const Icon(Icons.notifications_none_rounded),
             ),
 
-          if (role == 'DOKTER')
-            DoctorHeaderIdentity(name: '${api.user!['nama'] ?? ''}'),
-          if (role == 'ADMIN' && MediaQuery.sizeOf(context).width >= 700)
-            AdminIdentity(name: '${api.user!['nama'] ?? ''}'),
+          if (['DOKTER', 'ADMIN', 'PETUGAS'].contains(role) &&
+              MediaQuery.sizeOf(context).width >= 700)
+            ProfileHeaderIdentity(api: api),
           IconButton(
             tooltip: 'Profil akun',
-            icon: patientHome
-                ? const CircleAvatar(
-                    radius: 16,
-                    backgroundColor: QueueBStyle.mint,
-                    foregroundColor: QueueBStyle.darkTeal,
-                    child: Icon(Icons.person_outline_rounded, size: 22),
-                  )
-                : const Icon(Icons.account_circle_outlined),
-            onPressed: () => showDialog<void>(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: Text('${api.user!['nama']}'),
-                content: SelectableText(
-                  '${api.user!['email']}\nPeran: $role\nID akun: ${api.user!['id']}',
-                ),
-                actions: [
-                  if (role == 'DOKTER')
-                    TextButton(
-                      onPressed: () => showDialog<void>(
-                        context: context,
-                        builder: (_) => DoctorProfessionalDialog(api: api),
-                      ),
-                      child: const Text('Profil profesional'),
-                    ),
-                  TextButton(
-                    onPressed: () async {
-                      await Clipboard.setData(
-                        ClipboardData(text: '${api.user!['id']}'),
-                      );
-                      if (context.mounted) Navigator.pop(context);
-                    },
-                    child: const Text('Salin ID akun'),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Tutup'),
-                  ),
-                ],
-              ),
+            icon: ExcludeSemantics(child: AccountAvatar(api: api, radius: 16)),
+            onPressed: () => Navigator.of(context).push<void>(
+              MaterialPageRoute(builder: (_) => UserProfilePage(api: api)),
             ),
           ),
           IconButton(

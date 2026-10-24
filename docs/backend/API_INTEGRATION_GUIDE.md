@@ -1796,3 +1796,41 @@ Smoke browser P1: build Web dengan
 `node apps/client/tool/run-live.cjs --doctor-profile`. Runner memvalidasi database
 test, memakai API nyata serta media/fixture unik, kemudian memeriksa integritas dan
 membersihkan fixture milik run. Screenshot: `docs/frontend/images/doctor-profile-p1`.
+
+## 24. Profil Saya dan keamanan akun (P2)
+
+`GET /auth/me` tetap menjadi sumber identitas akun, dengan tambahan `aktif`,
+`avatarProfil: string|null`, dan `dibuatPada`. Email, role, status, ID, penugasan,
+serta relasi dokter tidak dapat diedit sendiri.
+
+| Metode | Endpoint | Request / hasil |
+| --- | --- | --- |
+| PATCH | `/auth/me` | `{nama}` 3–150 karakter setelah trim → metadata profil |
+| POST | `/auth/me/avatar` | Multipart `foto`, satu JPEG/PNG/WebP statis ≤2 MiB, ≤16 juta piksel → 201 `{id,avatarProfil}` |
+| GET | `/auth/me/avatar` | WebP privat akun sendiri dengan JWT; 404 jika kosong |
+| DELETE | `/auth/me/avatar` | Idempoten → 200 `{id,avatarProfil:null}` |
+| POST | `/auth/me/password` | `{kataSandiLama,kataSandiBaru}` → 200 `{message,loginUlang:true}` |
+
+Seluruh endpoint memerlukan JWT dan memakai identitas server. Field tambahan
+(termasuk userId, email, peran, aktif, avatarProfil) pada body profil ditolak 400.
+Avatar akun terpisah dari foto profesional Dokter P1; referensi avatar bukan URL
+publik. Baca byte melalui GET `/auth/me/avatar` dengan JWT; respons memakai
+`private, no-store` dan `nosniff`. Nama/avatar baru diperbarui pada header melalui
+state akun, tanpa logout.
+
+Password baru minimal 8 karakter, maksimal 72 karakter dan 72 byte UTF-8. Password
+lama salah atau password baru sama ditolak 400; 401 tetap berarti masalah sesi.
+Perubahan password dibatasi 5/menit per akun dan upload avatar 10/menit per akun
+(429 jika terlampaui). Setelah hash diganti, seluruh sesi dicabut secara atomik;
+Flutter menghapus token tersimpan dan meminta login ulang. Login in-flight dengan
+password lama diperiksa kembali di bawah row lock. Password/token tidak dicatat.
+
+Informasi penugasan PETUGAS dan profil/jadwal profesional DOKTER tetap memakai
+endpoint role existing secara read-only. Tidak ada field kesehatan baru.
+
+Migration aditif `20261024_user_profile_p2` menambah satu kolom nullable
+`pengguna.avatar_profil`. Deployment memerlukan storage persisten
+`USER_AVATAR_DIR` (default `.queueb-media/avatar`), terpisah dari
+`DOCTOR_MEDIA_DIR`. **Migration development masih memerlukan backup dan persetujuan
+Project Lead; implementasi P2 tidak otomatis memberi izin aktivasi database.**
+Rincian sesi, storage, pengujian dan batas: [USER_PROFILE_P2.md](USER_PROFILE_P2.md).

@@ -272,12 +272,17 @@ describe('Integrasi Hospital dan HOSP-OPS-01 (e2e)', () => {
     });
     await db().janjiTemu.deleteMany({ where: { tiketId: { in: ids } } });
     await db().tiketAntrean.deleteMany({ where: { id: { in: ids } } });
-    await db().slotPraktik.deleteMany({ where: { jadwalPraktikId: sesiId } });
-    await db().jadwalPraktik.deleteMany({ where: { id: sesiId } });
+    // Setup can fail before a session ID exists; still clean only this clinic's fixtures.
+    await db().slotPraktik.deleteMany({
+      where: { jadwalPraktik: { dokterLayanan: { layananId } } },
+    });
+    await db().jadwalPraktik.deleteMany({
+      where: { dokterLayanan: { layananId } },
+    });
     await db().dokterLayanan.deleteMany({ where: { layananId } });
     if (dokterId) await db().dokter.deleteMany({ where: { id: dokterId } });
     await db().penugasanPetugas.deleteMany({
-      where: { loketId: { in: [ruangId, ruangLainId] } },
+      where: { loket: { layananId } },
     });
     await db().loket.deleteMany({ where: { layananId } });
     await db().jadwalLayanan.deleteMany({ where: { layananId } });

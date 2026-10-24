@@ -37,6 +37,8 @@ class QueueApi extends ChangeNotifier {
   String? sessionMessage;
   Json? user;
   String? accessToken;
+  String? _avatarKey;
+  Future<Uint8List?>? _avatarFuture;
   String? _refreshToken;
   Future<void>? _refreshing;
   Future<void>? _restoring;
@@ -57,6 +59,7 @@ class QueueApi extends ChangeNotifier {
     bool authenticated = true,
     String? displayToken,
     List<int>? photoBytes,
+    bool binary = false,
   }) async {
     if (authenticated &&
         sessionPhase != SessionPhase.ready &&
@@ -96,10 +99,79 @@ class QueueApi extends ChangeNotifier {
         throw const ApiException(401, 'Sesi berubah. Silakan masuk kembali.');
       }
       if (retry.statusCode == 401) await clearSession();
-      return _decode(retry);
+      return binary ? _decodeBytes(retry) : _decode(retry);
     }
     if (response.statusCode == 401 && authenticated) await clearSession();
-    return _decode(response);
+    return binary ? _decodeBytes(response) : _decode(response);
+  }
+
+  Uint8List _decodeBytes(http.Response response) {
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      _decode(response);
+    }
+    return response.bodyBytes;
+  }
+
+  Future<void> reloadOwnProfile() async {
+    final generation = _generation;
+    final identity = _identity(await request('GET', '/auth/me'));
+    if (generation != _generation) return;
+    user = identity;
+    _avatarKey = null;
+    _avatarFuture = null;
+    _notify();
+  }
+
+  Future<void> updateOwnName(String name) async {
+    final generation = _generation;
+    final result = _identity(
+      await request('PATCH', '/auth/me', body: {'nama': name.trim()}),
+    );
+    if (generation != _generation) return;
+    user = result;
+    _notify();
+  }
+
+  Future<void> uploadOwnAvatar(List<int> bytes) async {
+    await request('POST', '/auth/me/avatar', photoBytes: bytes);
+    await reloadOwnProfile();
+  }
+
+  Future<void> removeOwnAvatar() async {
+    await request('DELETE', '/auth/me/avatar');
+    await reloadOwnProfile();
+  }
+
+  Future<Uint8List?> ownAvatar() {
+    final identity = user;
+    if (identity == null || identity['avatarProfil'] == null) {
+      return Future.value();
+    }
+    final key = '${identity['id']}|${identity['avatarProfil']}';
+    if (_avatarKey != key) {
+      _avatarKey = key;
+      _avatarFuture = () async {
+        try {
+          return await request('GET', '/auth/me/avatar', binary: true)
+              as Uint8List;
+        } on ApiException catch (e) {
+          if (e.status == 404) return null;
+          rethrow;
+        }
+      }();
+    }
+    return _avatarFuture!;
+  }
+
+  Future<void> changeOwnPassword(String oldPassword, String newPassword) async {
+    await request(
+      'POST',
+      '/auth/me/password',
+      body: {'kataSandiLama': oldPassword, 'kataSandiBaru': newPassword},
+    );
+    await clearSession();
+    sessionMessage = 'Kata sandi berhasil diubah. Silakan masuk kembali pada semua perangkat.';
+    _notify();
   }
 
   Future<http.Response> _send(
@@ -412,7 +484,7 @@ class QueueApi extends ChangeNotifier {
       if (generation == _generation &&
           user != null &&
           sessionPhase == SessionPhase.ready) {
-        user = _identity(data['user']);
+        user = {...?user, ..._identity(data['user'])};
         _scheduleRenew();
         _notify(); // Realtime listeners reconnect only after the pair is saved.
       }
@@ -482,6 +554,8 @@ class QueueApi extends ChangeNotifier {
     _renew?.cancel();
     user = null;
     accessToken = null;
+    _avatarKey = null;
+    _avatarFuture = null;
     _refreshToken = null;
     _pendingPersistence = null;
     _refreshUncertain = false;

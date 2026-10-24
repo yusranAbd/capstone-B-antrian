@@ -551,8 +551,10 @@ void main() {
     expect(find.byType(NavigationRail), findsNothing);
     await tester.tap(find.byTooltip('Profil akun'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('ID akun:'), findsOneWidget);
-    await press(tester, 'Tutup');
+    expect(find.text('Profil Saya'), findsOneWidget);
+    expect(find.text('Informasi Pribadi'), findsWidgets);
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
   testWidgets('Patient home navigation, empty tickets and catalog search', (
