@@ -8,6 +8,7 @@ import 'admin_ui.dart';
 import 'api.dart';
 import 'config.dart';
 import 'widgets.dart';
+import 'doctor_professional.dart';
 
 Json clinicOf(Json row, String path) => switch (path) {
   '/layanan' => row,
@@ -357,24 +358,39 @@ class _AdminDataViewState extends State<AdminDataView> {
           label,
           cell: (r) => SizedBox(
             width: 220,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                Text(
-                  label(r),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ProfessionalDoctorAvatar(
+                  config: widget.api.config,
+                  photo: r['fotoProfil'],
+                  radius: 18,
                 ),
-                Text(
-                  '${r['spesialisasi'] ?? 'Spesialisasi belum diisi'}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  '${r['kode']}',
-                  style: const TextStyle(fontSize: 12, color: Colors.blueGrey),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        label(r),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      Text(
+                        '${r['spesialisasi'] ?? 'Spesialisasi belum diisi'}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        '${r['kode']}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.blueGrey,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -550,11 +566,19 @@ class _AdminDataViewState extends State<AdminDataView> {
                       ),
                     ),
                 ],
-                child: const Padding(
-                  padding: EdgeInsets.all(8),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [Text('Aksi'), Icon(Icons.expand_more, size: 18)],
+                child: Semantics(
+                  button: true,
+                  label: 'Aksi profil dokter',
+                  excludeSemantics: true,
+                  child: const Padding(
+                    padding: EdgeInsets.all(8),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('Aksi'),
+                        Icon(Icons.expand_more, size: 18),
+                      ],
+                    ),
                   ),
                 ),
               ),

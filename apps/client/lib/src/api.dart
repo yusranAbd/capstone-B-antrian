@@ -56,6 +56,7 @@ class QueueApi extends ChangeNotifier {
     Map<String, String>? query,
     bool authenticated = true,
     String? displayToken,
+    List<int>? photoBytes,
   }) async {
     if (authenticated &&
         sessionPhase != SessionPhase.ready &&
@@ -71,6 +72,7 @@ class QueueApi extends ChangeNotifier {
       query,
       authenticated ? token : null,
       displayToken,
+      photoBytes,
     );
     if (authenticated && generation != _generation) {
       throw const ApiException(401, 'Sesi berubah. Silakan masuk kembali.');
@@ -88,6 +90,7 @@ class QueueApi extends ChangeNotifier {
         query,
         accessToken,
         displayToken,
+        photoBytes,
       );
       if (generation != _generation) {
         throw const ApiException(401, 'Sesi berubah. Silakan masuk kembali.');
@@ -106,15 +109,24 @@ class QueueApi extends ChangeNotifier {
     Map<String, String>? query,
     String? token,
     String? displayToken,
+    List<int>? photoBytes,
   ) async {
-    final request = http.Request(method, uri(path, query));
+    final http.BaseRequest request;
+    if (photoBytes != null) {
+      request = http.MultipartRequest(method, uri(path, query))
+        ..files.add(
+          http.MultipartFile.fromBytes('foto', photoBytes, filename: 'foto'),
+        );
+    } else {
+      request = http.Request(method, uri(path, query));
+      if (body != null) (request as http.Request).body = jsonEncode(body);
+    }
     request.headers.addAll({
       'Accept': 'application/json',
       if (body != null) 'Content-Type': 'application/json',
       if (token != null) 'Authorization': 'Bearer $token',
       'x-display-token': ?displayToken,
     });
-    if (body != null) request.body = jsonEncode(body);
     try {
       return await (() async {
         final transport = path.startsWith('/display/') && displayToken == null

@@ -1694,3 +1694,105 @@ Flutter membedakan profil dokter dan akun login serta memberi alur Buat profil �
 `admin-management-p0.e2e-spec.ts` memeriksa RBAC semua role, metadata aman, fixed role, email duplikat, pencabutan sesi, reaktivasi, akun nonaktif, batas tanggal inklusif, create/update paralel, serta provisioning dan privasi DOKTER. Seluruh E2E yang menulis data hanya dijalankan pada `127.0.0.1:5433/capstone_antrean_test` setelah pemeriksaan koneksi. Runner membandingkan integritas record existing dan hanya membersihkan fixture milik tes.
 
 Smoke browser melalui `node apps/client/tool/run-live.cjs --admin-p0` memakai server API test port 3001 dan build Web dengan API_BASE_URL test. Alur ini menjalankan Flutter hasil kompilasi dan API nyata, bukan stub REST; screenshot disimpan pada `docs/frontend/images/admin-p0`.
+
+## 23. P1 — Foto profesional dan biografi dokter
+
+Aktivasi memerlukan migration aditif `20261024_doctor_professional_profile`. **Jangan
+menjalankan build backend ini pada database yang belum dimigrasi.** Penerapan pada
+development utama harus melalui persetujuan Project Lead; QA menulis hanya ke
+`127.0.0.1:5433/capstone_antrean_test`.
+
+### 23.1 Field dan akses
+
+Entitas Dokter menambahkan dua field opsional:
+
+| Field JSON | Kolom PostgreSQL | Kontrak |
+| --- | --- | --- |
+| `fotoProfil` | `foto_profil VARCHAR(200) NULL` | Referensi API relatif `/media/dokter/<uuid>.webp`, dikelola endpoint foto |
+| `tentangDokter` | `tentang_dokter VARCHAR(1500) NULL` | Teks biasa maksimal 1.500 karakter; string kosong dinormalisasi menjadi null |
+
+`POST /dokter` dan `PATCH /dokter/:id` menerima `tentangDokter` opsional, termasuk
+`null` untuk mengosongkan. PATCH tanpa field tersebut mempertahankan deskripsi.
+`fotoProfil` tidak dapat diisi manual melalui body create/update. Referensi tidak
+pernah menerima URL eksternal atau path filesystem dari klien.
+
+`GET /dokter`, `GET /dokter/:id`, dan `GET /portal-dokter/profil` menyertakan field
+baru. Scope profil/poliklinik aktif dan privasi metadata akun tetap mengikuti
+kontrak existing. Hanya ADMIN dapat mengubah profil atau foto; DOKTER membaca
+profil profesionalnya dan tidak dapat mengubahnya pada P1. Foto ini terpisah dari
+avatar akun Pengguna; tidak ada perubahan registrasi, autentikasi atau Queue Engine.
+Pada Flutter, DOKTER membuka **Profil akun → Profil profesional** untuk melihat
+foto dan deskripsi sendiri tanpa kontrol edit.
+
+Contoh PATCH ADMIN:
+
+```json
+{"tentangDokter":"Dokter spesialis anak yang melayani konsultasi di poliklinik anak."}
+```
+
+### 23.2 Upload dan hapus foto
+
+Semua path berikut relatif terhadap API base `/api/v1`.
+
+| Endpoint | Hak akses | Request / response |
+| --- | --- | --- |
+| `POST /dokter/:id/foto` | JWT ADMIN | `multipart/form-data`, satu field file bernama `foto`; 201 `{id,fotoProfil}` |
+| `DELETE /dokter/:id/foto` | JWT ADMIN | 200 `{id,fotoProfil:null}`; idempoten untuk profil tanpa foto |
+| `GET /media/dokter/:filename` | Publik, hanya foto profesional yang masih direferensikan | `image/webp`; tidak menerima token dalam URL |
+
+Input dibatasi 2 MiB (2.097.152 byte), JPEG/PNG/WebP statis dan maksimal 16 juta
+piksel. Backend memeriksa signature dan hasil decoding, bukan ekstensi/MIME klien.
+Gambar didecode, orientasi diterapkan, dikecilkan hingga 640×640 tanpa memperbesar,
+metadata dibuang dan diencode ulang ke WebP. Nama file UUID v4 dibuat server;
+file asli tidak pernah disajikan atau disimpan sebagai base64 di PostgreSQL.
+Decoder memakai Sharp 0.35.5; parser multipart dipin ke Multer 2.5.0 melalui npm
+override untuk patch [GHSA-q7qp-rjg7-q26m](https://github.com/expressjs/multer/security/advisories/GHSA-q7qp-rjg7-q26m).
+
+401 tanpa JWT, 403 role selain ADMIN, 404 dokter/foto tidak ditemukan, 400 file
+rusak/format tidak didukung/field salah atau deskripsi terlalu panjang, 413 file
+terlalu besar, 409 konflik transaksi yang terdeteksi, 503 penyimpanan tidak tersedia.
+Validasi gagal mempertahankan foto existing. Penggantian/penghapusan referensi
+dikunci per record dokter dalam transaksi; file lama dibersihkan sesudah commit
+dan tidak dapat dibaca lagi melalui referensi lama. Kegagalan pembersihan tidak
+membatalkan update yang sudah commit; log tidak memuat path internal atau isi file.
+
+Endpoint media tidak membuka direktori statis, hanya nama UUID WebP yang valid
+dan masih direferensikan database. Header `nosniff`, CSP terbatas dan `no-cache`
+diterapkan. Foto profesional memang dapat dibaca publik; jangan mengunggah dokumen,
+foto pasien, atau media privat.
+
+### 23.3 Storage dan integrasi Flutter
+
+Default direktori media adalah `.queueb-media/dokter` relatif terhadap working
+directory proses API (jalankan dari `apps/api`). Gunakan `DOCTOR_MEDIA_DIR` berisi
+path absolut untuk lokasi persisten deployment. Direktori tidak dipasang sebagai
+web root dan harus hanya dapat ditulis proses API. Semua file upload di bawah
+`apps/api/.queueb-media` diabaikan Git.
+
+Solusi P1 adalah filesystem persisten satu instance. Backup PostgreSQL harus
+disertai backup volume media; deployment ephemeral atau beberapa instance memerlukan
+shared volume/storage tersendiri. Hard delete profil atau kegagalan disk dapat
+menyisakan file tanpa referensi; file tersebut tidak disajikan oleh API. Pembersihan
+operasional file yatim tidak termasuk endpoint/fitur P1.
+
+Flutter membentuk URL dari `API_BASE_URL + fotoProfil`, termasuk prefix reverse
+proxy. Gunakan origin API yang dapat dijangkau Android (localhost pada HP bukan
+localhost laptop), HTTPS sesuai deployment, CORS Flutter Web dan persistensi
+volume yang sesuai. Token tidak dimasukkan URL foto. Avatar fallback digunakan
+saat foto null, sedang dimuat atau gagal dimuat. Tidak ada rating/pengalaman dummy.
+
+ADMIN memilih file melalui file selector Web/Android, melihat preview, lalu
+menekan Simpan untuk menyimpan metadata dan foto. Profil baru dibuat lebih dulu;
+jika upload gagal, retry menggunakan ID profil yang sudah tersimpan, tanpa duplikat.
+Menutup form memperbarui katalog meski langkah foto gagal. Poliklinik dan akun
+login tetap ditautkan melalui aksi existing pada tabel.
+
+Pasien melihat foto, spesialisasi, poliklinik dan ringkasan jadwal dari API; detail
+menambahkan biografi dengan Baca Selengkapnya serta jadwal/ruang dan alur booking
+slot existing. Endpoint slot dan appointment tidak berubah.
+
+Smoke browser P1: build Web dengan
+`--dart-define=API_BASE_URL=http://127.0.0.1:3001/api/v1`, lalu
+`node apps/client/tool/run-live.cjs --doctor-profile`. Runner memvalidasi database
+test, memakai API nyata serta media/fixture unik, kemudian memeriksa integritas dan
+membersihkan fixture milik run. Screenshot: `docs/frontend/images/doctor-profile-p1`.

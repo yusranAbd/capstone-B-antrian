@@ -43,6 +43,8 @@ export class PortalDokterService {
         kode: true,
         nama: true,
         spesialisasi: true,
+        fotoProfil: true,
+        tentangDokter: true,
         aktif: true,
         dokterLayanan: {
           where: { aktif: true, layanan: { aktif: true } },
@@ -61,6 +63,8 @@ export class PortalDokterService {
       kode: d.kode,
       nama: d.nama,
       spesialisasi: d.spesialisasi,
+      fotoProfil: d.fotoProfil,
+      tentangDokter: d.tentangDokter,
       aktif: d.aktif,
       poliklinik: d.dokterLayanan.map((r) => r.layanan),
     };

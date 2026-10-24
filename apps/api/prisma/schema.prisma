@@ -305,6 +305,8 @@ model Dokter {
   kode           String   @unique @db.VarChar(30)
   nama           String   @db.VarChar(150)
   spesialisasi   String?  @db.VarChar(150)
+  fotoProfil     String?  @map("foto_profil") @db.VarChar(200)
+  tentangDokter  String?  @map("tentang_dokter") @db.VarChar(1500)
   aktif          Boolean  @default(true)
   dibuatPada     DateTime @default(now()) @map("dibuat_pada") @db.Timestamptz(6)
   diperbaruiPada DateTime @updatedAt @map("diperbarui_pada") @db.Timestamptz(6)

@@ -1,9 +1,16 @@
-import { IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 export class CreateDokterDto {
   @IsString()
   @Matches(/^[A-Z0-9-]{2,30}$/, {
-    message: 'Kode dokter harus terdiri dari 2-30 karakter huruf kapital, angka atau tanda hubung',
+    message:
+      'Kode dokter harus terdiri dari 2-30 karakter huruf kapital, angka atau tanda hubung',
   })
   kode!: string;
 
@@ -17,4 +24,9 @@ export class CreateDokterDto {
   @IsString()
   @MaxLength(150)
   spesialisasi?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1500)
+  tentangDokter?: string | null;
 }

@@ -75,6 +75,9 @@ async function main() {
     'http://127.0.0.1:8080';
   process.env.NODE_ENV = 'test';
   process.env.API_PORT = '3001';
+  const doctorProfileMedia = process.argv.includes('--doctor-profile')
+    ? path.join(apiPath, '.queueb-media', `qa-profile-${randomUUID()}`) : null;
+  if (doctorProfileMedia) process.env.DOCTOR_MEDIA_DIR = doctorProfileMedia;
   process.chdir(apiPath);
   const { Test } = fromApi('@nestjs/testing');
   const { ConfigService } = fromApi('@nestjs/config');
@@ -252,6 +255,9 @@ async function main() {
         }
       };
       code = 0;
+    } else if (process.argv.includes('--doctor-profile')) {
+      fixture.doctorProfile = true;
+      code = 0;
     } else if (process.argv.includes('--admin-p0')) {
       fixture.adminP0 = true;
       code = 0;
@@ -300,7 +306,7 @@ async function main() {
       child.once('error', reject);
       child.once('exit', value => resolve(value ?? 1));
     });
-    if (code === 0 && (process.argv.includes('--browser') || process.argv.includes('--browser-only') || fixture.staffV3 || fixture.adminP0 || fixture.demoFull || fixture.adminSchedules || fixture.realtimeAdmin || fixture.doctorSchedule || fixture.doctorPortal || fixture.displayV2 || fixture.displayPairing)) {
+    if (code === 0 && (process.argv.includes('--browser') || process.argv.includes('--browser-only') || fixture.doctorProfile || fixture.staffV3 || fixture.adminP0 || fixture.demoFull || fixture.adminSchedules || fixture.realtimeAdmin || fixture.doctorSchedule || fixture.doctorPortal || fixture.displayV2 || fixture.displayPairing)) {
       await require('./browser-smoke.cjs')(fixture);
     }
   } catch (error) {
@@ -356,6 +362,16 @@ async function main() {
       await prisma.pengguna.deleteMany({ where: { id: { in: users } } });
     }
     await app.close();
+    if (doctorProfileMedia) {
+      const fs = require('node:fs/promises');
+      try {
+        for (const filename of await fs.readdir(doctorProfileMedia)) {
+          if (!/^[0-9a-f-]+\.webp$/.test(filename)) throw new Error('Unexpected QA media');
+          await fs.unlink(path.join(doctorProfileMedia, filename));
+        }
+        await fs.rmdir(doctorProfileMedia);
+      } catch (error) { if (error.code !== 'ENOENT') throw error; }
+    }
   }
   const after = await readState();
   let existing = 0,
