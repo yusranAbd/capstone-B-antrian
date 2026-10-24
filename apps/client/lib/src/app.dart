@@ -105,14 +105,24 @@ class _RootState extends State<_Root> {
       AppBar header({
         bool patientHome = false,
         VoidCallback? onActivity,
+        Widget? staffContext,
       }) => AppBar(
         toolbarHeight: role == 'ADMIN'
             ? 58
             : role == 'DOKTER'
             ? 64
+            : role == 'PETUGAS'
+            ? 60
             : null,
         title: patientHome
             ? const PatientHomeBrand()
+            : staffContext != null && MediaQuery.sizeOf(context).width >= 700
+            ? Row(
+                children: [
+                  const Flexible(child: QueueBBrand(compact: true)),
+                  Expanded(flex: 3, child: staffContext),
+                ],
+              )
             : const QueueBBrand(compact: true),
         actions: [
           if (patientHome)
@@ -181,14 +191,17 @@ class _RootState extends State<_Root> {
             ? DoctorStyle.theme
             : QueueBStyle.theme,
         child: Scaffold(
-          appBar: role == 'USER' ? null : header(),
+          appBar: role == 'USER' || role == 'PETUGAS' ? null : header(),
           body: SafeArea(
             top: false,
             child: KeyedSubtree(
               key: ValueKey(api.user!['id']),
               child: switch (role) {
                 'ADMIN' => AdminPage(api: api),
-                'PETUGAS' => QueuePage(api: api),
+                'PETUGAS' => QueuePage(
+                  api: api,
+                  headerBuilder: (status) => header(staffContext: status),
+                ),
                 'DOKTER' => DoctorPage(api: api),
                 _ => PatientPage(
                   api: api,

@@ -36,6 +36,7 @@ module.exports = async function browserSmoke(fixture) {
   await new Promise(resolve => server.listen(8080, '127.0.0.1', resolve));
   let browser, lastPage;
   try {
+    if (fixture.staffV3) return await require('./browser-staff-v3.cjs')({fixture, root});
     if (fixture.adminP0) return await require('./browser-admin-p0.cjs')({fixture, root});
     if (fixture.displayPairing) return await require('./browser-display-pairing.cjs')({fixture, root});
     if (fixture.displayV2) return await require('./browser-display-v2.cjs')({fixture, root});
