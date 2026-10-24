@@ -36,13 +36,22 @@ export class DokterController {
 
   @Post(':id/akun')
   @Roles(PeranPengguna.ADMIN)
-  provisionAkun(@Param('id', ParseUUIDPipe) id: string, @Body() dto: ProvisionAkunDokterDto) {
+  provisionAkun(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ProvisionAkunDokterDto,
+  ) {
     return this.dokterService.provisionAkun(id, dto);
   }
 
   @Get()
   findAll(@CurrentUser() user: AuthenticatedUser) {
     return this.dokterService.findAll(user.peran);
+  }
+
+  @Get('akun-tersedia')
+  @Roles(PeranPengguna.ADMIN)
+  akunTersedia() {
+    return this.dokterService.akunTersedia();
   }
 
   @Get(':id')
@@ -55,10 +64,7 @@ export class DokterController {
 
   @Patch(':id')
   @Roles(PeranPengguna.ADMIN)
-  update(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdateDokterDto,
-  ) {
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateDokterDto) {
     return this.dokterService.update(id, dto);
   }
 

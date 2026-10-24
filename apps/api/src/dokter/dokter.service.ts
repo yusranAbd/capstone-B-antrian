@@ -22,6 +22,14 @@ export class DokterService {
     private readonly password?: PasswordService,
   ) {}
 
+  akunTersedia() {
+    return this.prisma.pengguna.findMany({
+      where: { peran: 'DOKTER', aktif: true, dokter: { is: null } },
+      select: { id: true, nama: true, email: true, aktif: true },
+      orderBy: { nama: 'asc' },
+    });
+  }
+
   async provisionAkun(id: string, dto: ProvisionAkunDokterDto) {
     if (
       dto.penggunaId
@@ -114,6 +122,9 @@ export class DokterService {
           },
       omit: { penggunaId: !admin },
       include: {
+        pengguna: admin
+          ? { select: { nama: true, email: true, aktif: true } }
+          : false,
         dokterLayanan: {
           where: admin ? undefined : { aktif: true, layanan: { aktif: true } },
           select: {
@@ -146,6 +157,9 @@ export class DokterService {
       },
       omit: { penggunaId: !admin },
       include: {
+        pengguna: admin
+          ? { select: { nama: true, email: true, aktif: true } }
+          : false,
         dokterLayanan: {
           where: admin ? undefined : { aktif: true, layanan: { aktif: true } },
           select: {
@@ -230,7 +244,9 @@ export class DokterService {
         create: { dokterId: id, layananId: dto.layananId, aktif: true },
         update: { aktif: true },
         include: {
-          layanan: { select: { id: true, kode: true, nama: true, aktif: true } },
+          layanan: {
+            select: { id: true, kode: true, nama: true, aktif: true },
+          },
         },
       });
     } catch (error: unknown) {
@@ -269,10 +285,14 @@ export class DokterService {
   private handleDatabaseError(error: unknown): never {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === 'P2002') {
-        throw new ConflictException('Kode dokter, email, akun atau relasi dokter sudah digunakan');
+        throw new ConflictException(
+          'Kode dokter, email, akun atau relasi dokter sudah digunakan',
+        );
       }
       if (error.code === 'P2025') {
-        throw new NotFoundException('Dokter atau relasi layanan tidak ditemukan');
+        throw new NotFoundException(
+          'Dokter atau relasi layanan tidak ditemukan',
+        );
       }
     }
     throw error;

@@ -31,6 +31,7 @@ const petugasUji = {
   nama: 'Petugas Administrasi 1',
   email: 'petugas1@test.local',
   peran: PeranPengguna.PETUGAS,
+  aktif: true,
 };
 
 const loketUji = {
@@ -62,23 +63,31 @@ const dataCreate = {
 // MOCK PRISMA
 // ==========================================
 
-const buatPrismaMock = () => ({
-  pengguna: {
-    findUnique: jest.fn(),
-  },
+const buatPrismaMock = () => {
+  const mock = {
+    $queryRaw: jest.fn(),
+    $transaction: jest.fn(),
+    pengguna: {
+      findUnique: jest.fn(),
+    },
 
-  loket: {
-    findUnique: jest.fn(),
-  },
+    loket: {
+      findUnique: jest.fn(),
+    },
 
-  penugasanPetugas: {
-    create: jest.fn(),
-    findMany: jest.fn(),
-    findFirst: jest.fn(),
-    findUnique: jest.fn(),
-    update: jest.fn(),
-  },
-});
+    penugasanPetugas: {
+      create: jest.fn(),
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+      findUnique: jest.fn(),
+      update: jest.fn(),
+    },
+  };
+  mock.$transaction.mockImplementation(
+    (callback: (tx: typeof mock) => unknown) => callback(mock),
+  );
+  return mock;
+};
 
 // ==========================================
 // HELPER ERROR PRISMA
@@ -150,6 +159,7 @@ describe('PenugasanPetugasService', () => {
         select: {
           id: true,
           peran: true,
+          aktif: true,
         },
       });
 
@@ -223,6 +233,17 @@ describe('PenugasanPetugasService', () => {
           tanggalSelesai: '2026-10-16',
         }),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('menolak akun PETUGAS nonaktif sebelum menyimpan penugasan', async () => {
+      prismaMock.pengguna.findUnique.mockResolvedValue({
+        ...petugasUji,
+        aktif: false,
+      });
+      await expect(service.create(dataCreate)).rejects.toThrow(
+        'Akun PETUGAS harus aktif',
+      );
+      expect(prismaMock.penugasanPetugas.create).not.toHaveBeenCalled();
     });
 
     it('menolak jika pengguna petugas tidak ditemukan', async () => {

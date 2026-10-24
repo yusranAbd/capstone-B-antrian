@@ -225,7 +225,7 @@ async function main() {
     fixture = {
       date, unique, serviceCode: `W${unique}`, ...accounts, roomId: room.id, roomName: room.nama, serviceId, doctorId, assignmentId: assignment.id, extraDoctorIds: [],
       scheduleId: schedule.id, slotId: slot.id, slotStart: slotStart.toISOString(), displayToken,
-      extraServiceCodes: [],
+      extraServiceCodes: [], extraUserIds: [],
     };
     if (process.argv.includes('--display-v2') || process.argv.includes('--display-pairing')) {
       fixture.displayV2 = !process.argv.includes('--display-pairing');
@@ -239,6 +239,9 @@ async function main() {
           if (socket.handshake.auth?.layananId === serviceId) socket.conn.close();
         }
       };
+      code = 0;
+    } else if (process.argv.includes('--admin-p0')) {
+      fixture.adminP0 = true;
       code = 0;
     } else if (process.argv.includes('--doctor-portal')) {
       const email = `flutter-doctor-${unique.toLowerCase()}@test.local`;
@@ -285,7 +288,7 @@ async function main() {
       child.once('error', reject);
       child.once('exit', value => resolve(value ?? 1));
     });
-    if (code === 0 && (process.argv.includes('--browser') || process.argv.includes('--browser-only') || fixture.demoFull || fixture.adminSchedules || fixture.realtimeAdmin || fixture.doctorSchedule || fixture.doctorPortal || fixture.displayV2 || fixture.displayPairing)) {
+    if (code === 0 && (process.argv.includes('--browser') || process.argv.includes('--browser-only') || fixture.adminP0 || fixture.demoFull || fixture.adminSchedules || fixture.realtimeAdmin || fixture.doctorSchedule || fixture.doctorPortal || fixture.displayV2 || fixture.displayPairing)) {
       await require('./browser-smoke.cjs')(fixture);
     }
   } catch (error) {
@@ -333,6 +336,7 @@ async function main() {
       });
       await prisma.layanan.deleteMany({ where: { id: serviceId } });
     }
+    users.push(...(fixture?.extraUserIds || []));
     if (users.length) {
       await prisma.sesiPengguna.deleteMany({
         where: { penggunaId: { in: users } },

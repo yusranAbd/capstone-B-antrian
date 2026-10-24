@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -262,7 +261,13 @@ void main() {
       (tester) async {
         await open(tester, initial: initial);
         expect(
-          find.text(initial == 7 ? 'Tambah perangkat' : 'Tambah'),
+          find.text(
+            initial == 7
+                ? 'Tambah perangkat'
+                : initial == 6
+                ? 'Tambah akun PETUGAS'
+                : 'Tambah',
+          ),
           findsOneWidget,
         );
         expect(tester.takeException(), isNull);
@@ -271,42 +276,16 @@ void main() {
   }
 
   testWidgets(
-    'staff selection imports a copied ID without offering an unsupported account directory',
+    'staff assignment uses the account directory and never exposes manual UUID input',
     (tester) async {
       await open(tester, initial: 6);
-      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-        SystemChannels.platform,
-        (call) async =>
-            call.method == 'Clipboard.getData' ? {'text': staffId} : null,
-      );
-      addTearDown(
-        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-          SystemChannels.platform,
-          null,
-        ),
-      );
+      await press(tester, find.text('Penugasan Loket'));
       await press(tester, find.text('Tambah'));
       expect(find.byType(AdminSearchChoice), findsOneWidget);
-      await press(tester, find.text('Tempel ID dari profil petugas'));
-      final id = tester.widget<TextFormField>(
-        find.widgetWithText(TextFormField, 'ID akun PETUGAS'),
-      );
-      expect(
-        tester
-            .widget<TextField>(
-              find.descendant(
-                of: find.widgetWithText(TextFormField, 'ID akun PETUGAS'),
-                matching: find.byType(TextField),
-              ),
-            )
-            .readOnly,
-        isTrue,
-      );
-      expect(id.controller!.text, staffId);
-      expect(
-        find.textContaining('API belum menyediakan direktori'),
-        findsOneWidget,
-      );
+      expect(find.text('Petugas (nama / email)'), findsOneWidget);
+      expect(find.text('ID akun PETUGAS'), findsNothing);
+      expect(find.textContaining('Tempel ID'), findsNothing);
+      expect(find.textContaining('tab Akun Petugas'), findsOneWidget);
       await press(tester, find.text('Kembali'));
     },
   );
