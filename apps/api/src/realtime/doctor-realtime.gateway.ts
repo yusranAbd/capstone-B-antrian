@@ -96,6 +96,7 @@ export class DoctorRealtimeGateway
           layananId: true,
           loketId: true,
           tanggalAntrean: true,
+          layanan: { select: { modeReservasi: true } },
           janjiTemu: {
             select: { slotPraktik: { select: { jadwalPraktikId: true } } },
           },
@@ -106,13 +107,17 @@ export class DoctorRealtimeGateway
         ticket.tanggalAntrean.getTime() !== today.tanggalDb.getTime()
       )
         return;
-      // Appointment scope comes from its schedule even before CHECK_IN; walk-in requires assigned room.
-      if (!ticket.janjiTemu && !ticket.loketId) return;
+      const harian = ticket.layanan.modeReservasi === 'ANTREAN_HARIAN';
+      // Daily waiting has no assigned room. All live sessions in this clinic
+      // must refresh when the shared pool changes, including after CALL.
+      if (!ticket.janjiTemu && !ticket.loketId && !harian) return;
       const sessions = await this.prisma.jadwalPraktik.findMany({
         where: {
           ...(ticket.janjiTemu
             ? { id: ticket.janjiTemu.slotPraktik.jadwalPraktikId }
-            : { loketId: ticket.loketId! }),
+            : harian
+              ? {}
+              : { loketId: ticket.loketId! }),
           tanggal: today.tanggalDb,
           aktif: true,
           mulaiPada: { lte: now },
@@ -124,7 +129,11 @@ export class DoctorRealtimeGateway
             layanan: {
               aktif: true,
               ...(!ticket.janjiTemu
-                ? { modeReservasi: 'HIBRIDA' as const }
+                ? {
+                    modeReservasi: {
+                      in: ['HIBRIDA' as const, 'ANTREAN_HARIAN' as const],
+                    },
+                  }
                 : {}),
             },
             dokter: { aktif: true, pengguna: { aktif: true, peran: 'DOKTER' } },
