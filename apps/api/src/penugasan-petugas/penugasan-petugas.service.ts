@@ -19,6 +19,7 @@ const relasiPenugasan = {
       nama: true,
       email: true,
       peran: true,
+      aktif: true,
     },
   },
   loket: {
@@ -55,26 +56,36 @@ export class PenugasanPetugasService {
 
     this.validasiRentang(mulai, selesai);
 
-    await this.validasiPetugas(dto.petugasId);
-    await this.validasiLoket(dto.loketId);
-
-    await this.validasiKonflik(dto.petugasId, mulai, selesai);
-
     try {
-      return await this.prisma.penugasanPetugas.create({
-        data: {
-          tanggalMulai: mulai,
-          tanggalSelesai: selesai,
-          aktif: true,
-          petugas: {
-            connect: { id: dto.petugasId },
-          },
-          loket: {
-            connect: { id: dto.loketId },
-          },
+      return await this.prisma.$transaction(
+        async (tx) => {
+          await this.kunciPetugas(tx, [dto.petugasId]);
+          await this.validasiPetugas(dto.petugasId, tx);
+          await this.validasiLoket(dto.loketId, tx);
+          await this.validasiKonflik(
+            dto.petugasId,
+            mulai,
+            selesai,
+            undefined,
+            tx,
+          );
+          return tx.penugasanPetugas.create({
+            data: {
+              tanggalMulai: mulai,
+              tanggalSelesai: selesai,
+              aktif: true,
+              petugas: {
+                connect: { id: dto.petugasId },
+              },
+              loket: {
+                connect: { id: dto.loketId },
+              },
+            },
+            include: relasiPenugasan,
+          });
         },
-        include: relasiPenugasan,
-      });
+        { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
+      );
     } catch (error: unknown) {
       this.handleDatabaseError(error);
     }
@@ -122,78 +133,85 @@ export class PenugasanPetugasService {
   // ==========================================
 
   async update(id: string, dto: UpdatePenugasanPetugasDto) {
-    const existing = await this.prisma.penugasanPetugas.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        petugasId: true,
-        loketId: true,
-        tanggalMulai: true,
-        tanggalSelesai: true,
-        aktif: true,
-      },
-    });
-
-    if (!existing) {
-      throw new NotFoundException('Penugasan petugas tidak ditemukan');
-    }
-
-    const petugasId = dto.petugasId ?? existing.petugasId;
-    const loketId = dto.loketId ?? existing.loketId;
-
-    const mulai =
-      dto.tanggalMulai !== undefined
-        ? this.parseTanggal(dto.tanggalMulai)
-        : existing.tanggalMulai;
-
-    const selesai =
-      dto.tanggalSelesai === undefined
-        ? existing.tanggalSelesai
-        : dto.tanggalSelesai === null
-          ? null
-          : this.parseTanggal(dto.tanggalSelesai);
-
-    const aktif = dto.aktif ?? existing.aktif;
-
-    this.validasiRentang(mulai, selesai);
-
-    // Periksa ulang jika referensi berubah
-    // atau penugasan tetap/menjadi aktif.
-    if (aktif || dto.petugasId !== undefined) {
-      await this.validasiPetugas(petugasId);
-    }
-
-    if (aktif || dto.loketId !== undefined) {
-      await this.validasiLoket(loketId);
-    }
-
-    if (aktif) {
-      await this.validasiKonflik(petugasId, mulai, selesai, id);
-    }
-
     try {
-      return await this.prisma.penugasanPetugas.update({
-        where: { id },
-        data: {
-          petugas:
-            dto.petugasId !== undefined
-              ? { connect: { id: petugasId } }
-              : undefined,
+      return await this.prisma.$transaction(
+        async (tx) => {
+          await tx.$queryRaw`SELECT id FROM penugasan_petugas WHERE id = ${id}::uuid FOR UPDATE`;
+          const existing = await tx.penugasanPetugas.findUnique({
+            where: { id },
+            select: {
+              id: true,
+              petugasId: true,
+              loketId: true,
+              tanggalMulai: true,
+              tanggalSelesai: true,
+              aktif: true,
+            },
+          });
 
-          loket:
-            dto.loketId !== undefined
-              ? { connect: { id: loketId } }
-              : undefined,
+          if (!existing) {
+            throw new NotFoundException('Penugasan petugas tidak ditemukan');
+          }
 
-          tanggalMulai: dto.tanggalMulai !== undefined ? mulai : undefined,
+          const petugasId = dto.petugasId ?? existing.petugasId;
+          const loketId = dto.loketId ?? existing.loketId;
+          await this.kunciPetugas(tx, [existing.petugasId, petugasId]);
 
-          tanggalSelesai:
-            dto.tanggalSelesai !== undefined ? selesai : undefined,
+          const mulai =
+            dto.tanggalMulai !== undefined
+              ? this.parseTanggal(dto.tanggalMulai)
+              : existing.tanggalMulai;
 
-          aktif: dto.aktif,
+          const selesai =
+            dto.tanggalSelesai === undefined
+              ? existing.tanggalSelesai
+              : dto.tanggalSelesai === null
+                ? null
+                : this.parseTanggal(dto.tanggalSelesai);
+
+          const aktif = dto.aktif ?? existing.aktif;
+
+          this.validasiRentang(mulai, selesai);
+
+          // Periksa ulang jika referensi berubah
+          // atau penugasan tetap/menjadi aktif.
+          if (aktif || dto.petugasId !== undefined) {
+            await this.validasiPetugas(petugasId, tx);
+          }
+
+          if (aktif || dto.loketId !== undefined) {
+            await this.validasiLoket(loketId, tx);
+          }
+
+          if (aktif) {
+            await this.validasiKonflik(petugasId, mulai, selesai, id, tx);
+          }
+
+          return tx.penugasanPetugas.update({
+            where: { id },
+            data: {
+              petugas:
+                dto.petugasId !== undefined
+                  ? { connect: { id: petugasId } }
+                  : undefined,
+
+              loket:
+                dto.loketId !== undefined
+                  ? { connect: { id: loketId } }
+                  : undefined,
+
+              tanggalMulai: dto.tanggalMulai !== undefined ? mulai : undefined,
+
+              tanggalSelesai:
+                dto.tanggalSelesai !== undefined ? selesai : undefined,
+
+              aktif: dto.aktif,
+            },
+            include: relasiPenugasan,
+          });
         },
-        include: relasiPenugasan,
-      });
+        { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
+      );
     } catch (error: unknown) {
       this.handleDatabaseError(error);
     }
@@ -204,14 +222,14 @@ export class PenugasanPetugasService {
   // ==========================================
 
   async remove(id: string) {
-    try {
-      return await this.prisma.penugasanPetugas.update({
-        where: { id },
-        data: { aktif: false },
-        include: relasiPenugasan,
-      });
-    } catch (error: unknown) {
-      this.handleDatabaseError(error);
+    return this.update(id, { aktif: false });
+  }
+
+  private async kunciPetugas(tx: Prisma.TransactionClient, ids: string[]) {
+    // Stable order also covers moving an assignment to another account.
+    // READ COMMITTED + this lock makes the following conflict read see prior commits.
+    for (const id of [...new Set(ids)].sort()) {
+      await tx.$queryRaw`SELECT id FROM pengguna WHERE id = ${id}::uuid FOR UPDATE`;
     }
   }
 
@@ -219,12 +237,16 @@ export class PenugasanPetugasService {
   // VALIDASI PENGGUNA
   // ==========================================
 
-  private async validasiPetugas(petugasId: string): Promise<void> {
-    const pengguna = await this.prisma.pengguna.findUnique({
+  private async validasiPetugas(
+    petugasId: string,
+    tx: Prisma.TransactionClient,
+  ): Promise<void> {
+    const pengguna = await tx.pengguna.findUnique({
       where: { id: petugasId },
       select: {
         id: true,
         peran: true,
+        aktif: true,
       },
     });
 
@@ -235,14 +257,19 @@ export class PenugasanPetugasService {
     if (pengguna.peran !== PeranPengguna.PETUGAS) {
       throw new BadRequestException('Pengguna harus memiliki peran PETUGAS');
     }
+    if (!pengguna.aktif)
+      throw new BadRequestException('Akun PETUGAS harus aktif');
   }
 
   // ==========================================
   // VALIDASI LOKET
   // ==========================================
 
-  private async validasiLoket(loketId: string): Promise<void> {
-    const loket = await this.prisma.loket.findUnique({
+  private async validasiLoket(
+    loketId: string,
+    tx: Prisma.TransactionClient,
+  ): Promise<void> {
+    const loket = await tx.loket.findUnique({
       where: { id: loketId },
       select: {
         id: true,
@@ -302,6 +329,7 @@ export class PenugasanPetugasService {
     mulai: Date,
     selesai: Date | null,
     kecualiId?: string,
+    tx: Prisma.TransactionClient = this.prisma,
   ): Promise<void> {
     const where: Prisma.PenugasanPetugasWhereInput = {
       petugasId,
@@ -320,7 +348,7 @@ export class PenugasanPetugasService {
       OR: [{ tanggalSelesai: null }, { tanggalSelesai: { gte: mulai } }],
     };
 
-    const bentrok = await this.prisma.penugasanPetugas.findFirst({
+    const bentrok = await tx.penugasanPetugas.findFirst({
       where,
       select: { id: true },
     });
@@ -337,6 +365,14 @@ export class PenugasanPetugasService {
   // ==========================================
 
   private handleDatabaseError(error: unknown): never {
+    const code =
+      typeof error === 'object' && error !== null && 'code' in error
+        ? String(error.code)
+        : '';
+    if (['P2034', 'P2028'].includes(code))
+      throw new ConflictException(
+        'Penugasan sedang berubah. Muat ulang dan coba lagi.',
+      );
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === 'P2025') {
         throw new NotFoundException('Penugasan atau relasi tidak ditemukan');

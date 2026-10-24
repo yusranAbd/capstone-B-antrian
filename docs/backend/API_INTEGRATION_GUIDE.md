@@ -1251,7 +1251,7 @@ Respons dari Prisma mencakup relasi berikut (cuplikan struktur, bukan objek leng
 }
 ```
 
-Objek penugasan sendiri memiliki field yang dipakai service seperti `id`, `petugasId`, `loketId`, `tanggalMulai`, `tanggalSelesai`, `aktif`, dan `dibuatPada`. Service memeriksa `peran: PETUGAS`, **tetapi fungsi `validasiPetugas` tidak mengecek flag `pengguna.aktif`**; jangan menulis bahwa ini sudah merupakan syarat create. Pemeriksaan aktif lain mungkin ada dalam alur autentikasi/operasional dan harus dievaluasi terpisah.
+Objek penugasan sendiri memiliki field yang dipakai service seperti `id`, `petugasId`, `loketId`, `tanggalMulai`, `tanggalSelesai`, `aktif`, dan `dibuatPada`. P0 ADMIN menambahkan syarat `peran: PETUGAS` dan `pengguna.aktif: true` pada pembuatan/perubahan penugasan aktif. Penonaktifan penugasan tetap boleh dilakukan ketika akun sudah nonaktif. Objek `petugas` kini juga memuat `aktif`; lihat Bagian 22.
 
 **Error terkait:** pengguna petugas atau loket tidak ditemukan `404`; peran bukan PETUGAS `400`; loket atau layanan induk tidak aktif `400`; tanggal tidak sah/rentang terbalik `400`; konflik jadwal `409`; penugasan tidak ditemukan `404`; relasi/keunikan database dapat menghasilkan `400`/`409` melalui handler. `DELETE` melakukan soft delete dan mengembalikan objek penugasan yang diperbarui dengan relasi-relasinya.
 
@@ -1266,7 +1266,7 @@ Objek penugasan sendiri memiliki field yang dipakai service seperti `id`, `petug
 
 ### 13.8 Batas verifikasi administrasi dan catatan QA
 
-- Keempat service melakukan pembatasan akses tambahan saat `GET` dan validasi domain pada mutasi. Namun, **pengecekan benturan penugasan dilakukan sebagai query sebelum penyimpanan**; sifat atomik terhadap dua request bersamaan atau keberadaan constraint anti-overlap tingkat database **belum bisa dipastikan** dari source yang ditinjau. Bila nantinya diperlukan hardening konkurensi, verifikasi schema/constraint dan pengujian E2E paralel.
+- Keempat service melakukan pembatasan akses tambahan saat `GET` dan validasi domain pada mutasi. Pada P0 ADMIN, pemeriksaan benturan dan penyimpanan penugasan disatukan dalam transaksi READ COMMITTED dengan row lock akun petugas. Perubahan penugasan juga mengunci record penugasan; perpindahan petugas mengunci akun lama/baru dalam urutan stabil. Tidak ada perubahan schema atau aturan tanggal. Lihat Bagian 22 dan regresi paralel `admin-management-p0.e2e-spec.ts`.
 - Kontrak 20 route, 8 DTO, 4 service, soft delete, dan aturan bisnis sudah diperiksa; metadata model Prisma, format envelope error global, dan kebijakan pagination masih berada di luar lingkup berkas ini.
 - Dokumentasi ini **tidak mengubah source code** dan tidak merupakan bukti bahwa seluruh kombinasi administrasi telah diuji ulang.
 
@@ -1653,3 +1653,42 @@ Transaksi Serializable memakai row lock dan FK PostgreSQL. Penghapusan jam/kapas
 Audit antrean di database dipertahankan. Karena belum tersedia tabel audit master-data generik, keberhasilan hapus dicatat melalui logger `AdminDeleteAudit` berisi aksi, resource, id, aktorId dan timestamp, tanpa nama pasien/token/hash. Pengelola deployment perlu mempertahankan log tersebut pada penyimpanan log server. Tidak ada perubahan schema/migration.
 
 Flutter menampilkan dialog **Hapus Data?**, tombol **Batal** dan **Hapus Permanen**; poliklinik/dokter memerlukan pengetikan kode atau nama yang tepat. Konfirmasi tidak menggantikan pemeriksaan RBAC/referensi backend. Sesudah sukses, daftar dimuat ulang dengan pencarian/filter yang masih aktif. Tombol Nonaktifkan tetap tersedia terpisah.
+
+
+## 22. ADMIN Management P0 — akun dan penugasan (24 Oktober 2026)
+
+Bagian ini memperbarui catatan historis tentang provisioning PETUGAS dan konkurensi penugasan pada Bagian 13–18. Akun ADMIN awal tetap disediakan pengelola server. Register publik tetap hanya membuat USER; tidak menerima input role. Tidak ada migration/schema baru.
+
+### 22.1 Akun PETUGAS — khusus JWT ADMIN
+
+| Method | Path (prefix `/api/v1`) | Request / hasil |
+|---|---|---|
+| GET | `/akun-petugas` | Array seluruh akun PETUGAS aktif/nonaktif, diurutkan nama/email; pencarian nama/email dilakukan Flutter pada array ini |
+| POST | `/akun-petugas` | `{nama,email,kataSandi}` → 201, metadata akun; role PETUGAS dan aktif ditetapkan server |
+| PATCH | `/akun-petugas/:id` | `{aktif:boolean}` → 200; hanya status akun PETUGAS yang dapat diubah |
+
+Metadata: `{id,nama,email,peran,aktif}`. Tidak ada hash, kata sandi atau token dalam respons/log audit. Nama 3–150 karakter, email valid maksimal 150, kata sandi awal 8–72 karakter memakai PasswordService existing. Email dinormalisasi lowercase; duplikat 409. Body tambahan (termasuk peran) ditolak 400. Tanpa JWT 401; USER/PETUGAS/DOKTER 403; akun tidak ditemukan atau ID milik role lain pada PATCH 404. Tidak ada endpoint hapus akun atau promosi role.
+
+Penonaktifan akun dan pencabutan seluruh sesi yang belum dicabut dilakukan dalam satu transaksi, tanpa menghapus pengguna atau penugasan. JWT/refresh lama ditolak; reaktivasi tidak menghidupkan sesi lama sehingga pengguna harus login ulang. Penugasan aktif yang masih berada dalam periode berlaku dapat dipakai kembali setelah akun diaktifkan. Mengakhiri penugasan tidak menonaktifkan akun. Log administratif mencatat aksi, ID, aktor ADMIN dan waktu; tidak mencatat kredensial.
+
+### 22.2 Penugasan loket
+
+Kontrak POST/PATCH/DELETE `/penugasan-petugas` tetap. Petugas dipilih dari `/akun-petugas` berdasarkan nama/email; hanya akun aktif ditawarkan untuk penugasan baru. Ruang/loket baru harus aktif dan berada pada poliklinik aktif. UUID tetap digunakan dalam body API sebagai identifier internal; Flutter tidak lagi meminta input atau clipboard UUID.
+
+Create/update memvalidasi peran dan akun aktif, mengunci akun petugas lalu memeriksa benturan dan menyimpan dalam transaksi READ COMMITTED. Update juga mengunci record penugasan. Akun lama/baru dikunci dalam urutan stabil ketika dipindahkan. Row lock akun yang sama dipakai oleh mutasi status akun. Dua request beririsan tidak dapat sama-sama berhasil; konflik tanggal 409. Akun nonaktif 400. Penonaktifan penugasan via DELETE tetap tersedia walaupun akun sudah nonaktif.
+
+Tanggal awal/akhir tetap inklusif, `tanggalSelesai:null` tanpa batas akhir. Tidak ada shift jam atau batas satu petugas per loket. Respons relasi petugas menambahkan `aktif`. Flutter membedakan status NONAKTIF, AKUN NONAKTIF, AKAN BERLAKU, BERLAKU, dan BERAKHIR dari flag/periode pada zona pelayanan. Status ini tidak mengubah data atau keputusan otorisasi server.
+
+### 22.3 Identitas dan akun DOKTER
+
+Provisioning tetap `POST /dokter/:id/akun` dengan salah satu body existing (email/kataSandi atau penggunaId). Tambahan baca khusus ADMIN: `GET /dokter/akun-tersedia` mengembalikan akun DOKTER aktif yang belum tertaut, berbentuk array `{id,nama,email,aktif}`, untuk pemilihan nama/email. Route ini ditempatkan sebelum `GET /dokter/:id`.
+
+`GET /dokter` dan `GET /dokter/:id` menambahkan `pengguna:{nama,email,aktif}|null` **hanya untuk ADMIN**. Non-ADMIN tidak memperoleh metadata akun ini maupun penggunaId. Metadata tidak menyertakan password/hash/token.
+
+Flutter membedakan profil dokter dan akun login serta memberi alur Buat profil → Hubungkan poliklinik → Buat akun login. Penyimpanan profil, hubungan poli, dan provisioning tetap operasi terpisah; kegagalan langkah lanjutan tidak membuat ulang profil/akun. Profil nonaktif memblokir akses portal melalui validasi JWT existing. Pelepasan/penggantian akun dan perubahan status akun DOKTER secara terpisah tetap di luar P0.
+
+### 22.4 Regresi dan QA
+
+`admin-management-p0.e2e-spec.ts` memeriksa RBAC semua role, metadata aman, fixed role, email duplikat, pencabutan sesi, reaktivasi, akun nonaktif, batas tanggal inklusif, create/update paralel, serta provisioning dan privasi DOKTER. Seluruh E2E yang menulis data hanya dijalankan pada `127.0.0.1:5433/capstone_antrean_test` setelah pemeriksaan koneksi. Runner membandingkan integritas record existing dan hanya membersihkan fixture milik tes.
+
+Smoke browser melalui `node apps/client/tool/run-live.cjs --admin-p0` memakai server API test port 3001 dan build Web dengan API_BASE_URL test. Alur ini menjalankan Flutter hasil kompilasi dan API nyata, bukan stub REST; screenshot disimpan pada `docs/frontend/images/admin-p0`.

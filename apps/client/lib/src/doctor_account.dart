@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'api.dart';
 import 'config.dart';
 import 'mobile_ui.dart';
+import 'admin_ui.dart';
 
 /// ADMIN-only provisioning; never promotes a patient or reassigns a linked profile.
 class DoctorAccountDialog extends StatefulWidget {
@@ -19,16 +20,16 @@ class DoctorAccountDialog extends StatefulWidget {
 
 class _DoctorAccountDialogState extends State<DoctorAccountDialog> {
   final form = GlobalKey<FormState>();
-  final email = TextEditingController(),
-      password = TextEditingController(),
-      user = TextEditingController();
+  final email = TextEditingController(), password = TextEditingController();
+  String? user;
+  List<Json> accounts = [];
+  bool loadingAccounts = false;
   bool link = false, busy = false;
   String? error;
   @override
   void dispose() {
     email.dispose();
     password.dispose();
-    user.dispose();
     super.dispose();
   }
 
@@ -43,7 +44,7 @@ class _DoctorAccountDialogState extends State<DoctorAccountDialog> {
         'POST',
         '/dokter/${widget.doctor['id']}/akun',
         body: link
-            ? {'penggunaId': user.text.trim()}
+            ? {'penggunaId': user}
             : {'email': email.text.trim(), 'kataSandi': password.text},
       );
       if (mounted) Navigator.pop(context, true);
@@ -54,95 +55,146 @@ class _DoctorAccountDialogState extends State<DoctorAccountDialog> {
     }
   }
 
+  Future<void> loadAccounts() async {
+    setState(() {
+      loadingAccounts = true;
+      error = null;
+    });
+    try {
+      final result = rows(
+        await widget.api.request('GET', '/dokter/akun-tersedia'),
+      );
+      if (mounted) setState(() => accounts = result);
+    } catch (e) {
+      if (mounted) setState(() => error = '$e');
+    } finally {
+      if (mounted) setState(() => loadingAccounts = false);
+    }
+  }
+
   @override
-  Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Akun portal dokter'),
-    content: SizedBox(
-      width: 440,
-      child: SingleChildScrollView(
-        child: Form(
-          key: form,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text('${widget.doctor['nama']}'),
-              if (widget.doctor['penggunaId'] != null)
-                const MobileNotice(
-                  'Profil dokter sudah memiliki akun. Penautan ulang tidak tersedia.',
-                )
-              else ...[
-                const Text(
-                  'Satu profil hanya dapat memiliki satu akun DOKTER. Registrasi pasien tidak digunakan.',
-                ),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Tautkan akun DOKTER existing'),
-                  value: link,
-                  onChanged: busy ? null : (v) => setState(() => link = v),
-                ),
-                if (link)
-                  TextFormField(
-                    controller: user,
-                    decoration: const InputDecoration(
-                      labelText: 'ID akun DOKTER',
-                    ),
-                    validator: (v) =>
-                        RegExp(
-                          r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$',
-                        ).hasMatch(v?.trim() ?? '')
-                        ? null
-                        : 'Masukkan UUID akun DOKTER.',
+  Widget build(BuildContext context) => PopScope(
+    canPop: !busy,
+    child: AlertDialog(
+      title: const Text('Akun portal dokter'),
+      content: SizedBox(
+        width: 440,
+        child: SingleChildScrollView(
+          child: Form(
+            key: form,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('${widget.doctor['nama']}'),
+                if (widget.doctor['penggunaId'] != null)
+                  MobileNotice(
+                    'Akun login: ${object(widget.doctor['pengguna'])['email'] ?? 'Tertaut'}. '
+                    'Status akun: ${object(widget.doctor['pengguna'])['aktif'] == true
+                        ? 'aktif'
+                        : object(widget.doctor['pengguna'])['aktif'] == false
+                        ? 'nonaktif'
+                        : 'belum tersedia'}. '
+                    'Status profil: ${widget.doctor['aktif'] == true ? 'aktif' : 'nonaktif'}. '
+                    'Pelepasan atau penggantian akun belum didukung. Menonaktifkan profil memblokir akses portal.',
                   )
                 else ...[
-                  TextFormField(
-                    controller: email,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(
-                      labelText: 'Email dokter',
-                    ),
-                    validator: (v) =>
-                        RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
-                            .hasMatch(v?.trim() ?? '')
-                        ? null
-                        : 'Masukkan email yang valid.',
+                  const Text(
+                    'Satu profil hanya dapat memiliki satu akun DOKTER. Registrasi pasien tidak digunakan.',
                   ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: password,
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Kata sandi awal',
-                    ),
-                    validator: (v) =>
-                        v != null && v.length >= 8 && v.length <= 72
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Tautkan akun DOKTER existing'),
+                    value: link,
+                    onChanged: busy || loadingAccounts
                         ? null
-                        : 'Kata sandi 8–72 karakter.',
+                        : (v) {
+                            setState(() => link = v);
+                            if (v) loadAccounts();
+                          },
                   ),
+                  if (link)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (loadingAccounts) const LinearProgressIndicator(),
+                        AdminSearchChoice(
+                          label: 'Akun DOKTER (nama / email)',
+                          choices: accounts
+                              .map(
+                                (a) => (
+                                  '${a['id']}',
+                                  '${a['nama']} · ${a['email']}',
+                                ),
+                              )
+                              .toList(),
+                          value: user,
+                          onChanged: busy || loadingAccounts
+                              ? null
+                              : (v) => setState(() => user = v),
+                        ),
+                        if (!loadingAccounts && accounts.isEmpty)
+                          const Text(
+                            'Tidak ada akun DOKTER aktif yang belum ditautkan.',
+                          ),
+                        TextButton(
+                          onPressed: busy || loadingAccounts
+                              ? null
+                              : loadAccounts,
+                          child: const Text('Muat ulang akun tersedia'),
+                        ),
+                      ],
+                    )
+                  else ...[
+                    TextFormField(
+                      controller: email,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: const InputDecoration(
+                        labelText: 'Email dokter',
+                      ),
+                      validator: (v) =>
+                          RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
+                              .hasMatch(v?.trim() ?? '')
+                          ? null
+                          : 'Masukkan email yang valid.',
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: password,
+                      obscureText: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Kata sandi awal',
+                      ),
+                      validator: (v) =>
+                          v != null && v.length >= 8 && v.length <= 72
+                          ? null
+                          : 'Kata sandi 8–72 karakter.',
+                    ),
+                  ],
                 ],
+                if (error != null) MobileNotice(error!, error: true),
               ],
-              if (error != null) MobileNotice(error!, error: true),
-            ],
+            ),
           ),
         ),
       ),
+      actions: [
+        TextButton(
+          onPressed: busy ? null : () => Navigator.pop(context),
+          child: const Text('Tutup'),
+        ),
+        if (widget.doctor['penggunaId'] == null)
+          FilledButton(
+            onPressed: busy || loadingAccounts ? null : submit,
+            child: Text(
+              busy
+                  ? 'Memproses…'
+                  : link
+                  ? 'Tautkan akun'
+                  : 'Buat akun DOKTER',
+            ),
+          ),
+      ],
     ),
-    actions: [
-      TextButton(
-        onPressed: busy ? null : () => Navigator.pop(context),
-        child: const Text('Tutup'),
-      ),
-      if (widget.doctor['penggunaId'] == null)
-        FilledButton(
-          onPressed: busy ? null : submit,
-          child: Text(
-            busy
-                ? 'Memproses…'
-                : link
-                ? 'Tautkan akun'
-                : 'Buat akun DOKTER',
-          ),
-        ),
-    ],
   );
 }

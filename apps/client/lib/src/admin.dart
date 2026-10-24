@@ -1,7 +1,6 @@
 import 'admin_delete.dart';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import 'admin_schema.dart';
 import 'admin_display.dart';
@@ -12,6 +11,7 @@ import 'admin_navigation.dart';
 import 'admin_ui.dart';
 import 'admin_dashboard.dart';
 import 'admin_schedules.dart';
+import 'admin_staff.dart';
 import 'api.dart';
 import 'config.dart';
 import 'widgets.dart';
@@ -27,6 +27,7 @@ class AdminPage extends StatefulWidget {
 
 class _AdminPageState extends State<AdminPage> {
   int selected = -1;
+  int staffTab = 0;
   bool collapsed = false;
   Map<String, List<Json>> catalog = {};
   List<Json> data = [];
@@ -59,6 +60,7 @@ class _AdminPageState extends State<AdminPage> {
           : selectedResource.path == '/slot-praktik'
           ? ['/jadwal-praktik', '/dokter', '/layanan', '/loket']
           : [selectedResource.path];
+      if (selected == 6) paths.add('/akun-petugas');
       final values = await Future.wait(
         paths.map((path) async => rows(await widget.api.request('GET', path))),
       );
@@ -115,6 +117,8 @@ class _AdminPageState extends State<AdminPage> {
             ? null
             : bulk
             ? 'Proses jadwal selesai. Daftar diperbarui; periksa hasil per hari.'
+            : resource.path == '/dokter' && row == null
+            ? 'Profil dokter disimpan. Lanjutkan Hubungkan poliklinik, lalu Buat akun login pada baris dokter.'
             : 'Data disimpan.',
       );
       await load(reloadCatalog: true);
@@ -275,16 +279,34 @@ class _AdminPageState extends State<AdminPage> {
                   ? AdminNotice(error!, error: true)
                   : const SizedBox.shrink(),
               message != null ? AdminNotice(message!) : const SizedBox.shrink(),
-              if (resource.path == '/penugasan-petugas')
+              if (selected == 1)
                 const AdminNotice(
-                  'Akun ADMIN/PETUGAS disediakan pengelola server. Gunakan ID akun dari profil petugas untuk memberikan penugasan.',
+                  'Alur dokter: 1. Buat profil → 2. Hubungkan poliklinik → 3. Buat akun login. Status profil dan akun login dikelola terpisah; profil nonaktif tidak dapat mengakses portal.',
                 ),
+              if (selected == 6) ...[
+                const SizedBox(height: 8),
+                TabBar(
+                  controller: null,
+                  tabs: const [
+                    Tab(text: 'Akun Petugas'),
+                    Tab(text: 'Penugasan Loket'),
+                  ],
+                  onTap: (v) => setState(() => staffTab = v),
+                ),
+              ],
               const SizedBox(height: 12),
               SizedBox(
                 height: loading ? 4 : 0,
                 child: loading ? const LinearProgressIndicator() : null,
               ),
-              if (resource.path == '/jadwal-layanan')
+              if (selected == 6 && staffTab == 0)
+                AdminStaffAccounts(
+                  api: widget.api,
+                  accounts: catalog['/akun-petugas'] ?? [],
+                  busy: loading,
+                  onChanged: () => load(reloadCatalog: true),
+                )
+              else if (resource.path == '/jadwal-layanan')
                 GroupedClinicSchedules(
                   toolbarActions: toolbarActions,
                   clinics: catalog['/layanan'] ?? [],
@@ -312,10 +334,16 @@ class _AdminPageState extends State<AdminPage> {
                   onDoctorAccount: (doctor) async {
                     final changed = await showDialog<bool>(
                       context: context,
+                      barrierDismissible: false,
                       builder: (_) =>
                           DoctorAccountDialog(api: widget.api, doctor: doctor),
                     );
-                    if (changed == true && mounted) {
+                    if (mounted) {
+                      if (changed == true) {
+                        setState(
+                          () => message = 'Akun login dokter berhasil ditautkan. Profil dan hubungan poliklinik dipertahankan.',
+                        );
+                      }
                       await load(reloadCatalog: true);
                     }
                   },
@@ -326,65 +354,69 @@ class _AdminPageState extends State<AdminPage> {
           );
     return Theme(
       data: AdminStyle.theme,
-      child: Material(
-        color: AdminStyle.theme.scaffoldBackgroundColor,
-        child: LayoutBuilder(
-          builder: (context, box) => box.maxWidth >= 960
-              ? Row(
-                  children: [
-                    SizedBox(
-                      width: collapsed ? 64 : 216,
-                      child: Material(
-                        color: Colors.white,
-                        child: AdminNavigation(
-                          selected: selected,
-                          onSelect: loading ? null : selectResource,
-                          collapsed: collapsed,
-                          onToggle: () =>
-                              setState(() => collapsed = !collapsed),
+      child: DefaultTabController(
+        length: 2,
+        initialIndex: staffTab,
+        child: Material(
+          color: AdminStyle.theme.scaffoldBackgroundColor,
+          child: LayoutBuilder(
+            builder: (context, box) => box.maxWidth >= 960
+                ? Row(
+                    children: [
+                      SizedBox(
+                        width: collapsed ? 64 : 216,
+                        child: Material(
+                          color: Colors.white,
+                          child: AdminNavigation(
+                            selected: selected,
+                            onSelect: loading ? null : selectResource,
+                            collapsed: collapsed,
+                            onToggle: () =>
+                                setState(() => collapsed = !collapsed),
+                          ),
                         ),
                       ),
-                    ),
-                    const VerticalDivider(width: 1),
-                    Expanded(child: content),
-                  ],
-                )
-              : Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                      child: Row(
-                        children: [
-                          Tooltip(
-                            message: 'Menu administrasi',
-                            child: OutlinedButton.icon(
-                              onPressed: loading ? null : openMenu,
-                              icon: const Icon(Icons.menu),
-                              label: Text(
-                                box.maxWidth < 375
-                                    ? 'Menu'
-                                    : 'Menu administrasi',
+                      const VerticalDivider(width: 1),
+                      Expanded(child: content),
+                    ],
+                  )
+                : Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                        child: Row(
+                          children: [
+                            Tooltip(
+                              message: 'Menu administrasi',
+                              child: OutlinedButton.icon(
+                                onPressed: loading ? null : openMenu,
+                                icon: const Icon(Icons.menu),
+                                label: Text(
+                                  box.maxWidth < 375
+                                      ? 'Menu'
+                                      : 'Menu administrasi',
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              selected == -1
-                                  ? 'Dashboard'
-                                  : selected == 7
-                                  ? 'Manajemen Display'
-                                  : resource.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                selected == -1
+                                    ? 'Dashboard'
+                                    : selected == 7
+                                    ? 'Manajemen Display'
+                                    : resource.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                    Expanded(child: content),
-                  ],
-                ),
+                      Expanded(child: content),
+                    ],
+                  ),
+          ),
         ),
       ),
     );
@@ -453,7 +485,14 @@ class _AdminEditorState extends State<_AdminEditor> {
           .firstOrNull?['layananId'];
       return choicesOf(
         (widget.catalog['/loket'] ?? [])
-            .where((v) => service == null || v['layananId'] == service)
+            .where(
+              (v) =>
+                  (service == null || v['layananId'] == service) &&
+                  (widget.resource.path != '/penugasan-petugas' ||
+                      (v['aktif'] == true &&
+                          object(v['layanan'])['aktif'] == true) ||
+                      v['id'] == widget.row?['loketId']),
+            )
             .toList(),
       );
     }
@@ -581,66 +620,35 @@ class _AdminEditorState extends State<_AdminEditor> {
   );
 
   Widget staffField(AdminField f) {
-    final known = <String, String>{
-      for (final a in widget.catalog['/penugasan-petugas'] ?? <Json>[])
-        if (a['petugasId'] is String)
-          '${a['petugasId']}': label(object(a['petugas'])),
-    };
-    final id = values[f.key] ?? '';
-    if (id.isNotEmpty) {
-      known.putIfAbsent(id, () => label(object(widget.row?['petugas'])));
-    }
+    final accounts = widget.catalog['/akun-petugas'] ?? <Json>[];
+    final eligible = accounts
+        .where((a) => a['aktif'] == true || a['id'] == widget.row?['petugasId'])
+        .toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         AdminSearchChoice(
-          label: 'Petugas dari penugasan existing',
-          choices: known.entries.map((e) => (e.key, e.value)).toList(),
-          value: id.isEmpty ? null : id,
-          required: false,
+          label: 'Petugas (nama / email)',
+          choices: eligible
+              .map(
+                (a) => (
+                  '${a['id']}',
+                  '${a['nama']} · ${a['email']}${a['aktif'] == true ? '' : ' (akun nonaktif)'}',
+                ),
+              )
+              .toList(),
+          value: (values[f.key] ?? '').isEmpty ? null : values[f.key],
           onChanged: busy
               ? null
-              : (v) => setState(() {
-                  values[f.key] = v ?? '';
-                  controllers[f.key]!.text = v ?? '';
-                }),
+              : (v) => setState(() => values[f.key] = v ?? ''),
         ),
-        const SizedBox(height: 8),
-        OutlinedButton.icon(
-          onPressed: busy
-              ? null
-              : () async {
-                  final imported =
-                      (await Clipboard.getData(Clipboard.kTextPlain))?.text
-                          ?.trim() ??
-                      '';
-                  if (!mounted) return;
-                  if (validateAdminField(f, imported, widget.api.config) !=
-                      null) {
-                    setState(
-                      () => error = 'Salin ID akun PETUGAS yang valid dari profil petugas terlebih dahulu.',
-                    );
-                    return;
-                  }
-                  setState(() {
-                    values[f.key] = imported;
-                    controllers[f.key]!.text = imported;
-                    error = null;
-                  });
-                },
-          icon: const Icon(Icons.content_paste),
-          label: const Text('Tempel ID dari profil petugas'),
-        ),
-        TextFormField(
-          controller: controllers[f.key],
-          readOnly: true,
-          decoration: const InputDecoration(
-            labelText: 'ID akun PETUGAS',
-            helperText: 'API belum menyediakan direktori akun petugas. Validasi role tetap dilakukan server.',
+        if (!accounts.any((a) => a['aktif'] == true))
+          const Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: Text(
+              'Belum ada akun PETUGAS aktif. Buat atau aktifkan akun pada tab Akun Petugas.',
+            ),
           ),
-          validator: (v) =>
-              validateAdminField(f, v?.trim() ?? '', widget.api.config),
-        ),
       ],
     );
   }

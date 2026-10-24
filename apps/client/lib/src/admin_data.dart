@@ -17,6 +17,17 @@ Json clinicOf(Json row, String path) => switch (path) {
 };
 Json doctorOf(Json row) => object(object(row['dokterLayanan'])['dokter']);
 
+String assignmentStatus(Json row, String today) {
+  if (row['aktif'] != true) return 'NONAKTIF';
+  if (object(row['petugas'])['aktif'] == false) return 'AKUN NONAKTIF';
+  if (dateOnly(row['tanggalMulai']).compareTo(today) > 0) return 'AKAN BERLAKU';
+  if (row['tanggalSelesai'] != null &&
+      dateOnly(row['tanggalSelesai']).compareTo(today) < 0) {
+    return 'BERAKHIR';
+  }
+  return 'BERLAKU';
+}
+
 /// Page a loaded REST array locally; never imply unsupported API pagination.
 class AdminPagedRows extends StatefulWidget {
   const AdminPagedRows({
@@ -222,6 +233,7 @@ class _AdminDataViewState extends State<AdminDataView> {
       clinicName(r),
       doctorOf(r)['nama'],
       object(r['petugas'])['nama'],
+      object(r['petugas'])['email'],
       object(r['loket'])['nama'],
       r['lokasi'],
       if (path == '/dokter')
@@ -308,6 +320,7 @@ class _AdminDataViewState extends State<AdminDataView> {
   Widget table(List<Json> items) => AdminTable(
     key: ValueKey('$path:$search:$status:$clinic:$doctor:$from:$until'),
     rows: items,
+    compact: path != '/dokter',
     columns: [
       if (path == '/jadwal-praktik') ...[
         AdminColumn('Tanggal', (r) => dateOnly(r['tanggal'])),
@@ -338,24 +351,122 @@ class _AdminDataViewState extends State<AdminDataView> {
               ? 'Tanpa akhir'
               : dateOnly(r['tanggalSelesai']),
         ),
+      ] else if (path == '/dokter') ...[
+        AdminColumn(
+          'Dokter',
+          label,
+          cell: (r) => SizedBox(
+            width: 220,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label(r),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                Text(
+                  '${r['spesialisasi'] ?? 'Spesialisasi belum diisi'}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  '${r['kode']}',
+                  style: const TextStyle(fontSize: 12, color: Colors.blueGrey),
+                ),
+              ],
+            ),
+          ),
+        ),
+        AdminColumn(
+          'Poliklinik',
+          (r) =>
+              rows(r['dokterLayanan'])
+                  .where((l) => l['aktif'] == true)
+                  .map((l) => label(object(l['layanan'])))
+                  .join(', '),
+          cell: (r) => SizedBox(
+            width: 180,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  rows(r['dokterLayanan'])
+                          .where((l) => l['aktif'] == true)
+                          .map((l) => label(object(l['layanan'])))
+                          .join(', ')
+                          .isEmpty
+                      ? 'Belum terhubung'
+                      : rows(r['dokterLayanan'])
+                            .where((l) => l['aktif'] == true)
+                            .map((l) => label(object(l['layanan'])))
+                            .join(', '),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                TextButton(
+                  onPressed: widget.busy ? null : () => widget.onDoctorLinks(r),
+                  child: const Text('Hubungkan poliklinik'),
+                ),
+              ],
+            ),
+          ),
+        ),
+        AdminColumn(
+          'Akun login',
+          (r) =>
+              object(r['pengguna'])['email'] ??
+              (r['penggunaId'] == null ? 'Belum dibuat' : 'Tertaut'),
+          cell: (r) => SizedBox(
+            width: 200,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  r['penggunaId'] == null
+                      ? 'Belum ada akun login'
+                      : object(r['pengguna'])['aktif'] == false
+                      ? 'Akun nonaktif'
+                      : object(r['pengguna'])['aktif'] == true
+                      ? 'Akun aktif'
+                      : 'Akun tertaut',
+                ),
+                if (object(r['pengguna'])['email'] != null)
+                  Text(
+                    '${object(r['pengguna'])['email']}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                if (r['penggunaId'] != null && r['aktif'] != true)
+                  const Text(
+                    'Akses portal diblokir profil',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                TextButton(
+                  onPressed:
+                      widget.busy ||
+                          (r['aktif'] != true && r['penggunaId'] == null) ||
+                          widget.onDoctorAccount == null
+                      ? null
+                      : () => widget.onDoctorAccount!(r),
+                  child: Text(
+                    r['penggunaId'] == null
+                        ? 'Buat akun login'
+                        : 'Lihat akun login',
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ] else ...[
         AdminColumn('Nama', label),
         AdminColumn('Kode', (r) => r['kode']),
-        if (path == '/dokter') ...[
-          AdminColumn('Spesialisasi', (r) => r['spesialisasi'] ?? '—'),
-          AdminColumn(
-            'Poliklinik',
-            (r) =>
-                rows(r['dokterLayanan'])
-                    .where((l) => l['aktif'] == true)
-                    .map((l) => label(object(l['layanan'])))
-                    .join(', '),
-          ),
-          AdminColumn(
-            'Akun DOKTER',
-            (r) => r['penggunaId'] == null ? 'Belum ditautkan' : 'Tertaut',
-          ),
-        ],
         if (path == '/layanan') ...[
           AdminColumn(
             'Mode reservasi',
@@ -388,14 +499,65 @@ class _AdminDataViewState extends State<AdminDataView> {
         if (path == '/loket') AdminColumn('Lokasi', (r) => r['lokasi'] ?? '—'),
       ],
       AdminColumn(
-        'Status',
+        path == '/dokter'
+            ? 'Status profil'
+            : path == '/penugasan-petugas'
+            ? 'Status penugasan'
+            : 'Status',
         (r) => r['aktif'] == true ? 'Aktif' : 'Nonaktif',
-        cell: (r) => stateChip(r['aktif'] == true ? 'AKTIF' : 'NONAKTIF'),
+        cell: (r) => stateChip(
+          path == '/penugasan-petugas'
+              ? assignmentStatus(r, widget.api.config.today)
+              : r['aktif'] == true
+              ? 'AKTIF'
+              : 'NONAKTIF',
+        ),
       ),
       AdminColumn(
         'Aksi',
         (_) => '',
-        cell: (r) => actions(r, showStatus: false),
+        cell: (r) => path != '/dokter'
+            ? actions(r, showStatus: false)
+            : PopupMenuButton<String>(
+                tooltip: 'Aksi profil dokter',
+                enabled: !widget.busy,
+                onSelected: (action) {
+                  switch (action) {
+                    case 'edit':
+                      widget.onEdit(r);
+                    case 'deactivate':
+                      widget.onDeactivate(r);
+                    case 'delete':
+                      widget.onDelete?.call(r);
+                  }
+                },
+                itemBuilder: (_) => [
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: Text('Ubah profil'),
+                  ),
+                  if (r['aktif'] == true)
+                    const PopupMenuItem(
+                      value: 'deactivate',
+                      child: Text('Nonaktifkan profil'),
+                    ),
+                  if (widget.onDelete != null)
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: Text(
+                        'Hapus profil',
+                        style: TextStyle(color: Color(0xffb3261e)),
+                      ),
+                    ),
+                ],
+                child: const Padding(
+                  padding: EdgeInsets.all(8),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [Text('Aksi'), Icon(Icons.expand_more, size: 18)],
+                  ),
+                ),
+              ),
       ),
     ],
   );

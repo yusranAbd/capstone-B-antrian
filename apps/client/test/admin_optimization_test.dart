@@ -132,11 +132,18 @@ void main() {
             .rowCount,
         1,
       );
-      await tester.tap(find.text('Ubah'));
-      await tester.tap(find.byTooltip('Nonaktifkan'));
-      await tester.tap(find.byTooltip('Akun dokter'));
-      await tester.ensureVisible(find.byTooltip('Hubungkan poliklinik'));
-      await tester.tap(find.byTooltip('Hubungkan poliklinik'));
+      await tester.tap(find.byTooltip('Aksi profil dokter'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Ubah profil'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Aksi profil dokter'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Nonaktifkan profil'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Buat akun login'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Hubungkan poliklinik'));
+      await tester.tap(find.text('Hubungkan poliklinik'));
       expect([edit, deactivate, account, links], [1, 1, 1, 1]);
       expect(tester.takeException(), isNull);
     },
