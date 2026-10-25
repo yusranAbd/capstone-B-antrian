@@ -7,6 +7,7 @@ import 'admin_schedules.dart';
 import 'api.dart';
 import 'config.dart';
 import 'doctor_professional.dart';
+import 'image_sizing.dart';
 
 // Hallmark · compact editor · existing ADMIN tokens · P5 H5 E4 S5 R5 V4.
 typedef DoctorPhotoPicker = Future<XFile?> Function();
@@ -182,6 +183,10 @@ class _AdminDoctorEditorState extends State<AdminDoctorEditor> {
                         ? ClipOval(
                             child: Image.memory(
                               selected!,
+                              cacheWidth: imageDecodeWidth(
+                                72,
+                                MediaQuery.devicePixelRatioOf(context),
+                              ),
                               width: 72,
                               height: 72,
                               fit: BoxFit.cover,

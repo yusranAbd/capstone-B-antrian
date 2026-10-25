@@ -15,7 +15,9 @@ abstract final class QueueBStyle {
   static const radius = 20.0;
   static const space = 16.0;
 
-  static ThemeData get theme {
+  static final ThemeData theme = _buildTheme();
+
+  static ThemeData _buildTheme() {
     final scheme = ColorScheme.fromSeed(seedColor: teal).copyWith(
       primary: darkTeal,
       onPrimary: Colors.white,

@@ -1,0 +1,673 @@
+{
+  "baselineCommit": "b634e95a0ab0eab7bd62561d318dff3f556a2ca5",
+  "sdk": {
+    "frameworkVersion": "3.47.5",
+    "channel": "stable",
+    "repositoryUrl": "https://github.com/flutter/flutter.git",
+    "frameworkRevision": "6a19cca56475dbfba1478ee68d7bd0c2ef891da1",
+    "frameworkCommitDate": "2026-09-17 14:13:22 -0400",
+    "engineRevision": "af7e796e161ae0bb1ff0758c71a7105418bd9ded",
+    "engineCommitDate": "2026-09-16 18:35:09.000Z",
+    "engineContentHash": "ab598368592da0064197e2bc15c7f5b0a2c6bb1f",
+    "engineBuildDate": "2026-09-17 04:35:21.428",
+    "dartSdkVersion": "3.13.4",
+    "devToolsVersion": "2.60.0",
+    "flutterVersion": "3.47.5"
+  },
+  "method": "Windows; identical preserved local doctor layout edits in both runs; Web release with API 127.0.0.1:3001/api/v1, Asia/Jakarta; APK default API; after release APK uses split-debug-info; 1 MiB = 1048576 bytes; file sizes, not installed size or RAM",
+  "before": {
+    "web": {
+      "bytes": 52223453,
+      "files": {
+        ".last_build_id": 32,
+        "assets/AssetManifest.bin": 582,
+        "assets/AssetManifest.bin.json": 778,
+        "assets/assets/illustrations/admin_welcome.png": 1662556,
+        "assets/assets/illustrations/doctor_avatar.png": 1510137,
+        "assets/assets/illustrations/login_hospital.png": 1585132,
+        "assets/assets/illustrations/patient_hospital.png": 1848551,
+        "assets/assets/illustrations/patient_ticket.png": 1125279,
+        "assets/FontManifest.json": 208,
+        "assets/fonts/MaterialIcons-Regular.otf": 22148,
+        "assets/NOTICES": 1361561,
+        "assets/packages/cupertino_icons/assets/CupertinoIcons.ttf": 1472,
+        "assets/shaders/ink_sparkle.frag": 8890,
+        "assets/shaders/stretch_effect.frag": 6737,
+        "canvaskit/canvaskit.js": 86987,
+        "canvaskit/canvaskit.js.symbols": 1356926,
+        "canvaskit/canvaskit.wasm": 7284602,
+        "canvaskit/chromium/canvaskit.js": 86226,
+        "canvaskit/chromium/canvaskit.js.symbols": 1235870,
+        "canvaskit/chromium/canvaskit.wasm": 5428806,
+        "canvaskit/skwasm.js": 63537,
+        "canvaskit/skwasm.js.symbols": 1540006,
+        "canvaskit/skwasm.wasm": 3593715,
+        "canvaskit/skwasm_heavy.js": 63650,
+        "canvaskit/skwasm_heavy.js.symbols": 1672152,
+        "canvaskit/skwasm_heavy.wasm": 5216217,
+        "canvaskit/webparagraph/canvaskit.js": 76114,
+        "canvaskit/webparagraph/canvaskit.js.symbols": 963641,
+        "canvaskit/webparagraph/canvaskit.wasm": 3729129,
+        "canvaskit/wimp.js": 59127,
+        "canvaskit/wimp.js.symbols": 1813030,
+        "canvaskit/wimp.wasm": 3581677,
+        "favicon.png": 917,
+        "flutter.js": 12136,
+        "flutter_bootstrap.js": 13091,
+        "flutter_service_worker.js": 815,
+        "icons/Icon-192.png": 5292,
+        "icons/Icon-512.png": 8252,
+        "icons/Icon-maskable-192.png": 5594,
+        "icons/Icon-maskable-512.png": 20998,
+        "index.html": 1609,
+        "main.dart.js": 5168231,
+        "manifest.json": 947,
+        "version.json": 96
+      }
+    },
+    "apk": {
+      "app-arm64-v8a-release.apk": {
+        "bytes": 36153422,
+        "sha256": "9bedcb74882ea59d10f6ed4fcb01c3e6927b3e2df4c920f7c621dad94880211b",
+        "unreferencedInteriorPaddingBytes": 0,
+        "nativeZipBytesByAbi": {
+          "arm64-v8a": 25711672
+        },
+        "largestEntries": [
+          {
+            "path": "lib/arm64-v8a/libflutter.so",
+            "zipBytes": 11747864,
+            "uncompressedBytes": 11747864
+          },
+          {
+            "path": "lib/arm64-v8a/libapp.so",
+            "zipBytes": 8848264,
+            "uncompressedBytes": 8848264
+          },
+          {
+            "path": "lib/arm64-v8a/libbarhopper_v3.so",
+            "zipBytes": 4946720,
+            "uncompressedBytes": 4946720
+          },
+          {
+            "path": "assets/flutter_assets/assets/illustrations/patient_hospital.png",
+            "zipBytes": 1848551,
+            "uncompressedBytes": 1848551
+          },
+          {
+            "path": "assets/flutter_assets/assets/illustrations/admin_welcome.png",
+            "zipBytes": 1662556,
+            "uncompressedBytes": 1662556
+          },
+          {
+            "path": "assets/flutter_assets/assets/illustrations/login_hospital.png",
+            "zipBytes": 1585132,
+            "uncompressedBytes": 1585132
+          },
+          {
+            "path": "assets/flutter_assets/assets/illustrations/doctor_avatar.png",
+            "zipBytes": 1510137,
+            "uncompressedBytes": 1510137
+          },
+          {
+            "path": "classes.dex",
+            "zipBytes": 1165435,
+            "uncompressedBytes": 2660880
+          }
+        ]
+      },
+      "app-armeabi-v7a-release.apk": {
+        "bytes": 32137918,
+        "sha256": "dec0c9334510b2ae003ec727fb76f248881736985cb3bb326e134fd42af5abdd",
+        "unreferencedInteriorPaddingBytes": 0,
+        "nativeZipBytesByAbi": {
+          "armeabi-v7a": 21702528
+        },
+        "largestEntries": [
+          {
+            "path": "lib/armeabi-v7a/libapp.so",
+            "zipBytes": 9732680,
+            "uncompressedBytes": 9732680
+          },
+          {
+            "path": "lib/armeabi-v7a/libflutter.so",
+            "zipBytes": 8615900,
+            "uncompressedBytes": 8615900
+          },
+          {
+            "path": "lib/armeabi-v7a/libbarhopper_v3.so",
+            "zipBytes": 3244440,
+            "uncompressedBytes": 3244440
+          },
+          {
+            "path": "assets/flutter_assets/assets/illustrations/patient_hospital.png",
+            "zipBytes": 1848551,
+            "uncompressedBytes": 1848551
+          },
+          {
+            "path": "assets/flutter_assets/assets/illustrations/admin_welcome.png",
+            "zipBytes": 1662556,
+            "uncompressedBytes": 1662556
+          },
+          {
+            "path": "assets/flutter_assets/assets/illustrations/login_hospital.png",
+            "zipBytes": 1585132,
+            "uncompressedBytes": 1585132
+          },
+          {
+            "path": "assets/flutter_assets/assets/illustrations/doctor_avatar.png",
+            "zipBytes": 1510137,
+            "uncompressedBytes": 1510137
+          },
+          {
+            "path": "classes.dex",
+            "zipBytes": 1165435,
+            "uncompressedBytes": 2660880
+          }
+        ]
+      },
+      "app-debug.apk": {
+        "bytes": 237176323,
+        "sha256": "976846179d7671c8375d2b99ed97c7596a4c055e0d1608a77296d7508487e4ed",
+        "unreferencedInteriorPaddingBytes": 47096357,
+        "nativeZipBytesByAbi": {
+          "arm64-v8a": 59150848,
+          "armeabi-v7a": 36480228,
+          "x86_64": 46146824
+        },
+        "largestEntries": [
+          {
+            "path": "lib/x86_64/libflutter.so",
+            "zipBytes": 40083280,
+            "uncompressedBytes": 40083280
+          },
+          {
+            "path": "lib/arm64-v8a/libflutter.so",
+            "zipBytes": 38828704,
+            "uncompressedBytes": 38828704
+          },
+          {
+            "path": "lib/armeabi-v7a/libflutter.so",
+            "zipBytes": 33150308,
+            "uncompressedBytes": 33150308
+          },
+          {
+            "path": "assets/flutter_assets/kernel_blob.bin",
+            "zipBytes": 25086076,
+            "uncompressedBytes": 80281520
+          },
+          {
+            "path": "lib/arm64-v8a/libVkLayer_khronos_validation.so",
+            "zipBytes": 15240080,
+            "uncompressedBytes": 15240080
+          },
+          {
+            "path": "lib/x86_64/libbarhopper_v3.so",
+            "zipBytes": 5909280,
+            "uncompressedBytes": 5909280
+          },
+          {
+            "path": "lib/arm64-v8a/libbarhopper_v3.so",
+            "zipBytes": 4946720,
+            "uncompressedBytes": 4946720
+          },
+          {
+            "path": "classes.dex",
+            "zipBytes": 4737009,
+            "uncompressedBytes": 11878700
+          }
+        ]
+      },
+      "app-release.apk": {
+        "bytes": 86158328,
+        "sha256": "d19b159b416d5323872d8a0db4833e17e6bc47647f900ba3cb157323f22edb45",
+        "unreferencedInteriorPaddingBytes": 0,
+        "nativeZipBytesByAbi": {
+          "arm64-v8a": 25711672,
+          "armeabi-v7a": 21702528,
+          "x86_64": 28176696
+        },
+        "largestEntries": [
+          {
+            "path": "lib/x86_64/libflutter.so",
+            "zipBytes": 13051424,
+            "uncompressedBytes": 13051424
+          },
+          {
+            "path": "lib/arm64-v8a/libflutter.so",
+            "zipBytes": 11747864,
+            "uncompressedBytes": 11747864
+          },
+          {
+            "path": "lib/armeabi-v7a/libapp.so",
+            "zipBytes": 9732680,
+            "uncompressedBytes": 9732680
+          },
+          {
+            "path": "lib/x86_64/libapp.so",
+            "zipBytes": 9044872,
+            "uncompressedBytes": 9044872
+          },
+          {
+            "path": "lib/arm64-v8a/libapp.so",
+            "zipBytes": 8848264,
+            "uncompressedBytes": 8848264
+          },
+          {
+            "path": "lib/armeabi-v7a/libflutter.so",
+            "zipBytes": 8615900,
+            "uncompressedBytes": 8615900
+          },
+          {
+            "path": "lib/x86_64/libbarhopper_v3.so",
+            "zipBytes": 5909280,
+            "uncompressedBytes": 5909280
+          },
+          {
+            "path": "lib/arm64-v8a/libbarhopper_v3.so",
+            "zipBytes": 4946720,
+            "uncompressedBytes": 4946720
+          }
+        ]
+      },
+      "app-x86_64-release.apk": {
+        "bytes": 38627404,
+        "sha256": "47be791e3e806f0dca1e44d94b85f1c4f4a8fe93a6af93373963253b62fbcca4",
+        "unreferencedInteriorPaddingBytes": 0,
+        "nativeZipBytesByAbi": {
+          "x86_64": 28176696
+        },
+        "largestEntries": [
+          {
+            "path": "lib/x86_64/libflutter.so",
+            "zipBytes": 13051424,
+            "uncompressedBytes": 13051424
+          },
+          {
+            "path": "lib/x86_64/libapp.so",
+            "zipBytes": 9044872,
+            "uncompressedBytes": 9044872
+          },
+          {
+            "path": "lib/x86_64/libbarhopper_v3.so",
+            "zipBytes": 5909280,
+            "uncompressedBytes": 5909280
+          },
+          {
+            "path": "assets/flutter_assets/assets/illustrations/patient_hospital.png",
+            "zipBytes": 1848551,
+            "uncompressedBytes": 1848551
+          },
+          {
+            "path": "assets/flutter_assets/assets/illustrations/admin_welcome.png",
+            "zipBytes": 1662556,
+            "uncompressedBytes": 1662556
+          },
+          {
+            "path": "assets/flutter_assets/assets/illustrations/login_hospital.png",
+            "zipBytes": 1585132,
+            "uncompressedBytes": 1585132
+          },
+          {
+            "path": "assets/flutter_assets/assets/illustrations/doctor_avatar.png",
+            "zipBytes": 1510137,
+            "uncompressedBytes": 1510137
+          },
+          {
+            "path": "classes.dex",
+            "zipBytes": 1165435,
+            "uncompressedBytes": 2660880
+          }
+        ]
+      }
+    }
+  },
+  "after": {
+    "web": {
+      "bytes": 47689351,
+      "files": {
+        ".last_build_id": 32,
+        "assets/AssetManifest.bin": 398,
+        "assets/AssetManifest.bin.json": 534,
+        "assets/assets/illustrations/doctor_avatar.png": 1510137,
+        "assets/assets/illustrations/login_hospital.webp": 1000384,
+        "assets/assets/illustrations/patient_ticket.webp": 686190,
+        "assets/FontManifest.json": 208,
+        "assets/fonts/MaterialIcons-Regular.otf": 22148,
+        "assets/NOTICES": 1361561,
+        "assets/packages/cupertino_icons/assets/CupertinoIcons.ttf": 1472,
+        "assets/shaders/ink_sparkle.frag": 8890,
+        "assets/shaders/stretch_effect.frag": 6737,
+        "canvaskit/canvaskit.js": 86987,
+        "canvaskit/canvaskit.js.symbols": 1356926,
+        "canvaskit/canvaskit.wasm": 7284602,
+        "canvaskit/chromium/canvaskit.js": 86226,
+        "canvaskit/chromium/canvaskit.js.symbols": 1235870,
+        "canvaskit/chromium/canvaskit.wasm": 5428806,
+        "canvaskit/skwasm.js": 63537,
+        "canvaskit/skwasm.js.symbols": 1540006,
+        "canvaskit/skwasm.wasm": 3593715,
+        "canvaskit/skwasm_heavy.js": 63650,
+        "canvaskit/skwasm_heavy.js.symbols": 1672152,
+        "canvaskit/skwasm_heavy.wasm": 5216217,
+        "canvaskit/webparagraph/canvaskit.js": 76114,
+        "canvaskit/webparagraph/canvaskit.js.symbols": 963641,
+        "canvaskit/webparagraph/canvaskit.wasm": 3729129,
+        "canvaskit/wimp.js": 59127,
+        "canvaskit/wimp.js.symbols": 1813030,
+        "canvaskit/wimp.wasm": 3581677,
+        "favicon.png": 917,
+        "flutter.js": 12136,
+        "flutter_bootstrap.js": 13091,
+        "flutter_service_worker.js": 815,
+        "icons/Icon-192.png": 5292,
+        "icons/Icon-512.png": 8252,
+        "icons/Icon-maskable-192.png": 5594,
+        "icons/Icon-maskable-512.png": 20998,
+        "index.html": 1609,
+        "main.dart.js": 5169501,
+        "manifest.json": 947,
+        "version.json": 96
+      }
+    },
+    "apk": {
+      "app-arm64-v8a-release.apk": {
+        "bytes": 30307341,
+        "sha256": "40d32e8cd4a6dda5ba24ac48ea60344fa55fc3f92b1f9d39634f6ddd08f9ba51",
+        "unreferencedInteriorPaddingBytes": 0,
+        "nativeZipBytesByAbi": {
+          "arm64-v8a": 24400952
+        },
+        "largestEntries": [
+          {
+            "path": "lib/arm64-v8a/libflutter.so",
+            "zipBytes": 11747864,
+            "uncompressedBytes": 11747864
+          },
+          {
+            "path": "lib/arm64-v8a/libapp.so",
+            "zipBytes": 7537544,
+            "uncompressedBytes": 7537544
+          },
+          {
+            "path": "lib/arm64-v8a/libbarhopper_v3.so",
+            "zipBytes": 4946720,
+            "uncompressedBytes": 4946720
+          },
+          {
+            "path": "assets/flutter_assets/assets/illustrations/doctor_avatar.png",
+            "zipBytes": 1510137,
+            "uncompressedBytes": 1510137
+          },
+          {
+            "path": "classes.dex",
+            "zipBytes": 1165435,
+            "uncompressedBytes": 2660880
+          },
+          {
+            "path": "assets/flutter_assets/assets/illustrations/login_hospital.webp",
+            "zipBytes": 1000384,
+            "uncompressedBytes": 1000384
+          },
+          {
+            "path": "assets/flutter_assets/assets/illustrations/patient_ticket.webp",
+            "zipBytes": 686190,
+            "uncompressedBytes": 686190
+          },
+          {
+            "path": "assets/mlkit_barcode_models/barcode_ssd_mobilenet_v1_dmp25_quant.tflite",
+            "zipBytes": 390456,
+            "uncompressedBytes": 390456
+          }
+        ]
+      },
+      "app-armeabi-v7a-release.apk": {
+        "bytes": 26078845,
+        "sha256": "e0d5961b3b17945e0988fa63777b0e29111fcca2ec62baf2d91854541bb0d6e1",
+        "unreferencedInteriorPaddingBytes": 0,
+        "nativeZipBytesByAbi": {
+          "armeabi-v7a": 20178816
+        },
+        "largestEntries": [
+          {
+            "path": "lib/armeabi-v7a/libflutter.so",
+            "zipBytes": 8615900,
+            "uncompressedBytes": 8615900
+          },
+          {
+            "path": "lib/armeabi-v7a/libapp.so",
+            "zipBytes": 8208968,
+            "uncompressedBytes": 8208968
+          },
+          {
+            "path": "lib/armeabi-v7a/libbarhopper_v3.so",
+            "zipBytes": 3244440,
+            "uncompressedBytes": 3244440
+          },
+          {
+            "path": "assets/flutter_assets/assets/illustrations/doctor_avatar.png",
+            "zipBytes": 1510137,
+            "uncompressedBytes": 1510137
+          },
+          {
+            "path": "classes.dex",
+            "zipBytes": 1165435,
+            "uncompressedBytes": 2660880
+          },
+          {
+            "path": "assets/flutter_assets/assets/illustrations/login_hospital.webp",
+            "zipBytes": 1000384,
+            "uncompressedBytes": 1000384
+          },
+          {
+            "path": "assets/flutter_assets/assets/illustrations/patient_ticket.webp",
+            "zipBytes": 686190,
+            "uncompressedBytes": 686190
+          },
+          {
+            "path": "assets/mlkit_barcode_models/barcode_ssd_mobilenet_v1_dmp25_quant.tflite",
+            "zipBytes": 390456,
+            "uncompressedBytes": 390456
+          }
+        ]
+      },
+      "app-debug.apk": {
+        "bytes": 185567998,
+        "sha256": "47ab4dcde0252aedd14104ea146fd3410c61c3803d0fe472c9d68d5ed0470160",
+        "unreferencedInteriorPaddingBytes": 0,
+        "nativeZipBytesByAbi": {
+          "arm64-v8a": 59150848,
+          "armeabi-v7a": 36480228,
+          "x86_64": 46146824
+        },
+        "largestEntries": [
+          {
+            "path": "lib/x86_64/libflutter.so",
+            "zipBytes": 40083280,
+            "uncompressedBytes": 40083280
+          },
+          {
+            "path": "lib/arm64-v8a/libflutter.so",
+            "zipBytes": 38828704,
+            "uncompressedBytes": 38828704
+          },
+          {
+            "path": "lib/armeabi-v7a/libflutter.so",
+            "zipBytes": 33150308,
+            "uncompressedBytes": 33150308
+          },
+          {
+            "path": "assets/flutter_assets/kernel_blob.bin",
+            "zipBytes": 25092252,
+            "uncompressedBytes": 80285064
+          },
+          {
+            "path": "lib/arm64-v8a/libVkLayer_khronos_validation.so",
+            "zipBytes": 15240080,
+            "uncompressedBytes": 15240080
+          },
+          {
+            "path": "lib/x86_64/libbarhopper_v3.so",
+            "zipBytes": 5909280,
+            "uncompressedBytes": 5909280
+          },
+          {
+            "path": "lib/arm64-v8a/libbarhopper_v3.so",
+            "zipBytes": 4946720,
+            "uncompressedBytes": 4946720
+          },
+          {
+            "path": "classes.dex",
+            "zipBytes": 4737009,
+            "uncompressedBytes": 11878700
+          }
+        ]
+      },
+      "app-release.apk": {
+        "bytes": 77477815,
+        "sha256": "1e9d7cf8f495caaa54cb45935afc24ca080c115c17d03c8e63f4aeb58f55f6d8",
+        "unreferencedInteriorPaddingBytes": 0,
+        "nativeZipBytesByAbi": {
+          "arm64-v8a": 24400952,
+          "armeabi-v7a": 20178816,
+          "x86_64": 26865976
+        },
+        "largestEntries": [
+          {
+            "path": "lib/x86_64/libflutter.so",
+            "zipBytes": 13051424,
+            "uncompressedBytes": 13051424
+          },
+          {
+            "path": "lib/arm64-v8a/libflutter.so",
+            "zipBytes": 11747864,
+            "uncompressedBytes": 11747864
+          },
+          {
+            "path": "lib/armeabi-v7a/libflutter.so",
+            "zipBytes": 8615900,
+            "uncompressedBytes": 8615900
+          },
+          {
+            "path": "lib/armeabi-v7a/libapp.so",
+            "zipBytes": 8208968,
+            "uncompressedBytes": 8208968
+          },
+          {
+            "path": "lib/x86_64/libapp.so",
+            "zipBytes": 7734152,
+            "uncompressedBytes": 7734152
+          },
+          {
+            "path": "lib/arm64-v8a/libapp.so",
+            "zipBytes": 7537544,
+            "uncompressedBytes": 7537544
+          },
+          {
+            "path": "lib/x86_64/libbarhopper_v3.so",
+            "zipBytes": 5909280,
+            "uncompressedBytes": 5909280
+          },
+          {
+            "path": "lib/arm64-v8a/libbarhopper_v3.so",
+            "zipBytes": 4946720,
+            "uncompressedBytes": 4946720
+          }
+        ]
+      },
+      "app-x86_64-release.apk": {
+        "bytes": 32781323,
+        "sha256": "b91d1e349cc3b060594ebbc131f307bb61395969061ccc1de61246bf1628cce7",
+        "unreferencedInteriorPaddingBytes": 0,
+        "nativeZipBytesByAbi": {
+          "x86_64": 26865976
+        },
+        "largestEntries": [
+          {
+            "path": "lib/x86_64/libflutter.so",
+            "zipBytes": 13051424,
+            "uncompressedBytes": 13051424
+          },
+          {
+            "path": "lib/x86_64/libapp.so",
+            "zipBytes": 7734152,
+            "uncompressedBytes": 7734152
+          },
+          {
+            "path": "lib/x86_64/libbarhopper_v3.so",
+            "zipBytes": 5909280,
+            "uncompressedBytes": 5909280
+          },
+          {
+            "path": "assets/flutter_assets/assets/illustrations/doctor_avatar.png",
+            "zipBytes": 1510137,
+            "uncompressedBytes": 1510137
+          },
+          {
+            "path": "classes.dex",
+            "zipBytes": 1165435,
+            "uncompressedBytes": 2660880
+          },
+          {
+            "path": "assets/flutter_assets/assets/illustrations/login_hospital.webp",
+            "zipBytes": 1000384,
+            "uncompressedBytes": 1000384
+          },
+          {
+            "path": "assets/flutter_assets/assets/illustrations/patient_ticket.webp",
+            "zipBytes": 686190,
+            "uncompressedBytes": 686190
+          },
+          {
+            "path": "assets/mlkit_barcode_models/barcode_ssd_mobilenet_v1_dmp25_quant.tflite",
+            "zipBytes": 390456,
+            "uncompressedBytes": 390456
+          }
+        ]
+      }
+    }
+  },
+  "imageConversion": [
+    {
+      "name": "login_hospital",
+      "dimensions": [
+        1122,
+        1402
+      ],
+      "pngBytes": 1585132,
+      "webpBytes": 1000384,
+      "identicalRgbaPixels": true
+    },
+    {
+      "name": "patient_ticket",
+      "dimensions": [
+        1354,
+        1161
+      ],
+      "pngBytes": 1125279,
+      "webpBytes": 686190,
+      "identicalRgbaPixels": true
+    }
+  ],
+  "bundledIllustrationBytes": {
+    "before": 7731655,
+    "after": 3196711
+  },
+  "nativeCodecBenchmarkDecodedRgbaBytes": {
+    "before": 6290064,
+    "after": 65536,
+    "scope": "1254-square test illustration decoded at 128-square; not browser or total process RAM"
+  },
+  "webMemory": {
+    "idle": null,
+    "after20NavigationCycles": null,
+    "growthAt5And10Minutes": null,
+    "jsHeap": null,
+    "reason": "Chrome computer-use stopped because current URL could not be verified safely; no memory reduction claim"
+  },
+  "tests": {
+    "passed": 329,
+    "skipped": 1,
+    "skipReason": "live fixture integration requires tool/run-live.cjs"
+  }
+}

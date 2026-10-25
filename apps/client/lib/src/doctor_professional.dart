@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'config.dart';
 import 'mobile_ui.dart';
 import 'api.dart';
+import 'image_sizing.dart';
 
 // Hallmark · scoped profile components · QueueB tokens · P5 H5 E4 S5 R5 V4.
 String? doctorPhotoUrl(AppConfig config, Object? reference) {
@@ -48,6 +49,10 @@ class ProfessionalDoctorAvatar extends StatelessWidget {
               ? fallback()
               : Image.network(
                   url,
+                  cacheWidth: imageDecodeWidth(
+                    radius * 2,
+                    MediaQuery.devicePixelRatioOf(context),
+                  ),
                   fit: BoxFit.cover,
                   excludeFromSemantics: true,
                   loadingBuilder: (context, child, loading) =>

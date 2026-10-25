@@ -51,6 +51,40 @@ void main() {
         ..accessToken = 'initial'
         ..user = {'id': 'owner', 'peran': 'USER'};
   Json event(String id) => {'versiSkema': 1, 'eventId': id, 'jenis': 'TIKET'};
+  for (final role in ['USER', 'DOKTER']) {
+    testWidgets(
+      'repeated $role portal disposal releases sockets, timers and API listeners',
+      (tester) async {
+        final a = api()..user = {'id': 'owner', 'peran': role};
+        final sockets = <FakePatientSocket>[];
+        for (var i = 0; i < 40; i++) {
+          final feed = PatientUpdates(
+            api: a,
+            role: role,
+            namespace: role == 'DOKTER' ? 'doctor' : 'patient',
+            socketFactory: (_, _) {
+              final socket = FakePatientSocket();
+              sockets.add(socket);
+              return socket;
+            },
+          );
+          feed.dispose();
+        }
+        a.accessToken = 'rotated-after-disposal';
+        a.notifyListeners();
+        await tester.pump(const Duration(minutes: 3));
+        expect(sockets, hasLength(40));
+        expect(
+          sockets.every(
+            (s) => s.disposed && s.handlers.isEmpty && s.connects == 1,
+          ),
+          isTrue,
+        );
+        a.dispose();
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
   test(
     'reads are serialized with exactly one trailing read for a burst',
     () async {
