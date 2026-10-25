@@ -46,6 +46,81 @@ IconData clinicIcon(String name) {
   return Icons.medical_services_outlined;
 }
 
+/// Compact patient-only navigation; no changes to shared role themes.
+class PatientBottomNavigation extends StatelessWidget {
+  const PatientBottomNavigation({
+    super.key,
+    required this.selectedIndex,
+    this.onSelected,
+  });
+  final int selectedIndex;
+  final ValueChanged<int>? onSelected;
+
+  @override
+  Widget build(BuildContext context) => Align(
+    heightFactor: 1,
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 520),
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          border: Border(top: BorderSide(color: QueueBStyle.border)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: NavigationBarTheme(
+            data: NavigationBarTheme.of(context).copyWith(
+              iconTheme: WidgetStateProperty.resolveWith(
+                (states) => IconThemeData(
+                  size: 22,
+                  color: states.contains(WidgetState.selected)
+                      ? QueueBStyle.darkTeal
+                      : QueueBStyle.muted,
+                ),
+              ),
+              labelTextStyle: WidgetStateProperty.resolveWith(
+                (states) => TextStyle(
+                  fontSize: 11,
+                  fontWeight: states.contains(WidgetState.selected)
+                      ? FontWeight.w700
+                      : FontWeight.w500,
+                  color: states.contains(WidgetState.selected)
+                      ? QueueBStyle.darkTeal
+                      : QueueBStyle.muted,
+                ),
+              ),
+            ),
+            child: NavigationBar(
+              height: 60,
+              selectedIndex: selectedIndex,
+              onDestinationSelected: onSelected,
+              destinations: const [
+                NavigationDestination(
+                  icon: Icon(Icons.home_outlined),
+                  selectedIcon: Icon(Icons.home),
+                  label: 'Beranda',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.add_circle_outline),
+                  label: 'Pendaftaran',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.confirmation_number_outlined),
+                  label: 'Tiket Saya',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.calendar_month_outlined),
+                  label: 'Janji Temu',
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
 class PatientHeading extends StatelessWidget {
   const PatientHeading({
     super.key,

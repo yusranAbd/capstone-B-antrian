@@ -102,11 +102,10 @@ class _RootState extends State<_Root> {
         );
       }
       final role = api.user!['peran'];
-      AppBar header({
-        bool patientHome = false,
-        VoidCallback? onActivity,
-        Widget? staffContext,
-      }) => AppBar(
+      void openProfile() => Navigator.of(context).push<void>(
+        MaterialPageRoute(builder: (_) => UserProfilePage(api: api)),
+      );
+      AppBar header({VoidCallback? onActivity, Widget? staffContext}) => AppBar(
         toolbarHeight: role == 'ADMIN'
             ? 58
             : role == 'DOKTER'
@@ -114,8 +113,12 @@ class _RootState extends State<_Root> {
             : role == 'PETUGAS'
             ? 60
             : null,
-        title: patientHome
-            ? const PatientHomeBrand()
+        title: role == 'USER'
+            ? PatientHomeIdentity(
+                name: '${api.user?['nama'] ?? 'Pasien'}',
+                avatar: AccountAvatar(api: api, radius: 20),
+                onProfile: openProfile,
+              )
             : staffContext != null && MediaQuery.sizeOf(context).width >= 700
             ? Row(
                 children: [
@@ -125,7 +128,7 @@ class _RootState extends State<_Root> {
               )
             : const QueueBBrand(compact: true),
         actions: [
-          if (patientHome)
+          if (role == 'USER')
             IconButton(
               tooltip: 'Aktivitas tiket',
               onPressed: onActivity,
@@ -135,24 +138,26 @@ class _RootState extends State<_Root> {
           if (['DOKTER', 'ADMIN', 'PETUGAS'].contains(role) &&
               MediaQuery.sizeOf(context).width >= 700)
             ProfileHeaderIdentity(api: api),
-          IconButton(
-            tooltip: 'Profil akun',
-            icon: ExcludeSemantics(child: AccountAvatar(api: api, radius: 16)),
-            onPressed: () => Navigator.of(context).push<void>(
-              MaterialPageRoute(builder: (_) => UserProfilePage(api: api)),
+          if (role != 'USER')
+            IconButton(
+              tooltip: 'Profil akun',
+              icon: ExcludeSemantics(
+                child: AccountAvatar(api: api, radius: 16),
+              ),
+              onPressed: openProfile,
             ),
-          ),
-          IconButton(
-            tooltip: 'Keluar akun',
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              try {
-                await api.logout();
-              } catch (_) {
-                /* Session gate reports cleanup failures and server confirmation. */
-              }
-            },
-          ),
+          if (role != 'USER')
+            IconButton(
+              tooltip: 'Keluar akun',
+              icon: const Icon(Icons.logout),
+              onPressed: () async {
+                try {
+                  await api.logout();
+                } catch (_) {
+                  /* Session gate reports cleanup failures and server confirmation. */
+                }
+              },
+            ),
         ],
       );
       return Theme(
@@ -176,8 +181,7 @@ class _RootState extends State<_Root> {
                 'DOKTER' => DoctorPage(api: api),
                 _ => PatientPage(
                   api: api,
-                  headerBuilder: (home, activity) =>
-                      header(patientHome: home, onActivity: activity),
+                  headerBuilder: (_, activity) => header(onActivity: activity),
                   onDisplay: () => Navigator.of(context).pushNamed('/display'),
                 ),
               },

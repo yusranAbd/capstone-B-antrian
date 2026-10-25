@@ -72,23 +72,8 @@ class LoginLayout extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             const QueueBBrand(compact: true),
-                            const SizedBox(height: 24),
-                            Text(
-                              'Akses mudah untuk pelayanan lebih baik',
-                              style: Theme.of(context).textTheme.headlineSmall
-                                  ?.copyWith(fontWeight: FontWeight.w800),
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Pendaftaran, tiket, dan antrean rumah sakit dalam satu aplikasi.',
-                              style: TextStyle(color: QueueBStyle.muted),
-                            ),
-                            const SizedBox(height: 24),
+                            const SizedBox(height: 16),
                             child,
-                            if (!mobile) ...[
-                              const SizedBox(height: 20),
-                              const _DigitalServices(),
-                            ],
                           ],
                         ),
                 ),
@@ -134,7 +119,6 @@ class _Welcome extends StatelessWidget {
     children: [
       LayoutBuilder(
         builder: (context, box) {
-          final wide = box.maxWidth >= 700;
           final copyWidth = box.maxWidth * .53;
           return Container(
             constraints: const BoxConstraints(minHeight: 550),
@@ -171,43 +155,8 @@ class _Welcome extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         const QueueBBrand(),
-                        const SizedBox(height: 32),
-                        Text(
-                          'Akses mudah untuk pelayanan lebih baik',
-                          style: TextStyle(
-                            fontSize: wide ? 38 : 30,
-                            fontWeight: FontWeight.w800,
-                            height: 1.12,
-                            letterSpacing: -.7,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Daftar, dapatkan tiket, dan ikuti antrean rumah sakit dalam satu aplikasi. Pelayanan kesehatan jadi lebih tertib, cepat, dan nyaman.',
-                          style: TextStyle(
-                            color: QueueBStyle.muted,
-                            fontSize: 15,
-                            height: 1.5,
-                          ),
-                        ),
-                        const SizedBox(height: 28),
-                        const _Benefit(
-                          icon: Icons.confirmation_number_outlined,
-                          title: 'Ambil tiket antrean',
-                          description: 'Dengan mudah dan cepat',
-                        ),
-                        const SizedBox(height: 16),
-                        const _Benefit(
-                          icon: Icons.schedule_rounded,
-                          title: 'Pantau antrean real-time',
-                          description: 'Kapan saja, di mana saja',
-                        ),
-                        const SizedBox(height: 16),
-                        const _Benefit(
-                          icon: Icons.favorite_border_rounded,
-                          title: 'Pelayanan lebih efisien',
-                          description: 'Untuk pengalaman lebih baik',
-                        ),
+                        const SizedBox(height: 24),
+                        const _DigitalServices(),
                       ],
                     ),
                   ),
@@ -217,8 +166,6 @@ class _Welcome extends StatelessWidget {
           );
         },
       ),
-      const SizedBox(height: 16),
-      const _DigitalServices(),
     ],
   );
 }

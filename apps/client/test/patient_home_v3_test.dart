@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:queueb_client/src/api.dart';
 import 'package:queueb_client/src/app.dart';
@@ -19,6 +20,14 @@ class HomeBackend extends PatientV2Backend {
   Completer<void>? homeGate;
   bool failHomeSchedule = false;
   bool expiredQr = false;
+  bool failQr = false, failTicketRead = false;
+  Completer<void>? qrGate;
+  String? ticketDay;
+  @override
+  Json get ticket => {
+    ...super.ticket,
+    if (ticketDay != null) 'tanggalPelayanan': ticketDay,
+  };
   Json get appointmentFixture => {
     'id': 'appointment-id-distinct-from-ticket',
     'tiket': ticket,
@@ -55,13 +64,25 @@ class HomeBackend extends PatientV2Backend {
         },
       ]);
     }
-    if (request.url.path.endsWith('/qr') && expiredQr) {
+    if (request.url.path.endsWith('/tiket/$uid') && failTicketRead) {
+      requests.add((request.method, '/tiket/$uid', {}));
+      return reply({'message': 'Status tiket belum dapat diperiksa.'}, 503);
+    }
+    if (request.url.path.endsWith('/qr')) {
       requests.add((request.method, '/tiket/$uid/qr', {}));
+      await qrGate?.future;
+      if (failQr) {
+        return reply({'message': 'Penerbitan QR gagal. Coba lagi.'}, 503);
+      }
       return reply({
         'tiketId': uid,
-        'qrPayload': 'expired',
+        'qrPayload': expiredQr ? 'expired' : 'SQ1.fixture',
         'berlakuHingga': DateTime.now()
-            .subtract(const Duration(seconds: 1))
+            .add(
+              expiredQr
+                  ? const Duration(seconds: -1)
+                  : const Duration(minutes: 10),
+            )
             .toUtc()
             .toIso8601String(),
       });
@@ -131,7 +152,18 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  for (final width in [320.0, 360.0, 375.0, 390.0, 412.0, 414.0, 768.0]) {
+  for (final width in [
+    320.0,
+    360.0,
+    375.0,
+    390.0,
+    412.0,
+    414.0,
+    500.0,
+    768.0,
+    1366.0,
+    1920.0,
+  ]) {
     testWidgets(
       'home V3 fits $width with long name, all sections and existing destinations',
       (tester) async {
@@ -142,7 +174,15 @@ void main() {
         );
         expect(find.byTooltip('Aktivitas tiket'), findsOneWidget);
         expect(find.byTooltip('Profil akun'), findsOneWidget);
-        expect(find.byTooltip('Keluar akun'), findsOneWidget);
+        expect(find.byTooltip('Keluar akun'), findsNothing);
+        expect(find.byType(PatientHomeBrand), findsNothing);
+        expect(find.text('Sinkronisasi berkala aktif'), findsNothing);
+        expect(find.byType(PatientHomeIdentity), findsOneWidget);
+        expect(find.text('Selamat datang,'), findsOneWidget);
+        expect(
+          tester.getTopLeft(find.byType(PatientHomeIdentity)).dy,
+          lessThan(tester.getTopLeft(find.byType(PatientHomeWelcome)).dy),
+        );
         for (final section in [
           'Cari Dokter Spesialis',
           'Dokter Pilihan',
@@ -173,10 +213,49 @@ void main() {
           find.widgetWithText(NavigationDestination, 'Pendaftaran'),
         );
         expect(find.text('Poliklinik & Dokter'), findsOneWidget);
+        expect(find.byTooltip('Keluar akun'), findsNothing);
+        expect(find.text('Sinkronisasi berkala aktif'), findsNothing);
+        expect(find.textContaining('Waktu pelayanan:'), findsNothing);
+        expect(find.byType(PatientHomeIdentity), findsOneWidget);
+        for (final destination in ['Tiket Saya', 'Janji Temu', 'Beranda']) {
+          await press(
+            tester,
+            find.widgetWithText(NavigationDestination, destination),
+          );
+          expect(find.byType(PatientHomeIdentity), findsOneWidget);
+          expect(find.text('Selamat datang,'), findsOneWidget);
+          expect(find.byTooltip('Profil akun'), findsOneWidget);
+          expect(find.byTooltip('Keluar akun'), findsNothing);
+          expect(find.text('Sinkronisasi berkala aktif'), findsNothing);
+          expect(tester.getSize(find.byType(NavigationBar)).height, 60);
+          expect(
+            tester.getSize(find.byType(NavigationBar)).width,
+            width.clamp(0, 520),
+          );
+          expect(tester.takeException(), isNull);
+        }
         expect(tester.takeException(), isNull);
       },
     );
   }
+
+  testWidgets(
+    'home identity opens existing profile and logout remains available there',
+    (tester) async {
+      final api = await launch(tester, HomeBackend());
+      await press(tester, find.byTooltip('Profil akun'));
+      expect(find.text('Profil Saya'), findsOneWidget);
+      expect(find.text('Keluar Akun'), findsOneWidget);
+      await press(tester, find.byType(BackButton));
+      expect(find.byType(PatientHomeIdentity), findsOneWidget);
+      expect(find.byTooltip('Keluar akun'), findsNothing);
+      await press(tester, find.byTooltip('Profil akun'));
+      await press(tester, find.text('Keluar Akun'));
+      expect(api.user, isNull);
+      expect(find.widgetWithText(TextFormField, 'Email'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets(
     'home search filters API clinic and doctor then doctor card opens existing detail',
@@ -230,7 +309,8 @@ void main() {
         );
         expect(find.byType(PatientHomeBanner), findsNothing);
         await press(tester, find.text('QR Code'));
-        await press(tester, find.text('Terbitkan QR'));
+        expect(find.byType(QrImageView), findsOneWidget);
+        expect(find.text('Perbarui QR'), findsOneWidget);
         expect(
           b.requests.where((r) => r.$1 == 'POST').single.$2,
           '/tiket/$uid/qr',
@@ -240,6 +320,96 @@ void main() {
       },
     );
   }
+
+  testWidgets(
+    'detail stays read-only while direct QR issues once and never renews on polling or check-in',
+    (tester) async {
+      final b = HomeBackend();
+      b.tickets.add(b.ticket);
+      await launch(tester, b);
+      await press(tester, find.text('Lihat Detail'));
+      expect(b.requests.where((r) => r.$1 == 'POST'), isEmpty);
+      expect(find.byType(QrImageView), findsNothing);
+      await press(tester, find.text('Tutup'));
+      await press(tester, find.text('QR Code'));
+      expect(
+        tester.widget<QrImageView>(find.byType(QrImageView)).semanticsLabel,
+        'QR check-in tiket UM-001',
+      );
+      await tester.pump(const Duration(seconds: 31));
+      await tester.pumpAndSettle();
+      expect(b.requests.where((r) => r.$1 == 'POST'), hasLength(1));
+      b.status = 'CHECK_IN';
+      b.tickets[0] = b.ticket;
+      await tester.pump(const Duration(seconds: 31));
+      await tester.pumpAndSettle();
+      expect(find.byType(QrImageView), findsNothing);
+      expect(b.requests.where((r) => r.$1 == 'POST'), hasLength(1));
+    },
+  );
+
+  for (final condition in ['future', 'changedStatus', 'readFailed']) {
+    testWidgets('direct QR does not issue when $condition', (tester) async {
+      final b = HomeBackend();
+      if (condition == 'future') b.ticketDay = b.tomorrow;
+      b.tickets.add(b.ticket);
+      await launch(tester, b);
+      if (condition == 'changedStatus') b.status = 'CHECK_IN';
+      if (condition == 'readFailed') b.failTicketRead = true;
+      await press(tester, find.text('QR Code'));
+      expect(find.byType(QrImageView), findsNothing);
+      expect(b.requests.where((r) => r.$1 == 'POST'), isEmpty);
+      if (condition == 'future') {
+        expect(
+          find.textContaining('tanggal pelayanan (${b.tomorrow})'),
+          findsOneWidget,
+        );
+      }
+      if (condition == 'readFailed') {
+        expect(
+          find.text('Status tiket belum dapat diperiksa.'),
+          findsOneWidget,
+        );
+      }
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets(
+    'direct QR opening coalesces double taps and pending issuance; failed issuance remains visible without retry',
+    (tester) async {
+      final b = HomeBackend()..qrGate = Completer<void>();
+      b.tickets.add(b.ticket);
+      await launch(tester, b);
+      final action = tester
+          .widget<PatientHomeVisit>(find.byType(PatientHomeVisit))
+          .onQr!;
+      action();
+      action();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(b.requests.where((r) => r.$1 == 'POST'), hasLength(1));
+      expect(
+        tester
+            .widget<LinearProgressIndicator>(
+              find.byType(LinearProgressIndicator),
+            )
+            .semanticsLabel,
+        'Memuat QR check-in',
+      );
+      b.failQr = true;
+      b.qrGate!.complete();
+      await tester.pumpAndSettle();
+      expect(find.text('Penerbitan QR gagal. Coba lagi.'), findsOneWidget);
+      expect(find.byType(QrImageView), findsNothing);
+      expect(b.requests.where((r) => r.$1 == 'POST'), hasLength(1));
+      b.failQr = false;
+      await press(tester, find.text('Terbitkan QR'));
+      expect(find.byType(QrImageView), findsOneWidget);
+      expect(b.requests.where((r) => r.$1 == 'POST'), hasLength(2));
+    },
+  );
 
   testWidgets(
     'expired home QR stays hidden; completed and cancelled visits disappear on reconciliation',
@@ -253,8 +423,8 @@ void main() {
       );
       expect(find.textContaining('08:00 –'), findsNothing);
       await press(tester, find.text('QR Code'));
-      await press(tester, find.text('Terbitkan QR'));
       expect(find.text('expired'), findsNothing);
+      expect(find.textContaining('QR sudah kedaluwarsa'), findsOneWidget);
       await press(tester, find.text('Tutup'));
       for (final status in ['SELESAI', 'DIBATALKAN']) {
         b.tickets[0] = {...b.ticket, 'status': status};

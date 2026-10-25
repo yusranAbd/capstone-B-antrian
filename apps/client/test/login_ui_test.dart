@@ -63,7 +63,19 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  for (final width in [320.0, 375.0, 414.0, 768.0, 1024.0, 1440.0]) {
+  for (final width in [
+    320.0,
+    360.0,
+    375.0,
+    390.0,
+    414.0,
+    500.0,
+    768.0,
+    1024.0,
+    1366.0,
+    1440.0,
+    1920.0,
+  ]) {
     testWidgets(
       'Login responsive $width: native fields, reachable CTAs, no overflow',
       (tester) async {
@@ -71,6 +83,37 @@ void main() {
         expect(find.byType(LoginLayout), findsOneWidget);
         expect(email, findsOneWidget);
         expect(password, findsOneWidget);
+        expect(
+          find.text('Akses mudah untuk pelayanan lebih baik'),
+          findsNothing,
+        );
+        expect(
+          find.textContaining('Pendaftaran, tiket, dan antrean'),
+          findsNothing,
+        );
+        expect(find.textContaining('Daftar, dapatkan tiket'), findsNothing);
+        expect(find.text('Ambil tiket antrean'), findsNothing);
+        expect(find.text('Pantau antrean real-time'), findsNothing);
+        expect(find.text('Pelayanan lebih efisien'), findsNothing);
+        final services = find.text('Layanan digital rumah sakit');
+        if (width >= 1024) {
+          expect(services, findsOneWidget);
+          expect(
+            tester.getTopLeft(services).dx,
+            lessThan(tester.getTopLeft(email).dx),
+          );
+          expect(
+            tester.getTopLeft(services).dy,
+            lessThan(tester.getTopLeft(password).dy),
+          );
+          expect(find.text('Pendaftaran online'), findsOneWidget);
+        } else {
+          expect(services, findsNothing);
+          expect(
+            tester.getTopLeft(find.byType(LoginFormCard)).dy,
+            lessThan(110),
+          );
+        }
         expect(
           find.byType(Image),
           width >= 1024 ? findsOneWidget : findsNothing,
@@ -293,7 +336,12 @@ void main() {
           }),
           findsOneWidget,
         );
-        await press(tester, find.byTooltip('Keluar akun'));
+        if (role == 'USER') {
+          await press(tester, find.byTooltip('Profil akun'));
+          await press(tester, find.text('Keluar Akun'));
+        } else {
+          await press(tester, find.byTooltip('Keluar akun'));
+        }
         expect(email, findsOneWidget);
         expect(api.user, isNull);
       },
