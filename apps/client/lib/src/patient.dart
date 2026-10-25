@@ -41,6 +41,7 @@ class _PatientPageState extends State<PatientPage> {
   late final RefreshGate overview;
   int tab = 0, catalogRevision = 0;
   bool busy = false, loading = true;
+  bool ticketDialogOpen = false;
   String? error, message, serviceId, doctorId, sessionId, slotId;
   bool appointment = true, bookingStage = false, doctorDetail = false;
   bool reviewing = false;
@@ -551,19 +552,26 @@ class _PatientPageState extends State<PatientPage> {
     }
   }
 
-  Future<void> openTicket(Json ticket) async {
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => _TicketDialog(
-        api: widget.api,
-        updates: updates,
-        ticket: ticket,
-        appointment: appointments
-            .where((a) => object(a['tiket'])['id'] == ticket['id'])
-            .firstOrNull,
-      ),
-    );
+  Future<void> openTicket(Json ticket, {bool issueQrOnOpen = false}) async {
+    if (ticketDialogOpen) return;
+    ticketDialogOpen = true;
+    try {
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => _TicketDialog(
+          api: widget.api,
+          updates: updates,
+          ticket: ticket,
+          issueQrOnOpen: issueQrOnOpen,
+          appointment: appointments
+              .where((a) => object(a['tiket'])['id'] == ticket['id'])
+              .firstOrNull,
+        ),
+      );
+    } finally {
+      ticketDialogOpen = false;
+    }
     if (mounted) await load();
   }
 
@@ -735,7 +743,10 @@ class _PatientPageState extends State<PatientPage> {
         PatientHomeWelcome(
           name: '${widget.api.user?['nama'] ?? 'Pasien'}',
           onSearch: (v) => setState(() => search = v.toLowerCase().trim()),
-          avatar: AccountAvatar(api: widget.api, radius: 23),
+          // The app header owns the greeting; retain it for standalone usage.
+          avatar: widget.headerBuilder == null
+              ? AccountAvatar(api: widget.api, radius: 23)
+              : null,
         ),
         const SizedBox(height: 16),
         if (active != null) ...[
@@ -751,6 +762,7 @@ class _PatientPageState extends State<PatientPage> {
             appointment: visit,
             config: widget.api.config,
             onTicket: busy ? null : () => openTicket(active),
+            onQr: busy ? null : () => openTicket(active, issueQrOnOpen: true),
           ),
           const SizedBox(height: 20),
         ],
@@ -916,16 +928,6 @@ class _PatientPageState extends State<PatientPage> {
                 key: ValueKey('$tab:$serviceId:$bookingStage:$doctorDetail'),
                 padding: const EdgeInsets.all(16),
                 children: [
-                  ValueListenableBuilder<String>(
-                    valueListenable: updates.status,
-                    builder: (context, value, _) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Text(
-                        value,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ),
-                  ),
                   if (error != null) ...[
                     MobileNotice(error!, error: true),
                     TextButton.icon(
@@ -980,34 +982,9 @@ class _PatientPageState extends State<PatientPage> {
           ),
         ),
       ),
-      SafeArea(
-        top: false,
-        child: NavigationBar(
-          height: tab == 0 ? 68 : null,
-          selectedIndex: tab == 4 ? 0 : [0, 2, 1, 3].indexOf(tab),
-          onDestinationSelected: busy
-              ? null
-              : (i) => setState(() => tab = [0, 2, 1, 3][i]),
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home),
-              label: 'Beranda',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.add_circle_outline),
-              label: 'Pendaftaran',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.confirmation_number_outlined),
-              label: 'Tiket Saya',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.calendar_month_outlined),
-              label: 'Janji Temu',
-            ),
-          ],
-        ),
+      PatientBottomNavigation(
+        selectedIndex: tab == 4 ? 0 : [0, 2, 1, 3].indexOf(tab),
+        onSelected: busy ? null : (i) => setState(() => tab = [0, 2, 1, 3][i]),
       ),
     ],
   );
@@ -1036,7 +1013,6 @@ class _PatientPageState extends State<PatientPage> {
               : serviceId == null
               ? 'Poliklinik & Dokter'
               : clinicName,
-          caption: 'Waktu pelayanan: ${widget.api.config.serviceTimeZone}',
           onBack: serviceId == null
               ? null
               : busy || loading
@@ -1465,11 +1441,13 @@ class _TicketDialog extends StatefulWidget {
     required this.ticket,
     required this.updates,
     this.appointment,
+    this.issueQrOnOpen = false,
   });
   final QueueApi api;
   final Json ticket;
   final PatientUpdates updates;
   final Json? appointment;
+  final bool issueQrOnOpen;
   @override
   State<_TicketDialog> createState() => _TicketDialogState();
 }
@@ -1480,6 +1458,7 @@ class _TicketDialogState extends State<_TicketDialog> {
   Json? qr;
   String? error;
   bool busy = false;
+  bool loading = true;
   Timer? countdown;
   int remaining = 0;
   bool get canIssue =>
@@ -1498,11 +1477,19 @@ class _TicketDialogState extends State<_TicketDialog> {
           remaining = expiry == null
               ? 0
               : expiry.difference(DateTime.now()).inSeconds.clamp(0, 600);
-          if (remaining == 0) qr = null;
+          if (remaining == 0 || !canIssue) qr = null;
         });
       }
     });
-    refresh();
+    initialize();
+  }
+
+  Future<void> initialize() async {
+    await refresh();
+    if (!mounted) return;
+    setState(() => loading = false);
+    // One request per explicit QR opening, never on expiry or reconnect.
+    if (widget.issueQrOnOpen && error == null && canIssue) await issue();
   }
 
   Future<void> refresh() => reader.refresh();
@@ -1515,7 +1502,7 @@ class _TicketDialogState extends State<_TicketDialog> {
         setState(() {
           data = next;
           error = null;
-          if (data['status'] != 'DIPESAN') qr = null;
+          if (!canIssue) qr = null;
         });
       }
     } catch (e) {
@@ -1524,7 +1511,7 @@ class _TicketDialogState extends State<_TicketDialog> {
   }
 
   Future<void> issue() async {
-    if (busy) return;
+    if (busy || loading || !canIssue) return;
     setState(() {
       busy = true;
       error = null;
@@ -1534,18 +1521,23 @@ class _TicketDialogState extends State<_TicketDialog> {
       final result = object(
         await widget.api.request('POST', '/tiket/${data['id']}/qr', body: {}),
       );
-      if (mounted) {
+      if (mounted && canIssue) {
         setState(() {
           qr = result;
           remaining = DateTime.parse('${result['berlakuHingga']}')
               .difference(DateTime.now())
               .inSeconds
               .clamp(0, 600);
+          if (remaining == 0) {
+            qr = null;
+            error =
+                'QR sudah kedaluwarsa. Terbitkan QR baru untuk melanjutkan.';
+          }
         });
       }
     } catch (e) {
-      if (mounted) setState(() => error = '$e');
       await refresh();
+      if (mounted) setState(() => error = '$e');
     } finally {
       if (mounted) setState(() => busy = false);
     }
@@ -1590,6 +1582,15 @@ class _TicketDialogState extends State<_TicketDialog> {
                 style: const TextStyle(fontSize: 11, color: QueueBStyle.muted),
               ),
               if (error != null) MobileNotice(error!, error: true),
+              if (loading || busy)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: LinearProgressIndicator(
+                    semanticsLabel: widget.issueQrOnOpen
+                        ? 'Memuat QR check-in'
+                        : 'Memuat tiket',
+                  ),
+                ),
               if (qr != null && remaining > 0) ...[
                 LayoutBuilder(
                   builder: (context, box) => QrImageView(
@@ -1618,12 +1619,12 @@ class _TicketDialogState extends State<_TicketDialog> {
                   'QR diterbitkan pada hari pelayanan, berlaku 10 menit. QR baru menggantikan QR sebelumnya.',
                 ),
                 FilledButton(
-                  onPressed: busy ? null : issue,
+                  onPressed: busy || loading ? null : issue,
                   child: Text(qr == null ? 'Terbitkan QR' : 'Perbarui QR'),
                 ),
               ] else
-                const MobileNotice(
-                  'QR tersedia untuk tiket DIPESAN pada tanggal pelayanan. Status disinkronkan secara berkala.',
+                MobileNotice(
+                  'QR tersedia untuk tiket DIPESAN pada tanggal pelayanan (${dateOnly(data['tanggalPelayanan'] ?? data['tanggalAntrean'])}). Status disinkronkan secara berkala.',
                 ),
             ],
           ),
@@ -1631,7 +1632,7 @@ class _TicketDialogState extends State<_TicketDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: busy ? null : refresh,
+          onPressed: busy || loading ? null : refresh,
           child: const Text('Muat ulang status'),
         ),
         TextButton(

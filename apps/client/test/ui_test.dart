@@ -588,7 +588,10 @@ void main() {
       expect(tester.takeException(), isNull);
       await press(tester, 'Pendaftaran');
       expect(tester.takeException(), isNull);
-      await tester.tap(find.byTooltip('Keluar akun'));
+      expect(find.byTooltip('Keluar akun'), findsNothing);
+      await tester.tap(find.byTooltip('Profil akun'));
+      await tester.pumpAndSettle();
+      await press(tester, 'Keluar Akun');
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
     });

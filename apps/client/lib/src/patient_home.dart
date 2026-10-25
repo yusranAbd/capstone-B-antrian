@@ -170,6 +170,56 @@ class PatientHomeWelcome extends StatelessWidget {
   );
 }
 
+/// Shared patient identity. Branding on other roles remains unchanged.
+class PatientHomeIdentity extends StatelessWidget {
+  const PatientHomeIdentity({
+    super.key,
+    required this.name,
+    required this.avatar,
+    required this.onProfile,
+  });
+  final String name;
+  final Widget avatar;
+  final VoidCallback onProfile;
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+    message: 'Profil akun',
+    child: InkWell(
+      onTap: onProfile,
+      borderRadius: BorderRadius.circular(12),
+      child: Row(
+        children: [
+          avatar,
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Selamat datang,',
+                  style: TextStyle(color: QueueBStyle.muted, fontSize: 12),
+                ),
+                Text(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: QueueBStyle.navy,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
 class PatientHomeBanner extends StatelessWidget {
   const PatientHomeBanner({super.key, required this.onRegister});
   final VoidCallback? onRegister;
@@ -403,6 +453,7 @@ class PatientHomeVisit extends StatelessWidget {
     required this.ticket,
     required this.doctor,
     required this.onTicket,
+    required this.onQr,
     required this.config,
     this.appointment,
   });
@@ -410,6 +461,7 @@ class PatientHomeVisit extends StatelessWidget {
   final Json? appointment;
   final AppConfig config;
   final VoidCallback? onTicket;
+  final VoidCallback? onQr;
   Json get room {
     final booked = object(
       object(object(appointment?['slotPraktik'])['jadwalPraktik'])['loket'],
@@ -523,7 +575,7 @@ class PatientHomeVisit extends StatelessWidget {
             const SizedBox(width: 10),
             Expanded(
               child: FilledButton.icon(
-                onPressed: onTicket,
+                onPressed: onQr,
                 icon: const Icon(Icons.qr_code_rounded, size: 18),
                 label: const Text('QR Code'),
               ),
