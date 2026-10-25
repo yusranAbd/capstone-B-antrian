@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'api.dart';
 import 'config.dart';
 import 'doctor_professional.dart';
+import 'image_sizing.dart';
 import 'mobile_ui.dart';
 
 // Hallmark · profile workspace · QueueB existing tokens · P5 H5 E4 S5 R5 V4.
@@ -47,6 +48,10 @@ class AccountAvatar extends StatelessWidget {
                 : ClipOval(
                     child: Image.memory(
                       snapshot.data!,
+                      cacheWidth: imageDecodeWidth(
+                        radius * 2,
+                        MediaQuery.devicePixelRatioOf(context),
+                      ),
                       width: radius * 2,
                       height: radius * 2,
                       fit: BoxFit.cover,

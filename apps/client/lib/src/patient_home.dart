@@ -294,7 +294,7 @@ class PatientHomeBanner extends StatelessWidget {
             flex: 2,
             child: ExcludeSemantics(
               child: Image.asset(
-                'assets/illustrations/patient_ticket.png',
+                'assets/illustrations/patient_ticket.webp',
                 fit: BoxFit.contain,
                 errorBuilder: (_, error, stack) => const Icon(
                   Icons.confirmation_number_rounded,

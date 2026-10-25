@@ -140,7 +140,7 @@ class _Welcome extends StatelessWidget {
                   height: 470,
                   child: ExcludeSemantics(
                     child: Image.asset(
-                      'assets/illustrations/login_hospital.png',
+                      'assets/illustrations/login_hospital.webp',
                       fit: BoxFit.contain,
                       alignment: Alignment.bottomRight,
                     ),

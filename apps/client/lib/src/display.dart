@@ -61,6 +61,7 @@ class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
   SnapshotLoader? loader;
   RealtimeFeed? feed;
   Timer? poll, clock;
+  late final ValueNotifier<DateTime> displayClock;
   Json? snapshot;
   String? error, audioError;
   String status = 'Menghubungkan…';
@@ -71,11 +72,12 @@ class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    displayClock = ValueNotifier(widget.api.config.now);
     WidgetsBinding.instance.addObserver(this);
     fullscreen.addListener(fullscreenChanged);
     restoreDevice();
     clock = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted && connected) setState(() {});
+      if (mounted && connected) displayClock.value = widget.api.config.now;
     });
     tts.setErrorHandler((message) {
       // Cancelling the preceding announcement is expected during RECALL/mute.
@@ -395,8 +397,12 @@ class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
     loader?.dispose();
     poll?.cancel();
     clock?.cancel();
+    displayClock.dispose();
     fullscreen.removeListener(fullscreenChanged);
     fullscreen.dispose();
+    // FlutterTts retains its latest instance in the platform channel handler.
+    // Release the callback that closes over this page after leaving the display.
+    tts.errorHandler = null;
     unawaited(stopSpeech());
     activation.dispose();
     service.dispose();
@@ -412,6 +418,7 @@ class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
             body: DisplayBoard(
               snapshot: snapshot,
               now: widget.api.config.now,
+              clock: displayClock,
               snapshotTime: widget.api.config
                   .instantLabel(snapshot?['diperolehPada'])
                   .split(' ')

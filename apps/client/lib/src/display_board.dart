@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'config.dart';
@@ -26,9 +27,11 @@ class DisplayBoard extends StatelessWidget {
     this.fullscreenSupported = false,
     this.rejected = false,
     this.snapshotTime,
+    this.clock,
   });
   final Json? snapshot;
   final DateTime now;
+  final ValueListenable<DateTime>? clock;
   final String status;
   final String? error, audioError, snapshotTime;
   final bool audio, audioBusy, fullscreen, fullscreenSupported, rejected;
@@ -139,21 +142,12 @@ class DisplayBoard extends StatelessWidget {
       overflow: TextOverflow.ellipsis,
       style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w800),
     );
-    final clock = Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Text(
-          '${two(now.hour)}:${two(now.minute)}:${two(now.second)}',
-          key: const ValueKey('display-clock'),
-          style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w800),
-        ),
-        Text(_date(now), style: const TextStyle(fontSize: 16)),
-        Text(
-          now.timeZoneName,
-          style: const TextStyle(color: QueueBStyle.muted),
-        ),
-      ],
-    );
+    final time = clock == null
+        ? _clock(now)
+        : ValueListenableBuilder<DateTime>(
+            valueListenable: clock!,
+            builder: (_, value, _) => _clock(value),
+          );
     if (compact) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -162,7 +156,7 @@ class DisplayBoard extends StatelessWidget {
           const SizedBox(height: 16),
           clinic,
           const SizedBox(height: 8),
-          clock,
+          time,
         ],
       );
     }
@@ -190,10 +184,26 @@ class DisplayBoard extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 16),
-        clock,
+        time,
       ],
     );
   }
+
+  Widget _clock(DateTime value) => Column(
+    crossAxisAlignment: CrossAxisAlignment.end,
+    children: [
+      Text(
+        '${two(value.hour)}:${two(value.minute)}:${two(value.second)}',
+        key: const ValueKey('display-clock'),
+        style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w800),
+      ),
+      Text(_date(value), style: const TextStyle(fontSize: 16)),
+      Text(
+        value.timeZoneName,
+        style: const TextStyle(color: QueueBStyle.muted),
+      ),
+    ],
+  );
 
   Widget _connection() {
     final text = rejected
