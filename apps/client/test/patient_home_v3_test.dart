@@ -9,7 +9,8 @@ import 'package:queueb_client/src/api.dart';
 import 'package:queueb_client/src/app.dart';
 import 'package:queueb_client/src/config.dart';
 import 'package:queueb_client/src/patient_home.dart';
-import 'package:queueb_client/src/patient_ui.dart';
+import 'package:queueb_client/src/doctor_professional.dart';
+import 'package:queueb_client/src/mobile_ui.dart';
 
 import 'patient_v2_test.dart' show PatientV2Backend;
 import 'ui_test.dart' show uid;
@@ -17,6 +18,21 @@ import 'ui_test.dart' show uid;
 class HomeBackend extends PatientV2Backend {
   Completer<void>? homeGate;
   bool failHomeSchedule = false;
+  bool expiredQr = false;
+  Json get appointmentFixture => {
+    'id': 'appointment-id-distinct-from-ticket',
+    'tiket': ticket,
+    'slotPraktik': {
+      'mulaiPada': '${today}T01:00:00Z',
+      'selesaiPada': '${today}T01:30:00Z',
+      'jadwalPraktik': {
+        'loket': room,
+        'dokterLayanan': {
+          'dokter': {'id': uid, 'nama': 'dr. Sindi QA', 'spesialisasi': 'Anak'},
+        },
+      },
+    },
+  };
   @override
   Json get user => {
     ...super.user,
@@ -24,6 +40,32 @@ class HomeBackend extends PatientV2Backend {
   };
   @override
   Future<http.Response> handle(http.Request request) async {
+    if (request.url.path.endsWith('/dokter')) {
+      return reply([
+        {
+          'id': uid,
+          'nama': 'dr. Sindi QA',
+          'spesialisasi': 'Anak',
+          'aktif': true,
+          'fotoProfil':
+              '/media/dokter/11111111-1111-4111-8111-111111111111.webp',
+          'dokterLayanan': [
+            {'id': uid, 'aktif': true, 'layananId': uid, 'layanan': service},
+          ],
+        },
+      ]);
+    }
+    if (request.url.path.endsWith('/qr') && expiredQr) {
+      requests.add((request.method, '/tiket/$uid/qr', {}));
+      return reply({
+        'tiketId': uid,
+        'qrPayload': 'expired',
+        'berlakuHingga': DateTime.now()
+            .subtract(const Duration(seconds: 1))
+            .toUtc()
+            .toIso8601String(),
+      });
+    }
     if (request.url.path.endsWith('/jadwal-praktik') &&
         request.url.queryParameters.isEmpty) {
       await homeGate?.future;
@@ -102,21 +144,16 @@ void main() {
         expect(find.byTooltip('Profil akun'), findsOneWidget);
         expect(find.byTooltip('Keluar akun'), findsOneWidget);
         for (final section in [
-          'Kunjungan terdekat',
-          'Poliklinik tersedia',
-          'Dokter & Jadwal',
-          'Tips Cepat',
+          'Cari Dokter Spesialis',
+          'Dokter Pilihan',
+          'Akses cepat',
         ]) {
           await tester.ensureVisible(find.text(section));
           await tester.pumpAndSettle();
           expect(tester.takeException(), isNull);
         }
-        expect(
-          tester
-              .widget<PatientClinicGrid>(find.byType(PatientClinicGrid))
-              .clinics,
-          hasLength(11),
-        );
+        expect(find.byType(ChoiceChip), findsNWidgets(12));
+        expect(find.text('Kunjungan Terdekat'), findsNothing);
         expect(
           tester
               .widget<PatientHomeDoctor>(find.byType(PatientHomeDoctor))
@@ -146,19 +183,10 @@ void main() {
     (tester) async {
       final b = HomeBackend()..manyClinics = true;
       await launch(tester, b);
-      await tester.enterText(find.byType(TextField).first, 'Dokter Umum');
+      await tester.enterText(find.byType(TextField).first, 'dr. Sindi QA');
       await tester.pumpAndSettle();
-      expect(
-        tester
-            .widget<PatientClinicGrid>(find.byType(PatientClinicGrid))
-            .clinics
-            .single['id'],
-        uid,
-      );
-      expect(
-        find.text('Spesialisasi belum dicantumkan \u00b7 Poli Umum'),
-        findsOneWidget,
-      );
+      expect(find.byType(ChoiceChip), findsNWidgets(2));
+      expect(find.text('Anak \u00b7 Poli Umum'), findsOneWidget);
       await press(tester, find.byType(PatientHomeDoctor));
       expect(find.text('Detail Dokter'), findsOneWidget);
       expect(find.text('Buat Janji Temu'), findsOneWidget);
@@ -166,11 +194,127 @@ void main() {
     },
   );
 
+  for (final width in [320.0, 360.0, 375.0, 390.0, 412.0, 414.0, 768.0]) {
+    testWidgets(
+      'V3.1 real appointment follows search and QR uses ticket ID at $width',
+      (tester) async {
+        final b = HomeBackend();
+        b.tickets.add(b.ticket);
+        b.appointments.add(b.appointmentFixture);
+        await launch(tester, b, width: width);
+        final card = find.byType(PatientHomeVisit);
+        final view = tester.widget<PatientHomeVisit>(card);
+        expect(view.ticket['id'], uid);
+        expect(view.doctor['spesialisasi'], 'Anak');
+        expect(view.doctor['fotoProfil'], contains('/media/dokter/'));
+        expect(
+          find.descendant(of: card, matching: find.text('dr. Sindi QA')),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: card,
+            matching: find.byType(ProfessionalDoctorAvatar),
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('08:00 – 08:30 · Asia/Jakarta'), findsOneWidget);
+        expect(find.text('RU · Ruang Umum'), findsOneWidget);
+        expect(
+          tester.getTopLeft(card).dy,
+          greaterThan(tester.getBottomLeft(find.byType(TextField).first).dy),
+        );
+        expect(
+          tester.getBottomLeft(card).dy,
+          lessThan(tester.getTopLeft(find.text('Cari Dokter Spesialis')).dy),
+        );
+        expect(find.byType(PatientHomeBanner), findsNothing);
+        await press(tester, find.text('QR Code'));
+        await press(tester, find.text('Terbitkan QR'));
+        expect(
+          b.requests.where((r) => r.$1 == 'POST').single.$2,
+          '/tiket/$uid/qr',
+        );
+        expect(find.text('Tiket UM-001'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  testWidgets(
+    'expired home QR stays hidden; completed and cancelled visits disappear on reconciliation',
+    (tester) async {
+      final b = HomeBackend()..expiredQr = true;
+      b.tickets.add(b.ticket);
+      await launch(tester, b);
+      expect(
+        tester.widget<PatientHomeVisit>(find.byType(PatientHomeVisit)).doctor,
+        isEmpty,
+      );
+      expect(find.textContaining('08:00 –'), findsNothing);
+      await press(tester, find.text('QR Code'));
+      await press(tester, find.text('Terbitkan QR'));
+      expect(find.text('expired'), findsNothing);
+      await press(tester, find.text('Tutup'));
+      for (final status in ['SELESAI', 'DIBATALKAN']) {
+        b.tickets[0] = {...b.ticket, 'status': status};
+        await tester.pump(const Duration(seconds: 31));
+        await tester.pumpAndSettle();
+        expect(find.text('Kunjungan Terdekat'), findsNothing);
+        expect(find.byType(PatientHomeVisit), findsNothing);
+      }
+    },
+  );
+
+  testWidgets(
+    'API clinic chips filter doctor cards and preserve clinic navigation',
+    (tester) async {
+      await launch(tester, HomeBackend()..manyClinics = true);
+      final target = find.widgetWithText(ChoiceChip, 'Poliklinik 1');
+      await press(tester, target);
+      expect(find.byType(PatientHomeDoctor), findsNothing);
+      expect(
+        find.text('Belum ada dokter yang sesuai pencarian.'),
+        findsOneWidget,
+      );
+      await press(tester, find.widgetWithText(ChoiceChip, 'Semua'));
+      expect(find.byType(PatientHomeDoctor), findsOneWidget);
+      await press(tester, find.text('Poliklinik dan Dokter'));
+      expect(find.byType(ClinicCard), findsWidgets);
+    },
+  );
+
+  test('nearest display prioritizes an active service over reserved slots on same date', () {
+    final b = HomeBackend();
+    expect(
+      nearestHomeTicket(
+        [
+          b.ticket,
+          {...b.ticket, 'id': 'live', 'status': 'DILAYANI'},
+        ],
+        [],
+        b.today,
+      )?['id'],
+      'live',
+    );
+    expect(
+      nearestHomeTicket(
+        [
+          {...b.ticket, 'status': 'DIBATALKAN'},
+          {...b.ticket, 'status': 'SELESAI'},
+        ],
+        [],
+        b.today,
+      ),
+      isNull,
+    );
+  });
+
   testWidgets(
     'hero, appointment, clinic, history and activity shortcuts keep existing routes',
     (tester) async {
       await launch(tester, HomeBackend());
-      await press(tester, find.text('Ambil Antrean'));
+      await press(tester, find.text('Janji Temu Dokter'));
       expect(find.text('Poliklinik & Dokter'), findsOneWidget);
       await press(
         tester,
@@ -230,7 +374,7 @@ void main() {
             .ticket['status'],
         'DIPANGGIL',
       );
-      await press(tester, find.text('Lihat Tiket'));
+      await press(tester, find.text('QR Code'));
       expect(find.textContaining('UM-001'), findsWidgets);
       expect(find.byType(AlertDialog), findsOneWidget);
     },
@@ -241,16 +385,16 @@ void main() {
     (tester) async {
       final b = HomeBackend()..homeGate = Completer<void>();
       await launch(tester, b, settle: false);
-      await tester.ensureVisible(find.text('Kunjungan terdekat'));
       expect(find.byType(PatientHomeLoading), findsWidgets);
+      expect(find.text('Kunjungan Terdekat'), findsNothing);
       b.failHomeSchedule = true;
       b.homeGate!.complete();
       await tester.pumpAndSettle();
-      expect(find.text('Belum ada kunjungan mendatang.'), findsOneWidget);
-      expect(find.text('Buat Janji Temu'), findsOneWidget);
+      expect(find.byType(PatientHomeVisit), findsNothing);
+      expect(find.text('Kunjungan Terdekat'), findsNothing);
       expect(find.text('Jadwal praktik belum dapat dimuat.'), findsOneWidget);
       expect(find.text('Jadwal belum dapat dimuat.'), findsOneWidget);
-      await press(tester, find.text('Buat Janji Temu'));
+      await press(tester, find.text('Janji Temu Dokter'));
       expect(find.text('Poliklinik & Dokter'), findsOneWidget);
     },
   );
