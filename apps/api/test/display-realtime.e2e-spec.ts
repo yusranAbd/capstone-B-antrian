@@ -12,6 +12,7 @@ import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/configure-app';
 import { StatusTiket } from '../src/generated/prisma/client';
 import { PrismaService } from '../src/prisma/prisma.service';
+import type { JenisPerubahanAntrean } from '../src/realtime/realtime-events.types';
 import { RealtimeBroadcastService } from '../src/realtime/realtime-broadcast.service';
 import type { DisplaySnapshot } from '../src/display/display-snapshot.types';
 import type { DisplayReadyEvent, DisplayUpdatedEvent } from '../src/realtime/display-realtime.types';
@@ -97,7 +98,7 @@ describe('Public Display Socket.IO (e2e)', () => {
       });
     });
   }
-  async function kirim(aksi: 'CALL' | 'RECALL' | 'COMPLETE', untukLayanan = layananId) {
+  async function kirim(aksi: JenisPerubahanAntrean, untukLayanan = layananId) {
     if (!app) throw new Error('Aplikasi belum berjalan');
     await app.get(RealtimeBroadcastService).kirim({
       aksi, layananId: untukLayanan, tiketId,
@@ -249,4 +250,33 @@ describe('Public Display Socket.IO (e2e)', () => {
     await kirim('RECALL');
     await disconnect;
   });
+  it('seluruh perubahan operasional memicu snapshot baru; reconnect mengirim ready', async () => {
+    let socket = buatSocket();
+    await tungguSiap(socket);
+    const cases: Array<[JenisPerubahanAntrean, StatusTiket, number]> = [
+      ['REQUEUE', StatusTiket.MENUNGGU, 1], ['CALL', StatusTiket.DIPANGGIL, 0],
+      ['RECALL', StatusTiket.DIPANGGIL, 0], ['SKIP', StatusTiket.DILEWATI, 0],
+      ['REQUEUE', StatusTiket.MENUNGGU, 1], ['CALL', StatusTiket.DIPANGGIL, 0],
+      ['START', StatusTiket.DILAYANI, 0], ['COMPLETE', StatusTiket.SELESAI, 0],
+    ];
+    for (const [aksi, status, total] of cases) {
+      // Fixture status is committed before invalidation, as in QueueService.
+      await db().tiketAntrean.update({ where: { id: tiketId }, data: { status } });
+      const event = tungguEvent(socket);
+      await kirim(aksi);
+      const signal = await event;
+      expect(signal.perluPeriksaPengumuman).toBe(aksi === 'CALL' || aksi === 'RECALL');
+      expect(JSON.stringify(signal)).not.toContain('Pemilik');
+      const snapshot = (await request(server()).get(`/api/v1/display/${layananId}/snapshot`)
+        .set('x-display-token', token).expect(200)).body as DisplaySnapshot;
+      expect(snapshot.totalMenunggu).toBe(total);
+      expect(snapshot.menunggu).toHaveLength(total);
+      if (total) expect(snapshot.menunggu?.[0].namaPasien).toBe('Pemilik t. u. d.');
+      if (status !== StatusTiket.DIPANGGIL) expect(snapshot.pengumumanTerakhir).toBeNull();
+    }
+    socket.disconnect();
+    socket = buatSocket();
+    expect(await tungguSiap(socket)).toMatchObject({ layananId });
+  });
+
 });
