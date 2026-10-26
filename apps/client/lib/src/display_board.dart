@@ -208,7 +208,7 @@ class DisplayBoard extends StatelessWidget {
       Expanded(
         child: Text(
           rejected
-              ? 'Akses display ditolak · periksa konfigurasi perangkat'
+              ? error ?? 'Akses display ditolak · periksa konfigurasi perangkat'
               : 'Snapshot belum tersinkron · menampilkan data terakhir',
           maxLines: 1,
           overflow: TextOverflow.ellipsis,

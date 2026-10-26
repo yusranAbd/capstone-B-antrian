@@ -13,6 +13,7 @@ class RealtimeFeed {
     this.onEvent,
     this.displayToken,
     this.displaySession = false,
+    this.displayDeviceId,
   }) {
     if (displayToken == null && !displaySession) {
       api.addListener(_credentialsChanged);
@@ -22,6 +23,7 @@ class RealtimeFeed {
   final QueueApi api;
   final String layananId;
   final String? displayToken;
+  final String? displayDeviceId;
   final bool displaySession;
   final void Function() onRefresh;
   final void Function(String) onStatus;
@@ -63,6 +65,8 @@ class RealtimeFeed {
         .setAuth({
           if (!displaySession) 'token': _usedToken,
           if (isDisplay) 'layananId': layananId,
+          if (displaySession && displayDeviceId != null)
+            'perangkatId': displayDeviceId,
         })
         .setReconnectionAttempts(isDisplay ? double.infinity : 8);
     if (isDisplay) options.setExtraHeaders(headers).enableWithCredentials();

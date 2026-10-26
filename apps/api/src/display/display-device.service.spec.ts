@@ -167,4 +167,12 @@ describe('Display device pairing', () => {
     });
     expect(cookie.mock.calls[0][2].domain).toBeUndefined();
   });
+  it('selector cookie tidak pernah fallback ke credential perangkat lain atau legacy', () => {
+    const id = '00000000-0000-4000-8000-000000000001';
+    const token = 'a'.repeat(64); const other = 'b'.repeat(64);
+    expect(cookieToken('queueb_display=' + other + '; queueb_display_' + id + '=' + token, id)).toBe(token);
+    expect(cookieToken('queueb_display=' + other, id)).toBeUndefined();
+    expect(cookieToken('queueb_display_' + id + '=' + token, 'invalid')).toBeUndefined();
+    expect(cookieToken('queueb_display_' + id + '=' + token + '; queueb_display_' + id + '=' + other, id)).toBeUndefined();
+  });
 });

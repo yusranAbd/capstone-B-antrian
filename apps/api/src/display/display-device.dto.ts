@@ -1,9 +1,10 @@
-import { IsString, IsUUID, Length, Matches } from 'class-validator';
+import { IsBoolean, IsOptional, IsString, IsUUID, Length, Matches } from 'class-validator';
 export class CreateDisplayDeviceDto {
   @IsUUID('4') layananId: string;
   @IsString() @Length(3, 100) @Matches(/\S/) nama: string;
 }
 export class PairDisplayDto {
+  @IsOptional() @IsBoolean() isolasiSesi?: boolean;
   @IsString() @Matches(/^\d{12}$/) kode: string;
 }
 

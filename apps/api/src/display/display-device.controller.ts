@@ -80,21 +80,23 @@ export class DisplayPairingController {
   ) {
     checkDisplayOrigin(req);
     const { token, device } = await this.devices.pair(dto.kode);
-    displayCookie(res, token);
+    displayCookie(res, token, false, dto.isolasiSesi ? device.id : undefined);
     return device; // No credential in JSON, URL or logs.
   }
   @Get('sesi')
   @Header('Cache-Control', 'no-store')
   session(@Req() req: Request) {
-    return this.devices.session(cookieToken(req.headers.cookie));
+    const id = req.headers['x-display-device-id'];
+    return this.devices.session(cookieToken(req.headers.cookie, id), id);
   }
   @Post('putuskan')
   @HttpCode(200)
   @Header('Cache-Control', 'no-store')
   async forget(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     checkDisplayOrigin(req);
-    const result = await this.devices.forget(cookieToken(req.headers.cookie));
-    displayCookie(res, '', true);
+    const id = req.headers['x-display-device-id'];
+    const result = await this.devices.forget(cookieToken(req.headers.cookie, id), id);
+    displayCookie(res, '', true, typeof id === 'string' ? id : undefined);
     return result;
   }
 }
