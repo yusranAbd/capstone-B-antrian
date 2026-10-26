@@ -1,7 +1,7 @@
 # QueueB | Panduan Integrasi REST API, Socket.IO, dan Public Display
 
 **Lokasi repository:** `docs/backend/API_INTEGRATION_GUIDE.md`
-**Versi dokumen:** 1.5 — pairing Public Display dan sesi kiosk HttpOnly
+**Versi dokumen:** 1.6 — Public Display Monitor V3 dan proyeksi nama sesuai kebijakan server
 **Tanggal penelaahan:** 19 Oktober 2026
 **Status:** Kontrak Authentication, Reservasi, Tiket/QR/Check-In, Queue, Realtime, Display, 20 endpoint Administrasi existing, empat endpoint manajemen display baru dan endpoint Hospital dipetakan terhadap source. Bagian 20 mencatat pairing dan sesi kiosk; Bagian 17 mencatat integrasi Hospital; Bagian 18 menyediakan urutan request untuk dua alur utama. Hasil QA dan batas MVP tersedia pada `MVP_BACKEND_FINAL.md`; checkpoint Milestone 2 tersedia pada `MILESTONE_2_INTEGRASI_HOSPITAL.md`. Resolusi manual HOSP-OPS-01 ditunda sesuai keputusan Project Lead. Deployment produksi tetap memerlukan konfigurasi dan penilaian risiko pada Bagian 14–15.
 **Basis:** `QueueController`, `QueueService` terbaru dan dua DTO Queue; source Display/Socket.IO termasuk `PatientRealtimeGateway` dan `PatientInvalidationInterceptor`; Authentication; Reservasi; Tiket/QR/Check-In; empat controller Administrasi; serta controller, DTO dan service Dokter, JadwalPraktik, SlotPraktik dan JanjiTemu. Isi branch/commit terbaru tetap merupakan sumber kebenaran jika ada perbedaan.
@@ -338,7 +338,7 @@ Mutasi berlangsung dalam Prisma `$transaction` dengan isolation `Serializable`; 
 
 ### 5.1 Endpoint
 
-Alur utama TV kini aktivasi kode sekali pakai dan cookie HttpOnly pada Bagian 20. Header berikut tetap didukung sebagai kompatibilitas token existing; bentuk snapshot tidak berubah.
+Alur utama TV kini aktivasi kode sekali pakai dan cookie HttpOnly pada Bagian 20. Header berikut tetap didukung sebagai kompatibilitas token existing; Monitor V3 menambahkan proyeksi nama dan daftar menunggu pada Bagian 25.
 
 ```http
 GET /api/v1/display/:layananId/snapshot HTTP/1.1
@@ -359,6 +359,12 @@ x-display-token: <token_perangkat>
   "diperolehPada": "2026-10-12T08:10:10.000Z",
   "layanan": { "kode": "LAY-A", "nama": "Layanan A" },
   "totalMenunggu": 3,
+  "modeNama": "SAMAR",
+  "menunggu": [
+    { "nomorAntrean": "A-026", "namaPasien": "Pasien A." },
+    { "nomorAntrean": "A-027", "namaPasien": "Pasien B." },
+    { "nomorAntrean": "A-028", "namaPasien": "Pasien C." }
+  ],
   "loket": [
     {
       "kode": "01",
@@ -366,6 +372,7 @@ x-display-token: <token_perangkat>
       "tiketAktif": [
         {
           "nomorAntrean": "A-025",
+          "namaPasien": "Pasien P.",
           "status": "DIPANGGIL",
           "dipanggilPada": "2026-10-12T08:10:00.000Z"
         }
@@ -378,7 +385,8 @@ x-display-token: <token_perangkat>
     "terjadiPada": "2026-10-12T08:10:00.000Z",
     "nomorAntrean": "A-025",
     "kodeLoket": "01",
-    "teks": "Nomor antrean A-025, silakan menuju loket 01.",
+    "namaPasien": "Pasien P.",
+    "teks": "Panggilan nomor antrean A, nol dua lima atas nama Pasien P., silakan menuju ke Layanan A, terima kasih.",
     "bahasa": "id-ID"
   }
 }
@@ -386,7 +394,7 @@ x-display-token: <token_perangkat>
 
 `pengumumanTerakhir` dapat bernilai `null`. Dalam implementasi service yang ditinjau, pemilihan pengumuman menggunakan peristiwa audit CALL/RECALL terkait tiket yang **masih DIPANGGIL** dan loket aktif pada tanggal pelayanan. Setelah tiket beralih ke DILAYANI, pengumuman lama tidak harus terus tersedia.
 
-**Pembatasan data:** respons monitor tidak mengandung `tiketId`, nama pengguna, nomor telepon, QR, JWT, atau token perangkat.
+**Pembatasan data:** respons monitor tidak mengandung `tiketId`, ID akun, nomor telepon, QR, JWT, atau token perangkat. `namaPasien` merupakan proyeksi sesuai kebijakan server, default disamarkan; mode lengkap memerlukan konfigurasi eksplisit fasilitas (Bagian 25). Contoh nama di atas adalah ilustrasi kontrak.
 
 ## 6. Socket.IO: kanal operasional `/queue`
 
@@ -1834,3 +1842,41 @@ Migration aditif `20261024_user_profile_p2` menambah satu kolom nullable
 `DOCTOR_MEDIA_DIR`. **Migration development masih memerlukan backup dan persetujuan
 Project Lead; implementasi P2 tidak otomatis memberi izin aktivasi database.**
 Rincian sesi, storage, pengujian dan batas: [USER_PROFILE_P2.md](USER_PROFILE_P2.md).
+
+
+## 25. Public Display Monitor V3 (v1.6)
+
+`GET /api/v1/display/:layananId/snapshot` mempertahankan `versiSkema: 1`, autentikasi perangkat, cookie HttpOnly/header token, `Cache-Control: no-store`, dan seluruh field existing. Field aditif:
+
+- `modeNama`: `SAMAR` (default), `LENGKAP`, atau `TANPA_NAMA`.
+- `menunggu`: maksimal 100 objek `{nomorAntrean, namaPasien}`; hanya tiket **MENUNGGU dan sudah ENQUEUE**, tanggal pelayanan dan layanan perangkat yang sama. `totalMenunggu` tetap total sebenarnya, bukan panjang array.
+- `loket[].tiketAktif[].namaPasien` dan `pengumumanTerakhir.namaPasien`: proyeksi yang sama, nullable. Tidak ada nama mentah tambahan, ID akun/tiket, email, telepon, NIK, alamat, QR atau informasi medis.
+
+Field baru menggantikan pembatasan lama pada Bagian 5 yang hanya menyediakan angka tanpa nama. Nama tetap informasi terbatas, termasuk bentuk tersamar; fasilitas harus menetapkan kebijakan pengumuman publiknya. Browser tidak dapat meminta mode nama lain melalui query/body/pairing.
+
+Konfigurasi **server** (tidak ada migration):
+
+```text
+DISPLAY_PATIENT_NAME_MODE=SAMAR
+# Hanya setelah fasilitas menyatakan dasar persetujuan/kebijakan yang sesuai:
+# DISPLAY_PATIENT_NAME_MODE=LENGKAP
+# DISPLAY_FULL_NAMES_APPROVED=true
+# Untuk tidak menampilkan atau menyuarakan nama sama sekali:
+# DISPLAY_PATIENT_NAME_MODE=TANPA_NAMA
+```
+
+Mode `LENGKAP` tanpa konfirmasi server `DISPLAY_FULL_NAMES_APPROVED=true` tetap menghasilkan SAMAR. `Yusran Abdullah` menjadi `Yusran A.`; satu kata menjadi inisial. Nama kosong/null tidak diganti dengan nama buatan. Konfigurasi berlaku bagi seluruh Display pada instance server tersebut; pengelola harus mengoordinasikan kebijakan antar-instance. Perubahan konfigurasi memerlukan deployment/restart sesuai mekanisme lingkungan.
+
+Urutan ANTREAN_HARIAN tetap FIFO `urutanMasukAntrean, id`. HIBRIDA/JANJI_TEMU_DOKTER menggunakan selector Hospital existing untuk kelayakan pada ruang appointment masing-masing, lalu comparator bersama: prioritas, slot, waktu REQUEUE/check-in, urutan masuk, id. Ini merupakan daftar konsolidasi poliklinik, **bukan janji urutan CALL tunggal lintas ruang**. CALL tetap memeriksa ruang/sesi dan hak petugas melalui Queue Engine existing. Pasien yang belum layak tetap termasuk total/list dengan prioritas server; frontend tidak mengurutkan ulang atau membuat estimasi.
+
+Teks pengumuman baru bersumber dari snapshot:
+
+> Panggilan nomor antrean A, nol nol dua atas nama Yusran A., silakan menuju ke Poliklinik Anak, terima kasih.
+
+`nomorAntrean` tetap `A-002`. Ejaan huruf/digit mempertahankan nol di depan; `teks` pada layar dan yang dikirim ke TTS **identik**. Tanpa nama, frasa `atas nama` dihilangkan. Hanya peristiwa CALL/RECALL baru yang boleh menyuarakan teks; `peristiwaId` adalah kunci deduplikasi. Bahasa tetap `id-ID`. Tidak ada chime existing pada implementasi ini dan tidak ditambahkan layanan suara berbayar.
+
+Namespace `/display`, room `display:layanan:<id>`, `display:ready` dan `display:updated` tidak berubah; payload socket tetap invalidasi minimal tanpa nama. Snapshot REST adalah sumber kebenaran. Setelah setiap sinyal, reconnect dan polling fallback, ambil ulang snapshot. Bootstrap/reconnect/manual refresh/resume membentuk baseline senyap sehingga tidak memutar ulang panggilan lama.
+
+Pembatalan existing hanya menerima appointment DIPESAN, sehingga tidak pernah termasuk daftar MENUNGGU Display. Tidak ditambahkan mutasi pembatalan pasien MENUNGGU atau event CANCEL baru. Tiket DIBATALKAN tetap dikecualikan dari snapshot. Event operasional ENQUEUE/CALL/RECALL/SKIP/REQUEUE/START/COMPLETE tetap menginvalidasi Display.
+
+Lihat [panduan monitor dan hasil QA V3](../frontend/PUBLIC_DISPLAY_V3.md).

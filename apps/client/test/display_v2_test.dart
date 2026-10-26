@@ -158,7 +158,7 @@ void main() {
         (tester) async {
           await board(tester, size, _snapshot(rooms: count));
           expect(tester.takeException(), isNull);
-          expect(find.text('Poliklinik Mata'), findsOneWidget);
+          expect(find.text('Poliklinik Mata'), findsWidgets);
           expect(
             find.byKey(const ValueKey('display-call-number')),
             findsOneWidget,

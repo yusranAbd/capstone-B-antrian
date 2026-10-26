@@ -226,4 +226,41 @@ describe('Public Display Snapshot (e2e)', () => {
     expect(body.pengumumanTerakhir).toBeNull();
     expect(body.loket[0]?.tiketAktif[0]?.status).toBe('DILAYANI');
   });
+  it('daftar menunggu tersamar dan nama panggilan tunduk kebijakan server', async () => {
+    const mode = process.env.DISPLAY_PATIENT_NAME_MODE;
+    const approved = process.env.DISPLAY_FULL_NAMES_APPROVED;
+    try {
+      delete process.env.DISPLAY_PATIENT_NAME_MODE;
+      delete process.env.DISPLAY_FULL_NAMES_APPROVED;
+      await db().tiketAntrean.update({ where: { id: tiketId }, data: { status: StatusTiket.MENUNGGU } });
+      const waiting = (await bacaSnapshot().expect(200)).body as DisplaySnapshot;
+      expect(waiting.totalMenunggu).toBe(1);
+      expect(waiting.menunggu).toEqual([{ nomorAntrean: 'D-025', namaPasien: 'Pemilik T. D. E.' }]);
+      expect(JSON.stringify(waiting)).not.toContain('Pemilik Tiket Display E2E');
+      await db().tiketAntrean.update({ where: { id: tiketId }, data: { status: StatusTiket.DIPANGGIL } });
+      process.env.DISPLAY_PATIENT_NAME_MODE = 'LENGKAP';
+      expect(((await bacaSnapshot().expect(200)).body as DisplaySnapshot).modeNama).toBe('SAMAR');
+      process.env.DISPLAY_FULL_NAMES_APPROVED = 'true';
+      const full = (await bacaSnapshot().expect(200)).body as DisplaySnapshot;
+      expect(full.loket[0].tiketAktif[0].namaPasien).toBe('Pemilik Tiket Display E2E');
+      expect(full.pengumumanTerakhir?.teks).toContain('atas nama Pemilik Tiket Display E2E');
+      expect(full.menunggu).toEqual([]);
+      process.env.DISPLAY_PATIENT_NAME_MODE = 'TANPA_NAMA';
+      const hidden = (await bacaSnapshot().expect(200)).body as DisplaySnapshot;
+      expect(hidden.loket[0].tiketAktif[0].namaPasien).toBeNull();
+      expect(hidden.pengumumanTerakhir?.teks).not.toContain('atas nama');
+    } finally {
+      if (mode === undefined) delete process.env.DISPLAY_PATIENT_NAME_MODE; else process.env.DISPLAY_PATIENT_NAME_MODE = mode;
+      if (approved === undefined) delete process.env.DISPLAY_FULL_NAMES_APPROVED; else process.env.DISPLAY_FULL_NAMES_APPROVED = approved;
+    }
+  });
+
+  it('tiket dibatalkan tidak masuk daftar menunggu atau pengumuman', async () => {
+    await db().tiketAntrean.update({ where: { id: tiketId }, data: { status: StatusTiket.DIBATALKAN } });
+    const body = (await bacaSnapshot().expect(200)).body as DisplaySnapshot;
+    expect(body.totalMenunggu).toBe(0);
+    expect(body.menunggu).toEqual([]);
+    expect(body.pengumumanTerakhir).toBeNull();
+  });
+
 });

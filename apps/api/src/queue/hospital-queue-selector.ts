@@ -92,23 +92,28 @@ export function urutkanKandidatHospital<T extends KandidatHospital>(
   sesiWalkInAktif: boolean,
 ): Array<KandidatTerurut<T>> {
   const terurut = kandidat.map((tiket) => statusKandidat(tiket, mode, loketId, sekarang, sesiWalkInAktif));
-  terurut.sort((a, b) => {
-    if (a.prioritas !== b.prioritas) return a.prioritas - b.prioritas;
-    // Appointment pada slot lebih awal berhak dipanggil lebih dahulu.
-    if (a.jenisAntrean === 'JANJI_TEMU' && b.jenisAntrean === 'JANJI_TEMU') {
-      const waktuSlotA = a.tiket.janjiTemu?.slotPraktik.mulaiPada.getTime() ?? Number.MAX_SAFE_INTEGER;
-      const waktuSlotB = b.tiket.janjiTemu?.slotPraktik.mulaiPada.getTime() ?? Number.MAX_SAFE_INTEGER;
-      if (waktuSlotA !== waktuSlotB) return waktuSlotA - waktuSlotB;
-    }
-    const waktuA = waktuPrioritas(a.tiket);
-    const waktuB = waktuPrioritas(b.tiket);
-    if (waktuA !== waktuB) return waktuA - waktuB;
-    const urutanA = a.tiket.urutanMasukAntrean ?? Number.MAX_SAFE_INTEGER;
-    const urutanB = b.tiket.urutanMasukAntrean ?? Number.MAX_SAFE_INTEGER;
-    if (urutanA !== urutanB) return urutanA - urutanB;
-    return a.tiket.id.localeCompare(b.tiket.id);
-  });
+  terurut.sort(bandingkanKandidatHospital);
   return terurut;
+}
+
+/** Comparator yang sama juga dipakai proyeksi display lintas ruang; tidak mengubah CALL. */
+export function bandingkanKandidatHospital<T extends KandidatHospital>(
+  a: KandidatTerurut<T>, b: KandidatTerurut<T>,
+): number {
+  if (a.prioritas !== b.prioritas) return a.prioritas - b.prioritas;
+  // Appointment pada slot lebih awal berhak dipanggil lebih dahulu.
+  if (a.jenisAntrean === 'JANJI_TEMU' && b.jenisAntrean === 'JANJI_TEMU') {
+    const waktuSlotA = a.tiket.janjiTemu?.slotPraktik.mulaiPada.getTime() ?? Number.MAX_SAFE_INTEGER;
+    const waktuSlotB = b.tiket.janjiTemu?.slotPraktik.mulaiPada.getTime() ?? Number.MAX_SAFE_INTEGER;
+    if (waktuSlotA !== waktuSlotB) return waktuSlotA - waktuSlotB;
+  }
+  const waktuA = waktuPrioritas(a.tiket);
+  const waktuB = waktuPrioritas(b.tiket);
+  if (waktuA !== waktuB) return waktuA - waktuB;
+  const urutanA = a.tiket.urutanMasukAntrean ?? Number.MAX_SAFE_INTEGER;
+  const urutanB = b.tiket.urutanMasukAntrean ?? Number.MAX_SAFE_INTEGER;
+  if (urutanA !== urutanB) return urutanA - urutanB;
+  return a.tiket.id.localeCompare(b.tiket.id);
 }
 
 /** Slot mendatang, relasi nonaktif atau ruang lain tidak boleh di-CALL. */
