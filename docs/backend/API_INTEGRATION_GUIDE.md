@@ -148,7 +148,7 @@ Authorization: Bearer <access_token>
 - `loket[].tiketAktif` adalah array, bukan objek tunggal. Frontend harus tetap dapat menampilkan beberapa tiket aktif jika kondisi database memilikinya.
 - `versi` pada tiket dapat dipakai untuk mengenali state yang lebih baru pada tiket sama; jangan disamakan dengan `versiSkema`.
 - `masukAntreanPada`, `dipanggilPada`, `pelayananDimulaiPada`, dan `urutanMasukAntrean` dapat `null` sebagaimana tipe resminya.
-- Snapshot operasional tidak menyertakan data pribadi dalam tipe responsnya.
+- Bagian legacy `menunggu` tetap tanpa identitas. Portal PETUGAS V4 menambahkan `daftarPasien.tiket[].namaPasien` dan `checkInPada`, serta `loket[].tiketAktif[].namaPasien`, khusus REST PETUGAS aktif sesuai penugasan. Respons memakai `Cache-Control: no-store`; identitas ini tidak ditambahkan ke event Socket.IO atau snapshot Public Display.
 
 ### 4.4 `GET /queue/menunggu`: daftar FIFO ringkas
 
@@ -331,7 +331,7 @@ Mutasi berlangsung dalam Prisma `$transaction` dengan isolation `Serializable`; 
 
 - Setelah koneksi `/queue` diterima dan `queue:join` berhasil, lakukan `GET /queue/snapshot?loketId=...`. Pada setiap `queue:updated` atau reconnect, lakukan refresh snapshot. Event `queue:updated` bukan respons operasi dan tidak menjamin semua field respons REST tersedia.
 - Tombol **Panggil** hanya aktif ketika tidak ada tiket `DIPANGGIL`/`DILAYANI` pada loket dan antrean layanan masih menunggu. Jika ada konflik tetap percayai server.
-- Tombol **Panggil Ulang / Lewati / Mulai Pelayanan / Selesaikan** mengikuti status tiket aktif loket. Tiket dilewati tidak tersedia dalam `snapshot.loket[].tiketAktif` (snapshot memuat hanya `DIPANGGIL`/`DILAYANI`), sehingga aksi **Antre Ulang** pada tiket `DILEWATI` memerlukan rujukan tiket yang berwenang dari hasil SKIP atau data sumber lain; jangan mengarang endpoint daftar DILEWATI.
+- Tombol **Panggil Ulang / Lewati / Mulai Pelayanan / Selesaikan** mengikuti status tiket aktif loket. `snapshot.loket[].tiketAktif` tetap hanya `DIPANGGIL`/`DILAYANI`. Gunakan `snapshot.daftarPasien.tiket` untuk tabel terpadu MENUNGGU/DILEWATI/CHECK_IN; REQUEUE dan pemulihan CHECK_IN memakai endpoint mutasi existing melalui aksi baris, tanpa rujukan UUID manual atau cache hasil SKIP.
 - Saat RECALL, TTS perlu memperhatikan event `RECALL` walaupun status tetap `DIPANGGIL`; Public Display memakai sinyal pembaruan dan identitas peristiwa pengumuman untuk menghindari duplikasi.
 
 ## 5. REST: Public Display
@@ -1959,3 +1959,30 @@ POST /display/pairing menerima field opsional boolean isolasiSesi. Nilai true me
 Klien Web baru menyimpan hanya UUID perangkat di sessionStorage, terpisah per tab dan API_BASE_URL. GET /display/sesi, GET /display/:layananId/snapshot dan POST /display/putuskan mengirim header opsional x-display-device-id; Socket.IO /display memakai auth.perangkatId bersama auth.layananId. Header/selector tidak memberikan hak akses sendiri: hanya cookie yang namanya sesuai selector dipakai, hash token harus menunjuk ID perangkat yang sama dan scope layanan diverifikasi kembali. Tidak ada fallback ke cookie perangkat lain. Token header/manual legacy tetap kompatibel.
 
 Rotasi/nonaktifkan/forget sasaran A tidak memengaruhi perangkat B/C. Tab baru tidak mengambil cookie ambient milik monitor lain. Upgrade API dan Flutter bersama; tab Web lama tanpa selector perlu pairing ulang satu kali. Detail trade-off sessionStorage, duplicate tab, kuota cookies, keamanan same-origin dan hasil/batas pengujian ada di docs/frontend/PUBLIC_DISPLAY_MULTI_MONITOR.md. Tidak ada migration atau perubahan Queue Engine.
+
+
+## Portal PETUGAS V4 — proyeksi operasional aditif
+
+Endpoint existing: **GET /queue/snapshot?loketId=<uuid>&halamanTindakLanjut=1**. Parameter halaman opsional, integer positif (default 1), dengan batas offset integer database; nilai invalid menghasilkan 400. JWT dan pemeriksaan PETUGAS aktif, penugasan, layanan, loket, tanggal pelayanan tetap berlaku. Tidak ada endpoint mutasi, schema atau migration baru.
+
+Bagian legacy versiSkema:1, menunggu.total/tiket dan loket[].tiketAktif dipertahankan. Field baru:
+
+| Field | Kontrak |
+|---|---|
+| daftarPasien.total | Total MENUNGGU + DILEWATI + CHECK_IN dalam scope bacaan |
+| daftarPasien.ditampilkan | Jumlah row pada response saat ini |
+| daftarPasien.halamanTindakLanjut | Batch DILEWATI/CHECK_IN yang diminta |
+| daftarPasien.jumlahHalamanTindakLanjut | Jumlah batch (minimal 1), masing-masing maksimum 100 |
+| daftarPasien.tiket[].tiketId / nomorAntrean / status | Identitas tiket dan status MENUNGGU, DILEWATI, atau CHECK_IN |
+| namaPasien | Nama lengkap dari pengguna pemilik tiket, bukan nama dokter/akun petugas; hanya proyeksi privat PETUGAS |
+| checkInPada | Timestamp CHECK_IN aktual nullable; bukan timestamp prioritas REQUEUE |
+| loketId | Loket terkait nullable; DILEWATI mempertahankan loket asal |
+| bisaAntreUlang | True hanya DILEWATI pada loket peminta; server tetap memvalidasi operasi |
+| bisaMasukAntrean | True pada CHECK_IN dalam scope; server tetap memvalidasi operasi |
+| loket[].tiketAktif[].namaPasien | Nama pasien aktif untuk panel pelayanan privat |
+
+Row MENUNGGU memakai **urutan selector existing** (maksimum 100 legacy) dan metadata eligibility Hospital tetap tersedia. Sesudahnya terdapat batch DILEWATI/CHECK_IN berurutan check-in lalu ID untuk presentasi saja. CHECK_IN appointment dibatasi ke ruang jadwal; walk-in tetap tersedia pada poliklinik yang ditugaskan. DILEWATI satu poliklinik dapat dibaca, tetapi REQUEUE hanya ditawarkan pada loket asal. Semua bacaan berada dalam transaksi RepeatableRead sesudah validasi penugasan.
+
+Mengganti halaman tindak lanjut tidak mengganti prioritas CALL, FIFO, slot, atau urutan menunggu legacy. Batasi render UI dengan pagination/virtualisasi; search lokal berlaku pada data yang sedang dimuat. Snapshot menunggu legacy tetap dibatasi 100, sehingga bukan pencarian seluruh database. Gunakan batch tindak lanjut berikutnya untuk SKIP/CHECK_IN di luar 100 pertama; bila jumlah batch menyusut sesudah tindakan, klien kembali ke batch sah dan fetch ulang. Jangan menggabungkan batch lama sebagai kebenaran tanpa snapshot baru atau membuat row duplikat.
+
+Dokter terjadwal dibaca melalui **GET /jadwal-praktik?layananId=<uuid>&tanggal=YYYY-MM-DD** existing, lalu dipilih berdasarkan loket dan tanggal. dokterLayanan.dokter kini menyertakan fotoProfil nullable berupa referensi media existing (/media/dokter/<uuid>.webp). Label ini menyatakan jadwal, bukan kehadiran dokter. Pergantian ruang/tanggal membatalkan penerapan hasil request lama pada UI; izin 401/403 mengosongkan cache pasien dan jadwal. Public Display dan Portal Dokter tetap memakai kontraknya masing-masing.

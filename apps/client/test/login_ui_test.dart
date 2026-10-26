@@ -345,6 +345,9 @@ void main() {
         if (role == 'USER') {
           await press(tester, find.byTooltip('Profil akun'));
           await press(tester, find.text('Keluar Akun'));
+        } else if (role == 'PETUGAS') {
+          await press(tester, find.byTooltip('Profil petugas'));
+          await press(tester, find.text('Keluar akun'));
         } else {
           await press(tester, find.byTooltip('Keluar akun'));
         }

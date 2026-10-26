@@ -71,7 +71,7 @@ describe('QueueService - REST Snapshot', () => {
       { id: loketKeduaId, kode: 'L-2', nama: 'Loket Dua' },
     ]);
     tx.tiketAntrean.findMany
-      .mockResolvedValueOnce([
+      .mockResolvedValue([]).mockResolvedValueOnce([
         {
           id: tiketMenungguId,
           nomorUrut: 9,
@@ -81,7 +81,7 @@ describe('QueueService - REST Snapshot', () => {
           masukAntreanPada: new Date('2026-10-12T03:01:00.000Z'),
         },
       ])
-      .mockResolvedValueOnce([
+      .mockResolvedValue([]).mockResolvedValueOnce([
         {
           id: tiketAktifId,
           loketId: loketKeduaId,
@@ -135,8 +135,8 @@ describe('QueueService - REST Snapshot', () => {
       },
     };
     tx.tiketAntrean.findMany.mockReset()
-      .mockResolvedValueOnce([walk, janji])
-      .mockResolvedValueOnce([]);
+      .mockResolvedValue([]).mockResolvedValueOnce([walk, janji])
+      .mockResolvedValue([]).mockResolvedValueOnce([]);
     const hasil = await service.snapshotAntrean(petugasId, loketId);
     expect(hasil.menunggu.tiket.map((t) => t.tiketId)).toEqual([janji.id, walk.id]);
     expect(hasil.menunggu.tiket[0]).toMatchObject({
@@ -162,7 +162,7 @@ describe('QueueService - REST Snapshot', () => {
       peristiwaAntrean: [{ terjadiPada: new Date('2026-10-12T03:50:00Z') }] };
     const menunggu = { ...ulang, id: tiketAktifId, nomorUrut: 10, versi: 3,
       urutanMasukAntrean: 2, checkInPada: new Date('2026-10-12T03:30:00Z'), peristiwaAntrean: [] };
-    tx.tiketAntrean.findMany.mockReset().mockResolvedValueOnce([ulang, menunggu]).mockResolvedValueOnce([]);
+    tx.tiketAntrean.findMany.mockReset().mockResolvedValue([]).mockResolvedValueOnce([ulang, menunggu]).mockResolvedValue([]).mockResolvedValueOnce([]);
     const hasil = await service.snapshotAntrean(petugasId, loketId);
     expect(hasil.menunggu.tiket.map((tiket) => tiket.tiketId)).toEqual([menunggu.id, ulang.id]);
     expect(tx.tiketAntrean.findMany).toHaveBeenCalledWith(expect.objectContaining({
@@ -215,7 +215,7 @@ describe('QueueService - REST Snapshot', () => {
       { urutanMasukAntrean: 'asc' },
       { id: 'asc' },
     ]);
-    expect(tx.tiketAntrean.count).toHaveBeenCalledTimes(1);
+    expect(tx.tiketAntrean.count).toHaveBeenCalledTimes(2);
     expect(hasil.menunggu.tiket.every((tiket) => tiket.jenisAntrean === undefined)).toBe(true);
   });
 
@@ -237,7 +237,7 @@ describe('QueueService - REST Snapshot', () => {
       isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead,
     });
     expect(tx.loket.findMany).toHaveBeenCalledTimes(1);
-    expect(tx.tiketAntrean.findMany).toHaveBeenCalledTimes(2);
+    expect(tx.tiketAntrean.findMany).toHaveBeenCalledTimes(4);
   });
 
   it('menolak identitas yang bukan PETUGAS aktif tanpa membaca antrean', async () => {

@@ -10,6 +10,7 @@ import 'realtime.dart';
 import 'widgets.dart';
 import 'mobile_ui.dart';
 import 'staff_ui.dart';
+import 'staff_v4.dart';
 
 class QueuePage extends StatefulWidget {
   const QueuePage({super.key, required this.api, this.headerBuilder});
@@ -22,13 +23,13 @@ class QueuePage extends StatefulWidget {
 class _QueuePageState extends State<QueuePage> with WidgetsBindingObserver {
   List<Json> assignments = [];
   Json? snapshot;
+  int followupPage = 1;
   String? roomId, error, message;
   String liveStatus = 'Menghubungkan realtime…';
   bool loading = true, busy = false;
   String? pendingPath;
-  final qr = TextEditingController(), ticket = TextEditingController();
+  final qr = TextEditingController();
   final search = TextEditingController();
-  final Map<String, Json> receipts = {};
   SnapshotLoader? loader;
   RealtimeFeed? feed;
   Timer? poll;
@@ -60,8 +61,11 @@ class _QueuePageState extends State<QueuePage> with WidgetsBindingObserver {
       final list = rows(await widget.api.request('GET', '/penugasan-petugas'));
       if (!mounted) return;
       setState(() {
+        final previous = roomId;
         assignments = list;
-        roomId = validAssignments.firstOrNull?['loketId'];
+        roomId = validAssignments.any((a) => a['loketId'] == previous)
+            ? previous
+            : validAssignments.firstOrNull?['loketId'];
       });
       setupRoom();
     } catch (e) {
@@ -76,34 +80,69 @@ class _QueuePageState extends State<QueuePage> with WidgetsBindingObserver {
     loader?.dispose();
     poll?.cancel();
     snapshot = null;
-    receipts.clear();
-    ticket.clear();
+    followupPage = 1;
+    schedules = [];
+    scheduleLoading = true;
+    scheduleFailed = false;
+    scheduleVersion++;
+    lastScan = null;
+    manualQrOpen = false;
     qr.clear();
     message = null;
     final room = selectedRoom;
     if (room == null) return;
     final selected = roomId!;
     loader = SnapshotLoader(
-      fetch: () async => object(
-        await widget.api.request(
-          'GET',
-          '/queue/snapshot',
-          query: {'loketId': selected},
-        ),
-      ),
-      onData: (data) {
+      fetch: () async {
+        final data = object(
+          await widget.api.request(
+            'GET',
+            '/queue/snapshot',
+            query: {
+              'loketId': selected,
+              'halamanTindakLanjut': '$followupPage',
+            },
+          ),
+        );
         if (mounted && selected == roomId) {
+          unawaited(
+            loadSchedules(selected, data['tanggalPelayanan'].toString()),
+          );
+        }
+        return data;
+      },
+      onData: (data) {
+        final pages =
+            object(data['daftarPasien'])['jumlahHalamanTindakLanjut'] ?? 1;
+        if (mounted && selected == roomId && followupPage > pages) {
+          setState(() => followupPage = pages);
+          loader?.refresh();
+          return;
+        }
+        if (mounted &&
+            selected == roomId &&
+            (object(data['daftarPasien'])['halamanTindakLanjut'] ??
+                    followupPage) ==
+                followupPage) {
           setState(() {
             snapshot = data;
             error = null;
-            receipts.removeWhere(
-              (_, r) => r['date'] != data['tanggalPelayanan'],
-            );
           });
         }
       },
       onError: (e) {
-        if (mounted && selected == roomId) setState(() => error = '$e');
+        if (mounted && selected == roomId) {
+          setState(() {
+            error = e.toString();
+            if (e is ApiException && [401, 403].contains(e.status)) {
+              snapshot = null;
+              schedules = [];
+              scheduleLoading = false;
+              scheduleVersion++;
+              lastScan = null;
+            }
+          });
+        }
       },
     );
     feed = RealtimeFeed(
@@ -113,7 +152,6 @@ class _QueuePageState extends State<QueuePage> with WidgetsBindingObserver {
       onStatus: (status) {
         if (mounted) setState(() => liveStatus = status);
       },
-      onEvent: rememberEvent,
     );
     loader!.refresh();
     poll = Timer.periodic(const Duration(seconds: 15), (_) {
@@ -125,7 +163,6 @@ class _QueuePageState extends State<QueuePage> with WidgetsBindingObserver {
           setState(() {
             roomId = null;
             snapshot = null;
-            receipts.clear();
             message = 'Penugasan berubah tanggal. Muat ulang penugasan.';
           });
         }
@@ -133,15 +170,6 @@ class _QueuePageState extends State<QueuePage> with WidgetsBindingObserver {
         loader?.refresh();
       }
     });
-  }
-
-  void rememberEvent(Json event) {
-    final id = '${event['tiketId']}';
-    if (event['loketId'] == roomId && event['aksi'] == 'SKIP') {
-      receipts[id] = {...event, 'date': widget.api.config.today};
-    } else if (event['aksi'] != 'RECALL') {
-      receipts.remove(id);
-    }
   }
 
   @override
@@ -165,22 +193,9 @@ class _QueuePageState extends State<QueuePage> with WidgetsBindingObserver {
           body: body ?? {'loketId': roomId},
         ),
       );
-      final id = '${result['tiketId']}';
       if (mounted) {
         setState(() {
           message = '${result['nomorAntrean']} · ${result['status']}';
-          if (['CHECK_IN', 'DILEWATI'].contains(result['status'])) {
-            receipts[id] = {...result, 'date': widget.api.config.today};
-          } else {
-            receipts.remove(id);
-          }
-          if (result['status'] == 'CHECK_IN') {
-            qr.clear();
-            ticket.text = id;
-          }
-          if (['MENUNGGU', 'SELESAI'].contains(result['status'])) {
-            ticket.clear();
-          }
         });
       }
     } catch (e) {
@@ -249,8 +264,6 @@ class _QueuePageState extends State<QueuePage> with WidgetsBindingObserver {
         setState(() {
           lastScan = result;
           qr.clear();
-          ticket.clear();
-          receipts.remove('${result['tiketId']}');
         });
       }
       return result;
@@ -285,9 +298,118 @@ class _QueuePageState extends State<QueuePage> with WidgetsBindingObserver {
     loader?.dispose();
     poll?.cancel();
     qr.dispose();
-    ticket.dispose();
     search.dispose();
     super.dispose();
+  }
+
+  Widget roomChoice() => Row(
+    children: [
+      Expanded(
+        child: ChoiceField(
+          label: 'Ruang yang ditugaskan',
+          choices: {
+            for (final a in validAssignments)
+              '${a['loketId']}':
+                  '${label(object(a['loket']))} · ${label(object(object(a['loket'])['layanan']))}',
+          }.entries.map((e) => (e.key, e.value)).toList(),
+          value: roomId,
+          onChanged: busy || loading
+              ? null
+              : (v) => setState(() {
+                  roomId = v;
+                  error = null;
+                  search.clear();
+                  setupRoom();
+                }),
+        ),
+      ),
+      IconButton(
+        tooltip: 'Muat ulang penugasan',
+        onPressed: busy || loading ? null : loadAssignments,
+        icon: const Icon(Icons.refresh, size: 20),
+      ),
+    ],
+  );
+
+  List<Json> schedules = [];
+  bool scheduleLoading = false, scheduleFailed = false;
+  int scheduleVersion = 0;
+  Future<void> loadSchedules(String selected, String date) async {
+    final version = ++scheduleVersion;
+    try {
+      final list = rows(
+        await widget.api.request(
+          'GET',
+          '/jadwal-praktik',
+          query: {
+            'layananId': '${object(selectedRoom?['layanan'])['id']}',
+            'tanggal': date,
+          },
+        ),
+      );
+      if (mounted && selected == roomId && version == scheduleVersion) {
+        setState(() {
+          schedules = list
+              .where(
+                (s) =>
+                    (s['loketId'] ?? object(s['loket'])['id']) == selected &&
+                    dateOnly(s['tanggal']) == date &&
+                    s['aktif'] != false,
+              )
+              .toList();
+          scheduleLoading = false;
+          scheduleFailed = false;
+        });
+      }
+    } catch (_) {
+      if (mounted && selected == roomId && version == scheduleVersion) {
+        setState(() {
+          schedules = [];
+          scheduleLoading = false;
+          scheduleFailed = true;
+        });
+      }
+    }
+  }
+
+  List<Json> get patients {
+    final source = snapshot?['daftarPasien'] is Map
+        ? rows(object(snapshot?['daftarPasien'])['tiket'])
+        : rows(object(snapshot?['menunggu'])['tiket'])
+              .map((t) => {'status': 'MENUNGGU', ...t})
+              .toList();
+    final unique = <String, Json>{};
+    for (final t in source) {
+      unique.putIfAbsent('${t['tiketId']}', () => t);
+    }
+    return unique.values.toList();
+  }
+
+  void rowAction(Json row, String route) {
+    if (route == 'detail') {
+      showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('${row['nomorAntrean']}'),
+          content: Text(
+            '${row['namaPasien'] ?? 'Nama belum tersedia'}\nStatus: ${row['status']}\nCheck-in: ${widget.api.config.instantLabel(row['checkInPada'])}${row['layakDipanggil'] == false ? '\n${row['alasanTidakLayak'] ?? 'Belum layak dipanggil'}' : ''}',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Tutup'),
+            ),
+          ],
+        ),
+      );
+    } else if (row['status'] == 'DILEWATI' &&
+            row['bisaAntreUlang'] == true &&
+            route == 'antre-ulang' ||
+        row['status'] == 'CHECK_IN' &&
+            row['bisaMasukAntrean'] == true &&
+            route == 'masuk') {
+      action('/queue/${row['tiketId']}/$route');
+    }
   }
 
   @override
@@ -295,175 +417,81 @@ class _QueuePageState extends State<QueuePage> with WidgetsBindingObserver {
     data: StaffStyle.theme,
     child: Builder(
       builder: (context) => Scaffold(
-        appBar: widget.headerBuilder?.call(
-          StaffHeaderContext(
-            name: '${widget.api.user?['nama'] ?? 'Petugas'}',
-            room: selectedRoom,
-            status: liveStatus,
-          ),
-        ),
+        appBar: widget.headerBuilder?.call(roomChoice()),
         body: LayoutBuilder(
-          builder: (context, constraints) {
-            final wide = constraints.maxWidth >= 1000;
+          builder: (context, box) {
+            final wide = box.maxWidth >= 1000;
             final room = selectedRoom;
-            final stats = [
-              StaffMetric(
-                title: 'Pasien menunggu',
-                value: '${object(snapshot?['menunggu'])['total'] ?? '—'}',
-                detail: 'Poliklinik terpilih',
-                icon: Icons.groups_outlined,
-              ),
-              StaffMetric(
-                title: 'Dipanggil / dilayani',
-                value: snapshot == null ? '—' : '${active.length}',
-                detail: 'Ruang ini',
-                icon: Icons.campaign_outlined,
-              ),
-              const StaffMetric(
-                title: 'Pasien selesai',
-                value: '—',
-                detail: 'Total belum tersedia dari API',
-                icon: Icons.task_alt_rounded,
-              ),
-            ];
-            return ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                Wrap(
-                  spacing: 16,
-                  runSpacing: 12,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Panel petugas',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        Text(
-                          '${widget.api.config.today} · ${widget.api.config.serviceTimeZone}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: QueueBStyle.muted,
-                          ),
-                        ),
-                        if (constraints.maxWidth < 700)
-                          Text(
-                            '${widget.api.user?['nama'] ?? 'Petugas'}',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: QueueBStyle.muted,
-                            ),
-                          ),
-                      ],
+            final doctor = StaffScheduledDoctors(
+              config: widget.api.config,
+              schedules: schedules,
+              clinic: label(object(room?['layanan'])),
+              loading: scheduleLoading,
+              failed: scheduleFailed,
+            );
+            final mainHeight = (box.maxHeight - 202).clamp(390.0, 900.0);
+            return SingleChildScrollView(
+              key: const ValueKey('staff-page-scroll'),
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (widget.headerBuilder == null) roomChoice(),
+                  if (loading)
+                    const LinearProgressIndicator(
+                      semanticsLabel: 'Memuat penugasan',
                     ),
-                    if (validAssignments.isNotEmpty)
-                      SizedBox(
-                        width: wide
-                            ? 430
-                            : (constraints.maxWidth - 32).clamp(0, 430),
-                        child: ChoiceField(
-                          label: 'Ruang yang ditugaskan',
-                          choices: {
-                            for (final a in validAssignments)
-                              '${a['loketId']}':
-                                  '${label(object(a['loket']))} · ${label(object(object(a['loket'])['layanan']))}',
-                          }.entries.map((e) => (e.key, e.value)).toList(),
-                          value: roomId,
-                          onChanged: busy
-                              ? null
-                              : (v) => setState(() {
-                                  roomId = v;
-                                  error = null;
-                                  search.clear();
-                                  setupRoom();
-                                }),
-                        ),
+                  if (busy)
+                    const LinearProgressIndicator(
+                      semanticsLabel: 'Memproses tindakan',
+                    ),
+                  if (error != null) MobileNotice(error!, error: true),
+                  if (message != null) MobileNotice(message!),
+                  if (room == null && !loading)
+                    const StaffPanel(
+                      title: 'Ruang pelayanan',
+                      icon: Icons.meeting_room_outlined,
+                      child: StaffEmpty(
+                        'Tidak ada penugasan aktif untuk hari ini. Hubungi ADMIN untuk penugasan loket.',
                       ),
-                    IconButton(
-                      tooltip: 'Muat ulang penugasan',
-                      onPressed: busy || loading ? null : loadAssignments,
-                      icon: const Icon(Icons.refresh_rounded),
                     ),
-                    if (!wide) StaffLiveStatus(liveStatus),
-                  ],
-                ),
-                if (loading)
-                  const LinearProgressIndicator(
-                    semanticsLabel: 'Memuat penugasan',
-                  ),
-                if (busy)
-                  const LinearProgressIndicator(
-                    semanticsLabel: 'Memproses tindakan',
-                  ),
-                if (error != null) MobileNotice(error!, error: true),
-                if (message != null) MobileNotice(message!),
-                const SizedBox(height: 12),
-                if (constraints.maxWidth >= 640)
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      for (var i = 0; i < stats.length; i++) ...[
-                        if (i > 0) const SizedBox(width: 12),
-                        Expanded(child: stats[i]),
-                      ],
-                    ],
-                  )
-                else ...[
-                  for (final stat in stats)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: stat,
-                    ),
-                ],
-                const SizedBox(height: 12),
-                if (room == null && !loading)
-                  const StaffPanel(
-                    title: 'Ruang pelayanan',
-                    icon: Icons.meeting_room_outlined,
-                    child: StaffEmpty(
-                      'Tidak ada penugasan aktif untuk hari ini. Hubungi ADMIN untuk penugasan loket.',
-                    ),
-                  ),
-                if (room != null) ...[
-                  if (wide)
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          flex: 3,
-                          child: waitingPanel(context, height: 294),
+                  if (room != null) ...[
+                    if (wide)
+                      SizedBox(
+                        height: mainHeight,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(
+                              flex: 65,
+                              child: Column(
+                                children: [
+                                  doctor,
+                                  const SizedBox(height: 12),
+                                  Expanded(child: waitingPanel(context)),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              flex: 35,
+                              child: servicePanel(context, height: mainHeight),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(flex: 2, child: servicePanel(context)),
-                      ],
-                    )
-                  else ...[
-                    servicePanel(context),
+                      )
+                    else ...[
+                      doctor,
+                      const SizedBox(height: 12),
+                      servicePanel(context),
+                      const SizedBox(height: 12),
+                      SizedBox(height: 450, child: waitingPanel(context)),
+                    ],
                     const SizedBox(height: 12),
-                    waitingPanel(context, height: 300),
-                  ],
-                  const SizedBox(height: 12),
-                  if (wide)
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(flex: 3, child: checkInPanel()),
-                        const SizedBox(width: 12),
-                        Expanded(flex: 2, child: recoveryPanel()),
-                      ],
-                    )
-                  else ...[
                     checkInPanel(),
-                    const SizedBox(height: 12),
-                    recoveryPanel(),
                   ],
                 ],
-              ],
+              ),
             );
           },
         ),
@@ -471,230 +499,287 @@ class _QueuePageState extends State<QueuePage> with WidgetsBindingObserver {
     ),
   );
 
-  Widget waitingPanel(BuildContext context, {required double height}) {
-    final waiting = rows(object(snapshot?['menunggu'])['tiket']);
-    // Filtering only hides rows; server order and eligibility stay untouched.
-    final visible = waiting
+  Widget waitingPanel(BuildContext context) {
+    final query = search.text.trim().toLowerCase();
+    final visible = patients
         .where(
-          (t) => '${t['nomorAntrean']}'.toLowerCase().contains(
-            search.text.trim().toLowerCase(),
-          ),
+          (t) => '${t['nomorAntrean'] ?? ''} ${t['namaPasien'] ?? ''}'
+              .toLowerCase()
+              .contains(query),
         )
         .toList();
     return StaffPanel(
       title: 'Daftar antrean poli',
       icon: Icons.format_list_numbered_rounded,
-      action: IconButton(
-        tooltip: 'Muat ulang antrean',
-        onPressed: busy ? null : () => loader?.refresh(),
-        icon: const Icon(Icons.refresh_rounded),
+      expand: true,
+      action: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Tooltip(
+            message: liveStatus,
+            child: Icon(
+              liveStatus == 'Realtime terhubung'
+                  ? Icons.wifi_rounded
+                  : Icons.sync_rounded,
+              size: 16,
+              color: liveStatus == 'Realtime terhubung'
+                  ? QueueBStyle.success
+                  : QueueBStyle.warning,
+            ),
+          ),
+          IconButton(
+            tooltip: 'Muat ulang antrean',
+            onPressed: busy ? null : () => loader?.refresh(),
+            icon: const Icon(Icons.refresh_rounded),
+          ),
+        ],
       ),
-      child: SizedBox(
-        height: height - 76,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TextField(
-              controller: search,
-              onChanged: (_) => setState(() {}),
-              decoration: const InputDecoration(
-                labelText: 'Cari nomor antrean',
-                prefixIcon: Icon(Icons.search_rounded, size: 20),
-              ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextField(
+            controller: search,
+            onChanged: (_) => setState(() {}),
+            decoration: const InputDecoration(
+              labelText: 'Cari nomor antrean atau nama pasien',
+              prefixIcon: Icon(Icons.search_rounded, size: 20),
             ),
-            const SizedBox(height: 8),
-            Expanded(
-              child: snapshot == null
-                  ? const StaffEmpty('Menunggu snapshot…')
-                  : visible.isEmpty
-                  ? StaffEmpty(
-                      search.text.trim().isEmpty
-                          ? 'Belum ada pasien menunggu.'
-                          : 'Nomor antrean tidak ditemukan.',
-                    )
-                  : ListView.separated(
-                      itemCount: visible.length,
-                      separatorBuilder: (_, _) =>
-                          const Divider(height: 1, color: QueueBStyle.border),
-                      itemBuilder: (context, index) {
-                        final t = visible[index];
-                        final eligible = t['layakDipanggil'] != false;
-                        final kind = switch (t['jenisAntrean']) {
-                          'JANJI_TEMU' => 'Appointment',
-                          'WALK_IN' => 'Walk-in',
-                          _ => 'Antrean harian',
-                        };
-                        final reason = t['alasanTidakLayak'] == null
-                            ? 'Belum layak dipanggil'
-                            : '${t['alasanTidakLayak']}'.replaceAll('_', ' ');
-                        final detail = [
-                          kind,
-                          if (!eligible) reason,
-                          if (t['slotMulaiPada'] != null)
-                            'Slot ${widget.api.config.instantLabel(t['slotMulaiPada'])}',
-                        ].join(' · ');
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 7,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: QueueBStyle.mint,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  '${t['nomorAntrean']}',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w800,
-                                    color: QueueBStyle.darkTeal,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  detail,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: QueueBStyle.muted,
-                                  ),
-                                ),
-                              ),
-                              Tooltip(
-                                message: eligible ? 'Menunggu' : reason,
-                                child: Icon(
-                                  eligible
-                                      ? Icons.check_circle_outline
-                                      : Icons.schedule,
-                                  size: 18,
-                                  color: eligible
-                                      ? QueueBStyle.success
-                                      : QueueBStyle.warning,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: snapshot == null
+                ? const StaffEmpty('Menunggu snapshot…')
+                : StaffPatientList(
+                    key: ValueKey(query),
+                    rows: visible,
+                    config: widget.api.config,
+                    busy: busy,
+                    onAction: rowAction,
+                  ),
+          ),
+          if ((object(snapshot?['daftarPasien'])['jumlahHalamanTindakLanjut'] ??
+                  1) >
+              1)
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Tindak lanjut: $followupPage/${object(snapshot?['daftarPasien'])['jumlahHalamanTindakLanjut']}',
+                    style: const TextStyle(fontSize: 11),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Tindak lanjut sebelumnya',
+                  onPressed: busy || followupPage <= 1
+                      ? null
+                      : () {
+                          setState(() => followupPage--);
+                          loader?.refresh();
+                        },
+                  icon: const Icon(Icons.chevron_left),
+                ),
+                IconButton(
+                  tooltip: 'Tindak lanjut berikutnya',
+                  onPressed:
+                      busy ||
+                          followupPage >=
+                              (object(
+                                    snapshot?['daftarPasien'],
+                                  )['jumlahHalamanTindakLanjut'] ??
+                                  1)
+                      ? null
+                      : () {
+                          setState(() => followupPage++);
+                          loader?.refresh();
+                        },
+                  icon: const Icon(Icons.chevron_right),
+                ),
+              ],
             ),
-            const SizedBox(height: 6),
-            Text(
-              'Urutan server · ${visible.length}/${waiting.length} tiket ditampilkan · ${widget.api.config.instantLabel(snapshot?['diperolehPada'])}',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 11, color: QueueBStyle.muted),
-            ),
-          ],
-        ),
+          Text(
+            'Urutan menunggu dari server · ${object(snapshot?['daftarPasien'])['ditampilkan'] ?? patients.length}/${object(snapshot?['daftarPasien'])['total'] ?? object(snapshot?['menunggu'])['total'] ?? '—'} tiket dimuat',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 10, color: QueueBStyle.muted),
+          ),
+        ],
       ),
     );
   }
 
-  Widget servicePanel(BuildContext context) => StaffPanel(
-    title: 'Pelayanan ruang ini',
-    icon: Icons.campaign_outlined,
-    dark: true,
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          '${selectedRoom?['kode'] ?? ''} · ${label(selectedRoom ?? {})}',
-          style: const TextStyle(color: QueueBStyle.mint, fontSize: 12),
-        ),
-        if (active.isEmpty) ...[
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
-            child: Text(
-              '—',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 48,
-                height: 1.2,
-                fontWeight: FontWeight.w800,
-              ),
+  Widget servicePanel(BuildContext context, {double? height}) => SizedBox(
+    height: height,
+    child: StaffPanel(
+      title: 'Pelayanan ruang ini',
+      icon: Icons.campaign_outlined,
+      dark: true,
+      expand: height != null,
+      child: LayoutBuilder(
+        builder: (context, box) => SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: box.hasBoundedHeight ? box.maxHeight : 0,
             ),
-          ),
-          const Text(
-            'Belum ada tiket aktif',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white, fontSize: 13),
-          ),
-          const SizedBox(height: 12),
-        ],
-        for (final t in active) ...[
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Wrap(
-              spacing: 16,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  '${t['nomorAntrean']}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 44,
-                    height: 1.15,
-                    fontWeight: FontWeight.w800,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${selectedRoom?['kode'] ?? ''} · ${label(selectedRoom ?? {})}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
+                    ),
+                    Text(
+                      label(object(selectedRoom?['layanan'])),
+                      style: const TextStyle(
+                        color: QueueBStyle.mint,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+                Container(
+                  margin: const EdgeInsets.symmetric(vertical: 12),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: .06),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: .12),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      if (active.isEmpty) ...[
+                        const Text(
+                          '—',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 52,
+                            height: 1.2,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Belum ada tiket aktif',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Panggil pasien berikutnya untuk memulai pelayanan.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: QueueBStyle.mint,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                      for (final t in active) ...[
+                        Text(
+                          '${t['nomorAntrean']}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 44,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        if (t['namaPasien'] != null)
+                          Tooltip(
+                            message: '${t['namaPasien']}',
+                            child: Text(
+                              '${t['namaPasien']}',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        const SizedBox(height: 8),
+                        StatusBadge(t['status']),
+                      ],
+                    ],
                   ),
                 ),
-                StatusBadge(t['status']),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (active.isEmpty)
+                      FilledButton.icon(
+                        onPressed: busy || snapshot == null
+                            ? null
+                            : () => action('/queue/panggil'),
+                        icon: const Icon(Icons.campaign_outlined, size: 20),
+                        label: operationLabel(
+                          '/queue/panggil',
+                          'Panggil berikutnya',
+                        ),
+                      ),
+                    for (final t in active) ...[
+                      if (t['status'] == 'DIPANGGIL')
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            lightButton(
+                              'Panggil Ulang',
+                              '/queue/${t['tiketId']}/panggil-ulang',
+                            ),
+                            lightButton(
+                              'Lewati',
+                              '/queue/${t['tiketId']}/lewati',
+                            ),
+                            FilledButton(
+                              onPressed: busy
+                                  ? null
+                                  : () => action(
+                                      '/queue/${t['tiketId']}/mulai-pelayanan',
+                                    ),
+                              child: operationLabel(
+                                '/queue/${t['tiketId']}/mulai-pelayanan',
+                                'Mulai Pelayanan',
+                              ),
+                            ),
+                          ],
+                        ),
+                      if (t['status'] == 'DILAYANI')
+                        FilledButton(
+                          onPressed: busy
+                              ? null
+                              : () => action(
+                                  '/queue/${t['tiketId']}/selesaikan-pelayanan',
+                                ),
+                          child: operationLabel(
+                            '/queue/${t['tiketId']}/selesaikan-pelayanan',
+                            'Selesaikan Pelayanan',
+                          ),
+                        ),
+                    ],
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Pemilihan tiket mengikuti prioritas Queue Engine.',
+                      style: TextStyle(color: QueueBStyle.mint, fontSize: 11),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
-          const SizedBox(height: 10),
-          if (t['status'] == 'DIPANGGIL')
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                lightButton(
-                  'Panggil Ulang',
-                  '/queue/${t['tiketId']}/panggil-ulang',
-                ),
-                lightButton('Lewati', '/queue/${t['tiketId']}/lewati'),
-                FilledButton(
-                  onPressed: busy
-                      ? null
-                      : () => action('/queue/${t['tiketId']}/mulai-pelayanan'),
-                  child: operationLabel(
-                    '/queue/${t['tiketId']}/mulai-pelayanan',
-                    'Mulai Pelayanan',
-                  ),
-                ),
-              ],
-            ),
-          if (t['status'] == 'DILAYANI')
-            FilledButton(
-              onPressed: busy
-                  ? null
-                  : () => action('/queue/${t['tiketId']}/selesaikan-pelayanan'),
-              child: operationLabel(
-                '/queue/${t['tiketId']}/selesaikan-pelayanan',
-                'Selesaikan Pelayanan',
-              ),
-            ),
-        ],
-        if (active.isEmpty)
-          FilledButton.icon(
-            onPressed: busy || snapshot == null
-                ? null
-                : () => action('/queue/panggil'),
-            icon: const Icon(Icons.campaign_outlined, size: 20),
-            label: operationLabel('/queue/panggil', 'Panggil berikutnya'),
-          ),
-        const SizedBox(height: 10),
-        const Text(
-          'Pemilihan tiket mengikuti prioritas Queue Engine.',
-          style: TextStyle(color: QueueBStyle.mint, fontSize: 11),
         ),
-      ],
+      ),
     ),
   );
 
@@ -737,187 +822,76 @@ class _QueuePageState extends State<QueuePage> with WidgetsBindingObserver {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Text(
-            'Pindai QR pasien untuk melakukan check-in dan memasukkan tiket ke antrean secara otomatis.',
+            'Pindai QR pasien untuk langsung memasukkannya ke antrean.',
             style: TextStyle(fontSize: 12, color: QueueBStyle.muted),
           ),
-          const SizedBox(height: 10),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: FilledButton.icon(
-              onPressed: busy ? null : scan,
-              icon: const Icon(Icons.qr_code_scanner),
-              label: Text(
-                'Mulai Pindai QR',
-                style: TextStyle(
-                  fontFamily: Theme.of(context)
-                      .textTheme
-                      .labelLarge
-                      ?.fontFamily,
+          const SizedBox(height: 8),
+          LayoutBuilder(
+            builder: (context, box) {
+              final scanButton = FilledButton.icon(
+                onPressed: busy ? null : scan,
+                icon: const Icon(Icons.qr_code_scanner),
+                label: const Text('Mulai Pindai QR'),
+              );
+              final manual = ExpansionTile(
+                key: const ValueKey('staff-manual-qr'),
+                initiallyExpanded: manualQrOpen,
+                onExpansionChanged: (v) => setState(() => manualQrOpen = v),
+                tilePadding: EdgeInsets.zero,
+                title: const Text(
+                  'Input Manual',
+                  style: TextStyle(fontSize: 13),
                 ),
-              ),
-            ),
+                children: [
+                  TextField(
+                    controller: qr,
+                    enabled: !busy,
+                    obscureText: true,
+                    autocorrect: false,
+                    enableSuggestions: false,
+                    decoration: const InputDecoration(
+                      labelText: 'Payload QR (SQ1…)',
+                      prefixIcon: Icon(Icons.qr_code),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  OutlinedButton(
+                    onPressed: busy
+                        ? null
+                        : () async {
+                            try {
+                              await submitQr(qr.text);
+                            } catch (_) {
+                              /* Visible error; no optimistic status. */
+                            }
+                          },
+                    child: const Text('Proses QR & Masuk Antrean'),
+                  ),
+                ],
+              );
+              return box.maxWidth >= 850
+                  ? Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(flex: 4, child: scanButton),
+                        const SizedBox(width: 32),
+                        Expanded(flex: 6, child: manual),
+                      ],
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [scanButton, manual],
+                    );
+            },
           ),
-          if (busy && pendingPath == '/check-in/auto-antrean') ...[
-            const SizedBox(height: 8),
+          if (busy && pendingPath == '/check-in/auto-antrean')
             const LinearProgressIndicator(),
-          ],
           if (lastScan != null) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             StaffScanResult(result: lastScan!),
           ],
-          ExpansionTile(
-            key: const ValueKey('staff-manual-qr'),
-            initiallyExpanded: manualQrOpen,
-            onExpansionChanged: (value) => manualQrOpen = value,
-            tilePadding: EdgeInsets.zero,
-            title: const Text('Input Manual', style: TextStyle(fontSize: 13)),
-            children: [
-              TextField(
-                controller: qr,
-                enabled: !busy,
-                obscureText: true,
-                autocorrect: false,
-                enableSuggestions: false,
-                decoration: const InputDecoration(
-                  labelText: 'Payload QR (SQ1…)',
-                  prefixIcon: Icon(Icons.qr_code),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: OutlinedButton(
-                  onPressed: busy
-                      ? null
-                      : () async {
-                          try {
-                            await submitQr(qr.text);
-                          } catch (_) {
-                            /* Visible error; no optimistic status. */
-                          }
-                        },
-                  child: const Text('Proses QR & Masuk Antrean'),
-                ),
-              ),
-            ],
-          ),
         ],
       ),
     ),
   );
-
-  Widget recoveryPanel() => StaffPanel(
-    title: 'Tiket diterima / dilewati',
-    icon: Icons.move_to_inbox_outlined,
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (receipts.isEmpty)
-          const Text(
-            'Belum ada tiket untuk ditindaklanjuti.',
-            style: TextStyle(fontSize: 13, color: QueueBStyle.muted),
-          ),
-        if (receipts.isNotEmpty)
-          SizedBox(
-            height: (receipts.length * 58.0).clamp(58, 116),
-            child: ListView(
-              children: [
-                for (final r in receipts.values)
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '${r['nomorAntrean']}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            Text(
-                              '${r['status']}'.replaceAll('_', ' '),
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: QueueBStyle.muted,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: busy
-                            ? null
-                            : () => action(
-                                '/queue/${r['tiketId']}/${r['status'] == 'CHECK_IN' ? 'masuk' : 'antre-ulang'}',
-                              ),
-                        child: operationLabel(
-                          '/queue/${r['tiketId']}/${r['status'] == 'CHECK_IN' ? 'masuk' : 'antre-ulang'}',
-                          r['status'] == 'CHECK_IN'
-                              ? 'Masuk Antrean'
-                              : 'Antre Ulang',
-                          onLight: true,
-                        ),
-                      ),
-                    ],
-                  ),
-              ],
-            ),
-          ),
-        const SizedBox(height: 6),
-        const Text(
-          'Daftar sementara sesi ini dan event SKIP. Setelah membuka ulang, gunakan pemulihan ID tiket.',
-          style: TextStyle(fontSize: 11, color: QueueBStyle.muted),
-        ),
-        ExpansionTile(
-          tilePadding: EdgeInsets.zero,
-          childrenPadding: const EdgeInsets.only(bottom: 4),
-          title: const Text(
-            'Pemulihan ID tiket',
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-          ),
-          children: [
-            TextField(
-              controller: ticket,
-              enabled: !busy,
-              decoration: const InputDecoration(
-                labelText: 'ID tiket untuk masuk / antre ulang',
-              ),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                OutlinedButton(
-                  onPressed: busy ? null : () => manual('masuk'),
-                  child: operationLabel(
-                    '/queue/${ticket.text.trim()}/masuk',
-                    'Masuk Antrean',
-                    onLight: true,
-                  ),
-                ),
-                OutlinedButton(
-                  onPressed: busy ? null : () => manual('antre-ulang'),
-                  child: operationLabel(
-                    '/queue/${ticket.text.trim()}/antre-ulang',
-                    'Antre Ulang',
-                    onLight: true,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ],
-    ),
-  );
-  void manual(String route) {
-    if (!RegExp(r'^[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$')
-        .hasMatch(ticket.text.trim())) {
-      setState(() => error = 'Masukkan ID tiket UUID yang sah.');
-      return;
-    }
-    action('/queue/${ticket.text.trim()}/$route');
-  }
 }

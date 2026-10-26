@@ -13,6 +13,7 @@ import 'patient_home.dart';
 import 'queue.dart';
 import 'mobile_ui.dart';
 import 'login_ui.dart';
+import 'staff_v4.dart';
 
 class QueueBApp extends StatelessWidget {
   const QueueBApp({super.key, required this.api});
@@ -105,61 +106,82 @@ class _RootState extends State<_Root> {
       void openProfile() => Navigator.of(context).push<void>(
         MaterialPageRoute(builder: (_) => UserProfilePage(api: api)),
       );
-      AppBar header({VoidCallback? onActivity, Widget? staffContext}) => AppBar(
-        toolbarHeight: role == 'ADMIN'
-            ? 58
-            : role == 'DOKTER'
-            ? 64
-            : role == 'PETUGAS'
-            ? 60
-            : null,
-        title: role == 'USER'
-            ? PatientHomeIdentity(
-                name: '${api.user?['nama'] ?? 'Pasien'}',
-                avatar: AccountAvatar(api: api, radius: 20),
-                onProfile: openProfile,
-              )
-            : staffContext != null && MediaQuery.sizeOf(context).width >= 700
-            ? Row(
-                children: [
-                  const Flexible(child: QueueBBrand(compact: true)),
-                  Expanded(flex: 3, child: staffContext),
-                ],
-              )
-            : const QueueBBrand(compact: true),
-        actions: [
-          if (role == 'USER')
-            IconButton(
-              tooltip: 'Aktivitas tiket',
-              onPressed: onActivity,
-              icon: const Icon(Icons.notifications_none_rounded),
-            ),
-
-          if (['DOKTER', 'ADMIN', 'PETUGAS'].contains(role) &&
-              MediaQuery.sizeOf(context).width >= 700)
-            ProfileHeaderIdentity(api: api),
-          if (role != 'USER')
-            IconButton(
-              tooltip: 'Profil akun',
-              icon: ExcludeSemantics(
-                child: AccountAvatar(api: api, radius: 16),
+      PreferredSizeWidget header({
+        VoidCallback? onActivity,
+        Widget? staffContext,
+      }) {
+        if (role == 'PETUGAS') {
+          return StaffToolbar(
+            selection: staffContext ?? const SizedBox(),
+            avatar: AccountAvatar(api: api, radius: 18),
+            name: (api.user?['nama'] ?? 'Petugas').toString(),
+            onProfile: openProfile,
+            onLogout: () async {
+              try {
+                await api.logout();
+              } catch (_) {
+                /* Session gate owns errors. */
+              }
+            },
+          );
+        }
+        return AppBar(
+          toolbarHeight: role == 'ADMIN'
+              ? 58
+              : role == 'DOKTER'
+              ? 64
+              : role == 'PETUGAS'
+              ? 60
+              : null,
+          title: role == 'USER'
+              ? PatientHomeIdentity(
+                  name: '${api.user?['nama'] ?? 'Pasien'}',
+                  avatar: AccountAvatar(api: api, radius: 20),
+                  onProfile: openProfile,
+                )
+              : staffContext != null && MediaQuery.sizeOf(context).width >= 700
+              ? Row(
+                  children: [
+                    const Flexible(child: QueueBBrand(compact: true)),
+                    Expanded(flex: 3, child: staffContext),
+                  ],
+                )
+              : const QueueBBrand(compact: true),
+          actions: [
+            if (role == 'USER')
+              IconButton(
+                tooltip: 'Aktivitas tiket',
+                onPressed: onActivity,
+                icon: const Icon(Icons.notifications_none_rounded),
               ),
-              onPressed: openProfile,
-            ),
-          if (role != 'USER')
-            IconButton(
-              tooltip: 'Keluar akun',
-              icon: const Icon(Icons.logout),
-              onPressed: () async {
-                try {
-                  await api.logout();
-                } catch (_) {
-                  /* Session gate reports cleanup failures and server confirmation. */
-                }
-              },
-            ),
-        ],
-      );
+
+            if (['DOKTER', 'ADMIN', 'PETUGAS'].contains(role) &&
+                MediaQuery.sizeOf(context).width >= 700)
+              ProfileHeaderIdentity(api: api),
+            if (role != 'USER')
+              IconButton(
+                tooltip: 'Profil akun',
+                icon: ExcludeSemantics(
+                  child: AccountAvatar(api: api, radius: 16),
+                ),
+                onPressed: openProfile,
+              ),
+            if (role != 'USER')
+              IconButton(
+                tooltip: 'Keluar akun',
+                icon: const Icon(Icons.logout),
+                onPressed: () async {
+                  try {
+                    await api.logout();
+                  } catch (_) {
+                    /* Session gate reports cleanup failures and server confirmation. */
+                  }
+                },
+              ),
+          ],
+        );
+      }
+
       return Theme(
         data: role == 'ADMIN'
             ? AdminStyle.theme

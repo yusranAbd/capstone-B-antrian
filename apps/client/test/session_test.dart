@@ -654,11 +654,14 @@ void main() {
       me.complete(reply(identity(role)));
       await tester.pumpAndSettle();
       await pending;
-      expect(find.byTooltip('Profil akun'), findsOneWidget);
+      expect(
+        find.byTooltip(role == 'PETUGAS' ? 'Profil petugas' : 'Profil akun'),
+        findsOneWidget,
+      );
       expect(
         find.text(switch (role) {
           'ADMIN' => 'Poliklinik',
-          'PETUGAS' => 'Panel petugas',
+          'PETUGAS' => 'Ruang yang ditugaskan',
           _ => 'Akses cepat',
         }),
         findsWidgets,

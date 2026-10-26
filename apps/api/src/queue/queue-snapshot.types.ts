@@ -1,5 +1,5 @@
 import type { AlasanTidakLayakHospital } from '../hospital/hospital-context';
-/** Kontrak respons REST khusus dashboard PETUGAS, tanpa data pribadi. */
+/** Kontrak respons REST khusus dashboard PETUGAS, dengan identitas minimal pada bagian operasional terotorisasi. */
 export interface SnapshotTiketMenunggu {
   tiketId: string;
   nomorAntrean: string;
@@ -14,7 +14,19 @@ export interface SnapshotTiketMenunggu {
   alasanTidakLayak?: AlasanTidakLayakHospital | null;
 }
 
+export interface SnapshotPasien {
+  tiketId: string;
+  nomorAntrean: string;
+  status: 'MENUNGGU' | 'DILEWATI' | 'CHECK_IN';
+  namaPasien: string | null;
+  checkInPada: string | null;
+  loketId: string | null;
+  bisaAntreUlang?: boolean;
+  bisaMasukAntrean?: boolean;
+}
+
 export interface SnapshotTiketAktif {
+  namaPasien?: string | null;
   tiketId: string;
   nomorAntrean: string;
   status: 'DIPANGGIL' | 'DILAYANI';
@@ -25,6 +37,7 @@ export interface SnapshotTiketAktif {
 }
 
 export interface SnapshotAntrean {
+  daftarPasien?: { total: number; ditampilkan: number; tiket: SnapshotPasien[]; halamanTindakLanjut: number; jumlahHalamanTindakLanjut: number };
   versiSkema: 1;
   diperolehPada: string;
   tanggalPelayanan: string;

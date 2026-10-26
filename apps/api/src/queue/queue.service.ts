@@ -15,6 +15,7 @@ import {
   StatusTiket,
 } from '../generated/prisma/client';
 
+import { bacaPasienOperasional } from './queue-operational-snapshot';
 import { PrismaService } from '../prisma/prisma.service';
 import { RealtimeBroadcastService } from '../realtime/realtime-broadcast.service';
 import type { JenisPerubahanAntrean } from '../realtime/realtime-events.types';
@@ -606,7 +607,7 @@ export class QueueService {
    * Hanya PETUGAS yang aktif dan masih ditugaskan pada loket ini.
    * Query menunggu, total, dan tiket aktif dibaca dari satu snapshot DB.
    */
-  async snapshotAntrean(petugasId: string, loketId: string): Promise<SnapshotAntrean> {
+  async snapshotAntrean(petugasId: string, loketId: string, halamanTindakLanjut = 1): Promise<SnapshotAntrean> {
     const tanggal = this.dapatkanTanggalPelayanan(new Date());
 
     const snapshot = await this.prisma.$transaction(
@@ -794,6 +795,14 @@ export class QueueService {
               versi: tiket.versi,
             }));
 
+        const operasional = await bacaPasienOperasional(
+          tx, layananId, loketId, tanggal.tanggalDb, menungguDitampilkan,
+          totalMenunggu, tiketAktif.map(t => t.id), layanan.prefixAntrean, halamanTindakLanjut,
+        );
+        for (const daftar of aktifPerLoket.values()) {
+          for (const tiket of daftar) tiket.namaPasien = operasional.nama.get(tiket.tiketId)?.pengguna.nama ?? null;
+        }
+
         return {
           versiSkema: 1 as const,
           tanggalPelayanan: tanggal.tanggal,
@@ -803,6 +812,7 @@ export class QueueService {
             kode: penugasan.loket.kode,
             nama: penugasan.loket.nama,
           },
+          daftarPasien: operasional.daftarPasien,
           menunggu: {
             total: totalMenunggu,
             ditampilkan: menungguDitampilkan.length,

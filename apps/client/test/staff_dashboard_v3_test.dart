@@ -8,7 +8,6 @@ import 'package:timezone/data/latest.dart' as tz;
 import 'package:queueb_client/src/api.dart';
 import 'package:queueb_client/src/app.dart';
 import 'package:queueb_client/src/config.dart';
-import 'package:queueb_client/src/staff_ui.dart';
 
 import 'ui_test.dart' show FakeBackend, uid;
 
@@ -79,13 +78,13 @@ void main() {
         find.text('Daftar antrean poli'),
         find.text('Pelayanan ruang ini'),
         find.text('Mulai Pindai QR'),
-        find.text('Pemulihan ID tiket'),
+        find.text('Ruang yang ditugaskan'),
       ]) {
         expect(finder, findsOneWidget);
         expect(tester.getBottomLeft(finder).dy, lessThan(size.height));
       }
-      expect(find.text('Total belum tersedia dari API'), findsOneWidget);
-      expect(find.text('12'), findsOneWidget);
+      expect(find.text('Total belum tersedia dari API'), findsNothing);
+      expect(find.text('Tiket diterima / dilewati'), findsNothing);
       expect(tester.takeException(), isNull);
     });
   }
@@ -114,9 +113,9 @@ void main() {
     try {
       await tester.pump();
       final searchNode = tester.getSemantics(
-        find.bySemanticsLabel('Cari nomor antrean'),
+        find.bySemanticsLabel('Cari nomor antrean atau nama pasien'),
       );
-      expect(searchNode.label, contains('Cari nomor antrean'));
+      expect(searchNode.label, contains('Cari nomor antrean atau nama pasien'));
       expect(searchNode.label, isNot(contains('Pelayanan ruang ini')));
     } finally {
       semantics.dispose();
@@ -128,16 +127,16 @@ void main() {
     expect(find.textContaining('SLOT BELUM MULAI'), findsOneWidget);
     final initial = backend.requests.length;
     await tester.enterText(
-      find.widgetWithText(TextField, 'Cari nomor antrean'),
+      find.widgetWithText(TextField, 'Cari nomor antrean atau nama pasien'),
       '002',
     );
     await tester.pumpAndSettle();
     expect(find.text('UM-009'), findsNothing);
     expect(find.text('UM-002'), findsOneWidget);
-    expect(find.text('12'), findsOneWidget); // total is not the filtered count.
+    expect(find.textContaining('2/12 tiket dimuat'), findsOneWidget);
     expect(backend.requests.length, initial);
     await tester.enterText(
-      find.widgetWithText(TextField, 'Cari nomor antrean'),
+      find.widgetWithText(TextField, 'Cari nomor antrean atau nama pasien'),
       '',
     );
     await tester.pumpAndSettle();
@@ -176,24 +175,13 @@ void main() {
     );
   }
 
-  testWidgets('Manual recovery rejects invalid UUID without a mutation', (
-    tester,
-  ) async {
-    final backend = StaffBackend();
-    await launch(tester, backend, const Size(1366, 768));
-    await tester.tap(find.text('Pemulihan ID tiket'));
-    await tester.pumpAndSettle();
-    await tester.enterText(
+  testWidgets('Recovery panels and UUID fields are absent', (tester) async {
+    await launch(tester, StaffBackend(), const Size(1366, 768));
+    expect(find.text('Pemulihan ID tiket'), findsNothing);
+    expect(find.text('Tiket diterima / dilewati'), findsNothing);
+    expect(
       find.widgetWithText(TextField, 'ID tiket untuk masuk / antre ulang'),
-      'not-a-ticket',
+      findsNothing,
     );
-    final enter = find.widgetWithText(OutlinedButton, 'Masuk Antrean');
-    await tester.ensureVisible(enter);
-    await tester.pumpAndSettle();
-    await tester.tap(enter);
-    await tester.pumpAndSettle();
-    expect(find.text('Masukkan ID tiket UUID yang sah.'), findsOneWidget);
-    expect(backend.requests.where((r) => r.$2.endsWith('/masuk')), isEmpty);
-    expect(find.byType(StaffPanel), findsNWidgets(4));
   });
 }

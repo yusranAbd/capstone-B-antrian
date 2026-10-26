@@ -213,7 +213,10 @@ void main() {
           hasLength(1),
         );
         expect(backend.requests.where((r) => r.$2.endsWith('/masuk')), isEmpty);
-        expect(find.text('Pasien Uji'), findsOneWidget);
+        expect(
+          find.text('Pasien Uji'),
+          findsNWidgets(2),
+        ); // Snapshot row + transient scan receipt.
         expect(find.text('UM-001 · MENUNGGU'), findsOneWidget);
         expect(tester.takeException(), isNull);
         final capture = Platform.environment['QUEUEB_QR_CAPTURE_DIR'];
