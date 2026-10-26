@@ -1950,3 +1950,12 @@ menunggu dan totalMenunggu mempertahankan arti semula. Semua daftar tetap dibata
 Nama lengkap memakai mekanisme server existing: DISPLAY_PATIENT_NAME_MODE=LENGKAP dan DISPLAY_FULL_NAMES_APPROVED=true. Permintaan operator pada revisi ini menyetujui aktivasi development; default source tetap SAMAR untuk instalasi lain. Flutter tidak membuka nama tersamar sendiri. Browser harus memakai backend terbaru dan snapshot baru. TTS mengikuti kebijakan nama yang sama, sementara deduplikasi peristiwaId tetap berlaku.
 
 Tabel monitor berjudul **Antrian pasien**, dengan kolom NOMOR, NAMA PASIEN, STATUS. Angka header adalah total kedua status. Baris berganti halaman setiap 12 detik jika tidak muat; batas snapshot dan total tetap diinformasikan. Flutter lama tetap dapat membaca menunggu; Flutter baru fallback ke menunggu jika backend belum mengirim antrianPasien.
+
+
+## 28. Multi-monitor Public Display dan isolasi pairing
+
+POST /display/pairing menerima field opsional boolean isolasiSesi. Nilai true menulis HttpOnly cookie queueb_display_<UUID perangkat>; tanpa field mempertahankan cookie legacy queueb_display. Respons metadata perangkat tidak berubah dan tidak memuat raw token. Kode tetap sekali pakai/5 menit; sesi tetap 30 hari; JWT/RBAC ADMIN untuk provisioning/rotasi/pencabutan tidak berubah.
+
+Klien Web baru menyimpan hanya UUID perangkat di sessionStorage, terpisah per tab dan API_BASE_URL. GET /display/sesi, GET /display/:layananId/snapshot dan POST /display/putuskan mengirim header opsional x-display-device-id; Socket.IO /display memakai auth.perangkatId bersama auth.layananId. Header/selector tidak memberikan hak akses sendiri: hanya cookie yang namanya sesuai selector dipakai, hash token harus menunjuk ID perangkat yang sama dan scope layanan diverifikasi kembali. Tidak ada fallback ke cookie perangkat lain. Token header/manual legacy tetap kompatibel.
+
+Rotasi/nonaktifkan/forget sasaran A tidak memengaruhi perangkat B/C. Tab baru tidak mengambil cookie ambient milik monitor lain. Upgrade API dan Flutter bersama; tab Web lama tanpa selector perlu pairing ulang satu kali. Detail trade-off sessionStorage, duplicate tab, kuota cookies, keamanan same-origin dan hasil/batas pengujian ada di docs/frontend/PUBLIC_DISPLAY_MULTI_MONITOR.md. Tidak ada migration atau perubahan Queue Engine.

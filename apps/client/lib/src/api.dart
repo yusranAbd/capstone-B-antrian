@@ -58,6 +58,7 @@ class QueueApi extends ChangeNotifier {
     Map<String, String>? query,
     bool authenticated = true,
     String? displayToken,
+    String? displayDeviceId,
     List<int>? photoBytes,
     bool binary = false,
   }) async {
@@ -75,6 +76,7 @@ class QueueApi extends ChangeNotifier {
       query,
       authenticated ? token : null,
       displayToken,
+      displayDeviceId,
       photoBytes,
     );
     if (authenticated && generation != _generation) {
@@ -93,6 +95,7 @@ class QueueApi extends ChangeNotifier {
         query,
         accessToken,
         displayToken,
+        displayDeviceId,
         photoBytes,
       );
       if (generation != _generation) {
@@ -181,6 +184,7 @@ class QueueApi extends ChangeNotifier {
     Map<String, String>? query,
     String? token,
     String? displayToken,
+    String? displayDeviceId,
     List<int>? photoBytes,
   ) async {
     final http.BaseRequest request;
@@ -198,6 +202,7 @@ class QueueApi extends ChangeNotifier {
       if (body != null) 'Content-Type': 'application/json',
       if (token != null) 'Authorization': 'Bearer $token',
       'x-display-token': ?displayToken,
+      'x-display-device-id': ?displayDeviceId,
     });
     try {
       return await (() async {

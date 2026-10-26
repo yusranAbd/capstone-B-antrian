@@ -29,7 +29,7 @@ export class DisplayService {
     return createHash('sha256').update(token, 'utf8').digest('hex');
   }
 
-  async snapshot(layananId: string, token: string | undefined): Promise<DisplaySnapshot> {
+  async snapshot(layananId: string, token: string | undefined, deviceId?: unknown): Promise<DisplaySnapshot> {
     if (typeof token !== 'string' || !POLA_TOKEN.test(token)) {
       throw new UnauthorizedException('Token perangkat display tidak valid');
     }
@@ -43,9 +43,9 @@ export class DisplayService {
       async (tx) => {
         const perangkat = await tx.perangkatTampilan.findUnique({
           where: { tokenHash: hashToken },
-          select: { sesiBerakhirPada: true, aktif: true, layananId: true, layanan: { select: { aktif: true } } },
+          select: { id: true, sesiBerakhirPada: true, aktif: true, layananId: true, layanan: { select: { aktif: true } } },
         });
-        if (!perangkat || (perangkat.sesiBerakhirPada && perangkat.sesiBerakhirPada <= sekarang)) {
+        if (!perangkat || (deviceId !== undefined && perangkat.id !== deviceId) || (perangkat.sesiBerakhirPada && perangkat.sesiBerakhirPada <= sekarang)) {
           throw new UnauthorizedException('Token perangkat display tidak valid');
         }
         if (!perangkat.aktif || !perangkat.layanan.aktif || perangkat.layananId !== layananId) {
@@ -224,7 +224,9 @@ export class DisplayService {
           pengumumanTerakhir,
         };
       },
-      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+      // Multi-monitor reads may compete with browser rendering on a demo laptop.
+      // Keep the existing 2s max-wait and bound execution below the client 20s timeout.
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead, timeout: 15_000 },
     );
 
     return { ...data, diperolehPada: new Date().toISOString() };

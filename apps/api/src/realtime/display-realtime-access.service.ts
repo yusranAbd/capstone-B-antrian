@@ -16,7 +16,7 @@ export interface IdentitasDisplay {
 export class DisplayRealtimeAccessService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async autentikasi(token: unknown, layananId: unknown): Promise<IdentitasDisplay> {
+  async autentikasi(token: unknown, layananId: unknown, deviceId?: unknown): Promise<IdentitasDisplay> {
     if (
       typeof token !== 'string' || !POLA_TOKEN.test(token) ||
       typeof layananId !== 'string' || !POLA_UUID.test(layananId)
@@ -31,7 +31,7 @@ export class DisplayRealtimeAccessService {
       },
     });
     if (
-      !perangkat || (perangkat.sesiBerakhirPada && perangkat.sesiBerakhirPada <= new Date()) || !perangkat.aktif || !perangkat.layanan.aktif ||
+      !perangkat || (deviceId !== undefined && perangkat.id !== deviceId) || (perangkat.sesiBerakhirPada && perangkat.sesiBerakhirPada <= new Date()) || !perangkat.aktif || !perangkat.layanan.aktif ||
       perangkat.layananId !== layananId
     ) throw new Error('UNAUTHORIZED');
 

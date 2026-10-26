@@ -27,7 +27,8 @@ export class DisplayController {
     @Param('layananId', new ParseUUIDPipe({ version: '4' })) layananId: string,
     @Headers('x-display-token') token: string | undefined,
     @Headers('cookie') cookie?: string,
+    @Headers('x-display-device-id') deviceId?: string,
   ) {
-    return this.displayService.snapshot(layananId, token ?? cookieToken(cookie));
+    return this.displayService.snapshot(layananId, token ?? cookieToken(cookie, deviceId), deviceId);
   }
 }

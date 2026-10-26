@@ -7,6 +7,7 @@ import 'api.dart';
 import 'config.dart';
 import 'display_board.dart';
 import 'display_fullscreen.dart';
+import 'display_selection.dart';
 import 'mobile_ui.dart';
 import 'realtime.dart';
 import 'widgets.dart';
@@ -40,8 +41,14 @@ class AnnouncementGate {
 }
 
 class DisplayPage extends StatefulWidget {
-  const DisplayPage({super.key, required this.api, required this.onExit});
+  const DisplayPage({
+    super.key,
+    required this.api,
+    required this.onExit,
+    this.selection,
+  });
   final QueueApi api;
+  final DisplaySelection? selection;
   final VoidCallback onExit;
   @override
   State<DisplayPage> createState() => _DisplayPageState();
@@ -50,6 +57,8 @@ class DisplayPage extends StatefulWidget {
 class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
   final service = TextEditingController(), token = TextEditingController();
   final activation = TextEditingController();
+  late final DisplaySelection selection;
+  String? deviceId;
   bool legacy = false,
       activating = false,
       restoringDevice = true,
@@ -75,6 +84,8 @@ class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
     displayClock = ValueNotifier(widget.api.config.now);
     WidgetsBinding.instance.addObserver(this);
     fullscreen.addListener(fullscreenChanged);
+    selection =
+        widget.selection ?? createDisplaySelection(widget.api.config.apiBase);
     restoreDevice();
     clock = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted && connected) displayClock.value = widget.api.config.now;
@@ -87,8 +98,15 @@ class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
 
   Future<void> restoreDevice() async {
     try {
+      deviceId = await selection.read();
+      if (selection.isolated && deviceId == null) return;
       final device = object(
-        await widget.api.request('GET', '/display/sesi', authenticated: false),
+        await widget.api.request(
+          'GET',
+          '/display/sesi',
+          authenticated: false,
+          displayDeviceId: deviceId,
+        ),
       );
       if (!mounted) return;
       if (device['id'] is String && device['layananId'] is String) {
@@ -97,9 +115,10 @@ class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
         connectDevice(service.text, null);
       }
     } catch (e) {
-      if (mounted && !(e is ApiException && e.status == 401)) {
+      if (mounted &&
+          (selection.isolated || !(e is ApiException && e.status == 401))) {
         setState(
-          () => error = 'Sesi perangkat belum dapat diperiksa. Periksa koneksi lalu coba lagi.',
+          () => error = e is ApiException && e.status != 0 ? e.message : 'Sesi perangkat belum dapat diperiksa. Periksa koneksi atau penyimpanan tab lalu coba lagi.',
         );
       }
     } finally {
@@ -119,17 +138,26 @@ class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
           'POST',
           '/display/pairing',
           authenticated: false,
-          body: {'kode': activation.text.trim()},
+          body: {
+            'kode': activation.text.trim(),
+            if (selection.isolated) 'isolasiSesi': true,
+          },
         ),
       );
       if (!mounted) return;
       activation.clear();
+      if (selection.isolated) {
+        final id = device['id'] as String;
+        await selection.write(id);
+        deviceId = id;
+      }
       try {
         final stored = object(
           await widget.api.request(
             'GET',
             '/display/sesi',
             authenticated: false,
+            displayDeviceId: deviceId,
           ),
         );
         if (stored['id'] != device['id']) {
@@ -173,7 +201,24 @@ class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
     unawaited(stopSpeech());
   }
 
-  void rejectDevice() {
+  Future<void> explainRejection(int epoch) async {
+    try {
+      await widget.api.request(
+        'GET',
+        '/display/sesi',
+        authenticated: false,
+        displayDeviceId: deviceId,
+      );
+    } on ApiException catch (e) {
+      if (mounted && rejected && epoch == connectionEpoch && e.status != 0) {
+        setState(() => error = e.message);
+      }
+    } catch (_) {
+      // The existing rejection stays visible when offline.
+    }
+  }
+
+  void rejectDevice([String? message]) {
     rebase();
     feed?.dispose();
     loader?.dispose();
@@ -183,15 +228,17 @@ class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
         rejected = true;
         audio = false;
         snapshot = null;
-        error = 'Token perangkat tidak valid atau akses layanan ditolak.';
+        error = message ?? 'Sesi perangkat berakhir, dinonaktifkan atau akses dicabut. Minta kode baru dari ADMIN.';
       });
     }
+    if (pairedSession) unawaited(explainRejection(connectionEpoch));
   }
 
   void connect() {
     if (!form.currentState!.validate()) return;
     final id = service.text.trim(), credential = token.text.trim();
     pairedSession = false;
+    deviceId = null;
     connectDevice(id, credential);
   }
 
@@ -221,6 +268,7 @@ class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
             '/display/$id/snapshot',
             authenticated: false,
             displayToken: credential,
+            displayDeviceId: pairedSession ? deviceId : null,
           ),
         );
       },
@@ -252,7 +300,7 @@ class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
       onError: (e) {
         if (!mounted || !connected || fetchedEpoch != connectionEpoch) return;
         if (e is ApiException && [401, 403].contains(e.status)) {
-          rejectDevice();
+          rejectDevice(e.message);
         } else {
           rebase();
           setState(
@@ -267,6 +315,7 @@ class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
       layananId: id,
       displayToken: credential,
       displaySession: pairedSession,
+      displayDeviceId: deviceId,
       onRefresh: () => loader?.refresh(),
       onStatus: (s) {
         if (!connected || rejected) return;
@@ -353,6 +402,7 @@ class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
           'POST',
           '/display/putuskan',
           authenticated: false,
+          displayDeviceId: deviceId,
         );
       } catch (e) {
         if (mounted) {
@@ -364,6 +414,9 @@ class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
       }
     }
     if (!mounted) return;
+    await selection.clear();
+    if (!mounted) return;
+    deviceId = null;
     pairedSession = false;
     speechEpoch++;
     feed?.dispose();
@@ -492,7 +545,7 @@ class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
                         ),
                         const SizedBox(height: 12),
                         const Text(
-                          'Satu layar untuk satu poliklinik. Minta kode sekali pakai dari ADMIN melalui Manajemen Display.',
+                          'Tab ini belum dipasangkan. Setiap monitor/tab menggunakan perangkat sendiri. Minta kode sekali pakai dari ADMIN melalui Manajemen Display.',
                         ),
                         if (restoringDevice || activating)
                           const LinearProgressIndicator(),

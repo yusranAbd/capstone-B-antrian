@@ -10,7 +10,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { DisplayRealtimeGateway } from '../realtime/display-realtime.gateway';
-import { DISPLAY_SESSION_MS } from './display-cookie';
+import { DISPLAY_SESSION_MS, displayCookieName } from './display-cookie';
 import {
   CreateDisplayDeviceDto,
   UpdateDisplayDeviceDto,
@@ -160,24 +160,27 @@ export class DisplayDeviceService {
     });
     return { token, device };
   }
-  async session(token: string | undefined) {
+  async session(token: string | undefined, deviceId?: unknown) {
     if (!token)
       throw new UnauthorizedException('Aktivasi perangkat diperlukan');
     const current = await this.prisma.perangkatTampilan.findUnique({
       where: { tokenHash: hash(token) },
       select: { ...metadata, sesiBerakhirPada: true },
     });
-    if (
-      !current ||
-      !current.aktif ||
-      !current.layanan.aktif ||
-      !current.sesiBerakhirPada ||
-      current.sesiBerakhirPada <= new Date()
-    ) {
-      throw new UnauthorizedException(
-        'Sesi perangkat berakhir atau perangkat dinonaktifkan',
-      );
+    if (!current) {
+      // Only public device status is used to explain a revoked cookie; never return metadata.
+      const known = typeof deviceId === 'string' && displayCookieName(deviceId)
+        ? await this.prisma.perangkatTampilan.findUnique({ where: { id: deviceId }, select: { aktif: true } }) : null;
+      throw new UnauthorizedException(known?.aktif === false
+        ? 'Perangkat dinonaktifkan. Hubungi ADMIN untuk aktivasi ulang.'
+        : 'Sesi perangkat tidak valid atau akses telah dicabut. Minta kode aktivasi baru dari ADMIN.');
     }
+    if (deviceId !== undefined && current.id !== deviceId)
+      throw new UnauthorizedException('Identitas sesi perangkat tidak cocok. Pasangkan ulang tab ini.');
+    if (!current.aktif || !current.layanan.aktif)
+      throw new UnauthorizedException('Perangkat atau poliklinik dinonaktifkan. Hubungi ADMIN.');
+    if (!current.sesiBerakhirPada || current.sesiBerakhirPada <= new Date())
+      throw new UnauthorizedException('Sesi perangkat kedaluwarsa. Minta kode aktivasi baru dari ADMIN.');
     const { sesiBerakhirPada: _expiry, ...device } = current;
     await this.prisma.perangkatTampilan.updateMany({
       where: {
@@ -192,13 +195,13 @@ export class DisplayDeviceService {
     });
     return device;
   }
-  async forget(token: string | undefined) {
+  async forget(token: string | undefined, deviceId?: unknown) {
     if (token) {
       const current = await this.prisma.perangkatTampilan.findUnique({
         where: { tokenHash: hash(token) },
         select: { id: true },
       });
-      if (current) {
+      if (current && (deviceId === undefined || current.id === deviceId)) {
         const revoked = await this.prisma.perangkatTampilan.updateMany({
           where: { id: current.id, tokenHash: hash(token) },
           data: {

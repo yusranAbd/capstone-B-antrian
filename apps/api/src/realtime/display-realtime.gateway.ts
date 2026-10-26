@@ -36,7 +36,7 @@ export class DisplayRealtimeGateway
         return;
       }
       void this.akses
-        .autentikasi(client.handshake.auth?.token ?? cookieToken(client.handshake.headers.cookie), client.handshake.auth?.layananId)
+        .autentikasi(client.handshake.auth?.token ?? cookieToken(client.handshake.headers.cookie, client.handshake.auth?.perangkatId), client.handshake.auth?.layananId, client.handshake.auth?.perangkatId)
         .then((identitas) => {
           client.data.display = identitas;
           next();
