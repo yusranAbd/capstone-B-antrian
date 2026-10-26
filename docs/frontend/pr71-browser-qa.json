@@ -1,0 +1,107 @@
+{
+  "engine": "Google Chrome headless, two distinct persistent user-data directories",
+  "speech": "controlled id-ID Web Speech, not a speaker hardware test",
+  "cases": {
+    "differentClinicsSameProfile": true,
+    "twoChromeProfiles": true,
+    "otherProfileCannotBorrowCredential": true,
+    "httpOnlyAndNoStorageToken": true,
+    "crossClinicDenied": true,
+    "independentAudio": true,
+    "call": true,
+    "recall": true,
+    "reloadAndSocketReconnect": true,
+    "skip": true,
+    "requeueNoDuplicate": true,
+    "sameClinicConsistent": true,
+    "rotationOnlyA": true,
+    "deactivationOnlyA": true,
+    "noUnexpected401403": true,
+    "noCrossClinicLeak": true,
+    "noScroll": true
+  },
+  "profiles": 2,
+  "monitors": 4,
+  "unexpected401403": [],
+  "consoleErrors": [],
+  "failedRequests": [],
+  "canceledRequests": [
+    {
+      "index": 3,
+      "path": "/api/v1/display/c485c84a-39bc-4188-947c-0fff9facd122/snapshot",
+      "error": "net::ERR_ABORTED"
+    }
+  ],
+  "apiErrors": [],
+  "expectedNavigationAborts": [],
+  "layout": [
+    {
+      "width": 1280,
+      "height": 720,
+      "scrollWidth": 1280,
+      "scrollHeight": 720,
+      "noScroll": true
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "scrollWidth": 1366,
+      "scrollHeight": 768,
+      "noScroll": true
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "scrollWidth": 1920,
+      "scrollHeight": 1080,
+      "noScroll": true
+    }
+  ],
+  "phase": "disable",
+  "chromeVersion": "155.0.8059.86",
+  "connections": [
+    {
+      "monitor": 1,
+      "ready": 3,
+      "invalidations": 4,
+      "snapshots": 7
+    },
+    {
+      "monitor": 2,
+      "ready": 1,
+      "invalidations": 0,
+      "snapshots": 2
+    },
+    {
+      "monitor": 3,
+      "ready": 1,
+      "invalidations": 4,
+      "snapshots": 6
+    },
+    {
+      "monitor": 4,
+      "ready": 1,
+      "invalidations": 4,
+      "snapshots": 5
+    }
+  ],
+  "success": true,
+  "sourceBaseCommit": "7380c6e",
+  "snapshotTransactionTimeoutMs": 15000,
+  "security": {
+    "httpOnly": true,
+    "productionSecure": true,
+    "sameSiteStrict": true,
+    "hostOnly": true,
+    "noLegacyFallback": true,
+    "duplicateCookieRejected": true
+  },
+  "database": "127.0.0.1:5433/capstone_antrean_test",
+  "databaseIntegrity": {
+    "existing": 13,
+    "missing": 0,
+    "changed": 0,
+    "remaining": 0
+  },
+  "fontSetup": "Local SDK Roboto for browser font requests; API and Socket.IO are real"
+}

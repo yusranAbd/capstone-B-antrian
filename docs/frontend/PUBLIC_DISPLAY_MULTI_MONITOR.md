@@ -33,7 +33,7 @@ sessionStorage bertahan pada reload, tetapi tab/browser yang ditutup dapat memer
 
 Uji otomatis mencakup legacy overwrite; tiga monitor dalam satu cookie jar (Anak, Bedah, Anak); pemalsuan selector/nama cookie; isolasi scope REST/socket; invalidasi CALL/RECALL/SKIP/REQUEUE/START/COMPLETE; reload/reconnect; rotasi A; nonaktifkan A; forget C sementara B tetap aktif. Flutter menguji dua instance halaman, tab baru tanpa ambient credential, reload selector, audio, logout, polling dan disposal yang independen.
 
-Browser baseline berhasil direproduksi. Computer-use untuk verifikasi browser sesudah perbaikan/dua profil Chrome **terhenti oleh pemeriksaan URL-confidence pada Windows**. Tidak digunakan CDP/Playwright alternatif untuk melewati pembatasan. Jangan mengklaim pengujian browser sesudah perbaikan atau dua profil Chrome sudah lulus; bukti sesudah berasal dari E2E HTTP/Socket.IO dan widget Flutter sampai browser dapat diverifikasi kembali. Monitor/speaker TV fisik belum diuji.
+Pada checkpoint awal 7380c6e, verifikasi browser sesudah perbaikan masih tertahan oleh URL-confidence alat native. Pada finalisasi berikutnya, Project Lead secara eksplisit meminta Chrome dan Playwright: Google Chrome headless berhasil dijalankan dengan dua profil sementara terpisah, tanpa melampirkan profil pengguna atau melewati interstitial keamanan. Semua URL aplikasi dibatasi ke server QA lokal; hasil browser nyata kini tercatat dalam [laporan final](PR71_FINAL_QA.md) dan [JSON QA](pr71-browser-qa.json). Monitor/speaker TV fisik tetap belum diuji.
 
 Semua fixture browser berada pada database test, dicatat berdasarkan ID unik, lalu dibersihkan. Baseline 13 record identik kembali, tanpa record berubah/hilang atau fixture tersisa. Tidak ada data development yang dihapus atau perangkat existing yang dipasangkan ulang untuk pengujian.
 
@@ -42,3 +42,7 @@ Semua fixture browser berada pada database test, dicatat berdasarkan ID unik, la
 Hasil lokal: unit backend **676/676 PASS** (45 suite); seluruh E2E **383/383 PASS** (31 suite), baseline 13 record identik dan nol fixture tersisa; Flutter seluruh role **354 PASS**, 1 live fixture opsional SKIP. Analyze dan backend lint/typecheck/build lulus. Capture widget dua poli memperlihatkan audio aktif hanya pada monitor kiri; ini memakai mock engine, bukan bukti suara speaker/browser fisik.
 
 Build Web release berhasil; peringatan dry-run WASM berasal dari flutter_tts/socket_io_common existing (tidak mengklaim build WASM). Pengulangan E2E pairing final **11/11 PASS**, termasuk cookie/selector palsu pada Socket.IO; baseline 13 record tetap identik. Format/analyze dan tes multi-monitor final 2/2 PASS. Tidak ada browser QA sesudah perbaikan yang diklaim dari capture widget.
+
+## Finalisasi browser PR #71
+
+Seluruh acceptance criteria Chrome kini PASS. Snapshot sempat menghasilkan Prisma P2028 dengan durasi 7,2 detik saat beberapa Chrome aktif; transaksi baca RepeatableRead memakai batas default 5 detik. Hanya timeout eksekusi snapshot dinaikkan menjadi 15 detik, dengan max-wait existing tetap dan di bawah batas request klien 20 detik. Ini tidak mengubah isolasi, otorisasi, Queue Engine, schema atau data. Unit mengunci opsi tersebut; pengujian browser akhir tidak menghasilkan HTTP 5xx, 401/403 yang tidak diharapkan, atau error console aplikasi.
