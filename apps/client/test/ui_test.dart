@@ -504,6 +504,8 @@ void main() {
     final server = FakeBackend('USER', mode: 'ANTREAN_HARIAN');
     await launch(tester, server, size: const Size(390, 844));
     await press(tester, 'Pendaftaran');
+    await press(tester, 'Buat Reservasi');
+    await press(tester, 'Pilih Poliklinik');
     await tester.tap(find.byType(ClinicCard).first);
     await tester.pumpAndSettle();
     await press(tester, 'Reservasi walk-in');
@@ -521,6 +523,8 @@ void main() {
       final server = FakeBackend('USER');
       await launch(tester, server);
       await press(tester, 'Pendaftaran');
+      await press(tester, 'Buat Reservasi');
+      await press(tester, 'Pilih Poliklinik');
       await tester.tap(find.byType(ClinicCard).first);
       await tester.pumpAndSettle();
       await press(tester, 'Lihat Detail Dokter');
@@ -537,7 +541,7 @@ void main() {
         {'slotPraktikId': uid},
       );
       await press(tester, 'Batalkan janji temu');
-      await press(tester, 'Lanjutkan');
+      await press(tester, 'Ya, Batalkan');
       expect(
         server.requests.any(
           (r) =>
