@@ -78,7 +78,7 @@ void main() {
       for (final finder in [
         find.text('Daftar antrean poli'),
         find.text('Pelayanan ruang ini'),
-        find.widgetWithText(FilledButton, 'Check-In'),
+        find.text('Mulai Pindai QR'),
         find.text('Pemulihan ID tiket'),
       ]) {
         expect(finder, findsOneWidget);

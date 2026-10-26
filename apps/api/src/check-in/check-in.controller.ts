@@ -17,6 +17,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 
 import { PeranPengguna } from '../generated/prisma/client';
 
+import { AutoCheckInService } from './auto-check-in.service';
 import { CheckInService } from './check-in.service';
 import { ProsesCheckInDto } from './dto/proses-check-in.dto';
 
@@ -24,7 +25,7 @@ import { ProsesCheckInDto } from './dto/proses-check-in.dto';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(PeranPengguna.PETUGAS)
 export class CheckInController {
-  constructor(private readonly checkInService: CheckInService) {}
+  constructor(private readonly checkInService: CheckInService, private readonly autoCheckIn: AutoCheckInService) {}
 
   @Post()
   @HttpCode(HttpStatus.OK)
@@ -34,4 +35,10 @@ export class CheckInController {
   ) {
     return this.checkInService.proses(dto, user.id);
   }
+  @Post('auto-antrean')
+  @HttpCode(HttpStatus.OK)
+  otomatis(@Body() dto: ProsesCheckInDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.autoCheckIn.proses(dto, user.id);
+  }
+
 }

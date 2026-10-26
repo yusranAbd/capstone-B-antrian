@@ -1,7 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
+
+import 'staff_qr_scanner.dart';
 
 import 'api.dart';
 import 'config.dart';
@@ -197,12 +198,84 @@ class _QueuePageState extends State<QueuePage> with WidgetsBindingObserver {
     }
   }
 
+  Json? lastScan;
+  bool manualQrOpen = false;
+
+  Future<Json> submitQr(String value) async {
+    if (!mounted) {
+      throw const ApiException(
+        401,
+        'Sesi petugas telah berakhir. Tutup pemindai dan login kembali.',
+      );
+    }
+    final payload = value.trim();
+    if (busy || selectedRoom == null) {
+      throw const ApiException(409, 'Tunggu proses sebelumnya selesai.');
+    }
+    if (!validCheckInQr(payload)) {
+      const message = 'Format QR tidak lengkap atau tidak valid.';
+      setState(() => error = message);
+      throw const ApiException(400, message);
+    }
+    setState(() {
+      busy = true;
+      pendingPath = '/check-in/auto-antrean';
+      error = null;
+      message = null;
+      lastScan = null;
+    });
+    String? failure;
+    try {
+      final result = object(
+        await widget.api.request(
+          'POST',
+          '/check-in/auto-antrean',
+          body: {'qrPayload': payload, 'loketId': roomId},
+        ),
+      );
+      if (!mounted) {
+        throw const ApiException(
+          401,
+          'Sesi petugas telah berakhir. Tutup pemindai dan login kembali.',
+        );
+      }
+      if (result['status'] != 'MENUNGGU') {
+        throw const ApiException(
+          409,
+          'Status belum MENUNGGU. Periksa antrean sebelum mencoba kembali.',
+        );
+      }
+      if (mounted) {
+        setState(() {
+          lastScan = result;
+          qr.clear();
+          ticket.clear();
+          receipts.remove('${result['tiketId']}');
+        });
+      }
+      return result;
+    } catch (e) {
+      failure = '$e';
+      if (mounted) setState(() => error = failure);
+      rethrow;
+    } finally {
+      await loader?.refresh();
+      if (mounted) {
+        setState(() {
+          busy = false;
+          pendingPath = null;
+          if (failure != null) error = failure;
+        });
+      }
+    }
+  }
+
   Future<void> scan() async {
-    final payload = await showDialog<String>(
+    await showDialog<void>(
       context: context,
-      builder: (context) => const _Scanner(),
+      barrierDismissible: false,
+      builder: (_) => StaffQrScanner(onScan: submitQr),
     );
-    if (payload != null && mounted) setState(() => qr.text = payload);
   }
 
   @override
@@ -655,53 +728,81 @@ class _QueuePageState extends State<QueuePage> with WidgetsBindingObserver {
     );
   }
 
-  Widget checkInPanel() => StaffPanel(
-    title: 'QR Check-In',
-    icon: Icons.qr_code_scanner_rounded,
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        TextField(
-          controller: qr,
-          enabled: !busy,
-          decoration: const InputDecoration(
-            labelText: 'Payload QR (SQ1…)',
-            prefixIcon: Icon(Icons.qr_code_rounded, size: 20),
+  Widget checkInPanel() => RepaintBoundary(
+    key: const ValueKey('staff-qr-panel'),
+    child: StaffPanel(
+      title: 'QR Check-in Otomatis',
+      icon: Icons.qr_code_scanner_rounded,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'Pindai QR pasien untuk melakukan check-in dan memasukkan tiket ke antrean secara otomatis.',
+            style: TextStyle(fontSize: 12, color: QueueBStyle.muted),
           ),
-        ),
-        const SizedBox(height: 10),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            OutlinedButton.icon(
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: FilledButton.icon(
               onPressed: busy ? null : scan,
-              icon: const Icon(Icons.qr_code_scanner, size: 20),
-              label: const Text('Pindai kamera'),
+              icon: const Icon(Icons.qr_code_scanner),
+              label: Text(
+                'Mulai Pindai QR',
+                style: TextStyle(
+                  fontFamily: Theme.of(context)
+                      .textTheme
+                      .labelLarge
+                      ?.fontFamily,
+                ),
+              ),
             ),
-            FilledButton(
-              onPressed: busy
-                  ? null
-                  : () {
-                      if (qr.text.trim().isEmpty) {
-                        setState(() => error = 'Payload QR wajib diisi.');
-                        return;
-                      }
-                      action(
-                        '/check-in',
-                        body: {'qrPayload': qr.text.trim(), 'loketId': roomId},
-                      );
-                    },
-              child: operationLabel('/check-in', 'Check-In', onLight: true),
-            ),
+          ),
+          if (busy && pendingPath == '/check-in/auto-antrean') ...[
+            const SizedBox(height: 8),
+            const LinearProgressIndicator(),
           ],
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          '1. Check-In QR → 2. Masuk Antrean dari tiket diterima.',
-          style: TextStyle(fontSize: 12, color: QueueBStyle.muted),
-        ),
-      ],
+          if (lastScan != null) ...[
+            const SizedBox(height: 10),
+            StaffScanResult(result: lastScan!),
+          ],
+          ExpansionTile(
+            key: const ValueKey('staff-manual-qr'),
+            initiallyExpanded: manualQrOpen,
+            onExpansionChanged: (value) => manualQrOpen = value,
+            tilePadding: EdgeInsets.zero,
+            title: const Text('Input Manual', style: TextStyle(fontSize: 13)),
+            children: [
+              TextField(
+                controller: qr,
+                enabled: !busy,
+                obscureText: true,
+                autocorrect: false,
+                enableSuggestions: false,
+                decoration: const InputDecoration(
+                  labelText: 'Payload QR (SQ1…)',
+                  prefixIcon: Icon(Icons.qr_code),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton(
+                  onPressed: busy
+                      ? null
+                      : () async {
+                          try {
+                            await submitQr(qr.text);
+                          } catch (_) {
+                            /* Visible error; no optimistic status. */
+                          }
+                        },
+                  child: const Text('Proses QR & Masuk Antrean'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     ),
   );
 
@@ -819,50 +920,4 @@ class _QueuePageState extends State<QueuePage> with WidgetsBindingObserver {
     }
     action('/queue/${ticket.text.trim()}/$route');
   }
-}
-
-class _Scanner extends StatefulWidget {
-  const _Scanner();
-  @override
-  State<_Scanner> createState() => _ScannerState();
-}
-
-class _ScannerState extends State<_Scanner> {
-  bool detected = false;
-  final controller = MobileScannerController(formats: [BarcodeFormat.qrCode]);
-  @override
-  void dispose() {
-    controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Pindai QR tiket'),
-    content: SizedBox(
-      width: 480,
-      height: 360,
-      child: MobileScanner(
-        controller: controller,
-        onDetect: (capture) {
-          final raw = capture.barcodes.firstOrNull?.rawValue;
-          if (!detected && raw != null && raw.startsWith('SQ1.')) {
-            detected = true;
-            Navigator.pop(context, raw);
-          }
-        },
-        errorBuilder: (context, error) => const Center(
-          child: Text(
-            'Kamera tidak tersedia atau izin ditolak. Tutup lalu tempel payload QR.',
-          ),
-        ),
-      ),
-    ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.pop(context),
-        child: const Text('Tutup'),
-      ),
-    ],
-  );
 }

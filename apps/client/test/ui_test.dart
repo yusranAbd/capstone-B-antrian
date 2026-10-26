@@ -163,6 +163,16 @@ class FakeBackend {
       tickets[0] = ticket;
       return reply({});
     }
+    if (path == '/check-in/auto-antrean') {
+      final duplicate = status == 'MENUNGGU';
+      status = 'MENUNGGU';
+      return reply({
+        ...ticket,
+        'namaPasien': 'Pasien Uji',
+        'namaPoliklinik': service['nama'],
+        'sudahTerdaftar': duplicate,
+      });
+    }
     if (path == '/check-in') {
       status = 'CHECK_IN';
       return reply(ticket);
@@ -447,14 +457,14 @@ void main() {
     (tester) async {
       final server = FakeBackend('PETUGAS');
       await launch(tester, server);
+      await press(tester, 'Input Manual');
       await tester.enterText(
         find.widgetWithText(TextField, 'Payload QR (SQ1…)'),
-        'SQ1.fixture',
+        'SQ1.${'A' * 43}',
       );
-      await press(tester, 'Check-In', type: FilledButton);
-      expect(server.status, 'CHECK_IN');
+      await press(tester, 'Proses QR & Masuk Antrean', type: OutlinedButton);
+      expect(server.status, 'MENUNGGU');
       expect(server.requests.where((r) => r.$2.endsWith('/masuk')), isEmpty);
-      await press(tester, 'Masuk Antrean', type: TextButton);
       expect(server.status, 'MENUNGGU');
       await press(tester, 'Panggil berikutnya');
       await press(tester, 'Panggil Ulang');
