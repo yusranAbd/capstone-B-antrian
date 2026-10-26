@@ -271,6 +271,11 @@ describe('Public Display Socket.IO (e2e)', () => {
         .set('x-display-token', token).expect(200)).body as DisplaySnapshot;
       expect(snapshot.totalMenunggu).toBe(total);
       expect(snapshot.menunggu).toHaveLength(total);
+      const hasPatientRow = status === StatusTiket.MENUNGGU || status === StatusTiket.DILEWATI;
+      expect(snapshot.antrianPasien).toHaveLength(hasPatientRow ? 1 : 0);
+      expect(snapshot.totalAntrianPasien).toBe(hasPatientRow ? 1 : 0);
+      expect(snapshot.totalDilewati).toBe(status === StatusTiket.DILEWATI ? 1 : 0);
+      if (hasPatientRow) expect(snapshot.antrianPasien?.[0].status).toBe(status);
       if (total) expect(snapshot.menunggu?.[0].namaPasien).toBe('Pemilik t. u. d.');
       if (status !== StatusTiket.DIPANGGIL) expect(snapshot.pengumumanTerakhir).toBeNull();
     }

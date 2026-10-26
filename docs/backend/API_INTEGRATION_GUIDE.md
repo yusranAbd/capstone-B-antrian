@@ -1935,3 +1935,18 @@ Setelah commit, kirim **ENQUEUE** melalui broadcaster existing ke `/queue` dan `
 Flutter PETUGAS langsung memproses deteksi QR lengkap tanpa konfirmasi kedua, mengunci request, menahan frame QR sama, dan siap membaca QR pasien berbeda. Input Manual tetap memakai tombol **Proses QR & Masuk Antrean**. Status sukses hanya tampil setelah respons MENUNGGU; error tidak membuat status lokal palsu. Kamera ditutup/dilepas saat keluar dan dihentikan ketika aplikasi tidak aktif. Bunyi sistem bersifat opsional/nonblocking sesuai dukungan platform dan izin audio.
 
 Lihat [panduan dan QA One-Scan](../frontend/ONE_SCAN_QR.md).
+
+
+## 27. Public Display — Antrian Pasien dan Status (26 Oktober 2026)
+
+GET /display/:layananId/snapshot menambahkan field opsional berikut tanpa mengubah versiSkema=1 atau field menunggu existing:
+
+- totalDilewati: jumlah tiket DILEWATI di poliklinik perangkat pada tanggal pelayanan SERVICE_TIME_ZONE.
+- totalAntrianPasien: totalMenunggu + totalDilewati; tidak mencakup DIPESAN, CHECK_IN, DIPANGGIL, DILAYANI, SELESAI atau DIBATALKAN.
+- antrianPasien: objek {nomorAntrean, namaPasien, status}. Status hanya MENUNGGU atau DILEWATI. Maksimum 100 MENUNGGU mengikuti comparator existing, kemudian maksimum 100 DILEWATI menurut urutanMasukAntrean/id. Urutan tampilan tidak mengubah kelayakan atau urutan CALL. SKIP tidak otomatis REQUEUE.
+
+menunggu dan totalMenunggu mempertahankan arti semula. Semua daftar tetap dibatasi token/perangkat aktif, poliklinik dan tanggal yang sama. Hanya nama diproyeksikan; tidak ada ID akun, email, rekam medis atau data pribadi tambahan.
+
+Nama lengkap memakai mekanisme server existing: DISPLAY_PATIENT_NAME_MODE=LENGKAP dan DISPLAY_FULL_NAMES_APPROVED=true. Permintaan operator pada revisi ini menyetujui aktivasi development; default source tetap SAMAR untuk instalasi lain. Flutter tidak membuka nama tersamar sendiri. Browser harus memakai backend terbaru dan snapshot baru. TTS mengikuti kebijakan nama yang sama, sementara deduplikasi peristiwaId tetap berlaku.
+
+Tabel monitor berjudul **Antrian pasien**, dengan kolom NOMOR, NAMA PASIEN, STATUS. Angka header adalah total kedua status. Baris berganti halaman setiap 12 detik jika tidak muat; batas snapshot dan total tetap diinformasikan. Flutter lama tetap dapat membaca menunggu; Flutter baru fallback ke menunggu jika backend belum mengirim antrianPasien.

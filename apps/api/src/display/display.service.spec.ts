@@ -53,7 +53,7 @@ describe('DisplayService - snapshot publik berbasis token perangkat', () => {
     tx.loket.findMany.mockResolvedValue([
       { id: loketId, kode: '01', nama: 'Loket Satu' },
     ]);
-    tx.tiketAntrean.findMany.mockImplementation((query: { where: { status: unknown } }) => Promise.resolve(query.where.status === StatusTiket.MENUNGGU ? [] : [
+    tx.tiketAntrean.findMany.mockImplementation((query: { where: { status: unknown } }) => Promise.resolve((query.where.status === StatusTiket.MENUNGGU || query.where.status === StatusTiket.DILEWATI) ? [] : [
       {
         loketId,
         nomorUrut: 25,
@@ -61,7 +61,8 @@ describe('DisplayService - snapshot publik berbasis token perangkat', () => {
         dipanggilPada: new Date('2026-10-12T03:55:00.000Z'),
       },
     ]));
-    tx.tiketAntrean.count.mockResolvedValue(7);
+    tx.tiketAntrean.count.mockImplementation((q: { where: { status: StatusTiket } }) =>
+      Promise.resolve(q.where.status === StatusTiket.MENUNGGU ? 7 : 0));
     tx.peristiwaAntrean.findFirst.mockResolvedValue({
       id: '00000000-0000-4000-8000-000000000003',
       tipe: 'CALL',
@@ -219,4 +220,23 @@ describe('DisplayService - snapshot publik berbasis token perangkat', () => {
     expect(result.menunggu?.map((t) => t.nomorAntrean)).toEqual(['A-003', 'A-002', 'A-001']);
   });
 
+  it('menyertakan DILEWATI terpisah dari total dan urutan MENUNGGU', async () => {
+    tx.tiketAntrean.findMany.mockImplementation((q: { where: { status: unknown } }) => Promise.resolve(
+      q.where.status === StatusTiket.DILEWATI ? [{ nomorUrut: 8, pengguna: { nama: 'Pasien Dilewati' } }] : []));
+    tx.tiketAntrean.count.mockImplementation((q: { where: { status: StatusTiket } }) =>
+      Promise.resolve(q.where.status === StatusTiket.DILEWATI ? 1 : 0));
+    const result = await service.snapshot(layananId, token);
+    expect(result.totalMenunggu).toBe(0);
+    expect(result.totalDilewati).toBe(1);
+    expect(result.totalAntrianPasien).toBe(1);
+    expect(result.menunggu).toEqual([]);
+    expect(result.antrianPasien).toEqual([
+      { nomorAntrean: 'A-008', namaPasien: 'Pasien D.', status: 'DILEWATI' },
+    ]);
+    const query = tx.tiketAntrean.findMany.mock.calls.find((args) =>
+      args[0].where.status === StatusTiket.DILEWATI)?.[0];
+    expect(query.where).toEqual({ layananId, tanggalAntrean: new Date('2026-10-12T00:00:00Z'), status: StatusTiket.DILEWATI });
+    expect(query.take).toBe(100);
+    expect(query.select).toEqual({ nomorUrut: true, pengguna: { select: { nama: true } } });
+  });
 });

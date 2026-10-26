@@ -260,7 +260,45 @@ describe('Public Display Snapshot (e2e)', () => {
     const body = (await bacaSnapshot().expect(200)).body as DisplaySnapshot;
     expect(body.totalMenunggu).toBe(0);
     expect(body.menunggu).toEqual([]);
+    expect(body.antrianPasien).toEqual([]);
+    expect(body.totalAntrianPasien).toBe(0);
     expect(body.pengumumanTerakhir).toBeNull();
   });
 
+  it('SKIP tampil DILEWATI dan REQUEUE berpindah status tanpa duplikasi', async () => {
+    await db().tiketAntrean.update({ where: { id: tiketId }, data: { status: StatusTiket.DILEWATI } });
+    const skipped = (await bacaSnapshot().expect(200)).body as DisplaySnapshot;
+    expect(skipped.totalMenunggu).toBe(0);
+    expect(skipped.totalDilewati).toBe(1);
+    expect(skipped.totalAntrianPasien).toBe(1);
+    expect(skipped.antrianPasien).toEqual([
+      { nomorAntrean: 'D-025', namaPasien: 'Pemilik T. D. E.', status: 'DILEWATI' },
+    ]);
+    expect(skipped.menunggu).toEqual([]);
+    expect(skipped.pengumumanTerakhir).toBeNull();
+    await db().tiketAntrean.update({ where: { id: tiketId }, data: { status: StatusTiket.MENUNGGU } });
+    const requeued = (await bacaSnapshot().expect(200)).body as DisplaySnapshot;
+    expect(requeued.totalDilewati).toBe(0);
+    expect(requeued.totalAntrianPasien).toBe(1);
+    expect(requeued.antrianPasien?.map((r) => r.status)).toEqual(['MENUNGGU']);
+  });
+  it('nama lengkap dari kebijakan server, tiket hari lain dikecualikan', async () => {
+    const mode = process.env.DISPLAY_PATIENT_NAME_MODE;
+    const approved = process.env.DISPLAY_FULL_NAMES_APPROVED;
+    try {
+      process.env.DISPLAY_PATIENT_NAME_MODE = 'LENGKAP';
+      process.env.DISPLAY_FULL_NAMES_APPROVED = 'true';
+      await db().tiketAntrean.update({ where: { id: tiketId }, data: { status: StatusTiket.DILEWATI } });
+      const full = (await bacaSnapshot().expect(200)).body as DisplaySnapshot;
+      expect(full.antrianPasien?.[0].namaPasien).toBe('Pemilik Tiket Display E2E');
+      await db().tiketAntrean.update({ where: { id: tiketId }, data: { tanggalAntrean: new Date(tanggalLayanan().getTime() - 86400000) } });
+      const previousDay = (await bacaSnapshot().expect(200)).body as DisplaySnapshot;
+      expect(previousDay.antrianPasien).toEqual([]);
+      expect(previousDay.totalAntrianPasien).toBe(0);
+    } finally {
+      await db().tiketAntrean.update({ where: { id: tiketId }, data: { tanggalAntrean: tanggalLayanan() } });
+      if (mode === undefined) delete process.env.DISPLAY_PATIENT_NAME_MODE; else process.env.DISPLAY_PATIENT_NAME_MODE = mode;
+      if (approved === undefined) delete process.env.DISPLAY_FULL_NAMES_APPROVED; else process.env.DISPLAY_FULL_NAMES_APPROVED = approved;
+    }
+  });
 });

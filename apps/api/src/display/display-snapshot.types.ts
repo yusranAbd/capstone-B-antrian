@@ -30,6 +30,13 @@ export interface DisplaySnapshot {
   diperolehPada: string;
   layanan: { kode: string; nama: string };
   totalMenunggu: number;
+  totalDilewati?: number;
+  totalAntrianPasien?: number;
+  antrianPasien?: Array<{
+    nomorAntrean: string;
+    namaPasien: string | null;
+    status: 'MENUNGGU' | 'DILEWATI';
+  }>;
   modeNama?: 'SAMAR' | 'LENGKAP' | 'TANPA_NAMA';
   menunggu?: Array<{ nomorAntrean: string; namaPasien: string | null }>;
 
