@@ -274,6 +274,8 @@ describe('CheckInService', () => {
           statusSesudah: StatusTiket.CHECK_IN,
           dataTambahan: {
             metode: 'QR_CHECK_IN',
+            buktiQrHash: tokenQrHash,
+            qrBerlakuHingga: tiketUji.qrKedaluwarsaPada.toISOString(),
             loketId,
             penugasanId,
           },

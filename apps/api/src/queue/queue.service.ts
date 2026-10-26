@@ -141,273 +141,9 @@ export class QueueService {
 
     for (let percobaan = 1; percobaan <= maksimalPercobaan; percobaan++) {
       const sekarang = new Date();
-      const tanggalLokal = this.dapatkanTanggalPelayanan(sekarang);
-
       try {
         const hasil = await this.prisma.$transaction(
-          async (tx) => {
-            // 1. Validasi identitas PETUGAS.
-            const petugas = await tx.pengguna.findUnique({
-              where: {
-                id: petugasId,
-              },
-              select: {
-                id: true,
-                peran: true,
-                aktif: true,
-              },
-            });
-
-            if (
-              !petugas ||
-              !petugas.aktif ||
-              petugas.peran !== PeranPengguna.PETUGAS
-            ) {
-              throw new ForbiddenException('Pengguna bukan PETUGAS aktif');
-            }
-
-            // 2. Ambil tiket beserta layanan.
-            const tiket = await tx.tiketAntrean.findUnique({
-              where: {
-                id: tiketId,
-              },
-              select: {
-                id: true,
-                layananId: true,
-                tanggalAntrean: true,
-                nomorUrut: true,
-                status: true,
-                versi: true,
-                checkInPada: true,
-                urutanMasukAntrean: true,
-                loketId: true,
-                janjiTemu: PILIH_JANJI_TEMU_HOSPITAL,
-                layanan: {
-                  select: {
-                    aktif: true,
-                    prefixAntrean: true,
-                    modeReservasi: true,
-                  },
-                },
-              },
-            });
-
-            if (!tiket) {
-              throw new NotFoundException('Tiket antrean tidak ditemukan');
-            }
-
-            // 3. Validasi State Machine.
-            if (
-              !bolehTransisiAntrean(tiket.status, AKSI_ANTREAN.MASUK_ANTREAN)
-            ) {
-              throw new ConflictException(
-                `Tiket berstatus ${tiket.status} ` +
-                  'tidak dapat masuk antrean',
-              );
-            }
-
-            if (!tiket.checkInPada) {
-              throw new ConflictException(
-                'Tiket belum memiliki waktu check-in',
-              );
-            }
-
-            if (tiket.urutanMasukAntrean !== null) {
-              throw new ConflictException(
-                'Tiket sudah memiliki urutan antrean',
-              );
-            }
-
-            if (!tiket.layanan.aktif) {
-              throw new ConflictException('Layanan tidak aktif');
-            }
-
-            // 4. Pastikan tanggal pelayanan
-            // sama dengan tanggal hari ini.
-            const tanggalTiket = tiket.tanggalAntrean
-              .toISOString()
-              .slice(0, 10);
-
-            if (tanggalTiket !== tanggalLokal.tanggal) {
-              throw new ConflictException(
-                'Tanggal tiket tidak sesuai dengan hari pelayanan',
-              );
-            }
-
-            // 5. Validasi penugasan PETUGAS
-            // pada loket layanan yang sama.
-            const penugasan = await tx.penugasanPetugas.findFirst({
-              where: {
-                petugasId,
-                loketId,
-                aktif: true,
-                tanggalMulai: {
-                  lte: tanggalLokal.tanggalDb,
-                },
-                OR: [
-                  {
-                    tanggalSelesai: null,
-                  },
-                  {
-                    tanggalSelesai: {
-                      gte: tanggalLokal.tanggalDb,
-                    },
-                  },
-                ],
-              },
-              select: {
-                id: true,
-                loket: {
-                  select: {
-                    aktif: true,
-                    layananId: true,
-                    layanan: {
-                      select: {
-                        aktif: true,
-                      },
-                    },
-                  },
-                },
-              },
-            });
-
-            if (
-              !penugasan ||
-              !penugasan.loket.aktif ||
-              !penugasan.loket.layanan.aktif ||
-              penugasan.loket.layananId !== tiket.layananId
-            ) {
-              throw new ForbiddenException(
-                'Petugas tidak memiliki penugasan aktif pada loket layanan ini',
-              );
-            }
-
-            const alasan = alasanPenerimaanHospital({
-              ...tiket, modeReservasi: tiket.layanan.modeReservasi,
-            }, loketId, sekarang);
-            const hospital = tiket.layanan.modeReservasi === ModeReservasi.HIBRIDA ||
-              tiket.layanan.modeReservasi === ModeReservasi.JANJI_TEMU_DOKTER;
-            if (alasan === 'RUANG_BERBEDA' || (hospital && tiket.loketId !== loketId)) {
-              throw new ForbiddenException('ENQUEUE harus dilakukan pada ruang check-in yang sesuai');
-            }
-            if (alasan) throw new ConflictException(`Konteks Hospital tidak valid: ${alasan}`);
-
-            // 6. Pastikan jadwal hari
-            // pelayanan masih aktif.
-            const jadwal = await tx.jadwalLayanan.findUnique({
-              where: {
-                layananId_hari: {
-                  layananId: tiket.layananId,
-                  hari: tanggalLokal.hari,
-                },
-              },
-              select: {
-                aktif: true,
-              },
-            });
-
-            if (!jadwal?.aktif) {
-              throw new ConflictException(
-                'Jadwal layanan hari ini tidak aktif',
-              );
-            }
-
-            // 7. Ambil counter harian yang
-            // sudah dibuat saat reservasi.
-            const kunciCounter = {
-              layananId_tanggal: {
-                layananId: tiket.layananId,
-                tanggal: tiket.tanggalAntrean,
-              },
-            };
-
-            const counterAda = await tx.urutanAntreanHarian.findUnique({
-              where: kunciCounter,
-              select: {
-                id: true,
-              },
-            });
-
-            if (!counterAda) {
-              throw new ConflictException(
-                'Counter antrean harian belum tersedia',
-              );
-            }
-
-            // Increment atomik dalam transaksi.
-            const counter = await tx.urutanAntreanHarian.update({
-              where: kunciCounter,
-              data: {
-                urutanMasukTerakhir: {
-                  increment: 1,
-                },
-              },
-              select: {
-                urutanMasukTerakhir: true,
-              },
-            });
-
-            const transisi = jalankanTransisiAntrean(
-              tiket.status,
-              AKSI_ANTREAN.MASUK_ANTREAN,
-            );
-
-            // 8. Update bersyarat.
-            const perubahan = await tx.tiketAntrean.updateMany({
-              where: {
-                id: tiket.id,
-                versi: tiket.versi,
-                status: StatusTiket.CHECK_IN,
-                checkInPada: {
-                  not: null,
-                },
-                urutanMasukAntrean: null,
-              },
-              data: {
-                status: transisi.statusSesudah,
-                urutanMasukAntrean: counter.urutanMasukTerakhir,
-                masukAntreanPada: sekarang,
-                versi: {
-                  increment: 1,
-                },
-              },
-            });
-
-            if (perubahan.count !== 1) {
-              throw new ConflictException(
-                'Tiket sudah diproses oleh request lain',
-              );
-            }
-
-            // 9. Audit status dalam transaksi sama.
-            await tx.peristiwaAntrean.create({
-              data: {
-                tiketAntreanId: tiket.id,
-                aktorId: petugasId,
-                tipe: transisi.tipePeristiwa,
-                statusSebelum: transisi.statusSebelum,
-                statusSesudah: transisi.statusSesudah,
-                dataTambahan: {
-                  metode: 'QUEUE_ENQUEUE',
-                  loketId,
-                  penugasanId: penugasan.id,
-                  urutanMasukAntrean: counter.urutanMasukTerakhir,
-                },
-              },
-            });
-
-            // 10. Kembalikan hasil.
-            return {
-              tiketId: tiket.id,
-              layananId: tiket.layananId,
-              nomorAntrean:
-                `${tiket.layanan.prefixAntrean.trim()}-` +
-                String(tiket.nomorUrut).padStart(3, '0'),
-              status: transisi.statusSesudah,
-              urutanMasukAntrean: counter.urutanMasukTerakhir,
-              masukAntreanPada: sekarang.toISOString(),
-            };
-          },
+          (tx) => this.masukAntreanDalamTransaksi(tx, tiketId, petugasId, loketId, sekarang),
           {
             isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
             maxWait: 10000,
@@ -439,6 +175,275 @@ export class QueueService {
     throw new ConflictException(
       'Operasi antrean gagal setelah beberapa percobaan',
     );
+  }
+
+  /** Komposisi internal: pemanggil memiliki transaksi dan menerbitkan event setelah commit. */
+  async masukAntreanDalamTransaksi(
+    tx: Prisma.TransactionClient, tiketId: string, petugasId: string, loketId: string, sekarang: Date,
+  ) {
+    const tanggalLokal = this.dapatkanTanggalPelayanan(sekarang);
+
+  // 1. Validasi identitas PETUGAS.
+  const petugas = await tx.pengguna.findUnique({
+    where: {
+      id: petugasId,
+    },
+    select: {
+      id: true,
+      peran: true,
+      aktif: true,
+    },
+  });
+
+  if (
+    !petugas ||
+    !petugas.aktif ||
+    petugas.peran !== PeranPengguna.PETUGAS
+  ) {
+    throw new ForbiddenException('Pengguna bukan PETUGAS aktif');
+  }
+
+  // 2. Ambil tiket beserta layanan.
+  const tiket = await tx.tiketAntrean.findUnique({
+    where: {
+      id: tiketId,
+    },
+    select: {
+      id: true,
+      layananId: true,
+      tanggalAntrean: true,
+      nomorUrut: true,
+      status: true,
+      versi: true,
+      checkInPada: true,
+      urutanMasukAntrean: true,
+      loketId: true,
+      janjiTemu: PILIH_JANJI_TEMU_HOSPITAL,
+      layanan: {
+        select: {
+          aktif: true,
+          prefixAntrean: true,
+          modeReservasi: true,
+        },
+      },
+    },
+  });
+
+  if (!tiket) {
+    throw new NotFoundException('Tiket antrean tidak ditemukan');
+  }
+
+  // 3. Validasi State Machine.
+  if (
+    !bolehTransisiAntrean(tiket.status, AKSI_ANTREAN.MASUK_ANTREAN)
+  ) {
+    throw new ConflictException(
+      `Tiket berstatus ${tiket.status} ` +
+        'tidak dapat masuk antrean',
+    );
+  }
+
+  if (!tiket.checkInPada) {
+    throw new ConflictException(
+      'Tiket belum memiliki waktu check-in',
+    );
+  }
+
+  if (tiket.urutanMasukAntrean !== null) {
+    throw new ConflictException(
+      'Tiket sudah memiliki urutan antrean',
+    );
+  }
+
+  if (!tiket.layanan.aktif) {
+    throw new ConflictException('Layanan tidak aktif');
+  }
+
+  // 4. Pastikan tanggal pelayanan
+  // sama dengan tanggal hari ini.
+  const tanggalTiket = tiket.tanggalAntrean
+    .toISOString()
+    .slice(0, 10);
+
+  if (tanggalTiket !== tanggalLokal.tanggal) {
+    throw new ConflictException(
+      'Tanggal tiket tidak sesuai dengan hari pelayanan',
+    );
+  }
+
+  // 5. Validasi penugasan PETUGAS
+  // pada loket layanan yang sama.
+  const penugasan = await tx.penugasanPetugas.findFirst({
+    where: {
+      petugasId,
+      loketId,
+      aktif: true,
+      tanggalMulai: {
+        lte: tanggalLokal.tanggalDb,
+      },
+      OR: [
+        {
+          tanggalSelesai: null,
+        },
+        {
+          tanggalSelesai: {
+            gte: tanggalLokal.tanggalDb,
+          },
+        },
+      ],
+    },
+    select: {
+      id: true,
+      loket: {
+        select: {
+          aktif: true,
+          layananId: true,
+          layanan: {
+            select: {
+              aktif: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (
+    !penugasan ||
+    !penugasan.loket.aktif ||
+    !penugasan.loket.layanan.aktif ||
+    penugasan.loket.layananId !== tiket.layananId
+  ) {
+    throw new ForbiddenException(
+      'Petugas tidak memiliki penugasan aktif pada loket layanan ini',
+    );
+  }
+
+  const alasan = alasanPenerimaanHospital({
+    ...tiket, modeReservasi: tiket.layanan.modeReservasi,
+  }, loketId, sekarang);
+  const hospital = tiket.layanan.modeReservasi === ModeReservasi.HIBRIDA ||
+    tiket.layanan.modeReservasi === ModeReservasi.JANJI_TEMU_DOKTER;
+  if (alasan === 'RUANG_BERBEDA' || (hospital && tiket.loketId !== loketId)) {
+    throw new ForbiddenException('ENQUEUE harus dilakukan pada ruang check-in yang sesuai');
+  }
+  if (alasan) throw new ConflictException(`Konteks Hospital tidak valid: ${alasan}`);
+
+  // 6. Pastikan jadwal hari
+  // pelayanan masih aktif.
+  const jadwal = await tx.jadwalLayanan.findUnique({
+    where: {
+      layananId_hari: {
+        layananId: tiket.layananId,
+        hari: tanggalLokal.hari,
+      },
+    },
+    select: {
+      aktif: true,
+    },
+  });
+
+  if (!jadwal?.aktif) {
+    throw new ConflictException(
+      'Jadwal layanan hari ini tidak aktif',
+    );
+  }
+
+  // 7. Ambil counter harian yang
+  // sudah dibuat saat reservasi.
+  const kunciCounter = {
+    layananId_tanggal: {
+      layananId: tiket.layananId,
+      tanggal: tiket.tanggalAntrean,
+    },
+  };
+
+  const counterAda = await tx.urutanAntreanHarian.findUnique({
+    where: kunciCounter,
+    select: {
+      id: true,
+    },
+  });
+
+  if (!counterAda) {
+    throw new ConflictException(
+      'Counter antrean harian belum tersedia',
+    );
+  }
+
+  // Increment atomik dalam transaksi.
+  const counter = await tx.urutanAntreanHarian.update({
+    where: kunciCounter,
+    data: {
+      urutanMasukTerakhir: {
+        increment: 1,
+      },
+    },
+    select: {
+      urutanMasukTerakhir: true,
+    },
+  });
+
+  const transisi = jalankanTransisiAntrean(
+    tiket.status,
+    AKSI_ANTREAN.MASUK_ANTREAN,
+  );
+
+  // 8. Update bersyarat.
+  const perubahan = await tx.tiketAntrean.updateMany({
+    where: {
+      id: tiket.id,
+      versi: tiket.versi,
+      status: StatusTiket.CHECK_IN,
+      checkInPada: {
+        not: null,
+      },
+      urutanMasukAntrean: null,
+    },
+    data: {
+      status: transisi.statusSesudah,
+      urutanMasukAntrean: counter.urutanMasukTerakhir,
+      masukAntreanPada: sekarang,
+      versi: {
+        increment: 1,
+      },
+    },
+  });
+
+  if (perubahan.count !== 1) {
+    throw new ConflictException(
+      'Tiket sudah diproses oleh request lain',
+    );
+  }
+
+  // 9. Audit status dalam transaksi sama.
+  await tx.peristiwaAntrean.create({
+    data: {
+      tiketAntreanId: tiket.id,
+      aktorId: petugasId,
+      tipe: transisi.tipePeristiwa,
+      statusSebelum: transisi.statusSebelum,
+      statusSesudah: transisi.statusSesudah,
+      dataTambahan: {
+        metode: 'QUEUE_ENQUEUE',
+        loketId,
+        penugasanId: penugasan.id,
+        urutanMasukAntrean: counter.urutanMasukTerakhir,
+      },
+    },
+  });
+
+  // 10. Kembalikan hasil.
+  return {
+    tiketId: tiket.id,
+    layananId: tiket.layananId,
+    nomorAntrean:
+      `${tiket.layanan.prefixAntrean.trim()}-` +
+      String(tiket.nomorUrut).padStart(3, '0'),
+    status: transisi.statusSesudah,
+    urutanMasukAntrean: counter.urutanMasukTerakhir,
+    masukAntreanPada: sekarang.toISOString(),
+  };
   }
 
   // ==========================================

@@ -1880,3 +1880,58 @@ Namespace `/display`, room `display:layanan:<id>`, `display:ready` dan `display:
 Pembatalan existing hanya menerima appointment DIPESAN, sehingga tidak pernah termasuk daftar MENUNGGU Display. Tidak ditambahkan mutasi pembatalan pasien MENUNGGU atau event CANCEL baru. Tiket DIBATALKAN tetap dikecualikan dari snapshot. Event operasional ENQUEUE/CALL/RECALL/SKIP/REQUEUE/START/COMPLETE tetap menginvalidasi Display.
 
 Lihat [panduan monitor dan hasil QA V3](../frontend/PUBLIC_DISPLAY_V3.md).
+
+
+## 26. One-Scan QR Check-in dan Auto-Enqueue
+
+### Endpoint baru (aditif)
+
+`POST /api/v1/check-in/auto-antrean`, JWT dan RBAC **PETUGAS aktif**. Penugasan harus aktif dan inklusif pada tanggal pelayanan, loket/poli sesuai tiket. Format DTO sama dengan endpoint check-in legacy; tidak menerima penggunaId/role/status dari klien.
+
+```json
+{"qrPayload":"SQ1.<token acak 43 karakter base64url>","loketId":"UUID v4 loket"}
+```
+
+200 menghasilkan data server aktual, misalnya:
+
+```json
+{
+  "tiketId":"UUID tiket",
+  "layananId":"UUID poliklinik",
+  "nomorAntrean":"AN-001",
+  "status":"MENUNGGU",
+  "checkInPada":"2026-10-26T03:00:00.000Z",
+  "loketId":"UUID ruang",
+  "petugasId":"UUID petugas",
+  "versi":4,
+  "urutanMasukAntrean":12,
+  "masukAntreanPada":"2026-10-26T03:00:00.000Z",
+  "namaPasien":"Pasien Contoh",
+  "namaPoliklinik":"Poliklinik Anak",
+  "sudahTerdaftar":false,
+  "pesan":"Check-in berhasil. Pasien masuk antrean."
+}
+```
+
+Nama pasien hanya dikembalikan pada respons PETUGAS berwenang, bukan pada event socket. Contoh di atas ilustratif. Tidak ada token/hash QR dalam respons.
+
+### Atomisitas dan scan ulang
+
+Satu transaksi **Serializable** memakai callback CHECK_IN dan ENQUEUE existing pada TransactionClient yang sama. Validasi QR, tanggal SERVICE_TIME_ZONE, jam poli, assignment, rantai Hospital/ruang/sesi, status dan counter FIFO tetap berlaku. Tercatat dua audit: DIPESAN → CHECK_IN dan CHECK_IN → MENUNGGU. Kegagalan mana pun me-rollback seluruh transaksi termasuk konsumsi QR dan counter. P2034 dicoba ulang maksimal tiga percobaan; tidak menambah kebijakan prioritas/fairness baru.
+
+Token aktif tetap dikonsumsi (`tokenQrHash` dan expiry aktif dikosongkan). Audit CHECK_IN baru menyimpan **hash bukti QR** dan expiry semula pada JSON internal `dataTambahan.buktiQrHash` / `qrBerlakuHingga`. Token mentah tidak disimpan atau dicatat. Bukti bukan QR baru: hanya boleh mengenali scan ulang tiket CHECK_IN/MENUNGGU, masih dalam expiry semula, setelah otorisasi dan validasi konteks. MENUNGGU menghasilkan `sudahTerdaftar: true`, urutan tetap, tanpa audit/event ENQUEUE baru. CHECK_IN valid dilanjutkan satu kali. DIPANGGIL/DILAYANI/SELESAI/DIBATALKAN/DILEWATI ditolak; SKIP/REQUEUE tetap melalui operasi existing.
+
+**Kompatibilitas rollout:** `POST /check-in` tetap hanya CHECK_IN dan tetap menolak replay; `POST /queue/:id/masuk` tetap tersedia. CHECK_IN legacy yang terjadi setelah update ini memiliki bukti hash sehingga dapat dilanjutkan dengan QR semula sebelum expiry. CHECK_IN historis sebelum update yang tidak memiliki bukti hash tidak dapat dicocokkan secara aman dari token yang telah dikonsumsi; gunakan pemulihan ID tiket existing untuk enqueue. Tidak ada bypass QR, rekonstruksi token atau migration data historis. Jika bukti QR telah expired tetapi tiket sudah CHECK_IN, gunakan pemulihan tiket berwenang; QR baru hanya diterbitkan untuk DIPESAN sesuai kontrak lama.
+
+### Error dan realtime
+
+- 400: format/token tidak valid, tanggal/jam/konteks Hospital tidak sesuai.
+- 401: JWT/sesi/akun tidak sah; 403: role/assignment/poli/ruang ditolak.
+- 409: status akhir/telah dipanggil, data/counter tidak konsisten, atau konflik serialisasi setelah retry.
+- 410: QR atau bukti QR expired. Tidak ada masa berlaku baru akibat scan ulang.
+
+Setelah commit, kirim **ENQUEUE** melalui broadcaster existing ke `/queue` dan `/display` serta invalidasi dokter. Interceptor existing menginvalidasi pasien dan dokter dari hasil yang telah commit. Event socket tidak memuat nama/hash/payload QR. Tidak ada event CALL/TTS baru akibat scan check-in. Duplikasi invalidasi dapat dikoaleskan oleh loader existing; tidak menghasilkan mutasi tiket baru. Kegagalan broadcast tidak membatalkan transaksi tersimpan; REST snapshot dan polling fallback tetap sumber kebenaran.
+
+Flutter PETUGAS langsung memproses deteksi QR lengkap tanpa konfirmasi kedua, mengunci request, menahan frame QR sama, dan siap membaca QR pasien berbeda. Input Manual tetap memakai tombol **Proses QR & Masuk Antrean**. Status sukses hanya tampil setelah respons MENUNGGU; error tidak membuat status lokal palsu. Kamera ditutup/dilepas saat keluar dan dihentikan ketika aplikasi tidak aktif. Bunyi sistem bersifat opsional/nonblocking sesuai dukungan platform dan izin audio.
+
+Lihat [panduan dan QA One-Scan](../frontend/ONE_SCAN_QR.md).
