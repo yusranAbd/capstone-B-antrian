@@ -212,7 +212,7 @@ void main() {
           tester,
           find.widgetWithText(NavigationDestination, 'Pendaftaran'),
         );
-        expect(find.text('Poliklinik & Dokter'), findsOneWidget);
+        expect(find.text('Reservasi Saya'), findsOneWidget);
         expect(find.byTooltip('Keluar akun'), findsNothing);
         expect(find.text('Sinkronisasi berkala aktif'), findsNothing);
         expect(find.textContaining('Waktu pelayanan:'), findsNothing);

@@ -1,0 +1,39 @@
+{
+  "buildSha256": "c050906b41f89f0174a083b307487b76e7e4458782ff488d64c15b1649889537",
+  "testedAt": "2026-10-26T19:43:15.546Z",
+  "mode": "Real Chrome release Flutter; synthetic HTTP/Socket.IO, no database or real credentials",
+  "states": {
+    "openCorrectTicketQr": true,
+    "serverCancellation": true,
+    "doctorBooking": true,
+    "walkInBooking": true,
+    "nearestActualSlot": true,
+    "realtimeAndReconnect": true,
+    "reloadAndLoginAgain": true
+  },
+  "viewports": [
+    {
+      "width": 360,
+      "height": 800,
+      "scrollWidth": 360
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390
+    },
+    {
+      "width": 412,
+      "height": 915,
+      "scrollWidth": 412
+    },
+    {
+      "width": 768,
+      "height": 1024,
+      "scrollWidth": 768
+    }
+  ],
+  "errors": [],
+  "chrome": "155.0.8059.86",
+  "success": true
+}

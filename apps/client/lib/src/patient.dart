@@ -13,6 +13,7 @@ import 'doctor_professional.dart';
 import 'patient_ui.dart';
 import 'patient_home.dart';
 import 'user_profile.dart';
+import 'patient_reservations.dart';
 
 String appointmentDetails(Json appointment, AppConfig config) {
   final slot = object(appointment['slotPraktik']);
@@ -41,7 +42,12 @@ class _PatientPageState extends State<PatientPage> {
   late final RefreshGate overview;
   int tab = 0, catalogRevision = 0;
   bool busy = false, loading = true;
-  bool ticketDialogOpen = false;
+  bool ticketDialogOpen = false, cancelReviewing = false;
+  bool reservationCreating = false, nearestLoading = false;
+  String reservationMode = 'legacy', reservationQuery = '';
+  String? reservationClinicId, nearestError;
+  int nearestRevision = 0, reservationFlowVersion = 0;
+  List<Json> nearestChoices = [];
   String? error, message, serviceId, doctorId, sessionId, slotId;
   bool appointment = true, bookingStage = false, doctorDetail = false;
   bool reviewing = false;
@@ -269,7 +275,15 @@ class _PatientPageState extends State<PatientPage> {
         errors.add('$e');
       }),
     ]);
-    if (mounted) setState(() => error = errors.firstOrNull);
+    if (mounted) {
+      setState(() => error = errors.firstOrNull);
+      if (tab == 2 &&
+          reservationCreating &&
+          reservationMode == 'nearest' &&
+          serviceId == null) {
+        unawaited(loadNearest());
+      }
+    }
   }
 
   Future<void> readCatalog() async {
@@ -527,15 +541,33 @@ class _PatientPageState extends State<PatientPage> {
   }
 
   Future<void> cancel(Json appt) async {
-    if (!await confirm(
-      context,
-      'Batalkan janji temu ini? Hanya tiket DIPESAN dapat dibatalkan.',
-    )) {
-      return;
-    }
+    if (busy || cancelReviewing) return;
+    cancelReviewing = true;
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Batalkan reservasi?'),
+        content: const Text(
+          'Reservasi yang dibatalkan tidak dapat digunakan untuk check-in.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Kembali'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Ya, Batalkan'),
+          ),
+        ],
+      ),
+    );
+    cancelReviewing = false;
+    if (!mounted || accepted != true || busy) return;
     setState(() {
       busy = true;
       error = null;
+      message = null;
     });
     try {
       await widget.api.request(
@@ -543,9 +575,12 @@ class _PatientPageState extends State<PatientPage> {
         '/janji-temu/${appt['id']}/batalkan',
         body: {},
       );
-      if (mounted) setState(() => message = 'Janji temu dibatalkan.');
-      await load();
+      await overview.refresh();
+      if (mounted) setState(() => message = 'Reservasi dibatalkan.');
     } catch (e) {
+      // A concurrent check-in can reject cancellation. Re-read authoritative
+      // ticket state before reporting the conflict; never mutate it locally.
+      await overview.refresh();
       if (mounted) setState(() => error = '$e');
     } finally {
       if (mounted) setState(() => busy = false);
@@ -588,6 +623,7 @@ class _PatientPageState extends State<PatientPage> {
     setState(() {
       catalogRevision++;
       serviceId = value;
+      reservationCreating = true;
       clinicAvailability.clear();
       search = '';
       tab = 2;
@@ -608,6 +644,10 @@ class _PatientPageState extends State<PatientPage> {
 
   void startRegistration(bool isAppointment) {
     setState(() {
+      reservationCreating = true;
+      reservationMode = 'legacy';
+      nearestRevision++;
+      reservationFlowVersion++;
       tab = 2;
       channel = isAppointment ? 'Janji temu' : 'Walk-in';
       clinicAvailability.clear();
@@ -621,6 +661,281 @@ class _PatientPageState extends State<PatientPage> {
       search = '';
       clinicSchedules = [];
     });
+  }
+
+  void showReservations() {
+    if (busy) return;
+    setState(() {
+      tab = 2;
+      reservationCreating = false;
+      catalogRevision++;
+      nearestRevision++;
+      reservationFlowVersion++;
+      loading = false;
+    });
+  }
+
+  Future<void> createReservation() async {
+    if (busy || loading) return;
+    final method = await chooseReservationMethod(context);
+    if (!mounted || method == null || busy) return;
+    setState(() {
+      tab = 2;
+      reservationCreating = true;
+      reservationMode = method;
+      nearestLoading = false;
+      nearestError = null;
+      reservationQuery = '';
+      reservationClinicId = null;
+      serviceId = doctorId = sessionId = slotId = null;
+      bookingStage = doctorDetail = false;
+      channel = 'Semua';
+      search = '';
+      error = message = null;
+      clinicSchedules = schedules = slots = [];
+      catalogRevision++;
+      nearestRevision++;
+      reservationFlowVersion++;
+    });
+    if (method == 'nearest') await loadNearest();
+  }
+
+  List<Json> get reservableSessions =>
+      homeSchedules.where((s) {
+        final link = object(s['dokterLayanan']);
+        final clinicId = link['layananId'] ?? object(link['layanan'])['id'];
+        final doctor = link['dokterId'] ?? object(link['dokter'])['id'];
+        return s['aktif'] != false &&
+            link['aktif'] != false &&
+            object(s['loket'])['aktif'] != false &&
+            dateOnly(s['tanggal']).compareTo(widget.api.config.today) >= 0 &&
+            (DateTime.tryParse('${s['selesaiPada']}')
+                    ?.isAfter(DateTime.now()) ??
+                false) &&
+            services.any(
+              (c) =>
+                  c['id'] == clinicId && c['modeReservasi'] != 'ANTREAN_HARIAN',
+            ) &&
+            doctors.any((d) => d['id'] == doctor);
+      }).toList()..sort(
+        (a, b) => '${a['mulaiPada']}'.compareTo('${b['mulaiPada']}'),
+      );
+
+  Future<void> loadNearest() async {
+    final revision = ++nearestRevision;
+    setState(() {
+      nearestLoading = true;
+      nearestError = null;
+      nearestChoices = [];
+    });
+    final sessions = reservableSessions;
+    final found = <Json>[];
+    bool failed = false;
+    // A bounded batch avoids one simultaneous request per doctor/session.
+    for (var i = 0; i < sessions.length; i += 4) {
+      if (!mounted || revision != nearestRevision) return;
+      await Future.wait(
+        sessions.skip(i).take(4).map((session) async {
+          try {
+            final options = rows(
+              await widget.api.request(
+                'GET',
+                '/slot-praktik',
+                query: {'jadwalPraktikId': '${session['id']}'},
+              ),
+            );
+            final link = object(session['dokterLayanan']);
+            final clinicId = link['layananId'] ?? object(link['layanan'])['id'];
+            final doctorId = link['dokterId'] ?? object(link['dokter'])['id'];
+            for (final slot in options.where(
+              (s) =>
+                  s['aktif'] != false &&
+                  s['tersedia'] == true &&
+                  (DateTime.tryParse('${s['mulaiPada']}')
+                          ?.isAfter(DateTime.now()) ??
+                      false),
+            )) {
+              found.add({
+                'doctor': doctors.firstWhere((d) => d['id'] == doctorId),
+                'clinic': services.firstWhere((c) => c['id'] == clinicId),
+                'session': session,
+                'slot': slot,
+              });
+            }
+          } catch (_) {
+            failed = true;
+          }
+        }),
+      );
+    }
+    if (!mounted || revision != nearestRevision) return;
+    found.sort(
+      (a, b) =>
+          DateTime.parse('${object(a['slot'])['mulaiPada']}')
+              .compareTo(DateTime.parse('${object(b['slot'])['mulaiPada']}')),
+    );
+    setState(() {
+      nearestChoices = found;
+      nearestLoading = false;
+      nearestError = failed
+          ? 'Sebagian slot belum dapat dimuat. Muat ulang untuk mencoba lagi.'
+          : homeScheduleError;
+    });
+  }
+
+  Future<void> chooseReservationDoctor(
+    Json doctor,
+    Json clinic, {
+    Json? session,
+    Json? slot,
+  }) async {
+    if (busy || loading) return;
+    final version = ++reservationFlowVersion;
+    nearestRevision++;
+    await selectService('${clinic['id']}');
+    if (!mounted || version != reservationFlowVersion || tab != 2) return;
+    if (session != null) date.text = dateOnly(session['tanggal']);
+    await chooseDoctor(doctor);
+    if (!mounted || version != reservationFlowVersion || tab != 2) return;
+    setState(() => doctorDetail = false);
+    if (session != null && schedules.any((s) => s['id'] == session['id'])) {
+      await loadSlots('${session['id']}');
+      if (mounted &&
+          version == reservationFlowVersion &&
+          slot != null &&
+          slots.any((s) => s['id'] == slot['id'] && s['tersedia'] == true)) {
+        setState(() => slotId = '${slot['id']}');
+      }
+    }
+  }
+
+  Widget reservationDoctors(BuildContext context) {
+    final nearest = reservationMode == 'nearest';
+    final choices = <Json>[];
+    if (nearest) {
+      choices.addAll(nearestChoices);
+    } else {
+      for (final doctor in doctors) {
+        for (final link in rows(
+          doctor['dokterLayanan'],
+        ).where((l) => l['aktif'] == true)) {
+          final clinic = services
+              .where(
+                (c) =>
+                    c['id'] ==
+                        (link['layananId'] ?? object(link['layanan'])['id']) &&
+                    c['modeReservasi'] != 'ANTREAN_HARIAN',
+              )
+              .firstOrNull;
+          if (clinic == null) continue;
+          final sessions = reservableSessions.where((s) {
+            final pair = object(s['dokterLayanan']);
+            return (pair['dokterId'] ?? object(pair['dokter'])['id']) ==
+                    doctor['id'] &&
+                (pair['layananId'] ?? object(pair['layanan'])['id']) ==
+                    clinic['id'];
+          });
+          choices.add({
+            'doctor': doctor,
+            'clinic': clinic,
+            'session': sessions.firstOrNull,
+          });
+        }
+      }
+    }
+    final visible = choices
+        .where(
+          (c) =>
+              (reservationClinicId == null ||
+                  object(c['clinic'])['id'] == reservationClinicId) &&
+              ('${label(object(c['doctor']))} ${object(c['doctor'])['spesialisasi'] ?? ''} ${label(object(c['clinic']))}')
+                  .toLowerCase()
+                  .contains(reservationQuery),
+        )
+        .toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        PatientHeading(
+          title: nearest ? 'Jadwal Terdekat' : 'Buat Reservasi',
+          onBack: showReservations,
+        ),
+        TextField(
+          key: ValueKey(reservationMode),
+          onChanged: (v) =>
+              setState(() => reservationQuery = v.toLowerCase().trim()),
+          decoration: const InputDecoration(
+            hintText: 'Cari dokter, poliklinik, atau spesialisasi...',
+            hintStyle: TextStyle(fontSize: 12),
+            prefixIcon: Icon(Icons.search),
+          ),
+        ),
+        const SizedBox(height: 10),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              for (final c in [
+                <String, dynamic>{'id': null, 'nama': 'Semua'},
+                ...services.where(
+                  (c) => c['modeReservasi'] != 'ANTREAN_HARIAN',
+                ),
+              ])
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: ChoiceChip(
+                    label: Text(label(c)),
+                    showCheckmark: false,
+                    selected: reservationClinicId == c['id'],
+                    onSelected: (_) =>
+                        setState(() => reservationClinicId = c['id']),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (nearestLoading)
+          const LinearProgressIndicator(semanticsLabel: 'Membaca slot aktual'),
+        if (nearestError != null && nearest)
+          MobileNotice(nearestError!, error: true),
+        if (homeScheduleError != null && !nearest)
+          MobileNotice(homeScheduleError!, error: true),
+        if (visible.isEmpty && !nearestLoading && !loading)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Text(
+              nearest
+                  ? 'Belum ada slot tersedia yang sesuai.'
+                  : 'Tidak ada dokter yang sesuai.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: QueueBStyle.muted),
+            ),
+          ),
+        // The outer booking list owns scrolling. Only the nearest view is bounded
+        // locally; a limited page avoids eagerly building every available slot.
+        ReservationChoices(
+          choices: visible,
+          config: widget.api.config,
+          busy: busy || loading,
+          onSelect: (c) => chooseReservationDoctor(
+            object(c['doctor']),
+            object(c['clinic']),
+            session: c['slot'] == null ? null : object(c['session']),
+            slot: c['slot'] == null ? null : object(c['slot']),
+          ),
+        ),
+        OutlinedButton.icon(
+          onPressed: busy || loading || nearestLoading
+              ? null
+              : () async {
+                  await load();
+                },
+          icon: const Icon(Icons.refresh),
+          label: const Text('Muat ulang pilihan'),
+        ),
+      ],
+    );
   }
 
   List<Widget> _catalog(BuildContext context) {
@@ -924,72 +1239,112 @@ class _PatientPageState extends State<PatientPage> {
             alignment: Alignment.topCenter,
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 760),
-              child: ListView(
-                key: ValueKey('$tab:$serviceId:$bookingStage:$doctorDetail'),
-                padding: const EdgeInsets.all(16),
-                children: [
-                  if (error != null) ...[
-                    MobileNotice(error!, error: true),
-                    TextButton.icon(
-                      onPressed: busy || loading ? null : load,
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Coba lagi'),
-                    ),
-                  ],
-                  if (message != null) MobileNotice(message!),
-                  if (loading)
-                    const LinearProgressIndicator(
-                      semanticsLabel: 'Memuat data pelayanan',
-                    ),
-                  if (tab == 0) _home(context),
-                  if (tab == 2) _registration(context),
-                  if (tab == 1) _tickets(context),
-                  if (tab == 4) _history(context),
-                  if (tab == 3)
-                    Section(
-                      title: 'Janji temu saya',
-                      action: IconButton(
-                        tooltip: 'Muat ulang janji temu',
-                        onPressed: busy || loading ? null : load,
-                        icon: const Icon(Icons.refresh),
+              child: tab == 2 && !reservationCreating
+                  ? ReservationList(
+                      items: patientReservations(
+                        tickets,
+                        appointments,
+                        doctors,
+                        widget.api.config.today,
                       ),
-                      child: Column(
-                        children: [
-                          if (appointments.isEmpty && !loading)
-                            const EmptyState(text: 'Belum ada janji temu.'),
-                          for (final a in appointments)
-                            AppCard(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    appointmentDetails(a, widget.api.config),
-                                  ),
-                                  StatusBadge(object(a['tiket'])['status']),
-                                  TextButton(
-                                    onPressed: () => setState(() => tab = 1),
-                                    child: const Text('Lihat tiket'),
-                                  ),
-                                ],
-                              ),
-                            ),
+                      config: widget.api.config,
+                      loading: loading,
+                      busy: busy,
+                      error: error,
+                      message: message,
+                      onRefresh: load,
+                      onCreate: createReservation,
+                      onTicket: (r) =>
+                          openTicket(r.ticket, issueQrOnOpen: !r.terminal),
+                      onCancel: (r) => cancel(r.appointment!),
+                    )
+                  : ListView(
+                      key: ValueKey(
+                        '$tab:$serviceId:$bookingStage:$doctorDetail',
+                      ),
+                      padding: const EdgeInsets.all(16),
+                      children: [
+                        if (error != null) ...[
+                          MobileNotice(error!, error: true),
+                          TextButton.icon(
+                            onPressed: busy || loading ? null : load,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Coba lagi'),
+                          ),
                         ],
-                      ),
+                        if (message != null) MobileNotice(message!),
+                        if (loading)
+                          const LinearProgressIndicator(
+                            semanticsLabel: 'Memuat data pelayanan',
+                          ),
+                        if (tab == 0) _home(context),
+                        if (tab == 2) _registration(context),
+                        if (tab == 1) _tickets(context),
+                        if (tab == 4) _history(context),
+                        if (tab == 3)
+                          Section(
+                            title: 'Janji temu saya',
+                            action: IconButton(
+                              tooltip: 'Muat ulang janji temu',
+                              onPressed: busy || loading ? null : load,
+                              icon: const Icon(Icons.refresh),
+                            ),
+                            child: Column(
+                              children: [
+                                if (appointments.isEmpty && !loading)
+                                  const EmptyState(
+                                    text: 'Belum ada janji temu.',
+                                  ),
+                                for (final a in appointments)
+                                  AppCard(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          appointmentDetails(
+                                            a,
+                                            widget.api.config,
+                                          ),
+                                        ),
+                                        StatusBadge(
+                                          object(a['tiket'])['status'],
+                                        ),
+                                        TextButton(
+                                          onPressed: () =>
+                                              setState(() => tab = 1),
+                                          child: const Text('Lihat tiket'),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                      ],
                     ),
-                ],
-              ),
             ),
           ),
         ),
       ),
       PatientBottomNavigation(
         selectedIndex: tab == 4 ? 0 : [0, 2, 1, 3].indexOf(tab),
-        onSelected: busy ? null : (i) => setState(() => tab = [0, 2, 1, 3][i]),
+        onSelected: busy
+            ? null
+            : (i) => setState(() {
+                tab = [0, 2, 1, 3][i];
+                reservationFlowVersion++;
+                nearestRevision++;
+                if (tab == 2) reservationCreating = false;
+              }),
       ),
     ],
   );
 
   Widget _registration(BuildContext context) {
+    if (serviceId == null && ['doctors', 'nearest'].contains(reservationMode)) {
+      return reservationDoctors(context);
+    }
     final doctor =
         doctors.where((d) => d['id'] == doctorId).firstOrNull ??
         <String, dynamic>{};
@@ -1011,10 +1366,12 @@ class _PatientPageState extends State<PatientPage> {
           title: bookingStage
               ? (doctorDetail ? 'Detail Dokter' : 'Pilih Jadwal Praktik')
               : serviceId == null
-              ? 'Poliklinik & Dokter'
+              ? (reservationMode == 'clinics'
+                    ? 'Buat Reservasi'
+                    : 'Poliklinik & Dokter')
               : clinicName,
           onBack: serviceId == null
-              ? null
+              ? showReservations
               : busy || loading
               ? null
               : () => setState(() {
