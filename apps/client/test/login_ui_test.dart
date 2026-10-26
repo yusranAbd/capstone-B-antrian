@@ -63,23 +63,23 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  for (final width in [
-    320.0,
-    360.0,
-    375.0,
-    390.0,
-    414.0,
-    500.0,
-    768.0,
-    1024.0,
-    1366.0,
-    1440.0,
-    1920.0,
+  for (final size in const [
+    Size(320, 700),
+    Size(360, 800),
+    Size(375, 800),
+    Size(390, 844),
+    Size(414, 800),
+    Size(500, 800),
+    Size(768, 1024),
+    Size(1024, 768),
+    Size(1366, 768),
+    Size(1440, 900),
+    Size(1920, 1080),
   ]) {
     testWidgets(
-      'Login responsive $width: native fields, reachable CTAs, no overflow',
+      'Login V3 $size: centered card, all actions visible without scrolling',
       (tester) async {
-        await launch(tester, size: Size(width, 800));
+        await launch(tester, size: size);
         expect(find.byType(LoginLayout), findsOneWidget);
         expect(email, findsOneWidget);
         expect(password, findsOneWidget);
@@ -95,28 +95,34 @@ void main() {
         expect(find.text('Ambil tiket antrean'), findsNothing);
         expect(find.text('Pantau antrean real-time'), findsNothing);
         expect(find.text('Pelayanan lebih efisien'), findsNothing);
-        final services = find.text('Layanan digital rumah sakit');
-        if (width >= 1024) {
-          expect(services, findsOneWidget);
-          expect(
-            tester.getTopLeft(services).dx,
-            lessThan(tester.getTopLeft(email).dx),
-          );
-          expect(
-            tester.getTopLeft(services).dy,
-            lessThan(tester.getTopLeft(password).dy),
-          );
-          expect(find.text('Pendaftaran online'), findsOneWidget);
-        } else {
-          expect(services, findsNothing);
-          expect(
-            tester.getTopLeft(find.byType(LoginFormCard)).dy,
-            lessThan(110),
-          );
-        }
+        expect(find.text('Layanan digital rumah sakit'), findsNothing);
+        expect(find.byType(Image), findsNothing);
+        expect(find.text('Akses sistem antrean rumah sakit'), findsOneWidget);
+        final card = tester.getRect(find.byType(LoginFormCard));
+        expect(card.width, lessThanOrEqualTo(LoginStyle.cardWidth));
+        expect(card.center.dx, closeTo(size.width / 2, .5));
+        expect(card.center.dy, closeTo(size.height / 2, .5));
+        expect(card.top, greaterThanOrEqualTo(24));
+        expect(card.bottom, lessThanOrEqualTo(size.height - 24));
         expect(
-          find.byType(Image),
-          width >= 1024 ? findsOneWidget : findsNothing,
+          find.descendant(
+            of: find.byType(LoginFormCard),
+            matching: find.text('QueueB Hospital'),
+          ),
+          findsOneWidget,
+        );
+        final scroll = tester.state<ScrollableState>(
+          find
+              .descendant(
+                of: find.byKey(const ValueKey('login-scroll')),
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        );
+        expect(scroll.position.maxScrollExtent, 0);
+        expect(
+          tester.getBottomRight(find.text('Pasien baru? Daftar')).dy,
+          lessThan(size.height),
         );
         expect(find.text('Lupa kata sandi?'), findsNothing);
         expect(find.textContaining('Google'), findsNothing);
@@ -347,6 +353,40 @@ void main() {
       },
     );
   }
+
+  testWidgets(
+    'Patient registration keeps the existing public API and returns to login',
+    (tester) async {
+      http.Request? registration;
+      await launch(
+        tester,
+        size: const Size(360, 800),
+        handle: (r) async {
+          if (r.url.path.endsWith('/auth/register')) {
+            registration = r;
+            return http.Response('{}', 201);
+          }
+          return http.Response('{}', 401);
+        },
+      );
+      await press(tester, find.text('Pasien baru? Daftar'));
+      await tester.enterText(
+        find.byKey(const ValueKey('login-name')),
+        'Pasien Fixture',
+      );
+      await tester.enterText(email, 'fixture@test.local');
+      await tester.enterText(password, 'fixture-only');
+      await press(tester, find.widgetWithText(FilledButton, 'Daftar pasien'));
+      expect(registration, isNotNull);
+      expect(registration!.method, 'POST');
+      final body = jsonDecode(registration!.body) as Map<String, dynamic>;
+      expect(body['nama'], 'Pasien Fixture');
+      expect(body.containsKey('peran'), isFalse);
+      expect(find.text('Akun pasien dibuat. Silakan masuk.'), findsOneWidget);
+      expect(submit, findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets(
     'Public Display opens existing route anonymously; no login request or bearer token',

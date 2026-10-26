@@ -2,283 +2,120 @@ import 'package:flutter/material.dart';
 
 import 'mobile_ui.dart';
 
-// Hallmark · QueueB reference · split healthcare welcome / focused native form.
-// Hallmark pre-emit critique: P4 H5 E4 S5 R4 V4; user reference takes priority.
-// Scoped tokens; existing app typography, routes and role dashboards are preserved.
+// Hallmark · modern-minimal · centered authentication card · QueueB teal/navy.
+// Pre-emit critique: P5 H5 E4 S5 R5 V4; user-approved centered layout takes priority.
+// Scoped presentation tokens. Authentication stays in the existing LoginPage.
 abstract final class LoginStyle {
-  static const sky = Color(0xffdaf4fc);
-  static const paper = Color(0xfff1fbfd);
+  static const paper = Color(0xfff3f8fc);
   static const rule = Color(0xffdce9ef);
   static const white = Colors.white;
-  static const shadow = Color(0x10007f80);
+  static const shadow = Color(0x100f2a43);
+  static const cardWidth = 420.0;
+  static const cardRadius = 18.0;
+  static const fieldRadius = 12.0;
+  static const inputText = TextStyle(fontSize: 14, color: QueueBStyle.navy);
 }
 
-/// Presentation only. The existing LoginPage owns validation and authentication.
+/// Centers the natural-height form; scrolling only becomes possible when the
+/// keyboard, accessibility text size, or a short viewport reduces usable space.
 class LoginLayout extends StatelessWidget {
   const LoginLayout({super.key, required this.child});
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) {
-      final desktop = constraints.maxWidth >= 1024;
-      final mobile = constraints.maxWidth < 600;
-      final padding = mobile ? 16.0 : 28.0;
-      return DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [LoginStyle.paper, LoginStyle.sky, LoginStyle.paper],
-          ),
-        ),
-        child: SingleChildScrollView(
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Center(
-              child: Padding(
-                padding: EdgeInsets.all(padding),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: desktop ? 1440 : 560),
-                  child: desktop
-                      ? Container(
-                          padding: const EdgeInsets.all(18),
-                          decoration: BoxDecoration(
-                            color: LoginStyle.white.withValues(alpha: .5),
-                            border: Border.all(
-                              color: LoginStyle.white,
-                              width: 3,
-                            ),
-                            borderRadius: BorderRadius.circular(32),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: LoginStyle.shadow,
-                                blurRadius: 40,
-                                offset: Offset(0, 16),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Expanded(flex: 64, child: _Welcome()),
-                              const SizedBox(width: 18),
-                              Expanded(flex: 40, child: child),
-                            ],
-                          ),
-                        )
-                      : Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            const QueueBBrand(compact: true),
-                            const SizedBox(height: 16),
-                            child,
-                          ],
-                        ),
+  Widget build(BuildContext context) => ColoredBox(
+    color: LoginStyle.paper,
+    child: LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        key: const ValueKey('login-scroll'),
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: LoginStyle.cardWidth,
                 ),
+                child: child,
               ),
             ),
           ),
         ),
-      );
-    },
+      ),
+    ),
   );
 }
 
 class LoginFormCard extends StatelessWidget {
   const LoginFormCard({super.key, required this.child});
   final Widget child;
-  @override
-  Widget build(BuildContext context) => Container(
-    constraints: BoxConstraints(
-      minHeight: MediaQuery.sizeOf(context).width >= 1024 ? 740 : 0,
-    ),
-    padding: EdgeInsets.all(MediaQuery.sizeOf(context).width < 600 ? 24 : 36),
-    decoration: BoxDecoration(
-      color: LoginStyle.white,
-      borderRadius: BorderRadius.circular(28),
-      border: Border.all(color: LoginStyle.rule),
-      boxShadow: const [
-        BoxShadow(
-          color: LoginStyle.shadow,
-          blurRadius: 28,
-          offset: Offset(0, 8),
-        ),
-      ],
-    ),
-    child: child,
-  );
-}
 
-class _Welcome extends StatelessWidget {
-  const _Welcome();
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      LayoutBuilder(
-        builder: (context, box) {
-          final copyWidth = box.maxWidth * .53;
-          return Container(
-            constraints: const BoxConstraints(minHeight: 550),
-            clipBehavior: Clip.antiAlias,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [LoginStyle.paper, LoginStyle.sky],
-              ),
-            ),
-            child: Stack(
-              children: [
-                Positioned(
-                  right: -46,
-                  bottom: -20,
-                  width: box.maxWidth * .52,
-                  height: 470,
-                  child: ExcludeSemantics(
-                    child: Image.asset(
-                      'assets/illustrations/login_hospital.webp',
-                      fit: BoxFit.contain,
-                      alignment: Alignment.bottomRight,
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(26),
-                  child: SizedBox(
-                    width: copyWidth,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const QueueBBrand(),
-                        const SizedBox(height: 24),
-                        const _DigitalServices(),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final border = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(LoginStyle.fieldRadius),
+      borderSide: const BorderSide(color: LoginStyle.rule),
+    );
+    return Container(
+      padding: const EdgeInsets.all(28),
+      decoration: BoxDecoration(
+        color: LoginStyle.white,
+        borderRadius: BorderRadius.circular(LoginStyle.cardRadius),
+        border: Border.all(color: LoginStyle.rule),
+        boxShadow: const [
+          BoxShadow(
+            color: LoginStyle.shadow,
+            blurRadius: 32,
+            offset: Offset(0, 8),
+          ),
+        ],
       ),
-    ],
-  );
-}
-
-class _Benefit extends StatelessWidget {
-  const _Benefit({
-    required this.icon,
-    required this.title,
-    required this.description,
-  });
-  final IconData icon;
-  final String title, description;
-  @override
-  Widget build(BuildContext context) => Row(
-    crossAxisAlignment: CrossAxisAlignment.center,
-    children: [
-      Container(
-        width: 44,
-        height: 44,
-        decoration: const BoxDecoration(
-          color: LoginStyle.white,
-          shape: BoxShape.circle,
-        ),
-        child: Icon(icon, color: QueueBStyle.darkTeal, size: 25),
-      ),
-      const SizedBox(width: 12),
-      Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+      child: Theme(
+        data: theme.copyWith(
+          inputDecorationTheme: theme.inputDecorationTheme.copyWith(
+            isDense: true,
+            labelStyle: LoginStyle.inputText.copyWith(color: QueueBStyle.muted),
+            hintStyle: LoginStyle.inputText.copyWith(color: QueueBStyle.muted),
+            prefixIconColor: QueueBStyle.muted,
+            prefixIconConstraints: const BoxConstraints(
+              minWidth: 44,
+              minHeight: 48,
             ),
-            const SizedBox(height: 3),
-            Text(
-              description,
-              style: const TextStyle(
-                color: QueueBStyle.muted,
-                fontSize: 12,
-                height: 1.4,
+            suffixIconConstraints: const BoxConstraints(
+              minWidth: 44,
+              minHeight: 48,
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 14,
+            ),
+            border: border,
+            enabledBorder: border,
+          ),
+          filledButtonTheme: FilledButtonThemeData(
+            style: FilledButton.styleFrom(
+              minimumSize: const Size(48, 48),
+              textStyle: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(LoginStyle.fieldRadius),
               ),
             ),
-          ],
+          ),
+          textButtonTheme: TextButtonThemeData(
+            style: TextButton.styleFrom(
+              minimumSize: const Size(44, 44),
+              textStyle: const TextStyle(fontSize: 13),
+            ),
+          ),
         ),
+        child: child,
       ),
-    ],
-  );
-}
-
-class _DigitalServices extends StatelessWidget {
-  const _DigitalServices();
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(24),
-    decoration: BoxDecoration(
-      color: LoginStyle.white.withValues(alpha: .9),
-      border: Border.all(color: LoginStyle.rule),
-      borderRadius: BorderRadius.circular(22),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Layanan digital rumah sakit',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
-        ),
-        const SizedBox(height: 6),
-        const Text(
-          'Kelola kebutuhan layanan kesehatan Anda dengan lebih praktis dan nyaman.',
-          style: TextStyle(color: QueueBStyle.muted, height: 1.4),
-        ),
-        const SizedBox(height: 22),
-        LayoutBuilder(
-          builder: (context, box) {
-            const items = [
-              _Benefit(
-                icon: Icons.calendar_month_outlined,
-                title: 'Pendaftaran online',
-                description: 'Daftar dari mana saja',
-              ),
-              _Benefit(
-                icon: Icons.schedule_rounded,
-                title: 'Pantau antrean',
-                description: 'Posisi antrean real-time',
-              ),
-              _Benefit(
-                icon: Icons.monitor_heart_outlined,
-                title: 'Akses mudah',
-                description: 'Dalam satu aplikasi',
-              ),
-            ];
-            return box.maxWidth >= 510
-                ? Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      for (var i = 0; i < items.length; i++) ...[
-                        if (i > 0) const SizedBox(width: 12),
-                        Expanded(child: items[i]),
-                      ],
-                    ],
-                  )
-                : Column(
-                    children: [
-                      for (var i = 0; i < items.length; i++) ...[
-                        if (i > 0) const SizedBox(height: 16),
-                        items[i],
-                      ],
-                    ],
-                  );
-          },
-        ),
-      ],
-    ),
-  );
+    );
+  }
 }

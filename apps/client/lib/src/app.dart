@@ -331,29 +331,33 @@ class _LoginPageState extends State<LoginPage> {
                   key: form,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisSize: MainAxisSize.min,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
+                      const Center(child: QueueBBrand(compact: true)),
+                      const SizedBox(height: 20),
                       Text(
                         register ? 'Daftar' : 'Masuk',
-                        style: Theme.of(context).textTheme.headlineLarge
-                            ?.copyWith(
-                              fontSize: MediaQuery.sizeOf(context).width < 600
-                                  ? 32
-                                  : 42,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -.8,
-                            ),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 25,
+                          fontWeight: FontWeight.w800,
+                          color: QueueBStyle.navy,
+                        ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
                       Text(
-                        register ? 'Daftar akun pasien' : 'Masuk untuk mengelola pelayanan atau tiket Anda.',
+                        register
+                            ? 'Daftar akun pasien'
+                            : 'Akses sistem antrean rumah sakit',
+                        textAlign: TextAlign.center,
                         style: const TextStyle(
                           color: QueueBStyle.muted,
-                          fontSize: 17,
+                          fontSize: 13,
                           height: 1.5,
                         ),
                       ),
-                      const SizedBox(height: 28),
+                      const SizedBox(height: 24),
                       if (widget.notice != null)
                         Semantics(
                           container: true,
@@ -364,18 +368,25 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       if (error != null)
                         Semantics(
+                          container: true,
                           liveRegion: true,
+                          label: error!,
+                          excludeSemantics: true,
                           child: MobileNotice(error!, error: true),
                         ),
                       if (message != null)
                         Semantics(
+                          container: true,
                           liveRegion: true,
+                          label: message!,
+                          excludeSemantics: true,
                           child: MobileNotice(message!),
                         ),
                       if (register) ...[
                         TextFormField(
                           key: const ValueKey('login-name'),
                           controller: name,
+                          style: LoginStyle.inputText,
                           enabled: !busy,
                           textInputAction: TextInputAction.next,
                           autofillHints: const [AutofillHints.name],
@@ -389,11 +400,12 @@ class _LoginPageState extends State<LoginPage> {
                               ? 'Nama 3–150 karakter.'
                               : null,
                         ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 16),
                       ],
                       TextFormField(
                         key: const ValueKey('login-email'),
                         controller: email,
+                        style: LoginStyle.inputText,
                         enabled: !busy,
                         keyboardType: TextInputType.emailAddress,
                         textInputAction: TextInputAction.next,
@@ -410,10 +422,11 @@ class _LoginPageState extends State<LoginPage> {
                             ? 'Masukkan email yang valid.'
                             : null,
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 16),
                       TextFormField(
                         key: const ValueKey('login-password'),
                         controller: password,
+                        style: LoginStyle.inputText,
                         enabled: !busy,
                         obscureText: obscure,
                         textInputAction: TextInputAction.done,
@@ -447,10 +460,10 @@ class _LoginPageState extends State<LoginPage> {
                             ? 'Kata sandi 8–72 karakter.'
                             : null,
                       ),
-                      const SizedBox(height: 30),
+                      const SizedBox(height: 20),
                       FilledButton(
                         style: FilledButton.styleFrom(
-                          minimumSize: const Size(48, 56),
+                          minimumSize: const Size(48, 48),
                         ),
                         onPressed: busy ? null : submit,
                         child: Row(
@@ -483,7 +496,7 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                       const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 24),
+                        padding: EdgeInsets.symmetric(vertical: 16),
                         child: Row(
                           children: [
                             Expanded(child: Divider(color: LoginStyle.rule)),
@@ -491,7 +504,10 @@ class _LoginPageState extends State<LoginPage> {
                               padding: EdgeInsets.symmetric(horizontal: 14),
                               child: Text(
                                 'atau',
-                                style: TextStyle(color: QueueBStyle.muted),
+                                style: TextStyle(
+                                  color: QueueBStyle.muted,
+                                  fontSize: 12,
+                                ),
                               ),
                             ),
                             Expanded(child: Divider(color: LoginStyle.rule)),
@@ -502,8 +518,13 @@ class _LoginPageState extends State<LoginPage> {
                         style: OutlinedButton.styleFrom(
                           foregroundColor: QueueBStyle.darkTeal,
                           side: const BorderSide(color: QueueBStyle.darkTeal),
-                          minimumSize: const Size(48, 54),
+                          minimumSize: const Size(48, 48),
                           padding: const EdgeInsets.symmetric(horizontal: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                              LoginStyle.fieldRadius,
+                            ),
+                          ),
                           textStyle: const TextStyle(
                             fontWeight: FontWeight.w700,
                             fontSize: 14,
@@ -512,24 +533,11 @@ class _LoginPageState extends State<LoginPage> {
                         onPressed: busy ? null : widget.onDisplay,
                         icon: const Icon(
                           Icons.desktop_windows_outlined,
-                          size: 23,
+                          size: 20,
                         ),
                         label: const Text('Masuk ke Public Display'),
                       ),
                       const SizedBox(height: 12),
-                      const Text(
-                        'Lihat antrean langsung di layar publik rumah sakit tanpa perlu login.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: QueueBStyle.muted,
-                          fontSize: 13,
-                          height: 1.5,
-                        ),
-                      ),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 22),
-                        child: Divider(color: LoginStyle.rule),
-                      ),
                       TextButton(
                         onPressed: busy
                             ? null

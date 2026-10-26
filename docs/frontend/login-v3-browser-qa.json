@@ -1,0 +1,66 @@
+{
+  "browser": "155.0.8059.86",
+  "api": "controlled HTTP fixtures; not live account login",
+  "viewports": [
+    {
+      "width": 1366,
+      "height": 768,
+      "scrollWidth": 1366,
+      "scrollHeight": 768,
+      "noScroll": true,
+      "actionsVisible": true
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "scrollWidth": 1440,
+      "scrollHeight": 900,
+      "noScroll": true,
+      "actionsVisible": true
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "scrollWidth": 1920,
+      "scrollHeight": 1080,
+      "noScroll": true,
+      "actionsVisible": true
+    },
+    {
+      "width": 768,
+      "height": 1024,
+      "scrollWidth": 768,
+      "scrollHeight": 1024,
+      "noScroll": true,
+      "actionsVisible": true
+    },
+    {
+      "width": 360,
+      "height": 800,
+      "scrollWidth": 360,
+      "scrollHeight": 800,
+      "noScroll": true,
+      "actionsVisible": true
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390,
+      "scrollHeight": 844,
+      "noScroll": true,
+      "actionsVisible": true
+    }
+  ],
+  "states": {
+    "validation": true,
+    "passwordToggle": true,
+    "loadingAndError": true,
+    "registration": true,
+    "publicDisplay": true
+  },
+  "errors": [],
+  "success": true,
+  "build": "Flutter Web release JavaScript",
+  "sourceBaseCommit": "52a65d0",
+  "authScope": "Widget and browser HTTP fixtures; no live credentials or database writes"
+}
