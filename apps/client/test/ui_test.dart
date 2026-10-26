@@ -182,6 +182,22 @@ class FakeBackend {
         'versiSkema': 1,
         'tanggalPelayanan': today,
         'diperolehPada': DateTime.now().toUtc().toIso8601String(),
+        'daftarPasien': {
+          'total': ['MENUNGGU', 'DILEWATI', 'CHECK_IN'].contains(status)
+              ? 1
+              : 0,
+          'tiket': ['MENUNGGU', 'DILEWATI', 'CHECK_IN'].contains(status)
+              ? [
+                  {
+                    ...ticket,
+                    'namaPasien': 'Pasien Uji',
+                    'checkInPada': DateTime.now().toUtc().toIso8601String(),
+                    'bisaAntreUlang': status == 'DILEWATI',
+                    'bisaMasukAntrean': status == 'CHECK_IN',
+                  },
+                ]
+              : [],
+        },
         'menunggu': {
           'total': status == 'MENUNGGU' ? 1 : 0,
           'tiket': status == 'MENUNGGU' ? [ticket] : [],
@@ -470,7 +486,11 @@ void main() {
       await press(tester, 'Panggil Ulang');
       await press(tester, 'Lewati');
       expect(server.status, 'DILEWATI');
-      await press(tester, 'Antre Ulang', type: TextButton);
+      await tester.ensureVisible(find.byTooltip('Aksi UM-001'));
+      await tester.tap(find.byTooltip('Aksi UM-001'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Kembalikan ke Antrean'));
+      await tester.pumpAndSettle();
       await press(tester, 'Panggil berikutnya');
       await press(tester, 'Mulai Pelayanan');
       await press(tester, 'Selesaikan Pelayanan');
@@ -657,7 +677,7 @@ void main() {
       tester,
     ) async {
       await launch(tester, FakeBackend('PETUGAS'), size: Size(width, 900));
-      expect(find.text('Panel petugas'), findsOneWidget);
+      expect(find.text('Daftar antrean poli'), findsOneWidget);
       expect(find.text('Mulai Pelayanan'), findsNothing);
       expect(find.text('Selesaikan Pelayanan'), findsNothing);
       await press(tester, 'Panggil berikutnya');

@@ -28,7 +28,7 @@ type JadwalInput = {
 const detailJadwal = {
   dokterLayanan: {
     include: {
-      dokter: { select: { id: true, kode: true, nama: true, spesialisasi: true, aktif: true } },
+      dokter: { select: { id: true, kode: true, nama: true, spesialisasi: true, fotoProfil: true, aktif: true } },
       layanan: { select: { id: true, kode: true, nama: true, aktif: true } },
     },
   },

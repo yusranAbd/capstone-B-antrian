@@ -30,7 +30,9 @@ abstract final class StaffStyle {
         style: FilledButton.styleFrom(
           minimumSize: const Size(44, 44),
           shape: shape,
-          textStyle: const TextStyle(fontWeight: FontWeight.w700),
+          textStyle: base.textTheme.labelLarge?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -148,12 +150,13 @@ class StaffPanel extends StatelessWidget {
     required this.child,
     this.action,
     this.dark = false,
+    this.expand = false,
   });
   final String title;
   final IconData icon;
   final Widget child;
   final Widget? action;
-  final bool dark;
+  final bool dark, expand;
   @override
   Widget build(BuildContext context) => Semantics(
     container: true,
@@ -191,7 +194,7 @@ class StaffPanel extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            child,
+            if (expand) Expanded(child: child) else child,
           ],
         ),
       ),

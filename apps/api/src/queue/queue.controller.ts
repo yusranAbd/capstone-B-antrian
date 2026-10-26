@@ -4,10 +4,12 @@ import {
   DefaultValuePipe,
   ForbiddenException,
   Get,
+  Header,
   HttpCode,
   HttpStatus,
   Param,
   ParseBoolPipe,
+  ParseIntPipe,
   ParseUUIDPipe,
   Post,
   Query,
@@ -125,15 +127,19 @@ export class QueueController {
   // ========================================
 
   @Get('snapshot')
+  @Header('Cache-Control', 'no-store')
   async snapshotAntrean(
     @Query('loketId', new ParseUUIDPipe({ version: '4' }))
     loketId: string,
+
+    @Query('halamanTindakLanjut', new DefaultValuePipe(1), ParseIntPipe)
+    halamanTindakLanjut: number,
 
     @Req()
     request: RequestTerautentikasi,
   ) {
     const petugasId = this.ambilPetugasId(request);
-    return this.queueService.snapshotAntrean(petugasId, loketId);
+    return this.queueService.snapshotAntrean(petugasId, loketId, halamanTindakLanjut);
   }
 
   // ========================================
