@@ -57,7 +57,7 @@ export class DisplayService {
           select: { kode: true, nama: true, prefixAntrean: true, modeReservasi: true },
         });
 
-        const [loketAktif, tiketAktif, totalMenunggu, panggilan, menunggu, sesiAktif] = await Promise.all([
+        const [loketAktif, tiketAktif, totalMenunggu, panggilan, menunggu, sesiAktif, dilewati, totalDilewati] = await Promise.all([
           tx.loket.findMany({
             where: { layananId, aktif: true },
             select: { id: true, kode: true, nama: true },
@@ -134,6 +134,17 @@ export class DisplayService {
                 dokter: { is: { aktif: true } }, layanan: { is: { aktif: true } } } } },
             select: { loketId: true },
           }),
+          tx.tiketAntrean.findMany({
+            where: { layananId, tanggalAntrean: tanggal.tanggalDb,
+              status: StatusTiket.DILEWATI },
+            select: { nomorUrut: true, pengguna: { select: { nama: true } } },
+            orderBy: [{ urutanMasukAntrean: 'asc' }, { id: 'asc' }],
+            take: 100,
+          }),
+          tx.tiketAntrean.count({
+            where: { layananId, tanggalAntrean: tanggal.tanggalDb,
+              status: StatusTiket.DILEWATI },
+          }),
         ]);
 
         // Klinik memiliki beberapa ruang: nilai kelayakan appointment di ruangnya
@@ -187,6 +198,20 @@ export class DisplayService {
           tanggalPelayanan: tanggal.tanggal,
           layanan: { kode: layanan.kode, nama: layanan.nama },
           totalMenunggu,
+          totalDilewati,
+          totalAntrianPasien: totalMenunggu + totalDilewati,
+          antrianPasien: [
+            ...daftarMenunggu.slice(0, 100).map((tiket) => ({
+              nomorAntrean: nomor(tiket.nomorUrut),
+              namaPasien: namaPublikDisplay(tiket.pengguna?.nama),
+              status: 'MENUNGGU' as const,
+            })),
+            ...dilewati.map((tiket) => ({
+              nomorAntrean: nomor(tiket.nomorUrut),
+              namaPasien: namaPublikDisplay(tiket.pengguna?.nama),
+              status: 'DILEWATI' as const,
+            })),
+          ],
           modeNama: modeNamaDisplay(),
           menunggu: daftarMenunggu.slice(0, 100).map((tiket) => ({
             nomorAntrean: nomor(tiket.nomorUrut), namaPasien: namaPublikDisplay(tiket.pengguna?.nama),

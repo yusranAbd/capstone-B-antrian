@@ -71,3 +71,29 @@ Unit backend: `npm test -- --runInBand`, lint `npm run lint`, type check `npx ts
 Deploy backend dan Web dari commit yang sama agar nama/list tersedia. Setelah pairing, klik Aktifkan Suara lalu Layar Penuh; fullscreen mengikuti dukungan browser/platform. Jangan menggunakan query token. Konfigurasi nama server adalah keputusan fasilitas, tidak diaktifkan otomatis pada development/production oleh PR ini.
 
 Pengujian otomatis audio memakai engine/mock platform: tersedianya suara id-ID dan bunyi dari speaker TV fisik tetap harus dicek saat pemasangan. Socket.IO tetap best effort dengan REST polling 15 detik; multi-instance memerlukan infrastruktur distribusi existing yang sesuai. Tidak ada klaim uji speaker atau monitor fisik.
+
+
+## Revisi Antrian pasien — 26 Oktober 2026
+
+Panel kanan kini memakai judul **Antrian pasien** dan kolom **Status** (Menunggu teal, Dilewati amber). Angka total mencakup keduanya. Nama mengikuti snapshot server; mode LENGKAP yang sudah ada dipakai untuk development sesuai permintaan operator. Tidak ada perubahan Queue Engine, pairing, schema/migration maupun prioritas panggilan.
+
+Field antrianPasien memuat MENUNGGU lalu DILEWATI pada poli/hari yang sama. Setelah REQUEUE, tiket berpindah kembali ke Menunggu tanpa duplikasi. Status selesai/dibatalkan tidak ditampung. Daftar panjang berganti halaman otomatis setiap 12 detik; timer dibersihkan saat widget dilepas. Nama panjang dapat membungkus hingga dua baris. Backend/frontend harus diperbarui bersama untuk melihat status Dilewati.
+
+
+### Validasi revisi Antrian pasien
+
+- Unit backend: 675 PASS (45 suite); unit Display final 15 PASS setelah koreksi tipe mock.
+- Flutter seluruh role: 352 PASS, 1 live fixture opsional SKIP. Source final Display: 20 PASS dengan capture/layout 1280x720, 1366x768, 1920x1080, nama lengkap, SKIP/REQUEUE dan paging.
+- Flutter analyze, backend lint/typecheck, NestJS build dan Web release: PASS.
+- Run E2E awal seluruh backend: 378 PASS/3 gagal setup pada hospital-integrasi (timeout dan setup 409 saat beban pengujian bersamaan). Dua fixture unik suite dibersihkan dengan ID/kode terverifikasi, 13 record awal tetap identik. Pengulangan tujuh suite relevan secara terisolasi: **70/70 PASS**, termasuk semua kasus yang gagal. Integritas akhir: existing=13, missing=0, changed=0, remaining=0. Tidak mengklaim satu run seluruh E2E hijau.
+- Preview lokal Web :5173 memakai backend preview :3001; backend existing :3000 tidak dihentikan. Konfigurasi API_BASE_URL hanya build-define preview. API health dan Web HTTP 200. Tidak ada penulisan data development oleh smoke test.
+- Screenshot fixture sintetis tersedia di tmp/display-status-capture/display-patients-1280.png; tidak memuat pasien sebenarnya. Test dapat direproduksi dengan QUEUEB_CAPTURE_DIR dan QUEUEB_FONT_DIR seperti instruksi sebelumnya.
+- Seluruh 28 file lokal pengguna cocok dengan SHA256 preflight. Dua konfigurasi nama development di .env dibackup privat ke tmp/private-display-config; tidak dimasukkan Git. Branch kerja codex/display-patient-status. Finalisasi Git/PR dilakukan setelah QA; tidak ada auto-merge.
+
+### Pengamanan deployment
+
+Default production tetap **SAMAR**. Nama lengkap hanya diberikan jika operator server secara eksplisit mengatur **keduanya**, DISPLAY_PATIENT_NAME_MODE=LENGKAP dan DISPLAY_FULL_NAMES_APPROVED=true. Konfigurasi development bukan perubahan default source, tidak dimasukkan commit, dan tidak boleh disalin ke production tanpa izin fasilitas. Filter token/perangkat, poliklinik dan tanggal tetap wajib.
+
+![Daftar pasien dan status — fixture sintetis 1280x720](images/public-display-v3/patient-status-1280.png)
+
+Checkpoint finalisasi Git: pengulangan kedua tujuh suite E2E kembali **70/70 PASS**; tiga kasus hospital-integrasi yang sempat gagal setup semuanya PASS. Baseline test tetap 13 record, tidak berubah/hilang dan tidak ada fixture tersisa.

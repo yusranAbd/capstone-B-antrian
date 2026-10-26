@@ -59,6 +59,109 @@ Json monitorSnapshot({
 
 void main() {
   final capture = Platform.environment['QUEUEB_CAPTURE_DIR'];
+  testWidgets('patient names, SKIP, REQUEUE and paging come from snapshot', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1280, 720);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final data = monitorSnapshot(waiting: 1, full: true);
+    final captureKey = GlobalKey();
+    data['antrianPasien'] = [
+      {
+        'nomorAntrean': 'AN-002',
+        'namaPasien': 'Pasien Demonstrasi Lengkap',
+        'status': 'MENUNGGU',
+      },
+      {
+        'nomorAntrean': 'AN-003',
+        'namaPasien': 'Pasien Terlewat Lengkap',
+        'status': 'DILEWATI',
+      },
+    ];
+    data['totalAntrianPasien'] = 2;
+    Future<void> render() => tester.pumpWidget(
+      MaterialApp(
+        theme: QueueBStyle.theme,
+        home: Scaffold(
+          body: RepaintBoundary(
+            key: captureKey,
+            child: DisplayBoard(
+              snapshot: data,
+              now: DateTime(2026, 10, 26),
+              status: 'Realtime terhubung',
+              onRefresh: () {},
+              onAudio: () {},
+              onConfigure: () {},
+              onFullscreen: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await render();
+    expect(find.text('Antrian pasien'), findsOneWidget);
+    expect(find.text('STATUS'), findsOneWidget);
+    expect(find.text('Pasien Demonstrasi Lengkap'), findsOneWidget);
+    expect(find.text('Pasien Terlewat Lengkap'), findsOneWidget);
+    expect(find.text('Menunggu'), findsOneWidget);
+    expect(find.text('Dilewati'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    if (capture != null) {
+      await tester.runAsync(() async {
+        final image =
+            await (captureKey.currentContext!.findRenderObject()!
+                    as RenderRepaintBoundary)
+                .toImage();
+        final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+        final file = File('$capture/display-patients-1280.png');
+        await file.parent.create(recursive: true);
+        await file.writeAsBytes(bytes!.buffer.asUint8List());
+        image.dispose();
+      });
+    }
+    data['antrianPasien'] = [
+      {
+        'nomorAntrean': 'AN-002',
+        'namaPasien': 'Pasien Demonstrasi Lengkap',
+        'status': 'MENUNGGU',
+      },
+      {
+        'nomorAntrean': 'AN-003',
+        'namaPasien': 'Pasien Terlewat Lengkap',
+        'status': 'MENUNGGU',
+      },
+    ];
+    await render();
+    expect(find.text('Dilewati'), findsNothing);
+    expect(find.text('Menunggu'), findsNWidgets(2));
+    expect(find.text('AN-003'), findsOneWidget);
+    data['antrianPasien'] = [
+      for (var i = 0; i < 9; i++)
+        {
+          'nomorAntrean': 'QA-$i',
+          'namaPasien': 'Pasien $i',
+          'status': 'MENUNGGU',
+        },
+      {
+        'nomorAntrean': 'QA-999',
+        'namaPasien': 'Pasien Dilewati Terakhir',
+        'status': 'DILEWATI',
+      },
+    ];
+    data['totalAntrianPasien'] = 10;
+    await render();
+    for (var i = 0; i < 3 && find.text('QA-999').evaluate().isEmpty; i++) {
+      await tester.pump(const Duration(seconds: 12));
+    }
+    expect(find.text('QA-999'), findsOneWidget);
+    expect(find.text('Dilewati'), findsOneWidget);
+    expect(find.byType(Scrollable), findsNothing);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 20));
+  });
   setUpAll(() async {
     final fontRoot = Platform.environment['QUEUEB_FONT_DIR'];
     if (capture != null && fontRoot != null) {
@@ -125,7 +228,7 @@ void main() {
             );
 
             if (count == 0) {
-              expect(find.text('Belum ada pasien menunggu.'), findsOneWidget);
+              expect(find.text('Belum ada antrian pasien.'), findsOneWidget);
             }
             if (count == 30) {
               expect(
