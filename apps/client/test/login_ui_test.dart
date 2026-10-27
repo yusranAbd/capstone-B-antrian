@@ -343,7 +343,10 @@ void main() {
           findsOneWidget,
         );
         if (role == 'USER') {
-          await press(tester, find.byTooltip('Profil akun'));
+          await press(
+            tester,
+            find.widgetWithText(NavigationDestination, 'Profil'),
+          );
           await press(tester, find.text('Keluar Akun'));
         } else if (role == 'PETUGAS') {
           await press(tester, find.byTooltip('Profil petugas'));

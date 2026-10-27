@@ -181,7 +181,7 @@ void main() {
       t.view.resetPhysicalSize();
       t.view.resetDevicePixelRatio();
     });
-    await t.tap(find.widgetWithText(NavigationDestination, 'Pendaftaran'));
+    await t.tap(find.widgetWithText(NavigationDestination, 'Reservasi'));
     await t.pumpAndSettle();
   }
 
@@ -230,12 +230,8 @@ void main() {
         await launch(t, ReservationBackend(), size: size);
         expect(find.text('Reservasi Saya'), findsOneWidget);
         expect(
-          t
-              .getBottomLeft(
-                find.byKey(const PageStorageKey('reservation-list')),
-              )
-              .dy,
-          lessThanOrEqualTo(t.getTopLeft(find.byType(FloatingActionButton)).dy),
+          t.getBottomLeft(find.byType(FloatingActionButton)).dy,
+          lessThanOrEqualTo(t.getTopLeft(find.byType(NavigationBar)).dy),
         );
         expect(find.text('Antrean harian / Walk-in'), findsOneWidget);
         expect(find.byType(ProfessionalDoctorAvatar), findsWidgets);
@@ -391,7 +387,7 @@ void main() {
         b.requests.any((r) => r.$1 == 'POST' && r.$2 == '/janji-temu'),
         isFalse,
       );
-      await press(t, find.widgetWithText(NavigationDestination, 'Pendaftaran'));
+      await press(t, find.widgetWithText(NavigationDestination, 'Reservasi'));
       b.slotsAvailable = false;
       await press(t, find.byType(FloatingActionButton));
       await press(t, find.text('Jadwal Terdekat'));

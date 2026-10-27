@@ -160,11 +160,11 @@ class ReservationCard extends StatelessWidget {
               ProfessionalDoctorAvatar(
                 config: config,
                 photo: item.doctor['fotoProfil'],
-                radius: 24,
+                radius: 20,
               )
             else
               const CircleAvatar(
-                radius: 24,
+                radius: 20,
                 backgroundColor: QueueBStyle.mint,
                 child: Icon(
                   Icons.local_hospital_outlined,
@@ -181,7 +181,7 @@ class ReservationCard extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
                       fontSize: 14,
                       color: QueueBStyle.navy,
                     ),
@@ -207,7 +207,7 @@ class ReservationCard extends StatelessWidget {
             ReservationStatus(item.status),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
@@ -242,7 +242,7 @@ class ReservationCard extends StatelessWidget {
             'Status janji temu: ${item.appointment!['status']}',
             style: const TextStyle(fontSize: 11),
           ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         LayoutBuilder(
           builder: (context, box) {
             final actions = [
@@ -367,137 +367,115 @@ class _ReservationListState extends State<ReservationList> {
               r.searchText.contains(search.text.trim().toLowerCase()),
         )
         .toList();
-    return Stack(
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(bottom: 76),
-          child: RefreshIndicator(
-            onRefresh: widget.onRefresh,
-            child: ListView.builder(
-              key: const PageStorageKey('reservation-list'),
-              controller: scroll,
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(16),
-              itemCount: 1 + (visible.isEmpty ? 1 : visible.length),
-              itemBuilder: (context, index) {
-                if (index > 0) {
-                  return visible.isEmpty
-                      ? Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 28),
-                          child: Text(
-                            widget.loading
-                                ? 'Memuat reservasi…'
-                                : widget.error != null && widget.items.isEmpty
-                                ? 'Reservasi belum dapat dimuat.'
-                                : 'Belum ada reservasi yang sesuai.',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(color: QueueBStyle.muted),
-                          ),
-                        )
-                      : ReservationCard(
-                          item: visible[index - 1],
-                          config: widget.config,
-                          busy: widget.busy,
-                          onTicket: () => widget.onTicket(visible[index - 1]),
-                          onCancel: () => widget.onCancel(visible[index - 1]),
-                        );
-                }
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+    return RefreshIndicator(
+      onRefresh: widget.onRefresh,
+      child: ListView.builder(
+        key: const PageStorageKey('reservation-list'),
+        controller: scroll,
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
+        itemCount: 1 + (visible.isEmpty ? 1 : visible.length),
+        itemBuilder: (context, index) {
+          if (index > 0) {
+            return visible.isEmpty
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 28),
+                    child: Text(
+                      widget.loading
+                          ? 'Memuat reservasi…'
+                          : widget.error != null && widget.items.isEmpty
+                          ? 'Reservasi belum dapat dimuat.'
+                          : 'Belum ada reservasi yang sesuai.',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: QueueBStyle.muted),
+                    ),
+                  )
+                : ReservationCard(
+                    item: visible[index - 1],
+                    config: widget.config,
+                    busy: widget.busy,
+                    onTicket: () => widget.onTicket(visible[index - 1]),
+                    onCancel: () => widget.onCancel(visible[index - 1]),
+                  );
+          }
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Reservasi Saya',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: QueueBStyle.navy,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Muat ulang reservasi',
+                    onPressed: widget.busy || widget.loading
+                        ? null
+                        : widget.onRefresh,
+                    icon: const Icon(Icons.refresh),
+                  ),
+                ],
+              ),
+              const Text(
+                'Kelola dan lihat riwayat reservasi Anda',
+                style: TextStyle(fontSize: 13, color: QueueBStyle.muted),
+              ),
+              if (widget.error != null) ...[
+                const SizedBox(height: 8),
+                MobileNotice(widget.error!, error: true),
+                TextButton(
+                  onPressed: widget.busy || widget.loading
+                      ? null
+                      : widget.onRefresh,
+                  child: const Text('Coba lagi'),
+                ),
+              ],
+              if (widget.message != null) MobileNotice(widget.message!),
+              if (widget.loading) const LinearProgressIndicator(),
+              const SizedBox(height: 12),
+              TextField(
+                controller: search,
+                onChanged: (_) => setState(() {}),
+                decoration: const InputDecoration(
+                  hintText: 'Cari dokter, poliklinik, nomor, atau tanggal...',
+                  hintStyle: TextStyle(fontSize: 12),
+                  prefixIcon: Icon(Icons.search_rounded),
+                ),
+              ),
+              const SizedBox(height: 10),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
                   children: [
-                    Row(
-                      children: [
-                        const Expanded(
-                          child: Text(
-                            'Reservasi Saya',
-                            style: TextStyle(
-                              fontSize: 25,
-                              fontWeight: FontWeight.w800,
-                              color: QueueBStyle.navy,
-                            ),
-                          ),
+                    for (final status in [
+                      'Semua',
+                      'Dipesan',
+                      'Selesai',
+                      'Dibatalkan',
+                    ])
+                      Padding(
+                        padding: const EdgeInsets.only(right: 6),
+                        child: ChoiceChip(
+                          label: Text(status),
+                          showCheckmark: false,
+                          selected: filter == status,
+                          onSelected: (_) => setState(() => filter = status),
                         ),
-                        IconButton(
-                          tooltip: 'Muat ulang reservasi',
-                          onPressed: widget.busy || widget.loading
-                              ? null
-                              : widget.onRefresh,
-                          icon: const Icon(Icons.refresh),
-                        ),
-                      ],
-                    ),
-                    const Text(
-                      'Kelola dan lihat riwayat reservasi Anda',
-                      style: TextStyle(fontSize: 13, color: QueueBStyle.muted),
-                    ),
-                    if (widget.error != null) ...[
-                      const SizedBox(height: 8),
-                      MobileNotice(widget.error!, error: true),
-                      TextButton(
-                        onPressed: widget.busy || widget.loading
-                            ? null
-                            : widget.onRefresh,
-                        child: const Text('Coba lagi'),
                       ),
-                    ],
-                    if (widget.message != null) MobileNotice(widget.message!),
-                    if (widget.loading) const LinearProgressIndicator(),
-                    const SizedBox(height: 18),
-                    TextField(
-                      controller: search,
-                      onChanged: (_) => setState(() {}),
-                      decoration: const InputDecoration(
-                        hintText:
-                            'Cari dokter, poliklinik, nomor, atau tanggal...',
-                        hintStyle: TextStyle(fontSize: 12),
-                        prefixIcon: Icon(Icons.search_rounded),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          for (final status in [
-                            'Semua',
-                            'Dipesan',
-                            'Selesai',
-                            'Dibatalkan',
-                          ])
-                            Padding(
-                              padding: const EdgeInsets.only(right: 6),
-                              child: ChoiceChip(
-                                label: Text(status),
-                                showCheckmark: false,
-                                selected: filter == status,
-                                onSelected: (_) =>
-                                    setState(() => filter = status),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
                   ],
-                );
-              },
-            ),
-          ),
-        ),
-        Positioned(
-          right: 16,
-          bottom: 12,
-          child: FloatingActionButton.extended(
-            heroTag: 'create-reservation',
-            onPressed: widget.busy || widget.loading ? null : widget.onCreate,
-            backgroundColor: QueueBStyle.teal,
-            foregroundColor: Colors.white,
-            elevation: 2,
-            icon: const Icon(Icons.add),
-            label: const Text('Buat Reservasi'),
-          ),
-        ),
-      ],
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          );
+        },
+      ),
     );
   }
 }
@@ -675,7 +653,7 @@ class ReservationDoctorChoice extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(

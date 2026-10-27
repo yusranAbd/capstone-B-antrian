@@ -173,7 +173,7 @@ void main() {
           findsOneWidget,
         );
         expect(find.byTooltip('Aktivitas tiket'), findsOneWidget);
-        expect(find.byTooltip('Profil akun'), findsOneWidget);
+        expect(find.byTooltip('Profil akun'), findsNothing);
         expect(find.byTooltip('Keluar akun'), findsNothing);
         expect(find.byType(PatientHomeBrand), findsNothing);
         expect(find.text('Sinkronisasi berkala aktif'), findsNothing);
@@ -207,10 +207,10 @@ void main() {
           findsNothing,
         );
         expect(find.textContaining('\u00c2\u00b7'), findsNothing);
-        expect(find.byType(NavigationDestination), findsNWidgets(4));
+        expect(find.byType(NavigationDestination), findsNWidgets(5));
         await press(
           tester,
-          find.widgetWithText(NavigationDestination, 'Pendaftaran'),
+          find.widgetWithText(NavigationDestination, 'Reservasi'),
         );
         expect(find.text('Reservasi Saya'), findsOneWidget);
         expect(find.byTooltip('Keluar akun'), findsNothing);
@@ -224,7 +224,7 @@ void main() {
           );
           expect(find.byType(PatientHomeIdentity), findsOneWidget);
           expect(find.text('Selamat datang,'), findsOneWidget);
-          expect(find.byTooltip('Profil akun'), findsOneWidget);
+          expect(find.byTooltip('Profil akun'), findsNothing);
           expect(find.byTooltip('Keluar akun'), findsNothing);
           expect(find.text('Sinkronisasi berkala aktif'), findsNothing);
           expect(tester.getSize(find.byType(NavigationBar)).height, 60);
@@ -240,16 +240,19 @@ void main() {
   }
 
   testWidgets(
-    'home identity opens existing profile and logout remains available there',
+    'bottom profile opens existing account and logout stays available there',
     (tester) async {
       final api = await launch(tester, HomeBackend());
-      await press(tester, find.byTooltip('Profil akun'));
+      await press(tester, find.widgetWithText(NavigationDestination, 'Profil'));
       expect(find.text('Profil Saya'), findsOneWidget);
       expect(find.text('Keluar Akun'), findsOneWidget);
-      await press(tester, find.byType(BackButton));
+      await press(
+        tester,
+        find.widgetWithText(NavigationDestination, 'Beranda'),
+      );
       expect(find.byType(PatientHomeIdentity), findsOneWidget);
       expect(find.byTooltip('Keluar akun'), findsNothing);
-      await press(tester, find.byTooltip('Profil akun'));
+      await press(tester, find.widgetWithText(NavigationDestination, 'Profil'));
       await press(tester, find.text('Keluar Akun'));
       expect(api.user, isNull);
       expect(find.widgetWithText(TextFormField, 'Email'), findsOneWidget);

@@ -136,9 +136,9 @@ class PatientHomeWelcome extends StatelessWidget {
       const Text(
         'Bagaimana kabar Anda hari ini?',
         style: TextStyle(
-          fontSize: 28,
-          height: 1.2,
-          fontWeight: FontWeight.w800,
+          fontSize: 20,
+          height: 1.25,
+          fontWeight: FontWeight.w600,
           color: QueueBStyle.navy,
         ),
       ),
@@ -154,7 +154,7 @@ class PatientHomeWelcome extends StatelessWidget {
           fillColor: Colors.white,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,
-            vertical: 17,
+            vertical: 12,
           ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(18),
@@ -176,47 +176,38 @@ class PatientHomeIdentity extends StatelessWidget {
     super.key,
     required this.name,
     required this.avatar,
-    required this.onProfile,
   });
   final String name;
   final Widget avatar;
-  final VoidCallback onProfile;
 
   @override
-  Widget build(BuildContext context) => Tooltip(
-    message: 'Profil akun',
-    child: InkWell(
-      onTap: onProfile,
-      borderRadius: BorderRadius.circular(12),
-      child: Row(
-        children: [
-          avatar,
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Selamat datang,',
-                  style: TextStyle(color: QueueBStyle.muted, fontSize: 12),
-                ),
-                Text(
-                  name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: QueueBStyle.navy,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
+  Widget build(BuildContext context) => Row(
+    children: [
+      avatar,
+      const SizedBox(width: 10),
+      Expanded(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Selamat datang,',
+              style: TextStyle(color: QueueBStyle.muted, fontSize: 11),
             ),
-          ),
-        ],
+            Text(
+              name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: QueueBStyle.navy,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
+    ],
   );
 }
 
@@ -470,119 +461,169 @@ class PatientHomeVisit extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) => PatientHomeSurface(
-    color: PatientHomeStyle.appointmentSurface,
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          children: [
-            if (doctor['id'] != null) ...[
-              ProfessionalDoctorAvatar(
-                config: config,
-                photo: doctor['fotoProfil'],
-                radius: 27,
-              ),
-              const SizedBox(width: 12),
-            ],
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    doctor['nama'] != null
-                        ? label(doctor)
-                        : label(object(ticket['layanan'])),
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      color: QueueBStyle.navy,
-                    ),
-                  ),
-                  if (doctor['spesialisasi'] != null)
+  Widget build(BuildContext context) => Container(
+    key: const ValueKey('patient-nearest-visit'),
+    decoration: BoxDecoration(
+      color: QueueBStyle.navy,
+      borderRadius: BorderRadius.circular(18),
+    ),
+    padding: const EdgeInsets.all(14),
+    child: DefaultTextStyle.merge(
+      style: const TextStyle(color: Colors.white, fontSize: 13),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (doctor['id'] != null) ...[
+                ProfessionalDoctorAvatar(
+                  config: config,
+                  photo: doctor['fotoProfil'],
+                  radius: 22,
+                ),
+                const SizedBox(width: 10),
+              ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Text(
-                      '${doctor['spesialisasi']}',
+                      doctor['nama'] != null
+                          ? label(doctor)
+                          : label(object(ticket['layanan'])),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 12,
-                        color: QueueBStyle.muted,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        height: 1.2,
                       ),
                     ),
-                ],
+                    if (doctor['spesialisasi'] != null)
+                      Text(
+                        '${doctor['spesialisasi']}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.white,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '${ticket['status'] ?? '—'}'.replaceAll('_', ' '),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: QueueBStyle.navy,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              Text(
+                label(object(ticket['layanan'])),
+                style: const TextStyle(fontSize: 12),
+              ),
+            ],
+          ),
+          if (room.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 5),
+              child: Text(
+                [
+                  room['kode'],
+                  room['nama'],
+                ].whereType<String>().where((s) => s.isNotEmpty).join(' · '),
+                style: const TextStyle(fontSize: 12),
               ),
             ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        Wrap(
-          spacing: 8,
-          runSpacing: 6,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            StatusBadge(ticket['status']),
+          const SizedBox(height: 10),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Nomor antrean',
+                      style: TextStyle(fontSize: 11, color: Colors.white),
+                    ),
+                    Text(
+                      '${ticket['nomorAntrean'] ?? 'Nomor belum tersedia'}',
+                      style: const TextStyle(
+                        fontSize: 28,
+                        height: 1.1,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            patientDate(
+              '${ticket['tanggalPelayanan'] ?? ticket['tanggalAntrean']}',
+            ),
+            style: const TextStyle(fontSize: 12),
+          ),
+          if (appointment != null)
             Text(
-              label(object(ticket['layanan'])),
-              style: const TextStyle(fontSize: 12, color: QueueBStyle.muted),
-            ),
-          ],
-        ),
-        if (room.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 6),
-            child: Text(
-              [
-                room['kode'],
-                room['nama'],
-              ].whereType<String>().where((s) => s.isNotEmpty).join(' · '),
-              style: const TextStyle(fontSize: 12, color: QueueBStyle.muted),
-            ),
-          ),
-        const SizedBox(height: 14),
-        const Text(
-          'Nomor antrean',
-          style: TextStyle(fontSize: 11, color: QueueBStyle.muted),
-        ),
-        Text(
-          '${ticket['nomorAntrean'] ?? 'Nomor belum tersedia'}',
-          style: const TextStyle(
-            fontSize: 26,
-            fontWeight: FontWeight.w800,
-            color: QueueBStyle.navy,
-          ),
-        ),
-        Text(
-          patientDate(
-            '${ticket['tanggalPelayanan'] ?? ticket['tanggalAntrean']}',
-          ),
-          style: const TextStyle(fontSize: 12, color: QueueBStyle.muted),
-        ),
-        if (appointment != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 5),
-            child: Text(
               '${patientTime(object(appointment!['slotPraktik']), config)} · ${config.serviceTimeZone}',
-              style: const TextStyle(fontSize: 12, color: QueueBStyle.darkTeal),
+              style: const TextStyle(fontSize: 12),
             ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: onTicket,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: const BorderSide(color: Colors.white),
+                    minimumSize: const Size(0, 44),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                  ),
+                  child: const Text(
+                    'Lihat Detail',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: onQr,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: QueueBStyle.navy,
+                    minimumSize: const Size(0, 44),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                  ),
+                  icon: const Icon(Icons.qr_code_rounded, size: 18),
+                  label: const Text('QR Code', style: TextStyle(fontSize: 12)),
+                ),
+              ),
+            ],
           ),
-        const SizedBox(height: 14),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: onTicket,
-                child: const Text('Lihat Detail'),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: FilledButton.icon(
-                onPressed: onQr,
-                icon: const Icon(Icons.qr_code_rounded, size: 18),
-                label: const Text('QR Code'),
-              ),
-            ),
-          ],
-        ),
-      ],
+        ],
+      ),
     ),
   );
 }

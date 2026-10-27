@@ -130,7 +130,6 @@ class _RootState extends State<_Root> {
               ? PatientHomeIdentity(
                   name: '${api.user?['nama'] ?? 'Pasien'}',
                   avatar: AccountAvatar(api: api, radius: 20),
-                  onProfile: openProfile,
                 )
               : staffContext != null && MediaQuery.sizeOf(context).width >= 700
               ? Row(

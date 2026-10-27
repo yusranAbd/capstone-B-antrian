@@ -1,0 +1,12 @@
+{
+  "file": "apps/client/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk",
+  "bytes": 31880265,
+  "MiB": 30.4,
+  "sha256": "725c5291ffc3c9bdd826efd7958375f9b00f3a4b52614e251baafc3d75197b12",
+  "abis": [
+    "arm64-v8a"
+  ],
+  "physicalDeviceTested": false,
+  "apiDefine": "http://10.0.2.2:3000/api/v1",
+  "signing": "existing debug signing for release QA; not store distribution"
+}

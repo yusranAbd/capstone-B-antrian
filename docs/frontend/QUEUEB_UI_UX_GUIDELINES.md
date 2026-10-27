@@ -107,7 +107,7 @@ Public Display **tidak memakai skala dashboard desktop**. Pertahankan skala resp
 | Loading | Indikator sesuai area data; pertahankan data valid terakhir bila kontrak mengizinkan. Hindari spinner yang mengunci seluruh layar pada refresh ringan. |
 | Error/reconnect | Pesan spesifik + retry, teks membungkus, jangan hanya warna. Loading/kosong/akses ditolak dibedakan; jangan bocorkan credential/detail internal. |
 | FAB | Hanya bila ada aksi primer nyata; jangan menutup baris terakhir, tombol batal, atau bottom navigation. Beri bottom inset konten yang cukup. |
-| Bottom Navigation | Gunakan `PatientBottomNavigation` existing (60 ditambah SafeArea), empat tujuan existing, label terbaca/ikon jelas. Jangan menaikkan navbar dasar global yang berdampak pada semua role. |
+| Bottom Navigation | Gunakan `PatientBottomNavigation` existing (60 ditambah SafeArea), lima tujuan pasien: Beranda, Reservasi, Tiket Saya, Janji Temu, Profil, label terbaca/ikon jelas. Jangan menaikkan navbar dasar global yang berdampak pada semua role. |
 
 ## Perbedaan lima portal
 

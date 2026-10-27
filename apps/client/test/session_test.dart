@@ -598,7 +598,7 @@ void main() {
         find.widgetWithText(NavigationDestination, 'Tiket Saya'),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Lihat tiket / QR'));
+      await tester.tap(find.text('Lihat Tiket / QR'));
       await tester.pumpAndSettle();
       expect(find.byType(AlertDialog), findsOneWidget);
       final exiting = api.logout();
@@ -661,7 +661,11 @@ void main() {
         await tester.pumpAndSettle();
       }
       expect(
-        find.byTooltip(role == 'PETUGAS' ? 'Profil petugas' : 'Profil akun'),
+        role == 'USER'
+            ? find.widgetWithText(NavigationDestination, 'Profil')
+            : find.byTooltip(
+                role == 'PETUGAS' ? 'Profil petugas' : 'Profil akun',
+              ),
         findsOneWidget,
       );
       if (role == 'ADMIN') {

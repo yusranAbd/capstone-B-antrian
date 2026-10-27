@@ -11,6 +11,7 @@ import 'package:queueb_client/src/api.dart';
 import 'package:queueb_client/src/app.dart';
 import 'package:queueb_client/src/config.dart';
 import 'package:queueb_client/src/mobile_ui.dart';
+import 'package:queueb_client/src/patient_reservations.dart';
 
 const uid = '11111111-1111-4111-8111-111111111111';
 
@@ -503,7 +504,7 @@ void main() {
   ) async {
     final server = FakeBackend('USER', mode: 'ANTREAN_HARIAN');
     await launch(tester, server, size: const Size(390, 844));
-    await press(tester, 'Pendaftaran');
+    await press(tester, 'Reservasi');
     await press(tester, 'Buat Reservasi');
     await press(tester, 'Pilih Poliklinik');
     await tester.tap(find.byType(ClinicCard).first);
@@ -511,7 +512,7 @@ void main() {
     await press(tester, 'Reservasi walk-in');
     await press(tester, 'Lanjutkan');
     expect(find.text('UM-001'), findsOneWidget);
-    await press(tester, 'Lihat tiket / QR');
+    await press(tester, 'Lihat Tiket / QR');
     await press(tester, 'Terbitkan QR');
     expect(find.text('SQ1.fixture'), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -522,7 +523,7 @@ void main() {
     (tester) async {
       final server = FakeBackend('USER');
       await launch(tester, server);
-      await press(tester, 'Pendaftaran');
+      await press(tester, 'Reservasi');
       await press(tester, 'Buat Reservasi');
       await press(tester, 'Pilih Poliklinik');
       await tester.tap(find.byType(ClinicCard).first);
@@ -540,7 +541,8 @@ void main() {
             .$3,
         {'slotPraktikId': uid},
       );
-      await press(tester, 'Batalkan janji temu');
+      await press(tester, 'Reservasi');
+      await press(tester, 'Batalkan Reservasi');
       await press(tester, 'Ya, Batalkan');
       expect(
         server.requests.any(
@@ -621,10 +623,10 @@ void main() {
     testWidgets('Mobile home layout at width $width', (tester) async {
       await launch(tester, FakeBackend('USER'), size: Size(width, 900));
       expect(tester.takeException(), isNull);
-      await press(tester, 'Pendaftaran');
+      await press(tester, 'Reservasi');
       expect(tester.takeException(), isNull);
       expect(find.byTooltip('Keluar akun'), findsNothing);
-      await tester.tap(find.byTooltip('Profil akun'));
+      await tester.tap(find.widgetWithText(NavigationDestination, 'Profil'));
       await tester.pumpAndSettle();
       await press(tester, 'Keluar Akun');
       await tester.pumpAndSettle();
@@ -669,8 +671,8 @@ void main() {
       server.tickets.add(server.ticket);
       await launch(tester, server, size: const Size(320, 900));
       await press(tester, 'Tiket Saya');
-      expect(find.text(status.replaceAll('_', ' ')), findsOneWidget);
-      await press(tester, 'Lihat tiket / QR');
+      expect(find.text(reservationStatus(status)), findsOneWidget);
+      await press(tester, 'Lihat Tiket / QR');
       expect(find.text(status.replaceAll('_', ' ')), findsWidgets);
       if (status != 'DIPESAN') expect(find.text('Terbitkan QR'), findsNothing);
       expect(tester.takeException(), isNull);

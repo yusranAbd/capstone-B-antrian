@@ -7,7 +7,13 @@ const { randomUUID, createHash } = require("node:crypto"),
 const { chromium, expect: baseExpect } = require("@playwright/test");
 const { Server } = require("socket.io");
 const expect = baseExpect.configure({ timeout: 30000 });
-module.exports = async ({ build, output, engineRoot, fontFile }) => {
+module.exports = async ({
+  build,
+  output,
+  engineRoot,
+  fontFile,
+  patientV5 = false,
+}) => {
   fs.mkdirSync(output, { recursive: true });
   const report = {
     buildSha256: createHash("sha256")
@@ -356,7 +362,9 @@ module.exports = async ({ build, output, engineRoot, fontFile }) => {
       await field.press("Tab");
     }
     async function reservations() {
-      const nav = page.getByLabel("Pendaftaran", { exact: true });
+      const nav = page.getByLabel(patientV5 ? "Reservasi" : "Pendaftaran", {
+        exact: true,
+      });
       // Navigation remains disabled while the existing booking reconciles REST.
       // Retry only this read-only tab selection, never a booking/cancel POST.
       await expect
@@ -379,12 +387,76 @@ module.exports = async ({ build, output, engineRoot, fontFile }) => {
       .poll(async () => {
         const p = page.locator("flt-semantics-placeholder");
         if (await p.count()) await p.evaluate((el) => el.click());
-        return page.getByRole("button", { name: "Masuk", exact: true }).count();
+        return page
+          .getByRole("button", {
+            name: "Masuk",
+            exact: true,
+            includeHidden: true,
+          })
+          .count();
       })
       .toBe(1);
     await type("Email", "fixture@test.local");
     await type("Kata sandi", "fixture-only");
     await press("Masuk");
+    if (patientV5) {
+      for (const [width, height] of [
+        [390, 844],
+        [320, 568],
+      ]) {
+        await page.setViewportSize({ width, height });
+        for (const [label, name] of [
+          ["Beranda", "home"],
+          ["Reservasi", "reservations"],
+          ["Tiket Saya", "tickets"],
+          ["Janji Temu", "appointments"],
+          ["Profil", "profile"],
+        ]) {
+          await page.getByLabel(label, { exact: true }).click();
+          await expect(page.getByRole("progressbar")).toHaveCount(0);
+          await page.mouse.move(1, 1);
+          await page.waitForTimeout(1200);
+          if (label === "Profil")
+            await expect(text("Profil Saya")).toBeVisible();
+          const metrics = await page.evaluate(() => ({
+            width: innerWidth,
+            height: innerHeight,
+            scrollWidth: document.scrollingElement.scrollWidth,
+          }));
+          assert.equal(metrics.width, metrics.scrollWidth);
+          await page.screenshot({
+            path: path.join(output, `after-${name}-${width}.png`),
+          });
+        }
+      }
+      report.states.fiveDestinationsAndProfile = true;
+      await page.getByLabel("Beranda", { exact: true }).click();
+      await expect(
+        page.getByRole("button", { name: /Profil akun/ }),
+      ).toHaveCount(0);
+      report.states.noHeaderProfile = true;
+      // Additional appointment fixture: do not relabel the real walk-in as a doctor visit.
+      const walk = tickets.find((t) => t.nomorAntrean === "UM-001");
+      const oldStatus = walk.status;
+      walk.status = "SELESAI";
+      invalidate();
+      await expect(text("PD-032")).toBeVisible();
+      for (const [width, height] of [
+        [390, 844],
+        [320, 568],
+      ]) {
+        await page.setViewportSize({ width, height });
+        await page.mouse.move(1, 1);
+        await page.waitForTimeout(700);
+        await page.screenshot({
+          path: path.join(output, `after-home-appointment-${width}.png`),
+        });
+      }
+      walk.status = oldStatus;
+      invalidate();
+      await expect(text("UM-001")).toBeVisible();
+      report.states.appointmentAndWalkInHome = true;
+    }
     await reservations();
     await expect(text("Reservasi Saya")).toBeVisible();
     await expect(
@@ -394,6 +466,8 @@ module.exports = async ({ build, output, engineRoot, fontFile }) => {
     await page.waitForTimeout(1800);
     await expect.poll(() => connections).toBeGreaterThan(0);
     for (const [width, height] of [
+      [320, 568],
+      [375, 812],
       [360, 800],
       [390, 844],
       [412, 915],
@@ -509,7 +583,13 @@ module.exports = async ({ build, output, engineRoot, fontFile }) => {
       .poll(async () => {
         const p = page.locator("flt-semantics-placeholder");
         if (await p.count()) await p.evaluate((el) => el.click());
-        return page.getByRole("button", { name: "Masuk", exact: true }).count();
+        return page
+          .getByRole("button", {
+            name: "Masuk",
+            exact: true,
+            includeHidden: true,
+          })
+          .count();
       })
       .toBe(1);
     // Existing Web policy is memory-only; Android secure persistence is unchanged.

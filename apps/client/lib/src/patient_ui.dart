@@ -71,7 +71,7 @@ class PatientBottomNavigation extends StatelessWidget {
             data: NavigationBarTheme.of(context).copyWith(
               iconTheme: WidgetStateProperty.resolveWith(
                 (states) => IconThemeData(
-                  size: 22,
+                  size: 21,
                   color: states.contains(WidgetState.selected)
                       ? QueueBStyle.darkTeal
                       : QueueBStyle.muted,
@@ -79,7 +79,7 @@ class PatientBottomNavigation extends StatelessWidget {
               ),
               labelTextStyle: WidgetStateProperty.resolveWith(
                 (states) => TextStyle(
-                  fontSize: 11,
+                  fontSize: 10,
                   fontWeight: states.contains(WidgetState.selected)
                       ? FontWeight.w700
                       : FontWeight.w500,
@@ -101,7 +101,7 @@ class PatientBottomNavigation extends StatelessWidget {
                 ),
                 NavigationDestination(
                   icon: Icon(Icons.add_circle_outline),
-                  label: 'Pendaftaran',
+                  label: 'Reservasi',
                 ),
                 NavigationDestination(
                   icon: Icon(Icons.confirmation_number_outlined),
@@ -110,6 +110,11 @@ class PatientBottomNavigation extends StatelessWidget {
                 NavigationDestination(
                   icon: Icon(Icons.calendar_month_outlined),
                   label: 'Janji Temu',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.person_outline),
+                  selectedIcon: Icon(Icons.person),
+                  label: 'Profil',
                 ),
               ],
             ),

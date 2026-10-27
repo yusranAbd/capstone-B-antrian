@@ -14,6 +14,7 @@ import 'patient_ui.dart';
 import 'patient_home.dart';
 import 'user_profile.dart';
 import 'patient_reservations.dart';
+import 'patient_mobile_v5.dart';
 
 String appointmentDetails(Json appointment, AppConfig config) {
   final slot = object(appointment['slotPraktik']);
@@ -41,6 +42,7 @@ class _PatientPageState extends State<PatientPage> {
   late final PatientUpdates updates;
   late final RefreshGate overview;
   int tab = 0, catalogRevision = 0;
+  bool profileVisited = false;
   bool busy = false, loading = true;
   bool ticketDialogOpen = false, cancelReviewing = false;
   bool reservationCreating = false, nearestLoading = false;
@@ -1223,122 +1225,139 @@ class _PatientPageState extends State<PatientPage> {
   }
 
   @override
-  Widget build(BuildContext context) => Column(
-    children: [
-      if (widget.headerBuilder != null)
-        SizedBox(
-          height: kToolbarHeight + MediaQuery.paddingOf(context).top,
-          child: widget.headerBuilder!(tab == 0, () => setState(() => tab = 1)),
-        ),
-      Expanded(
-        child: ColoredBox(
-          color: tab == 0
-              ? PatientHomeStyle.background
-              : QueueBStyle.background,
-          child: Align(
-            alignment: Alignment.topCenter,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 760),
-              child: tab == 2 && !reservationCreating
-                  ? ReservationList(
-                      items: patientReservations(
-                        tickets,
-                        appointments,
-                        doctors,
-                        widget.api.config.today,
-                      ),
-                      config: widget.api.config,
-                      loading: loading,
-                      busy: busy,
-                      error: error,
-                      message: message,
-                      onRefresh: load,
-                      onCreate: createReservation,
-                      onTicket: (r) =>
-                          openTicket(r.ticket, issueQrOnOpen: !r.terminal),
-                      onCancel: (r) => cancel(r.appointment!),
-                    )
-                  : ListView(
-                      key: ValueKey(
-                        '$tab:$serviceId:$bookingStage:$doctorDetail',
-                      ),
-                      padding: const EdgeInsets.all(16),
-                      children: [
-                        if (error != null) ...[
-                          MobileNotice(error!, error: true),
-                          TextButton.icon(
-                            onPressed: busy || loading ? null : load,
-                            icon: const Icon(Icons.refresh),
-                            label: const Text('Coba lagi'),
-                          ),
-                        ],
-                        if (message != null) MobileNotice(message!),
-                        if (loading)
-                          const LinearProgressIndicator(
-                            semanticsLabel: 'Memuat data pelayanan',
-                          ),
-                        if (tab == 0) _home(context),
-                        if (tab == 2) _registration(context),
-                        if (tab == 1) _tickets(context),
-                        if (tab == 4) _history(context),
-                        if (tab == 3)
-                          Section(
-                            title: 'Janji temu saya',
-                            action: IconButton(
-                              tooltip: 'Muat ulang janji temu',
-                              onPressed: busy || loading ? null : load,
-                              icon: const Icon(Icons.refresh),
-                            ),
-                            child: Column(
-                              children: [
-                                if (appointments.isEmpty && !loading)
-                                  const EmptyState(
-                                    text: 'Belum ada janji temu.',
-                                  ),
-                                for (final a in appointments)
-                                  AppCard(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          appointmentDetails(
-                                            a,
-                                            widget.api.config,
-                                          ),
-                                        ),
-                                        StatusBadge(
-                                          object(a['tiket'])['status'],
-                                        ),
-                                        TextButton(
-                                          onPressed: () =>
-                                              setState(() => tab = 1),
-                                          child: const Text('Lihat tiket'),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                      ],
-                    ),
-            ),
-          ),
-        ),
-      ),
-      PatientBottomNavigation(
-        selectedIndex: tab == 4 ? 0 : [0, 2, 1, 3].indexOf(tab),
+  Widget build(BuildContext context) => Theme(
+    data: PatientMobileV5.theme,
+    child: Scaffold(
+      appBar: tab == 5
+          ? null
+          : widget.headerBuilder?.call(tab == 0, () => setState(() => tab = 1)),
+      floatingActionButton: tab == 2 && !reservationCreating
+          ? FloatingActionButton.extended(
+              heroTag: 'create-reservation',
+              onPressed: busy || loading ? null : createReservation,
+              backgroundColor: QueueBStyle.darkTeal,
+              foregroundColor: Colors.white,
+              elevation: 2,
+              icon: const Icon(Icons.add),
+              label: const Text(
+                'Buat Reservasi',
+                style: TextStyle(fontSize: 13),
+              ),
+            )
+          : null,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      bottomNavigationBar: PatientBottomNavigation(
+        selectedIndex: tab == 4 ? 0 : [0, 2, 1, 3, 5].indexOf(tab),
         onSelected: busy
             ? null
             : (i) => setState(() {
-                tab = [0, 2, 1, 3][i];
+                tab = [0, 2, 1, 3, 5][i];
+                if (tab == 5) profileVisited = true;
                 reservationFlowVersion++;
                 nearestRevision++;
                 if (tab == 2) reservationCreating = false;
               }),
       ),
-    ],
+      body: ColoredBox(
+        color: tab == 0 ? PatientHomeStyle.background : QueueBStyle.background,
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 760),
+            child: IndexedStack(
+              index: tab == 5
+                  ? 2
+                  : tab == 2 && !reservationCreating
+                  ? 0
+                  : 1,
+              children: [
+                ReservationList(
+                  items: patientReservations(
+                    tickets,
+                    appointments,
+                    doctors,
+                    widget.api.config.today,
+                  ),
+                  config: widget.api.config,
+                  loading: loading,
+                  busy: busy,
+                  error: error,
+                  message: message,
+                  onRefresh: load,
+                  onCreate: createReservation,
+                  onTicket: (r) =>
+                      openTicket(r.ticket, issueQrOnOpen: !r.terminal),
+                  onCancel: (r) => cancel(r.appointment!),
+                ),
+                tab == 1
+                    ? _tickets(context)
+                    : ListView(
+                        key: PageStorageKey(
+                          '$tab:$serviceId:$bookingStage:$doctorDetail',
+                        ),
+                        padding: const EdgeInsets.all(16),
+                        children: [
+                          if (error != null) ...[
+                            MobileNotice(error!, error: true),
+                            TextButton.icon(
+                              onPressed: busy || loading ? null : load,
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('Coba lagi'),
+                            ),
+                          ],
+                          if (message != null) MobileNotice(message!),
+                          if (loading)
+                            const LinearProgressIndicator(
+                              semanticsLabel: 'Memuat data pelayanan',
+                            ),
+                          if (tab == 0) _home(context),
+                          if (tab == 2) _registration(context),
+                          if (tab == 4) _history(context),
+                          if (tab == 3) _appointments(context),
+                        ],
+                      ),
+                if (profileVisited)
+                  UserProfilePage(
+                    api: widget.api,
+                    onReturnToPatient: () => setState(() => tab = 0),
+                  )
+                else
+                  const SizedBox(),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+
+  Widget _appointments(BuildContext context) => Section(
+    title: 'Janji temu saya',
+    action: IconButton(
+      tooltip: 'Muat ulang janji temu',
+      onPressed: busy || loading ? null : load,
+      icon: const Icon(Icons.refresh),
+    ),
+    child: Column(
+      children: [
+        if (appointments.isEmpty && !loading)
+          const EmptyState(text: 'Belum ada janji temu.'),
+        for (final a in appointments)
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(appointmentDetails(a, widget.api.config)),
+                StatusBadge(object(a['tiket'])['status']),
+                TextButton(
+                  onPressed: () => setState(() => tab = 1),
+                  child: const Text('Lihat tiket'),
+                ),
+              ],
+            ),
+          ),
+      ],
+    ),
   );
 
   Widget _registration(BuildContext context) {
@@ -1715,81 +1734,64 @@ class _PatientPageState extends State<PatientPage> {
     ],
   );
 
-  Widget _tickets(BuildContext context) => Section(
-    title: 'Tiket Saya',
-    action: OutlinedButton.icon(
-      onPressed: busy || loading ? null : load,
-      icon: const Icon(Icons.refresh),
-      label: const Text('Muat ulang tiket'),
-    ),
-    child: Column(
-      children: [
-        if (tickets.isEmpty)
-          const EmptyState(
+  Widget _tickets(BuildContext context) {
+    final items = patientReservations(
+      tickets,
+      appointments,
+      doctors,
+      widget.api.config.today,
+    );
+    return ListView.builder(
+      key: const PageStorageKey('patient-tickets'),
+      padding: const EdgeInsets.all(16),
+      itemCount: 1 + (items.isEmpty ? 1 : items.length),
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Tiket Saya',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Muat ulang tiket',
+                      onPressed: busy || loading ? null : load,
+                      icon: const Icon(Icons.refresh),
+                    ),
+                  ],
+                ),
+                if (error != null) MobileNotice(error!, error: true),
+                if (message != null) MobileNotice(message!),
+                if (loading) const LinearProgressIndicator(),
+              ],
+            ),
+          );
+        }
+        if (items.isEmpty) {
+          return const EmptyState(
             text: 'Belum ada tiket. Daftar janji temu atau walk-in terlebih dahulu.',
             icon: Icons.confirmation_number_outlined,
-          ),
-        for (final t in tickets)
-          Card(
-            color: QueueBStyle.mint,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${t['nomorAntrean']}',
-                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: QueueBStyle.navy,
-                    ),
-                  ),
-                  PatientInfoRow(
-                    icon: Icons.local_hospital_outlined,
-                    title: 'Poliklinik',
-                    value: label(object(t['layanan'])),
-                  ),
-                  Text(
-                    patientDate(
-                      '${t['tanggalPelayanan'] ?? t['tanggalAntrean']}',
-                    ),
-                  ),
-                  for (final a in appointments.where(
-                    (a) => object(a['tiket'])['id'] == t['id'],
-                  ))
-                    Text(
-                      appointmentDetails(a, widget.api.config),
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: QueueBStyle.muted,
-                      ),
-                    ),
-                  StatusBadge(t['status']),
-                  Wrap(
-                    spacing: 12,
-                    children: [
-                      OutlinedButton(
-                        onPressed: busy ? null : () => openTicket(t),
-                        child: const Text('Lihat tiket / QR'),
-                      ),
-                      for (final a in appointments.where(
-                        (a) =>
-                            object(a['tiket'])['id'] == t['id'] &&
-                            t['status'] == 'DIPESAN',
-                      ))
-                        TextButton(
-                          onPressed: busy ? null : () => cancel(a),
-                          child: const Text('Batalkan janji temu'),
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-      ],
-    ),
-  );
+          );
+        }
+        final item = items[index - 1];
+        return PatientTicketCard(
+          item: item,
+          config: widget.api.config,
+          onOpen: busy ? null : () => openTicket(item.ticket),
+        );
+      },
+    );
+  }
 }
 
 class _TicketDialog extends StatefulWidget {

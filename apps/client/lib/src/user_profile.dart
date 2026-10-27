@@ -123,8 +123,10 @@ class UserProfilePage extends StatefulWidget {
     super.key,
     required this.api,
     this.pickPhoto = pickUserAvatar,
+    this.onReturnToPatient,
   });
   final QueueApi api;
+  final VoidCallback? onReturnToPatient;
   final Future<XFile?> Function() pickPhoto;
   @override
   State<UserProfilePage> createState() => _UserProfilePageState();
@@ -510,7 +512,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
           ),
           const SizedBox(height: 12),
           OutlinedButton.icon(
-            onPressed: () => Navigator.pop(context),
+            onPressed: widget.onReturnToPatient ?? () => Navigator.pop(context),
             icon: const Icon(Icons.confirmation_number_outlined),
             label: const Text('Kembali ke aplikasi pasien'),
           ),
@@ -657,6 +659,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
           ? const SizedBox.shrink()
           : Scaffold(
               appBar: AppBar(
+                automaticallyImplyLeading: widget.onReturnToPatient == null,
                 title: const Text('Profil Saya'),
                 actions: [
                   IconButton(
