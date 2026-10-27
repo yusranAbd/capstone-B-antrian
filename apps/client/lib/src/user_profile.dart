@@ -658,17 +658,20 @@ class _UserProfilePageState extends State<UserProfilePage> {
           api.user == null || api.user?['id'] != profileOwner
           ? const SizedBox.shrink()
           : Scaffold(
-              appBar: AppBar(
-                automaticallyImplyLeading: widget.onReturnToPatient == null,
-                title: const Text('Profil Saya'),
-                actions: [
-                  IconButton(
-                    tooltip: 'Muat ulang profil',
-                    onPressed: busy || loading ? null : load,
-                    icon: const Icon(Icons.refresh),
-                  ),
-                ],
-              ),
+              appBar: widget.onReturnToPatient != null
+                  ? null
+                  : AppBar(
+                      automaticallyImplyLeading:
+                          widget.onReturnToPatient == null,
+                      title: const Text('Profil Saya'),
+                      actions: [
+                        IconButton(
+                          tooltip: 'Muat ulang profil',
+                          onPressed: busy || loading ? null : load,
+                          icon: const Icon(Icons.refresh),
+                        ),
+                      ],
+                    ),
               body: SafeArea(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(20),
@@ -681,6 +684,25 @@ class _UserProfilePageState extends State<UserProfilePage> {
                           final navigation = Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
+                              if (widget.onReturnToPatient != null)
+                                Row(
+                                  children: [
+                                    const Expanded(
+                                      child: Text(
+                                        'Profil Saya',
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                    IconButton(
+                                      tooltip: 'Muat ulang profil',
+                                      onPressed: busy || loading ? null : load,
+                                      icon: const Icon(Icons.refresh),
+                                    ),
+                                  ],
+                                ),
                               Row(
                                 children: [
                                   AccountAvatar(api: api, radius: 32),

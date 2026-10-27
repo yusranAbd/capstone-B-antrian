@@ -13,6 +13,7 @@ module.exports = async ({
   engineRoot,
   fontFile,
   patientV5 = false,
+  patientFocus = false,
 }) => {
   fs.mkdirSync(output, { recursive: true });
   const report = {
@@ -427,9 +428,50 @@ module.exports = async ({
           await page.screenshot({
             path: path.join(output, `after-${name}-${width}.png`),
           });
+          if (patientFocus) {
+            await expect(
+              page.getByRole("button", {
+                name: "Aktivitas tiket",
+                exact: true,
+              }),
+            ).toHaveCount(name === "home" ? 1 : 0);
+            if (name !== "profile") {
+              await expect(text("Gilang QA")).toHaveCount(0);
+              await expect(text("Selamat datang,")).toHaveCount(0);
+            }
+            const canScroll = await page.evaluate(() =>
+              [...document.querySelectorAll("flt-semantics")].some(
+                (el) =>
+                  getComputedStyle(el).overflowY === "scroll" &&
+                  el.scrollHeight > el.clientHeight + 128,
+              ),
+            );
+            (report.scrollCases ??= []).push({ page: name, width, canScroll });
+            if (canScroll) {
+              await page.mouse.move(width / 2, height / 2);
+              await page.mouse.wheel(0, 150);
+              await page.waitForTimeout(650);
+              await expect(
+                page.getByLabel("Beranda", { exact: true }),
+              ).not.toBeVisible();
+              await page.screenshot({
+                path: path.join(output, `scrolled-${name}-${width}.png`),
+              });
+              await page.mouse.wheel(0, -90);
+              await expect(
+                page.getByLabel("Beranda", { exact: true }),
+              ).toBeVisible();
+              await page.mouse.wheel(0, -5000);
+              await page.waitForTimeout(650);
+            }
+          }
         }
       }
       report.states.fiveDestinationsAndProfile = true;
+      if (patientFocus) {
+        report.states.headerRemovedExceptHomeNotification = true;
+        report.states.chromeHidesOnWheelDownAndReturnsOnWheelUp = true;
+      }
       await page.getByLabel("Beranda", { exact: true }).click();
       await expect(
         page.getByRole("button", { name: /Profil akun/ }),

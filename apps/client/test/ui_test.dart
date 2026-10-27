@@ -598,7 +598,7 @@ void main() {
     tester,
   ) async {
     await launch(tester, FakeBackend('USER'), size: const Size(375, 812));
-    expect(find.text('Selamat datang,'), findsOneWidget);
+    expect(find.text('Selamat datang,'), findsNothing);
     await press(tester, 'Daftar Walk-in');
     expect(find.text('Poliklinik & Dokter'), findsOneWidget);
     await tester.enterText(

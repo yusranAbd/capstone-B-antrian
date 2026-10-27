@@ -2,6 +2,8 @@
 
 Acuan: [QueueB Compact & Professional UI/UX Design System](QUEUEB_UI_UX_GUIDELINES.md), dengan kebutuhan mobile V5 terbaru. Platform: Flutter Android/Web Mobile. Tidak ada perubahan backend/API, database/migration, JWT/RBAC, Queue Engine, atau transport realtime.
 
+Revisi lanjutan header dan animasi: [Patient Focus Scroll](PATIENT_FOCUS_SCROLL.md). Bukti V5 di bawah merekam baseline sebelum revisi tersebut.
+
 ## Perubahan
 
 - Header pasien tetap berisi identitas/sapaan serta tombol aktivitas tiket existing. Avatar/nama tidak lagi membuka Profil; tidak ada duplikasi avatar atau notifikasi buatan. Role lain tetap memakai header existing.

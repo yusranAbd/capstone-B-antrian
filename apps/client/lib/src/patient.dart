@@ -15,6 +15,7 @@ import 'patient_home.dart';
 import 'user_profile.dart';
 import 'patient_reservations.dart';
 import 'patient_mobile_v5.dart';
+import 'patient_scroll_shell.dart';
 
 String appointmentDetails(Json appointment, AppConfig config) {
   final slot = object(appointment['slotPraktik']);
@@ -1060,10 +1061,7 @@ class _PatientPageState extends State<PatientPage> {
         PatientHomeWelcome(
           name: '${widget.api.user?['nama'] ?? 'Pasien'}',
           onSearch: (v) => setState(() => search = v.toLowerCase().trim()),
-          // The app header owns the greeting; retain it for standalone usage.
-          avatar: widget.headerBuilder == null
-              ? AccountAvatar(api: widget.api, radius: 23)
-              : null,
+          // Patient identity is available exclusively from the Profile tab.
         ),
         const SizedBox(height: 16),
         if (active != null) ...[
@@ -1227,10 +1225,12 @@ class _PatientPageState extends State<PatientPage> {
   @override
   Widget build(BuildContext context) => Theme(
     data: PatientMobileV5.theme,
-    child: Scaffold(
-      appBar: tab == 5
-          ? null
-          : widget.headerBuilder?.call(tab == 0, () => setState(() => tab = 1)),
+    child: PatientScrollShell(
+      pageKey:
+          '$tab:$reservationCreating:$serviceId:$bookingStage:$doctorDetail',
+      header: tab == 0
+          ? widget.headerBuilder?.call(true, () => setState(() => tab = 1))
+          : null,
       floatingActionButton: tab == 2 && !reservationCreating
           ? FloatingActionButton.extended(
               heroTag: 'create-reservation',

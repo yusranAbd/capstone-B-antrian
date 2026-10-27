@@ -84,7 +84,7 @@ void main() {
           await launch(t, b, size, scale: scale);
           expect(find.byType(NavigationDestination), findsNWidgets(5));
           expect(find.byTooltip('Profil akun'), findsNothing);
-          expect(find.byType(PatientHomeIdentity), findsOneWidget);
+          expect(find.byType(PatientHomeIdentity), findsNothing);
           expect(
             t
                 .widget<Text>(find.text('Bagaimana kabar Anda hari ini?'))
@@ -207,6 +207,76 @@ void main() {
       expect(t.takeException(), isNull);
     },
   );
+  for (final size in [const Size(320, 568), const Size(390, 844)]) {
+    testWidgets('Patient chrome hides and returns on all five pages at $size', (
+      t,
+    ) async {
+      final b = V5Backend();
+      for (var i = 0; i < 15; i++) {
+        final ticket = {
+          ...b.ticket,
+          'id': 'ticket-$i',
+          'nomorAntrean': 'QA-$i',
+        };
+        b.tickets.add(ticket);
+        b.appointments.add({
+          ...b.appointmentFixture,
+          'id': 'visit-$i',
+          'tiket': ticket,
+        });
+      }
+      await launch(t, b, size);
+      for (final label in [
+        'Beranda',
+        'Reservasi',
+        'Tiket Saya',
+        'Janji Temu',
+        'Profil',
+      ]) {
+        await nav(t, label);
+        expect(find.byType(PatientHomeIdentity), findsNothing);
+        expect(
+          find.byTooltip('Aktivitas tiket'),
+          label == 'Beranda' ? findsOneWidget : findsNothing,
+        );
+        expect(
+          find.byType(AppBar),
+          label == 'Beranda' ? findsOneWidget : findsNothing,
+        );
+        final scroll = find
+            .byWidgetPredicate(
+              (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
+            )
+            .hitTestable()
+            .first;
+        await t.drag(scroll, const Offset(0, -180));
+        await t.pumpAndSettle();
+        expect(
+          t.getSize(find.byKey(const ValueKey('patient-chrome-bottom'))).height,
+          0,
+        );
+        if (label == 'Beranda') {
+          expect(
+            t.getSize(find.byKey(const ValueKey('patient-chrome-top'))).height,
+            0,
+          );
+        }
+        await t.drag(scroll, const Offset(0, 100));
+        await t.pumpAndSettle();
+        expect(
+          t.getSize(find.byKey(const ValueKey('patient-chrome-bottom'))).height,
+          greaterThanOrEqualTo(60),
+        );
+        if (label == 'Beranda') {
+          expect(
+            t.getSize(find.byKey(const ValueKey('patient-chrome-top'))).height,
+            48,
+          );
+        }
+        expect(t.takeException(), isNull);
+      }
+    });
+  }
   testWidgets('Profile name input stays above keyboard at 320x568', (t) async {
     await launch(t, V5Backend(), const Size(320, 568));
     await nav(t, 'Profil');

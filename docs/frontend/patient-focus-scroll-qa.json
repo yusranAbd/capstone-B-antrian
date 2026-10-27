@@ -1,0 +1,106 @@
+{
+  "buildSha256": "e0198124ec74866c1d75e49b8629cc184f374e7d2bc2918e4c41ab44ff14353d",
+  "testedAt": "2026-10-27T10:44:04.485Z",
+  "mode": "Real Chrome release Flutter; synthetic HTTP/Socket.IO, no database or real credentials",
+  "states": {
+    "fiveDestinationsAndProfile": true,
+    "headerRemovedExceptHomeNotification": true,
+    "chromeHidesOnWheelDownAndReturnsOnWheelUp": true,
+    "noHeaderProfile": true,
+    "appointmentAndWalkInHome": true,
+    "openCorrectTicketQr": true,
+    "serverCancellation": true,
+    "doctorBooking": true,
+    "walkInBooking": true,
+    "nearestActualSlot": true,
+    "realtimeAndReconnect": true,
+    "reloadAndLoginAgain": true
+  },
+  "viewports": [
+    {
+      "width": 320,
+      "height": 568,
+      "scrollWidth": 320
+    },
+    {
+      "width": 375,
+      "height": 812,
+      "scrollWidth": 375
+    },
+    {
+      "width": 360,
+      "height": 800,
+      "scrollWidth": 360
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390
+    },
+    {
+      "width": 412,
+      "height": 915,
+      "scrollWidth": 412
+    },
+    {
+      "width": 768,
+      "height": 1024,
+      "scrollWidth": 768
+    }
+  ],
+  "errors": [],
+  "chrome": "156.0.8078.48",
+  "scrollCases": [
+    {
+      "page": "home",
+      "width": 390,
+      "canScroll": true
+    },
+    {
+      "page": "reservations",
+      "width": 390,
+      "canScroll": true
+    },
+    {
+      "page": "tickets",
+      "width": 390,
+      "canScroll": false
+    },
+    {
+      "page": "appointments",
+      "width": 390,
+      "canScroll": false
+    },
+    {
+      "page": "profile",
+      "width": 390,
+      "canScroll": true
+    },
+    {
+      "page": "home",
+      "width": 320,
+      "canScroll": true
+    },
+    {
+      "page": "reservations",
+      "width": 320,
+      "canScroll": true
+    },
+    {
+      "page": "tickets",
+      "width": 320,
+      "canScroll": true
+    },
+    {
+      "page": "appointments",
+      "width": 320,
+      "canScroll": false
+    },
+    {
+      "page": "profile",
+      "width": 320,
+      "canScroll": true
+    }
+  ],
+  "success": true
+}

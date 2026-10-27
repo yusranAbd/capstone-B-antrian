@@ -9,7 +9,6 @@ import 'doctor.dart';
 import 'user_profile.dart';
 import 'doctor_visual.dart';
 import 'patient.dart';
-import 'patient_home.dart';
 import 'queue.dart';
 import 'mobile_ui.dart';
 import 'login_ui.dart';
@@ -119,7 +118,10 @@ class _RootState extends State<_Root> {
           );
         }
         return AppBar(
-          toolbarHeight: role == 'ADMIN'
+          automaticallyImplyLeading: role != 'USER',
+          toolbarHeight: role == 'USER'
+              ? 48
+              : role == 'ADMIN'
               ? 52
               : role == 'DOKTER'
               ? 64
@@ -127,10 +129,7 @@ class _RootState extends State<_Root> {
               ? 60
               : null,
           title: role == 'USER'
-              ? PatientHomeIdentity(
-                  name: '${api.user?['nama'] ?? 'Pasien'}',
-                  avatar: AccountAvatar(api: api, radius: 20),
-                )
+              ? null
               : staffContext != null && MediaQuery.sizeOf(context).width >= 700
               ? Row(
                   children: [

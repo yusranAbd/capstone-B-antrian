@@ -170,19 +170,16 @@ void main() {
         await launch(tester, HomeBackend()..manyClinics = true, width: width);
         expect(
           find.text('Rahmat Abdullah Pratama dengan Nama Panjang'),
-          findsOneWidget,
+          findsNothing,
         );
         expect(find.byTooltip('Aktivitas tiket'), findsOneWidget);
         expect(find.byTooltip('Profil akun'), findsNothing);
         expect(find.byTooltip('Keluar akun'), findsNothing);
         expect(find.byType(PatientHomeBrand), findsNothing);
         expect(find.text('Sinkronisasi berkala aktif'), findsNothing);
-        expect(find.byType(PatientHomeIdentity), findsOneWidget);
-        expect(find.text('Selamat datang,'), findsOneWidget);
-        expect(
-          tester.getTopLeft(find.byType(PatientHomeIdentity)).dy,
-          lessThan(tester.getTopLeft(find.byType(PatientHomeWelcome)).dy),
-        );
+        expect(find.byType(PatientHomeIdentity), findsNothing);
+        expect(find.text('Selamat datang,'), findsNothing);
+
         for (final section in [
           'Cari Dokter Spesialis',
           'Dokter Pilihan',
@@ -216,14 +213,14 @@ void main() {
         expect(find.byTooltip('Keluar akun'), findsNothing);
         expect(find.text('Sinkronisasi berkala aktif'), findsNothing);
         expect(find.textContaining('Waktu pelayanan:'), findsNothing);
-        expect(find.byType(PatientHomeIdentity), findsOneWidget);
+        expect(find.byType(PatientHomeIdentity), findsNothing);
         for (final destination in ['Tiket Saya', 'Janji Temu', 'Beranda']) {
           await press(
             tester,
             find.widgetWithText(NavigationDestination, destination),
           );
-          expect(find.byType(PatientHomeIdentity), findsOneWidget);
-          expect(find.text('Selamat datang,'), findsOneWidget);
+          expect(find.byType(PatientHomeIdentity), findsNothing);
+          expect(find.text('Selamat datang,'), findsNothing);
           expect(find.byTooltip('Profil akun'), findsNothing);
           expect(find.byTooltip('Keluar akun'), findsNothing);
           expect(find.text('Sinkronisasi berkala aktif'), findsNothing);
@@ -250,7 +247,7 @@ void main() {
         tester,
         find.widgetWithText(NavigationDestination, 'Beranda'),
       );
-      expect(find.byType(PatientHomeIdentity), findsOneWidget);
+      expect(find.byType(PatientHomeIdentity), findsNothing);
       expect(find.byTooltip('Keluar akun'), findsNothing);
       await press(tester, find.widgetWithText(NavigationDestination, 'Profil'));
       await press(tester, find.text('Keluar Akun'));
