@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
 import 'admin_schema.dart';
+import 'admin_practice_agenda.dart';
 import 'admin_schedules.dart';
 import 'admin_ui.dart';
 import 'api.dart';
+import 'mobile_ui.dart';
 import 'config.dart';
 import 'widgets.dart';
 import 'doctor_professional.dart';
@@ -271,7 +273,9 @@ class _AdminDataViewState extends State<AdminDataView> {
   Widget table(List<Json> items) => AdminTable(
     key: ValueKey('$path:$search:$status:$clinic:$doctor'),
     rows: items,
-    compact: path != '/dokter',
+    compact: true,
+    rowHeight: path == '/dokter' ? 64 : null,
+    pageSize: path == '/dokter' ? 6 : 10,
     columns: [
       if (path == '/jadwal-praktik') ...[
         AdminColumn('Tanggal', (r) => dateOnly(r['tanggal'])),
@@ -307,7 +311,7 @@ class _AdminDataViewState extends State<AdminDataView> {
           'Dokter',
           label,
           cell: (r) => SizedBox(
-            width: 220,
+            width: 230,
             child: Row(
               children: [
                 ProfessionalDoctorAvatar(
@@ -327,16 +331,17 @@ class _AdminDataViewState extends State<AdminDataView> {
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
-                      Text(
-                        '${r['spesialisasi'] ?? 'Spesialisasi belum diisi'}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Text(
-                        '${r['kode']}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.blueGrey,
+                      Tooltip(
+                        message:
+                            '${r['spesialisasi'] ?? 'Spesialisasi belum diisi'} · ${r['kode'] ?? '—'}',
+                        child: Text(
+                          '${r['spesialisasi'] ?? 'Spesialisasi belum diisi'} · ${r['kode'] ?? '—'}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: QueueBStyle.muted,
+                          ),
                         ),
                       ),
                     ],
@@ -354,7 +359,7 @@ class _AdminDataViewState extends State<AdminDataView> {
                   .map((l) => label(object(l['layanan'])))
                   .join(', '),
           cell: (r) => SizedBox(
-            width: 180,
+            width: 150,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -383,7 +388,7 @@ class _AdminDataViewState extends State<AdminDataView> {
               object(r['pengguna'])['email'] ??
               (r['penggunaId'] == null ? 'Belum dibuat' : 'Tertaut'),
           cell: (r) => SizedBox(
-            width: 200,
+            width: 180,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -553,7 +558,11 @@ class _AdminDataViewState extends State<AdminDataView> {
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               SizedBox(
-                width: box.maxWidth < 560 ? box.maxWidth : 280,
+                width: box.maxWidth < 560
+                    ? box.maxWidth
+                    : path == '/jadwal-praktik'
+                    ? 216
+                    : 260,
                 child: Semantics(
                   container: true,
                   child: TextField(
@@ -570,7 +579,7 @@ class _AdminDataViewState extends State<AdminDataView> {
               ),
 
               SizedBox(
-                width: 160,
+                width: box.maxWidth < 340 ? box.maxWidth : 132,
                 child: ChoiceField(
                   label: 'Status data',
                   choices: const [
@@ -584,7 +593,7 @@ class _AdminDataViewState extends State<AdminDataView> {
               ),
               if (path != '/layanan')
                 SizedBox(
-                  width: 200,
+                  width: box.maxWidth < 340 ? box.maxWidth : 170,
                   child: ChoiceField(
                     label: 'Filter poliklinik',
                     choices: [
@@ -597,7 +606,7 @@ class _AdminDataViewState extends State<AdminDataView> {
                 ),
               if (sessions)
                 SizedBox(
-                  width: 200,
+                  width: box.maxWidth < 340 ? box.maxWidth : 170,
                   child: ChoiceField(
                     label: 'Filter dokter',
                     choices: [
@@ -621,7 +630,15 @@ class _AdminDataViewState extends State<AdminDataView> {
         ),
         if (filtered.isEmpty && !widget.busy)
           const AdminNotice('Tidak ada data yang sesuai filter.'),
-        if ([
+        if (path == '/jadwal-praktik')
+          AdminPracticeAgenda(
+            rows: filtered,
+            config: widget.api.config,
+            busy: widget.busy,
+            clinicName: clinicName,
+            actions: (r) => actions(r, showStatus: false),
+          )
+        else if ([
           '/layanan',
           '/dokter',
           '/jadwal-praktik',

@@ -1,0 +1,58 @@
+{
+  "mode": "Baseline ADMIN Chrome capture, synthetic data",
+  "buildSha256": "3d5bab17cf9bcf9160b3561b00ef9ea9629416d4e0a82208d46e0074c917948b",
+  "states": {},
+  "viewports": [
+    {
+      "module": "Dokter",
+      "width": 1280,
+      "height": 720,
+      "scrollWidth": 1280
+    },
+    {
+      "module": "Dokter",
+      "width": 1366,
+      "height": 768,
+      "scrollWidth": 1366
+    },
+    {
+      "module": "Dokter",
+      "width": 1920,
+      "height": 1080,
+      "scrollWidth": 1920
+    },
+    {
+      "module": "Dokter",
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390
+    },
+    {
+      "module": "Jadwal praktik",
+      "width": 1280,
+      "height": 720,
+      "scrollWidth": 1280
+    },
+    {
+      "module": "Jadwal praktik",
+      "width": 1366,
+      "height": 768,
+      "scrollWidth": 1366
+    },
+    {
+      "module": "Jadwal praktik",
+      "width": 1920,
+      "height": 1080,
+      "scrollWidth": 1920
+    },
+    {
+      "module": "Jadwal praktik",
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390
+    }
+  ],
+  "errors": [],
+  "chrome": "156.0.8078.48",
+  "success": true
+}

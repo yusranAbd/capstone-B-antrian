@@ -1,0 +1,62 @@
+{
+  "mode": "Real Chrome release Flutter, synthetic ADMIN API, no database",
+  "buildSha256": "d444e9cd0512a1e0ba2bf9db205057310bd46eb7320315f0408bd6223d9d024c",
+  "states": {
+    "doctorSearchAndActions": true,
+    "agendaAndActions": true
+  },
+  "viewports": [
+    {
+      "module": "Dokter",
+      "width": 1280,
+      "height": 720,
+      "scrollWidth": 1280
+    },
+    {
+      "module": "Dokter",
+      "width": 1366,
+      "height": 768,
+      "scrollWidth": 1366
+    },
+    {
+      "module": "Dokter",
+      "width": 1920,
+      "height": 1080,
+      "scrollWidth": 1920
+    },
+    {
+      "module": "Dokter",
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390
+    },
+    {
+      "module": "Jadwal praktik",
+      "width": 1280,
+      "height": 720,
+      "scrollWidth": 1280
+    },
+    {
+      "module": "Jadwal praktik",
+      "width": 1366,
+      "height": 768,
+      "scrollWidth": 1366
+    },
+    {
+      "module": "Jadwal praktik",
+      "width": 1920,
+      "height": 1080,
+      "scrollWidth": 1920
+    },
+    {
+      "module": "Jadwal praktik",
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390
+    }
+  ],
+  "errors": [],
+  "chrome": "156.0.8078.48",
+  "doctorTableHeight": 428,
+  "success": true
+}

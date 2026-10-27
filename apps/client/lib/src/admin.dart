@@ -284,18 +284,40 @@ class _AdminPageState extends State<AdminPage> {
         : ListView(
             padding: const EdgeInsets.all(AdminStyle.pagePadding),
             children: [
-              Text(
-                resource.title,
-                style: Theme.of(context).textTheme.headlineSmall,
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      resource.title,
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                  ),
+                  if (selected == 1)
+                    TextButton.icon(
+                      icon: const Icon(Icons.help_outline, size: 18),
+                      label: const Text('Panduan dokter'),
+                      onPressed: () => showDialog<void>(
+                        context: context,
+                        builder: (c) => AlertDialog(
+                          title: const Text('Pengelolaan dokter'),
+                          content: const Text(
+                            '1. Buat profil → 2. Hubungkan poliklinik → 3. Buat akun login.\n\nStatus profil dan akun login dikelola terpisah; profil nonaktif tidak dapat mengakses portal.',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(c),
+                              child: const Text('Mengerti'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
               ),
               error != null
                   ? AdminNotice(error!, error: true)
                   : const SizedBox.shrink(),
               message != null ? AdminNotice(message!) : const SizedBox.shrink(),
-              if (selected == 1)
-                const AdminNotice(
-                  'Alur dokter: 1. Buat profil → 2. Hubungkan poliklinik → 3. Buat akun login. Status profil dan akun login dikelola terpisah; profil nonaktif tidak dapat mengakses portal.',
-                ),
               if (selected == 6) ...[
                 const SizedBox(height: 8),
                 TabBar(

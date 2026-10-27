@@ -156,12 +156,14 @@ class AdminTable extends StatefulWidget {
     this.pageSize = 10,
     this.compact = true,
     this.decorated = true,
+    this.rowHeight,
   });
   final List<Json> rows;
   final List<AdminColumn> columns;
   final String? title;
   final int pageSize;
   final bool compact, decorated;
+  final double? rowHeight;
   @override
   State<AdminTable> createState() => _AdminTableState();
 }
@@ -238,8 +240,12 @@ class _AdminTableState extends State<AdminTable> {
                   ),
             showCheckboxColumn: false,
             showEmptyRows: false,
-            dataRowMinHeight: widget.compact ? 44 : 58,
-            dataRowMaxHeight: widget.compact
+            dataRowMinHeight: widget.rowHeight ?? (widget.compact ? 44 : 58),
+            dataRowMaxHeight: widget.rowHeight != null
+                ? MediaQuery.textScalerOf(context)
+                      .scale(widget.rowHeight!)
+                      .clamp(widget.rowHeight!, double.infinity)
+                : widget.compact
                 ? (MediaQuery.textScalerOf(context).scale(32) + 16).clamp(
                     48,
                     double.infinity,
@@ -247,12 +253,13 @@ class _AdminTableState extends State<AdminTable> {
                 : 112,
             headingRowHeight: widget.compact ? 44 : 56,
             rowsPerPage: widget.rows.length.clamp(1, size),
-            availableRowsPerPage: [
+            availableRowsPerPage: {
               if (widget.rows.length < 10) widget.rows.length.clamp(1, 10),
+              widget.pageSize,
               10,
               20,
               50,
-            ],
+            }.toList()..sort(),
             onRowsPerPageChanged: (value) => setState(() => size = value ?? 10),
             sortColumnIndex: sort,
             sortAscending: ascending,
@@ -485,10 +492,19 @@ class AdminRowActions extends StatelessWidget {
       button: true,
       label: tooltip,
       excludeSemantics: true,
-      child: const SizedBox(
-        width: 88,
-        height: 40,
-        child: Row(
+      child: SizedBox(
+        width:
+            88 +
+            (MediaQuery.textScalerOf(context).scale(13) - 13).clamp(
+                  0,
+                  double.infinity,
+                ) *
+                4,
+        height: (MediaQuery.textScalerOf(context).scale(20) + 12).clamp(
+          40,
+          double.infinity,
+        ),
+        child: const Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(

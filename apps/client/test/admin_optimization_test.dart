@@ -9,6 +9,7 @@ import 'package:http/testing.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:queueb_client/src/admin.dart';
 import 'package:queueb_client/src/admin_data.dart';
+import 'package:queueb_client/src/admin_practice_agenda.dart';
 import 'package:queueb_client/src/admin_navigation.dart';
 import 'package:queueb_client/src/admin_schema.dart';
 import 'package:queueb_client/src/admin_ui.dart';
@@ -192,7 +193,7 @@ void main() {
     });
   }
   testWidgets(
-    'hundreds of practice rows use bounded table pagination and clinic doctor date filters',
+    'hundreds of practice rows use bounded daily agenda and preserve filters',
     (tester) async {
       final api = QueueApi(
         config: AppConfig(
@@ -221,15 +222,15 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.byType(AdminTable), findsOneWidget);
+      expect(find.byType(AdminPracticeAgenda), findsOneWidget);
       expect(
         tester
-            .widget<PaginatedDataTable>(find.byType(PaginatedDataTable))
-            .source
-            .rowCount,
+            .widget<AdminPracticeAgenda>(find.byType(AdminPracticeAgenda))
+            .rows
+            .length,
         440,
       );
-      expect(find.byType(AdminRowActions), findsNWidgets(10));
+      expect(find.byType(AdminRowActions), findsNWidgets(6));
       await tester.enterText(
         find.widgetWithText(TextField, 'Cari nama atau kode'),
         'Dokter 21',
@@ -237,16 +238,17 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         tester
-            .widget<PaginatedDataTable>(find.byType(PaginatedDataTable))
-            .source
-            .rowCount,
+            .widget<AdminPracticeAgenda>(find.byType(AdminPracticeAgenda))
+            .rows
+            .length,
         20,
       );
       expect(
         find.byWidgetPredicate((w) => w is Text && w.data == 'Dokter 21'),
-        findsNWidgets(10),
+        findsNWidgets(6),
       );
-      expect(find.text('Poliklinik 10'), findsNWidgets(10));
+      expect(find.text('Poliklinik 10'), findsNWidgets(6));
+      expect(find.byType(AdminRowActions), findsNWidgets(6));
       expect(
         find.widgetWithText(TextField, 'Dari tanggal (YYYY-MM-DD)'),
         findsNothing,

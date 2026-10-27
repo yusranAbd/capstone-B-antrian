@@ -12,6 +12,7 @@ module.exports = async ({
   engineRoot,
   fontFile,
   baseline = false,
+  compactManagement = false,
 }) => {
   fs.mkdirSync(output, { recursive: true });
   const report = {
@@ -149,6 +150,45 @@ module.exports = async ({
     "/penugasan-petugas": [assignment],
     "/perangkat-display": [device],
   };
+  if (compactManagement) {
+    store["/dokter"] = Array.from({ length: 10 }, (_, i) =>
+      i === 0
+        ? doctor
+        : {
+            ...doctor,
+            id: randomUUID(),
+            nama: `dr. Dokter Demonstrasi ${i + 1}, Sp.A`,
+            kode: `DR${i + 1}`,
+            penggunaId: randomUUID(),
+            pengguna: {
+              email: `dokter${i + 1}@fixture.local`,
+              aktif: i % 3 !== 0,
+            },
+          },
+    );
+    store["/loket"] = [
+      room,
+      { ...room, id: randomUUID(), kode: "AN02", nama: "Ruang Anak 2" },
+    ];
+    store["/jadwal-praktik"] = Array.from({ length: 155 }, (_, i) => {
+      const date = new Date(today + "T00:00:00Z");
+      date.setUTCDate(date.getUTCDate() + Math.floor(i / 10));
+      const day = date.toISOString().slice(0, 10),
+        d = store["/dokter"][i % 10],
+        r = store["/loket"][i % 2];
+      return {
+        ...practice,
+        id: randomUUID(),
+        tanggal: day,
+        mulaiPada: day + (i % 2 ? "T06:00:00Z" : "T00:00:00Z"),
+        selesaiPada: day + (i % 2 ? "T09:00:00Z" : "T05:00:00Z"),
+        loketId: r.id,
+        loket: r,
+        dokterLayanan: { ...practice.dokterLayanan, dokterId: d.id, dokter: d },
+        aktif: i % 11 !== 0,
+      };
+    });
+  }
   const auth = {
     accessToken: "fixture-admin-only",
     refreshToken: "fixture-refresh-only",
@@ -370,9 +410,67 @@ module.exports = async ({
       await expect(text(label)).toBeVisible();
     }
     await nav("Dokter");
-    await expect(text(doctor.nama)).toBeVisible();
+    await expect(
+      text(compactManagement ? "10 dari 10 data" : doctor.nama),
+    ).toBeVisible();
     await page.mouse.move(0, 0);
     await page.waitForTimeout(1000);
+    if (compactManagement) {
+      for (const [module, name] of [
+        ["Dokter", "doctor"],
+        ["Jadwal praktik", "practice"],
+      ]) {
+        await nav(module);
+        for (const [width, height] of [
+          [1280, 720],
+          [1366, 768],
+          [1920, 1080],
+          [390, 844],
+        ]) {
+          await page.setViewportSize({ width, height });
+          await page.mouse.move(0, 0);
+          await page.waitForTimeout(400);
+          const metrics = await page.evaluate(() => ({
+            width: innerWidth,
+            scrollWidth: document.scrollingElement.scrollWidth,
+          }));
+          assert.equal(metrics.width, metrics.scrollWidth);
+          report.viewports.push({ module, width, height, ...metrics });
+          await page.screenshot({
+            path: path.join(output, `${name}-${width}.png`),
+          });
+        }
+        await page.setViewportSize({ width: 1366, height: 768 });
+        if (!baseline && name === "practice") {
+          await expect(text("10 sesi · Asia/Jakarta")).toBeVisible();
+          await press("Tanggal berikutnya");
+          await expect(text("10 sesi · Asia/Jakarta")).toBeVisible();
+          await page
+            .getByRole("checkbox", { name: "Semua tanggal", exact: true })
+            .click();
+          await expect(text("155 sesi · Asia/Jakarta")).toBeVisible();
+          await menu("Ubah");
+          await page.mouse.click(700, 26);
+          report.states.agendaAndActions = true;
+        }
+        if (!baseline && name === "doctor") {
+          const table = page.getByRole("table").first();
+          report.doctorTableHeight = (await table.boundingBox()).height;
+          await type("Cari dokter atau spesialisasi", "Demonstrasi 10");
+          await expect(text("1 dari 10 data")).toBeVisible();
+          await menu("Ubah profil");
+          await page.mouse.click(700, 26);
+          report.states.doctorSearchAndActions = true;
+        }
+      }
+      assert.deepEqual(report.errors, []);
+      report.success = true;
+      fs.writeFileSync(
+        path.join(output, "report.json"),
+        JSON.stringify(report, null, 2),
+      );
+      return report;
+    }
     if (baseline) {
       await page.screenshot({
         path: path.join(output, "doctor-before-1366x768.png"),

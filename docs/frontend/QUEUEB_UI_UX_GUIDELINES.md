@@ -88,6 +88,12 @@ Statistik penting dapat lebih besar dari body bila membantu pemindaian cepat. Fo
 
 `operationalTextTheme` menetapkan headline 20/22, title 14/15/17, body 12/13/14 dan label 11/12/13. Ini mencegah fallback headline Material 24–32 masuk ke card operasional. Ukuran eksplisit pada halaman lama tidak otomatis berubah; koreksi per halaman setelah ada bukti proporsi bermasalah.
 
+### Dokter ADMIN dan agenda praktik
+
+Daftar Dokter memakai baris 64 logical px (bertambah mengikuti text scaling), identitas dan akun ringkas serta 6 baris per halaman; opsi jumlah baris dan seluruh menu aksi tetap tersedia. Bantuan alur profil/poliklinik/akun dipindahkan ke tombol Panduan dokter agar tidak menjadi banner permanen.
+
+Jadwal Praktik memakai agenda per tanggal dan ruang, dengan 6 sesi per halaman, jam sebagai jangkar visual, pemilih tanggal, navigasi tanggal tersedia, Hari ini dan Semua tanggal. Semua tanggal tetap dapat diakses; bukan pemotongan data API. Pencarian/filter lama dan handler mutasi dipertahankan. Layar kecil/teks besar membungkus secara alami. [QA compact management](ADMIN_DOCTOR_PRACTICE_COMPACT.md).
+
 ## Skala mobile — PASIEN
 
 | Elemen | Baseline |
