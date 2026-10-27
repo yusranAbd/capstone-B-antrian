@@ -4,7 +4,6 @@ import 'config.dart';
 import 'mobile_ui.dart';
 import 'doctor_professional.dart';
 
-// Hallmark · scoped patient journey · QueueB reference · P5 H5 E4 S5 R5 V4.
 // Tokens remain in QueueBStyle; no changes to shared themes or other roles.
 String patientDate(String value) {
   final day = DateTime.tryParse(dateOnly(value));

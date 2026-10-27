@@ -5,7 +5,6 @@ import 'mobile_ui.dart';
 import 'doctor_professional.dart';
 import 'staff_ui.dart';
 
-// Hallmark · operational workbench · QueueB tokens · P5 H5 E4 S5 R5 V4.
 class StaffToolbar extends StatelessWidget implements PreferredSizeWidget {
   const StaffToolbar({
     super.key,

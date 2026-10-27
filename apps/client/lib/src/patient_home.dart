@@ -22,7 +22,7 @@ abstract final class PatientHomeStyle {
 }
 
 // Home-only visual layer. Existing booking, session and realtime owners stay in
-// PatientPage. Hallmark self-review: P5 H5 E4 S5 R5 V4 (visit-first healthcare).
+// PatientPage.
 class PatientHomeBrand extends StatelessWidget {
   const PatientHomeBrand({super.key});
   @override

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'mobile_ui.dart';
 
-// Hallmark · single-page doctor workbench · QueueB reference · P5 H5 E4 S5 R5 V4.
 abstract final class DoctorStyle {
   static const canvas = Color(0xffeff9fd);
   static const paleBlue = Color(0xffedf7ff);
@@ -22,8 +21,10 @@ abstract final class DoctorStyle {
   );
   static ThemeData get theme => QueueBStyle.theme.copyWith(
     scaffoldBackgroundColor: canvas,
+    textTheme: QueueBStyle.operationalTextTheme,
     appBarTheme: QueueBStyle.theme.appBarTheme.copyWith(
       backgroundColor: Colors.white,
+      toolbarHeight: QueueBStyle.operationalToolbarHeight,
       scrolledUnderElevation: 0,
       shape: const Border(bottom: BorderSide(color: rule)),
     ),

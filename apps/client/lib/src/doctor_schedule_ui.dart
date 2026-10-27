@@ -5,7 +5,6 @@ import 'mobile_ui.dart';
 import 'doctor_professional.dart';
 
 // QueueB existing tokens and navigation; reference: doctor profile + calendar.
-// Hallmark · pre-emit critique: P4 H4 E4 S5 R5 V4.
 class DoctorProfileCard extends StatelessWidget {
   const DoctorProfileCard({
     super.key,

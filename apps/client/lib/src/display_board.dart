@@ -7,8 +7,6 @@ import 'package:flutter/material.dart';
 import 'config.dart';
 import 'mobile_ui.dart';
 
-// Hallmark · monitor QueueB · existing palette/type · focus on live information.
-// Hallmark · pre-emit critique: P5 H5 E4 S5 R5 V4.
 /// Renders only the allowlisted, privacy-filtered display snapshot.
 class DisplayBoard extends StatelessWidget {
   const DisplayBoard({

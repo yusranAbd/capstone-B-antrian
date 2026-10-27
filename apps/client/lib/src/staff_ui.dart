@@ -4,8 +4,7 @@ import 'config.dart';
 import 'mobile_ui.dart';
 
 // Operational QueueB / teal / compact list + service console.
-// Hallmark critique: philosophy 5, hierarchy 5, execution 4, specificity 5,
-// restraint 5, variety 4. Tokens inherit QueueB; only PETUGAS uses this theme.
+// Scoped to PETUGAS; see docs/frontend/QUEUEB_UI_UX_GUIDELINES.md.
 abstract final class StaffStyle {
   static const radius = 14.0;
   static ThemeData get theme {
@@ -14,7 +13,7 @@ abstract final class StaffStyle {
       borderRadius: BorderRadius.circular(10),
     );
     return base.copyWith(
-      textTheme: base.textTheme.copyWith(
+      textTheme: QueueBStyle.operationalTextTheme.copyWith(
         headlineSmall: base.textTheme.headlineSmall?.copyWith(fontSize: 20),
         titleLarge: base.textTheme.titleLarge?.copyWith(fontSize: 17),
         titleMedium: base.textTheme.titleMedium?.copyWith(fontSize: 14),
@@ -27,7 +26,7 @@ abstract final class StaffStyle {
       ),
       appBarTheme: base.appBarTheme.copyWith(
         backgroundColor: Colors.white,
-        toolbarHeight: 56,
+        toolbarHeight: QueueBStyle.operationalToolbarHeight,
         scrolledUnderElevation: 0,
       ),
       inputDecorationTheme: base.inputDecorationTheme.copyWith(

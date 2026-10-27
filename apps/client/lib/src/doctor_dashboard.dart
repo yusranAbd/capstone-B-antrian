@@ -7,7 +7,6 @@ import 'config.dart';
 import 'mobile_ui.dart';
 import 'doctor_visual.dart';
 
-// Hallmark · doctor web workbench · existing QueueB tokens · P5 H5 E4 S5 R5 V4.
 /// Presentation model only. Waiting order and eligibility come from REST.
 class DoctorDashboardData {
   DoctorDashboardData(this.appointments, this.snapshots) {

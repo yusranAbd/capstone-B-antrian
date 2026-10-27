@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'config.dart';
 import 'mobile_ui.dart';
 
-// Hallmark · ADMIN workbench · QueueB tokens · P5 H5 E4 S5 R5 V4.
 abstract final class AdminStyle {
   static const radius = 16.0;
   static const pagePadding = 16.0;
@@ -22,6 +21,7 @@ abstract final class AdminStyle {
   );
   static ThemeData get theme => QueueBStyle.theme.copyWith(
     scaffoldBackgroundColor: canvas,
+    textTheme: QueueBStyle.operationalTextTheme,
     cardTheme: const CardThemeData(
       color: Colors.white,
       elevation: 0,
@@ -31,6 +31,7 @@ abstract final class AdminStyle {
       backgroundColor: Colors.white,
       foregroundColor: QueueBStyle.navy,
       elevation: 0,
+      toolbarHeight: QueueBStyle.operationalToolbarHeight,
       scrolledUnderElevation: 0,
     ),
     dataTableTheme: const DataTableThemeData(

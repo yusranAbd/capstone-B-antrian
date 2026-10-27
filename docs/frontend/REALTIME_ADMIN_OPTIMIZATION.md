@@ -99,4 +99,4 @@ Bukti tambahan: [kelompok ruang](images/admin-room-groups.png), [kelompok penuga
 
 Semua source tetap pada aplikasi existing. File lokal React/Vite, backup, `.env`, schema review dan perubahan root di luar scope tidak disertakan.
 
-Catatan desain: identitas warna/font mengikuti tema Flutter existing; judul memakai nama API, bukan UUID. Tidak menambahkan angka demonstratif ke UI produksi, aset, dekorasi, atau menu tanpa fungsi. Penilaian internal Hallmark (1–5): Philosophy 4, Hierarchy 4, Execution 4, Specificity 5, Restraint 5, Variety 4; pemeriksaan akhir dilakukan pada screenshot browser dan tes viewport 320/375/414/768/1440. Aturan CSS/marketing yang tidak berlaku pada Flutter tidak diklaim lulus.
+Catatan desain: identitas warna/font mengikuti tema Flutter existing; judul memakai nama API, bukan UUID. Tidak menambahkan angka demonstratif ke UI produksi, aset, dekorasi, atau menu tanpa fungsi. Pemeriksaan akhir dilakukan pada screenshot browser dan tes viewport 320/375/414/768/1440. Aturan CSS/marketing yang tidak berlaku pada Flutter tidak diklaim lulus.

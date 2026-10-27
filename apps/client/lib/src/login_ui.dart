@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'mobile_ui.dart';
 
-// Hallmark · modern-minimal · centered authentication card · QueueB teal/navy.
-// Pre-emit critique: P5 H5 E4 S5 R5 V4; user-approved centered layout takes priority.
 // Scoped presentation tokens. Authentication stays in the existing LoginPage.
 abstract final class LoginStyle {
   static const paper = Color(0xfff3f8fc);

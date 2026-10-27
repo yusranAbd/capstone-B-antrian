@@ -10,7 +10,6 @@ import 'doctor_professional.dart';
 import 'image_sizing.dart';
 import 'mobile_ui.dart';
 
-// Hallmark · profile workspace · QueueB existing tokens · P5 H5 E4 S5 R5 V4.
 String accountRole(Object? role) => switch (role) {
   'USER' => 'Pasien',
   'PETUGAS' => 'Petugas',

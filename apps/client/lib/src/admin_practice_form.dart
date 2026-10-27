@@ -5,9 +5,6 @@ import 'api.dart';
 import 'config.dart';
 import 'mobile_ui.dart';
 
-// Hallmark · component scope · QueueB ADMIN tokens · no global theme changes.
-// Pre-emit critique: philosophy 5, hierarchy 5, execution 4, specificity 5,
-// restraint 5, variety 4. Native Material controls retain their interaction states.
 abstract final class _PracticeStyle {
   static const accent = QueueBStyle.darkTeal;
   static const tint = QueueBStyle.mint;

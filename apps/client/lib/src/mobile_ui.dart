@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-// Hallmark · app: QueueB · reference: user board · tokens scoped to USER/PETUGAS.
 abstract final class QueueBStyle {
   static const teal = Color(0xff009f9a);
   static const darkTeal = Color(0xff007f80);
@@ -14,8 +13,27 @@ abstract final class QueueBStyle {
   static const danger = Color(0xffba303e);
   static const radius = 20.0;
   static const space = 16.0;
+  static const smallSpace = 8.0;
+  static const mediumSpace = 12.0;
+  static const operationalToolbarHeight = 56.0;
 
   static final ThemeData theme = _buildTheme();
+
+  /// Operational typography only. Mobile patient and TV text retain their scale.
+  static final TextTheme operationalTextTheme = theme.textTheme.copyWith(
+    headlineLarge: theme.textTheme.headlineLarge?.copyWith(fontSize: 22),
+    headlineMedium: theme.textTheme.headlineMedium?.copyWith(fontSize: 22),
+    headlineSmall: theme.textTheme.headlineSmall?.copyWith(fontSize: 20),
+    titleLarge: theme.textTheme.titleLarge?.copyWith(fontSize: 17),
+    titleMedium: theme.textTheme.titleMedium?.copyWith(fontSize: 15),
+    titleSmall: theme.textTheme.titleSmall?.copyWith(fontSize: 14),
+    bodyLarge: theme.textTheme.bodyLarge?.copyWith(fontSize: 14),
+    bodyMedium: theme.textTheme.bodyMedium?.copyWith(fontSize: 13),
+    bodySmall: theme.textTheme.bodySmall?.copyWith(fontSize: 12),
+    labelLarge: theme.textTheme.labelLarge?.copyWith(fontSize: 13),
+    labelMedium: theme.textTheme.labelMedium?.copyWith(fontSize: 12),
+    labelSmall: theme.textTheme.labelSmall?.copyWith(fontSize: 11),
+  );
 
   static ThemeData _buildTheme() {
     final scheme = ColorScheme.fromSeed(seedColor: teal).copyWith(
@@ -155,11 +173,11 @@ class EmptyState extends StatelessWidget {
   final IconData icon;
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 20),
+    padding: const EdgeInsets.symmetric(vertical: QueueBStyle.mediumSpace),
     child: Column(
       children: [
-        Icon(icon, size: 36, color: QueueBStyle.darkTeal),
-        const SizedBox(height: 12),
+        Icon(icon, size: 32, color: QueueBStyle.darkTeal),
+        const SizedBox(height: QueueBStyle.smallSpace),
         Text(
           text,
           textAlign: TextAlign.center,

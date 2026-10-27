@@ -9,7 +9,6 @@ import 'config.dart';
 import 'doctor_professional.dart';
 import 'image_sizing.dart';
 
-// Hallmark · compact editor · existing ADMIN tokens · P5 H5 E4 S5 R5 V4.
 typedef DoctorPhotoPicker = Future<XFile?> Function();
 Future<XFile?> pickDoctorPhoto() => openFile(
   acceptedTypeGroups: const [

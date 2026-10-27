@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'config.dart';
+import 'mobile_ui.dart';
 
 class Notice extends StatelessWidget {
   const Notice(this.text, {super.key, this.error = false});
@@ -44,13 +45,13 @@ class Section extends StatelessWidget {
   Widget build(BuildContext context) => Card(
     margin: const EdgeInsets.symmetric(vertical: 8),
     child: Padding(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(QueueBStyle.space),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Wrap(
-            spacing: 20,
-            runSpacing: 12,
+            spacing: QueueBStyle.mediumSpace,
+            runSpacing: QueueBStyle.smallSpace,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Text(title, style: Theme.of(context).textTheme.titleLarge),
@@ -62,7 +63,7 @@ class Section extends StatelessWidget {
               padding: const EdgeInsets.only(top: 8),
               child: Text(subtitle!),
             ),
-          const SizedBox(height: 16),
+          const SizedBox(height: QueueBStyle.mediumSpace),
           child,
         ],
       ),
