@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Ruang Tenang: scoped to patients and the shared sign-in entry point.
+/// Periwinkle blue: scoped to patients and the shared sign-in entry point.
 /// Operational dashboards and signage keep their own design systems.
 class PatientAppearance extends ThemeExtension<PatientAppearance> {
   const PatientAppearance();
@@ -11,15 +11,15 @@ class PatientAppearance extends ThemeExtension<PatientAppearance> {
 }
 
 abstract final class PatientDesign {
-  static const primary = Color(0xff61486f);
-  static const hero = Color(0xff45334f);
-  static const accent = Color(0xffac4e35);
-  static const background = Color(0xfff7f3ee);
-  static const paper = Color(0xfffffdfa);
-  static const ink = Color(0xff302b32);
-  static const muted = Color(0xff6e6470);
-  static const border = Color(0xffe4dbd2);
-  static const soft = Color(0xffeee7f3);
+  static const primary = Color(0xff4c60cc);
+  static const hero = Color(0xff4169d5);
+  static const accent = Color(0xff007ca8);
+  static const background = Color(0xfff2f5ff);
+  static const paper = Color(0xffffffff);
+  static const ink = Color(0xff172544);
+  static const muted = Color(0xff52617a);
+  static const border = Color(0xffd9e1f2);
+  static const soft = Color(0xffeef1ff);
   static const success = Color(0xff2b674b);
   static const warning = Color(0xff825400);
   static const danger = Color(0xffa43946);
@@ -49,7 +49,7 @@ abstract final class PatientDesign {
     'DILEWATI' => const Color(0xfffcebd9),
     'DIPANGGIL' => const Color(0xffe7eff8),
     'DIPESAN' => soft,
-    _ => const Color(0xfff0ecef),
+    _ => const Color(0xffedf1f7),
   };
   static IconData statusIcon(String status) => switch (status) {
     'SELESAI' => Icons.check_circle_outline,

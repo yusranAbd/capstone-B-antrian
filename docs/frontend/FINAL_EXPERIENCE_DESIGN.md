@@ -1,5 +1,7 @@
 # QueueB Hospital - Final Experience / Ruang Tenang
 
+> Riwayat 27 Oktober 2026. Palet dan komposisi login telah direvisi pada [28 Oktober 2026](PATIENT_BLUE_PALETTE_REVISION.md); gunakan panduan QueueB terbaru untuk implementasi aktif.
+
 ## Product review dan keputusan
 
 Dua pendekatan dievaluasi sebelum implementasi:

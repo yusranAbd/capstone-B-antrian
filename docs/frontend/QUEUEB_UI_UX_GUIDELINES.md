@@ -27,21 +27,23 @@ Panduan mandiri untuk Flutter QueueB Hospital. Ini menjadi acuan seluruh penyemp
 
 Tidak ada framework/dependency baru. Theme dasar tetap cached. `QueueBStyle.operationalTextTheme` adalah skala khusus portal operasional; bukan pengganti seluruh tema aplikasi. Override per role yang sudah proporsional tetap boleh dipertahankan.
 
-### Pasien dan login: Ruang Tenang
+<a id="pasien-dan-login-ruang-tenang"></a>
 
-Persetujuan creative direction 27 Oktober 2026 mengizinkan identitas baru untuk Portal PASIEN dan pintu masuk login/registrasi. Acuan implementasi: `patient_design.dart` (cached ThemeData dan marker PatientAppearance); keputusan serta comparison ada di [FINAL_EXPERIENCE_DESIGN.md](FINAL_EXPERIENCE_DESIGN.md). Ini menggantikan palet teal/navy untuk scope tersebut, tanpa mengubah tema dashboard operasional atau TV.
+### Pasien dan login: Biru Periwinkle
+
+Revisi pengguna 28 Oktober 2026 mengganti palet Ruang Tenang dengan perpaduan biru/periwinkle, lavender muda, cyan dan putih dari referensi pengguna. Layout login dikembalikan ke kartu terpusat sebelum Final Experience (baseline f8baef8), tanpa panel editorial di kiri. Struktur compact pasien, lima navigasi, booking dan QR tetap dipertahankan. Acuan implementasi `patient_design.dart` tetap cached dan khusus scope pasien/login; dashboard operasional dan TV tidak berubah. [Catatan revisi](PATIENT_BLUE_PALETTE_REVISION.md). Laporan Final Experience sebelumnya merupakan riwayat, bukan palet aktif.
 
 | Token pasien | HEX | Fungsi |
 |---|---|---|
-| Primary plum | #61486F | Aksi utama, tab aktif, fokus |
-| Hero plum | #45334F | Kunjungan terdekat, teks putih |
-| Terracotta | #AC4E35 | Aksen sekunder berfungsi |
-| Background ivory | #F7F3EE | Kanvas aplikasi |
-| Paper | #FFFDFA | Card, form, dialog |
-| Ink | #302B32 | Informasi utama |
-| Muted | #6E6470 | Metadata/caption dengan kontras |
-| Border | #E4DBD2 | Pemisah, outline halus |
-| Soft plum | #EEE7F3 | Pilihan/permukaan pendukung |
+| Primary periwinkle | #4C60CC | Aksi utama, tab aktif, fokus |
+| Hero blue | #4169D5 | Kunjungan terdekat, teks putih |
+| Cyan | #007CA8 | Aksen sekunder berfungsi |
+| Background lavender | #F2F5FF | Kanvas aplikasi |
+| Paper | #FFFFFF | Card, form, dialog |
+| Ink | #172544 | Informasi utama |
+| Muted | #52617A | Metadata/caption dengan kontras |
+| Border | #D9E1F2 | Pemisah, outline halus |
+| Soft periwinkle | #EEF1FF | Pilihan/permukaan pendukung |
 | Success | #2B674B | Dilayani/selesai |
 | Waiting | #825400 | Check-in/menunggu |
 | Danger | #A43946 | Dibatalkan/error |
@@ -142,7 +144,7 @@ Public Display **tidak memakai skala dashboard desktop**. Pertahankan skala resp
 - **PASIEN:** mobile-first, navigasi sederhana, booking/reservasi/tiket/QR. Jangan mengorbankan touch target/teks demi kepadatan desktop.
 - **PUBLIC DISPLAY:** informasi jarak jauh, tanpa scroll, pengumuman aktual, privasi dan keamanan perangkat.
 
-Login memakai komposisi Ruang Tenang (editorial dua kolom pada desktop, form berpusat pada mobile). Perubahan ini merupakan scope persetujuan Final Experience; jangan ikut mengubahnya saat memadatkan portal operasional lain.
+Login memakai kartu terpusat pada desktop dan mobile sesuai revisi 28 Oktober 2026. Lebar maksimum 420, scroll ketika viewport/keyboard/text scale membutuhkannya. Tidak ada panel editorial baru. Jangan mengubahnya saat memadatkan portal operasional lain.
 
 ## Audit fondasi dan keputusan tahap ini
 

@@ -8,13 +8,13 @@ import 'doctor_professional.dart';
 abstract final class PatientHomeStyle {
   static const background = PatientDesign.background;
   static const welcomeTint = PatientDesign.soft;
-  static const shadow = Color(0x06302b32);
+  static const shadow = Color(0x06172544);
   static const heroStart = PatientDesign.hero, heroEnd = PatientDesign.hero;
   static const clinicSurface = PatientDesign.soft;
   static const appointmentInk = PatientDesign.primary;
   static const appointmentSurface = PatientDesign.soft;
   static const ticketInk = PatientDesign.accent;
-  static const ticketSurface = Color(0xfffaece3);
+  static const ticketSurface = Color(0xffe4f4fc);
   static const historyInk = PatientDesign.success;
   static const historySurface = Color(0xffe6f0e7);
   static const visitSurface = PatientDesign.soft;

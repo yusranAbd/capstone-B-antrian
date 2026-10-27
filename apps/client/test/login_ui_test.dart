@@ -76,78 +76,67 @@ void main() {
     Size(1440, 900),
     Size(1920, 1080),
   ]) {
-    testWidgets(
-      'Ruang Tenang login $size: responsive composition and working actions',
-      (tester) async {
-        await launch(tester, size: size);
-        expect(find.byType(LoginLayout), findsOneWidget);
-        expect(email, findsOneWidget);
-        expect(password, findsOneWidget);
-        expect(
-          find.text('Akses mudah untuk pelayanan lebih baik'),
-          findsNothing,
-        );
-        expect(
-          find.textContaining('Pendaftaran, tiket, dan antrean'),
-          findsNothing,
-        );
-        expect(find.textContaining('Daftar, dapatkan tiket'), findsNothing);
-        expect(find.text('Ambil tiket antrean'), findsNothing);
-        expect(find.text('Pantau antrean real-time'), findsNothing);
-        expect(find.text('Pelayanan lebih efisien'), findsNothing);
-        expect(find.text('Layanan digital rumah sakit'), findsNothing);
-        expect(find.byType(Image), findsNothing);
-        expect(find.text('Akses sistem antrean rumah sakit'), findsOneWidget);
-        final card = tester.getRect(find.byType(LoginFormCard));
-        expect(card.width, lessThanOrEqualTo(LoginStyle.cardWidth));
-        if (size.width >= 960) {
-          expect(card.left, greaterThan(size.width / 2));
-          expect(
-            find.text('Lebih tenang.\nDari awal kunjungan.'),
-            findsOneWidget,
-          );
-        } else {
-          expect(card.center.dx, closeTo(size.width / 2, .5));
-        }
-        expect(card.center.dy, closeTo(size.height / 2, .5));
-        expect(card.top, greaterThanOrEqualTo(24));
-        expect(card.bottom, lessThanOrEqualTo(size.height - 24));
-        expect(
-          find.descendant(
-            of: find.byType(LoginFormCard),
-            matching: find.text('QueueB Hospital'),
-          ),
-          findsOneWidget,
-        );
-        final scroll = tester.state<ScrollableState>(
-          find
-              .descendant(
-                of: find.byKey(const ValueKey('login-scroll')),
-                matching: find.byType(Scrollable),
-              )
-              .first,
-        );
-        expect(scroll.position.maxScrollExtent, 0);
-        expect(
-          tester.getBottomRight(find.text('Pasien baru? Daftar')).dy,
-          lessThan(size.height),
-        );
-        expect(find.text('Lupa kata sandi?'), findsNothing);
-        expect(find.textContaining('Google'), findsNothing);
-        expect(find.textContaining('Apple'), findsNothing);
-        await press(tester, submit);
-        expect(find.text('Masukkan email yang valid.'), findsOneWidget);
-        expect(find.text('Kata sandi wajib diisi.'), findsOneWidget);
-        await press(tester, find.text('Pasien baru? Daftar'));
-        expect(
-          find.widgetWithText(TextFormField, 'Nama lengkap'),
-          findsOneWidget,
-        );
-        await press(tester, find.widgetWithText(FilledButton, 'Daftar pasien'));
-        expect(find.text('Nama 3–150 karakter.'), findsOneWidget);
-        expect(tester.takeException(), isNull);
-      },
-    );
+    testWidgets('Login $size: previous centered layout and working actions', (
+      tester,
+    ) async {
+      await launch(tester, size: size);
+      expect(find.byType(LoginLayout), findsOneWidget);
+      expect(email, findsOneWidget);
+      expect(password, findsOneWidget);
+      expect(find.text('Akses mudah untuk pelayanan lebih baik'), findsNothing);
+      expect(
+        find.textContaining('Pendaftaran, tiket, dan antrean'),
+        findsNothing,
+      );
+      expect(find.textContaining('Daftar, dapatkan tiket'), findsNothing);
+      expect(find.text('Ambil tiket antrean'), findsNothing);
+      expect(find.text('Pantau antrean real-time'), findsNothing);
+      expect(find.text('Pelayanan lebih efisien'), findsNothing);
+      expect(find.text('Layanan digital rumah sakit'), findsNothing);
+      expect(find.byType(Image), findsNothing);
+      expect(find.text('Akses sistem antrean rumah sakit'), findsOneWidget);
+      final card = tester.getRect(find.byType(LoginFormCard));
+      expect(card.width, lessThanOrEqualTo(LoginStyle.cardWidth));
+      expect(card.center.dx, closeTo(size.width / 2, .5));
+      expect(find.text('Lebih tenang.\nDari awal kunjungan.'), findsNothing);
+      expect(card.center.dy, closeTo(size.height / 2, .5));
+      expect(card.top, greaterThanOrEqualTo(24));
+      expect(card.bottom, lessThanOrEqualTo(size.height - 24));
+      expect(
+        find.descendant(
+          of: find.byType(LoginFormCard),
+          matching: find.text('QueueB Hospital'),
+        ),
+        findsOneWidget,
+      );
+      final scroll = tester.state<ScrollableState>(
+        find
+            .descendant(
+              of: find.byKey(const ValueKey('login-scroll')),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      expect(scroll.position.maxScrollExtent, 0);
+      expect(
+        tester.getBottomRight(find.text('Pasien baru? Daftar')).dy,
+        lessThan(size.height),
+      );
+      expect(find.text('Lupa kata sandi?'), findsNothing);
+      expect(find.textContaining('Google'), findsNothing);
+      expect(find.textContaining('Apple'), findsNothing);
+      await press(tester, submit);
+      expect(find.text('Masukkan email yang valid.'), findsOneWidget);
+      expect(find.text('Kata sandi wajib diisi.'), findsOneWidget);
+      await press(tester, find.text('Pasien baru? Daftar'));
+      expect(
+        find.widgetWithText(TextFormField, 'Nama lengkap'),
+        findsOneWidget,
+      );
+      await press(tester, find.widgetWithText(FilledButton, 'Daftar pasien'));
+      expect(find.text('Nama 3–150 karakter.'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
   }
 
   for (final width in [375.0, 1024.0]) {

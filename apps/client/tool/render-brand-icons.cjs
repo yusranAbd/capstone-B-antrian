@@ -43,7 +43,7 @@ const targets = [
           canvas.height = size;
           const ctx = canvas.getContext("2d");
           if (maskable) {
-            ctx.fillStyle = "#F7F3EE";
+            ctx.fillStyle = "#F2F5FF";
             ctx.fillRect(0, 0, size, size);
             ctx.drawImage(
               image,

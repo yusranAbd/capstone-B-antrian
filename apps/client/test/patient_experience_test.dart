@@ -23,7 +23,7 @@ void main() {
     return x > y ? (x + .05) / (y + .05) : (y + .05) / (x + .05);
   }
 
-  test('Ruang Tenang readable text and status pairs meet WCAG AA', () {
+  test('Blue periwinkle readable text and status pairs meet WCAG AA', () {
     for (final pair in [
       (PatientDesign.ink, PatientDesign.paper),
       (PatientDesign.muted, PatientDesign.paper),
@@ -49,6 +49,9 @@ void main() {
         reason: '${pair.$1} on ${pair.$2}',
       );
     }
+    expect(PatientDesign.primary, const Color(0xff4c60cc));
+    expect(PatientDesign.hero, const Color(0xff4169d5));
+    expect(PatientDesign.background, const Color(0xfff2f5ff));
     expect(PatientDesign.theme.extension<PatientAppearance>(), isNotNull);
     expect(QueueBStyle.theme.extension<PatientAppearance>(), isNull);
     expect(QueueBStyle.teal, const Color(0xff009f9a));
