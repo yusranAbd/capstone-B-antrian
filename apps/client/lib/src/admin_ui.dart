@@ -2,15 +2,16 @@ import 'package:flutter/material.dart';
 
 import 'config.dart';
 import 'mobile_ui.dart';
+import 'queueb_palette.dart';
 
 abstract final class AdminStyle {
   static const radius = 16.0;
   static const pagePadding = 16.0;
-  static const canvas = Color(0xfff2f9fc);
-  static const sky = Color(0xffe0f2ff);
-  static const blue = Color(0xff087bd4);
-  static const rule = Color(0xffe2edf3);
-  static const shadow = Color(0x080c637d);
+  static const canvas = QueueBPalette.background;
+  static const sky = QueueBPalette.soft;
+  static const blue = QueueBPalette.cyan;
+  static const rule = QueueBPalette.border;
+  static const shadow = Color(0x08172544);
   static BoxDecoration get panel => BoxDecoration(
     color: Colors.white,
     borderRadius: BorderRadius.circular(radius),

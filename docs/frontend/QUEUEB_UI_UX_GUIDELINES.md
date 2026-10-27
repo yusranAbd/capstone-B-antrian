@@ -29,11 +29,11 @@ Tidak ada framework/dependency baru. Theme dasar tetap cached. `QueueBStyle.oper
 
 <a id="pasien-dan-login-ruang-tenang"></a>
 
-### Pasien dan login: Biru Periwinkle
+### Palet bersama seluruh portal: Biru Periwinkle
 
-Revisi pengguna 28 Oktober 2026 mengganti palet Ruang Tenang dengan perpaduan biru/periwinkle, lavender muda, cyan dan putih dari referensi pengguna. Layout login dikembalikan ke kartu terpusat sebelum Final Experience (baseline f8baef8), tanpa panel editorial di kiri. Struktur compact pasien, lima navigasi, booking dan QR tetap dipertahankan. Acuan implementasi `patient_design.dart` tetap cached dan khusus scope pasien/login; dashboard operasional dan TV tidak berubah. [Catatan revisi](PATIENT_BLUE_PALETTE_REVISION.md). Laporan Final Experience sebelumnya merupakan riwayat, bukan palet aktif.
+Revisi pengguna 28 Oktober 2026 mengganti palet Ruang Tenang dengan perpaduan biru/periwinkle, lavender muda, cyan dan putih dari referensi pengguna. Layout login dikembalikan ke kartu terpusat sebelum Final Experience (baseline f8baef8), tanpa panel editorial di kiri. Struktur compact pasien, lima navigasi, booking dan QR tetap dipertahankan. Perluasan persetujuan 28 Oktober 2026 menerapkan palet yang sama ke ADMIN, PETUGAS, DOKTER dan Public Display. Acuan warna bersama adalah `queueb_palette.dart`; tema tiap role tetap memiliki skala font/layout sendiri. `patient_design.dart` tetap menjadi tema khusus pasien. [QA seluruh portal](ALL_PORTALS_BLUE_PALETTE.md). [Catatan revisi](PATIENT_BLUE_PALETTE_REVISION.md). Laporan Final Experience sebelumnya merupakan riwayat, bukan palet aktif.
 
-| Token pasien | HEX | Fungsi |
+| Token bersama | HEX | Fungsi |
 |---|---|---|
 | Primary periwinkle | #4C60CC | Aksi utama, tab aktif, fokus |
 | Hero blue | #4169D5 | Kunjungan terdekat, teks putih |
@@ -52,11 +52,11 @@ Status tetap mengikuti API; `PatientDesign.statusInk/statusSurface/statusIcon` m
 
 Font Material bawaan (Roboto pada Android), tanpa font/dependency/ilustrasi baru. Ikon launcher/favicon/PWA template diganti ekspor geometris QueueB; branding in-app existing dipertahankan. Heading mobile 20–22, judul card 14–16, body 14, fakta 13, caption 11–12 dengan kontras memadai; target sentuh 44–48. Nomor tiket 30–34 dan QR mempunyai skala tersendiri. Card mengikuti isi; tipografi tidak diperkecil menggunakan FittedBox untuk memaksa muat. Spacing 4/8/12/16/24, radius input/tombol 14 dan card 20–24, elevation ringan.
 
-Lima navigasi pasien dan focus-scroll existing dipertahankan. Identitas tidak ditambahkan lagi ke header bersama. Agenda hanya memfilter tanggal appointment nyata, tiket memakai proyeksi terbaru, dan informasi teknis QR tidak mendominasi tampilan. Semua modal/picker menangkap tema dari scope USER di root, bukan mengubah theme global. Shared components membaca marker pasien dan kembali ke token lama pada portal lain.
+Lima navigasi pasien dan focus-scroll existing dipertahankan. Identitas tidak ditambahkan lagi ke header bersama. Agenda hanya memfilter tanggal appointment nyata, tiket memakai proyeksi terbaru, dan informasi teknis QR tidak mendominasi tampilan. Semua modal/picker menangkap tema dari scope USER di root, bukan mengubah theme global. Shared components membaca marker pasien untuk variasi komponen; seluruh role kini mengambil warna dasar yang sama dari QueueBPalette.
 
-### Warna dan visual operasional existing
+### Warna dan visual operasional
 
-Pertahankan token `QueueBStyle`: teal #009F9A, darkTeal #007F80, navy #102A43, background #F5F8FA, mint #E6F7F5, border #E2E8F0, muted #526C80, success #16804A, warning #996200, danger #BA303E. Variasi surface existing pada role boleh dipakai; jangan membuat palet baru per halaman.
+`QueueBStyle` mempertahankan nama alias existing (`teal`, `darkTeal`, `navy`, `mint`) demi kompatibilitas source, tetapi nilainya kini mengacu pada primary biru, ink dan soft dari QueueBPalette. Jangan menganggap nama legacy tersebut sebagai instruksi memakai teal lama. ADMIN memakai background/soft/cyan yang sama. Panel aksi PETUGAS dan live DOKTER memakai console #1D3270 sampai #314DA3 dengan teks putih/#E6EDFF; Public Display memakai hero #4169D5. Ukuran/font/grid tidak diubah. Status success/warning/danger operasional tetap memiliki warna semantik existing; jangan menggantinya dengan satu warna dekoratif.
 
 - Warna status selalu didampingi label/ikon, tidak menjadi satu-satunya pembeda.
 - Teks biasa target kontras minimal 4.5:1; teks besar dan kontrol bermakna minimal 3:1. Periksa kombinasi nyata, bukan menganggap seluruh warna token otomatis memenuhi semua konteks.

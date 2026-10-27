@@ -1,0 +1,160 @@
+{
+  "buildSha256": "3d5bab17cf9bcf9160b3561b00ef9ea9629416d4e0a82208d46e0074c917948b",
+  "testedAt": "2026-10-27T16:30:26.999Z",
+  "mode": "Real Chrome release Flutter; synthetic HTTP/Socket.IO, no database or real credentials",
+  "states": {
+    "fiveDestinationsAndProfile": true,
+    "headerRemovedExceptHomeNotification": true,
+    "chromeHidesOnWheelDownAndReturnsOnWheelUp": true,
+    "noHeaderProfile": true,
+    "appointmentAndWalkInHome": true,
+    "doctorDetail": true,
+    "openCorrectTicketQr": true,
+    "serverCancellation": true,
+    "doctorBooking": true,
+    "walkInBooking": true,
+    "nearestActualSlot": true,
+    "realtimeAndReconnect": true,
+    "reloadAndLoginAgain": true,
+    "profileSaved": true,
+    "logoutAndLoginAgain": true,
+    "navigationResourceCheck": true
+  },
+  "viewports": [
+    {
+      "width": 320,
+      "height": 568,
+      "scrollWidth": 320
+    },
+    {
+      "width": 375,
+      "height": 812,
+      "scrollWidth": 375
+    },
+    {
+      "width": 360,
+      "height": 800,
+      "scrollWidth": 360
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390
+    },
+    {
+      "width": 412,
+      "height": 915,
+      "scrollWidth": 412
+    },
+    {
+      "width": 768,
+      "height": 1024,
+      "scrollWidth": 768
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "scrollWidth": 1366
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "scrollWidth": 1920
+    }
+  ],
+  "errors": [],
+  "chrome": "156.0.8078.48",
+  "performance": {
+    "initial": {
+      "jsHeapMiB": 48.11,
+      "taskSeconds": 5.28006,
+      "nodes": 264,
+      "activeSockets": 1
+    },
+    "afterFlows": {
+      "jsHeapMiB": 130.05,
+      "taskSeconds": 5.549189,
+      "nodes": 1337,
+      "activeSockets": 1
+    },
+    "navigationCycles": [
+      {
+        "jsHeapMiB": 134.88,
+        "taskSeconds": 7.148925,
+        "nodes": 1571,
+        "activeSockets": 1
+      },
+      {
+        "jsHeapMiB": 51.74,
+        "taskSeconds": 8.747202,
+        "nodes": 331,
+        "activeSockets": 1
+      },
+      {
+        "jsHeapMiB": 67.88,
+        "taskSeconds": 10.133668,
+        "nodes": 536,
+        "activeSockets": 1
+      }
+    ],
+    "afterIdle": {
+      "jsHeapMiB": 70.25,
+      "taskSeconds": 10.20927,
+      "nodes": 536,
+      "activeSockets": 1
+    }
+  },
+  "scrollCases": [
+    {
+      "page": "home",
+      "width": 390,
+      "canScroll": true
+    },
+    {
+      "page": "reservations",
+      "width": 390,
+      "canScroll": false
+    },
+    {
+      "page": "tickets",
+      "width": 390,
+      "canScroll": false
+    },
+    {
+      "page": "appointments",
+      "width": 390,
+      "canScroll": false
+    },
+    {
+      "page": "profile",
+      "width": 390,
+      "canScroll": false
+    },
+    {
+      "page": "home",
+      "width": 320,
+      "canScroll": true
+    },
+    {
+      "page": "reservations",
+      "width": 320,
+      "canScroll": true
+    },
+    {
+      "page": "tickets",
+      "width": 320,
+      "canScroll": true
+    },
+    {
+      "page": "appointments",
+      "width": 320,
+      "canScroll": true
+    },
+    {
+      "page": "profile",
+      "width": 320,
+      "canScroll": true
+    }
+  ],
+  "success": true
+}

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'config.dart';
 import 'mobile_ui.dart';
 
-// Operational QueueB / teal / compact list + service console.
+// Operational QueueB / shared blue palette / compact service console.
 // Scoped to PETUGAS; see docs/frontend/QUEUEB_UI_UX_GUIDELINES.md.
 abstract final class StaffStyle {
   static const radius = 14.0;
@@ -183,9 +183,11 @@ class StaffPanel extends StatelessWidget {
     container: true,
     explicitChildNodes: true,
     child: Material(
-      color: dark ? QueueBStyle.navy : Colors.white,
+      color: dark ? QueueBStyle.console : Colors.white,
       shape: RoundedRectangleBorder(
-        side: BorderSide(color: dark ? QueueBStyle.navy : QueueBStyle.border),
+        side: BorderSide(
+          color: dark ? QueueBStyle.console : QueueBStyle.border,
+        ),
         borderRadius: BorderRadius.circular(StaffStyle.radius),
       ),
       child: Padding(

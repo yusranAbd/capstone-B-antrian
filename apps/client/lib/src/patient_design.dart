@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import 'queueb_palette.dart';
+
 /// Periwinkle blue: scoped to patients and the shared sign-in entry point.
-/// Operational dashboards and signage keep their own design systems.
+/// Role-specific typography and layout stay independent from shared colors.
 class PatientAppearance extends ThemeExtension<PatientAppearance> {
   const PatientAppearance();
   @override
@@ -11,15 +13,15 @@ class PatientAppearance extends ThemeExtension<PatientAppearance> {
 }
 
 abstract final class PatientDesign {
-  static const primary = Color(0xff4c60cc);
-  static const hero = Color(0xff4169d5);
-  static const accent = Color(0xff007ca8);
-  static const background = Color(0xfff2f5ff);
-  static const paper = Color(0xffffffff);
-  static const ink = Color(0xff172544);
-  static const muted = Color(0xff52617a);
-  static const border = Color(0xffd9e1f2);
-  static const soft = Color(0xffeef1ff);
+  static const primary = QueueBPalette.primary;
+  static const hero = QueueBPalette.hero;
+  static const accent = QueueBPalette.cyan;
+  static const background = QueueBPalette.background;
+  static const paper = QueueBPalette.paper;
+  static const ink = QueueBPalette.ink;
+  static const muted = QueueBPalette.muted;
+  static const border = QueueBPalette.border;
+  static const soft = QueueBPalette.soft;
   static const success = Color(0xff2b674b);
   static const warning = Color(0xff825400);
   static const danger = Color(0xffa43946);

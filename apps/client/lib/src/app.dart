@@ -14,6 +14,7 @@ import 'mobile_ui.dart';
 import 'login_ui.dart';
 import 'patient_design.dart';
 import 'staff_v4.dart';
+import 'queueb_palette.dart';
 
 class QueueBApp extends StatelessWidget {
   const QueueBApp({super.key, required this.api});
@@ -27,8 +28,10 @@ class QueueBApp extends StatelessWidget {
     localizationsDelegates: GlobalMaterialLocalizations.delegates,
     theme: ThemeData(
       useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xff245cdb)),
-      scaffoldBackgroundColor: const Color(0xfff4f6fa),
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: QueueBPalette.primary,
+      ).copyWith(primary: QueueBPalette.primary, secondary: QueueBPalette.cyan),
+      scaffoldBackgroundColor: QueueBPalette.background,
       inputDecorationTheme: const InputDecorationTheme(
         border: OutlineInputBorder(),
         filled: true,

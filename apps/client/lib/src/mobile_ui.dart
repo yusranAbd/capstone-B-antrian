@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
 
 import 'patient_design.dart';
+import 'queueb_palette.dart';
 
 abstract final class QueueBStyle {
-  static const teal = Color(0xff009f9a);
-  static const darkTeal = Color(0xff007f80);
-  static const navy = Color(0xff102a43);
-  static const background = Color(0xfff5f8fa);
-  static const mint = Color(0xffe6f7f5);
-  static const border = Color(0xffe2e8f0);
-  static const muted = Color(0xff526c80);
+  static const teal = QueueBPalette.primary;
+  static const darkTeal = QueueBPalette.primary;
+  static const navy = QueueBPalette.ink;
+  static const background = QueueBPalette.background;
+  static const mint = QueueBPalette.soft;
+  static const border = QueueBPalette.border;
+  static const muted = QueueBPalette.muted;
   static const success = Color(0xff16804a);
   static const warning = Color(0xff996200);
   static const danger = Color(0xffba303e);
+  static const hero = QueueBPalette.hero;
+  static const console = QueueBPalette.console;
   static const radius = 20.0;
   static const space = 16.0;
   static const smallSpace = 8.0;
@@ -41,7 +44,10 @@ abstract final class QueueBStyle {
     final scheme = ColorScheme.fromSeed(seedColor: teal).copyWith(
       primary: darkTeal,
       onPrimary: Colors.white,
-      secondary: teal,
+      secondary: QueueBPalette.cyan,
+      onSecondary: Colors.white,
+      onSurfaceVariant: muted,
+      outline: muted,
       surface: Colors.white,
       onSurface: navy,
       outlineVariant: border,

@@ -54,7 +54,7 @@ void main() {
     expect(PatientDesign.background, const Color(0xfff2f5ff));
     expect(PatientDesign.theme.extension<PatientAppearance>(), isNotNull);
     expect(QueueBStyle.theme.extension<PatientAppearance>(), isNull);
-    expect(QueueBStyle.teal, const Color(0xff009f9a));
+    expect(QueueBStyle.teal, PatientDesign.primary);
   });
   test(
     '5xx errors keep status, suppress server internals and never retry',

@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 
 import 'mobile_ui.dart';
+import 'queueb_palette.dart';
 
 abstract final class DoctorStyle {
-  static const canvas = Color(0xffeff9fd);
-  static const paleBlue = Color(0xffedf7ff);
-  static const deepNavy = Color(0xff07334b);
-  static const deepTeal = Color(0xff084f5e);
-  static const liveMuted = Color(0xffc3e1e9);
-  static const liveNumber = Color(0xff8eefd5);
-  static const rule = Color(0xffe3eff5);
-  static const shadow = Color(0x0707334b);
+  static const canvas = QueueBPalette.background;
+  static const paleBlue = QueueBPalette.soft;
+  static const deepNavy = QueueBPalette.console;
+  static const deepTeal = QueueBPalette.consoleEnd;
+  static const liveMuted = QueueBPalette.onConsoleMuted;
+  static const liveNumber = QueueBPalette.onConsole;
+  static const rule = QueueBPalette.border;
+  static const shadow = Color(0x07172544);
   static BoxDecoration get panel => BoxDecoration(
     color: Colors.white,
     border: Border.all(color: rule),

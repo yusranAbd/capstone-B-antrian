@@ -224,7 +224,7 @@ class DisplayBoard extends StatelessWidget {
       key: const ValueKey('display-call-panel'),
       padding: EdgeInsets.all(large ? 28 : 20),
       decoration: BoxDecoration(
-        color: QueueBStyle.navy,
+        color: QueueBStyle.hero,
         borderRadius: BorderRadius.circular(20),
       ),
       child: DefaultTextStyle.merge(
@@ -292,7 +292,7 @@ class DisplayBoard extends StatelessWidget {
                   vertical: 10,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: .1),
+                  color: QueueBStyle.console,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
@@ -316,7 +316,7 @@ class DisplayBoard extends StatelessWidget {
                               fontSize: large ? 34 : 26,
                               height: 1.1,
                               fontWeight: FontWeight.w800,
-                              color: QueueBStyle.mint,
+                              color: Colors.white,
                             ),
                           ),
                           const SizedBox(height: 2),
