@@ -114,7 +114,7 @@ class DisplayBoard extends StatelessWidget {
             ),
             SizedBox(height: gap),
             SizedBox(
-              height: large ? 136 : 98,
+              height: large ? 124 : 94,
               child: _RoomStrip(rooms: rooms),
             ),
             SizedBox(height: gap),
@@ -128,7 +128,7 @@ class DisplayBoard extends StatelessWidget {
 
   Widget _header(bool large) => Row(
     children: [
-      const SizedBox(width: 200, child: QueueBBrand()),
+      SizedBox(width: large ? 220 : 196, child: const QueueBBrand()),
       Container(width: 1, height: 52, color: QueueBStyle.border),
       const SizedBox(width: 20),
       Expanded(
@@ -141,6 +141,7 @@ class DisplayBoard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: large ? 36 : 28,
+                height: 1.15,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -190,6 +191,7 @@ class DisplayBoard extends StatelessWidget {
         key: const ValueKey('display-clock'),
         style: TextStyle(
           fontSize: large ? 40 : 30,
+          fontFeatures: const [FontFeature.tabularFigures()],
           height: 1.1,
           fontWeight: FontWeight.w800,
         ),
@@ -220,10 +222,9 @@ class DisplayBoard extends StatelessWidget {
 
   Widget _hero(bool large) {
     final call = currentCall(snapshot);
-    final clinic = '${object(snapshot?['layanan'])['nama'] ?? ''}';
     return Container(
       key: const ValueKey('display-call-panel'),
-      padding: EdgeInsets.all(large ? 32 : 22),
+      padding: EdgeInsets.all(large ? 28 : 20),
       decoration: BoxDecoration(
         color: QueueBStyle.navy,
         borderRadius: BorderRadius.circular(20),
@@ -261,11 +262,12 @@ class DisplayBoard extends StatelessWidget {
                       '${call.ticket['nomorAntrean']}',
                       key: const ValueKey('display-call-number'),
                       style: TextStyle(
-                        fontSize: large ? 270 : 190,
+                        fontSize: large ? 320 : 240,
                         height: 1,
                         fontWeight: FontWeight.w900,
                         color: Colors.white,
                         letterSpacing: -4,
+                        fontFeatures: const [FontFeature.tabularFigures()],
                       ),
                     ),
                   ),
@@ -279,23 +281,14 @@ class DisplayBoard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: large ? 42 : 30,
+                    fontSize: large ? 38 : 28,
+                    height: 1.15,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-              const SizedBox(height: 8),
-              Text(
-                clinic,
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: large ? 28 : 22,
-                  color: QueueBStyle.mint,
-                ),
-              ),
               const SizedBox(height: 12),
               Container(
+                key: const ValueKey('display-call-destination'),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 10,
@@ -314,15 +307,32 @@ class DisplayBoard extends StatelessWidget {
                     ),
                     const SizedBox(width: 10),
                     Flexible(
-                      child: Text(
-                        '${call.room['nama']} · Loket ${call.room['kode']}',
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: large ? 30 : 24,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Loket ${call.room['kode']}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: large ? 34 : 26,
+                              height: 1.1,
+                              fontWeight: FontWeight.w800,
+                              color: QueueBStyle.mint,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${call.room['nama']}',
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: large ? 24 : 20,
+                              height: 1.1,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -367,7 +377,7 @@ class DisplayBoard extends StatelessWidget {
       _PatientQueue(snapshot: snapshot, large: large);
 
   Widget _announcement(bool large) => Container(
-    padding: EdgeInsets.symmetric(horizontal: 18, vertical: large ? 18 : 12),
+    padding: EdgeInsets.symmetric(horizontal: 18, vertical: large ? 16 : 10),
     decoration: BoxDecoration(
       color: QueueBStyle.mint,
       borderRadius: BorderRadius.circular(14),
@@ -400,49 +410,58 @@ class DisplayBoard extends StatelessWidget {
 
   Widget _controls() => Padding(
     padding: const EdgeInsets.only(top: 4),
-    child: Row(
-      children: [
-        Expanded(
-          child: Text(
-            audioError ??
-                (audio ? 'Audio aktif · Bahasa Indonesia' : 'Audio nonaktif'),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 12,
-              color: audioError == null
-                  ? QueueBStyle.muted
-                  : QueueBStyle.danger,
+    child: TextButtonTheme(
+      data: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          minimumSize: const Size(40, 40),
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              audioError ??
+                  (audio ? 'Audio aktif · Bahasa Indonesia' : 'Audio nonaktif'),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12,
+                color: audioError == null
+                    ? QueueBStyle.muted
+                    : QueueBStyle.danger,
+              ),
             ),
           ),
-        ),
-        if (!rejected) ...[
+          if (!rejected) ...[
+            TextButton.icon(
+              onPressed: audioBusy ? null : onAudio,
+              icon: Icon(audio ? Icons.volume_up : Icons.volume_off, size: 18),
+              label: Text(audio ? 'Matikan suara' : 'Aktifkan suara'),
+            ),
+            TextButton.icon(
+              onPressed: onRefresh,
+              icon: const Icon(Icons.refresh, size: 18),
+              label: const Text('Muat ulang'),
+            ),
+          ],
+          if (fullscreenSupported)
+            TextButton.icon(
+              onPressed: onFullscreen,
+              icon: Icon(
+                fullscreen ? Icons.fullscreen_exit : Icons.fullscreen,
+                size: 18,
+              ),
+              label: Text(fullscreen ? 'Keluar fullscreen' : 'Layar penuh'),
+            ),
           TextButton.icon(
-            onPressed: audioBusy ? null : onAudio,
-            icon: Icon(audio ? Icons.volume_up : Icons.volume_off, size: 18),
-            label: Text(audio ? 'Matikan suara' : 'Aktifkan suara'),
-          ),
-          TextButton.icon(
-            onPressed: onRefresh,
-            icon: const Icon(Icons.refresh, size: 18),
-            label: const Text('Muat ulang'),
+            onPressed: onConfigure,
+            icon: const Icon(Icons.settings_outlined, size: 18),
+            label: const Text('Ganti perangkat'),
           ),
         ],
-        if (fullscreenSupported)
-          TextButton.icon(
-            onPressed: onFullscreen,
-            icon: Icon(
-              fullscreen ? Icons.fullscreen_exit : Icons.fullscreen,
-              size: 18,
-            ),
-            label: Text(fullscreen ? 'Keluar fullscreen' : 'Layar penuh'),
-          ),
-        TextButton.icon(
-          onPressed: onConfigure,
-          icon: const Icon(Icons.settings_outlined, size: 18),
-          label: const Text('Ganti perangkat'),
-        ),
-      ],
+      ),
     ),
   );
 }
@@ -488,7 +507,7 @@ class _PatientQueueState extends State<_PatientQueue> {
         (snapshot?['totalAntrianPasien'] ?? snapshot?['totalMenunggu']) as int?;
     return Container(
       key: const ValueKey('display-waiting-panel'),
-      padding: EdgeInsets.all(large ? 24 : 18),
+      padding: EdgeInsets.all(large ? 22 : 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -534,9 +553,9 @@ class _PatientQueueState extends State<_PatientQueue> {
             ),
             child: Row(
               children: [
-                const SizedBox(
-                  width: 100,
-                  child: Text(
+                SizedBox(
+                  width: large ? 144 : 112,
+                  child: const Text(
                     'NOMOR',
                     style: TextStyle(
                       fontWeight: FontWeight.w700,
@@ -587,7 +606,7 @@ class _PatientQueueState extends State<_PatientQueue> {
                     ),
                   );
                 }
-                final extent = large ? 62.0 : 45.0;
+                final extent = large ? 68.0 : 52.0;
                 final capacity = math.max(
                   1,
                   ((bounds.maxHeight - 28) / extent).floor(),
@@ -618,15 +637,20 @@ class _PatientQueueState extends State<_PatientQueue> {
                             child: Row(
                               children: [
                                 SizedBox(
-                                  width: 100,
-                                  child: Text(
-                                    '${row['nomorAntrean']}',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: large ? 27 : 22,
-                                      fontWeight: FontWeight.w800,
-                                      color: QueueBStyle.darkTeal,
+                                  width: large ? 144 : 112,
+                                  child: Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Text(
+                                        '${row['nomorAntrean']}',
+                                        maxLines: 1,
+                                        style: TextStyle(
+                                          fontSize: large ? 30 : 23,
+                                          fontWeight: FontWeight.w800,
+                                          color: QueueBStyle.darkTeal,
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -638,7 +662,7 @@ class _PatientQueueState extends State<_PatientQueue> {
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
-                                        fontSize: large ? 24 : 18,
+                                        fontSize: large ? 26 : 20,
                                         height: 1.1,
                                         fontWeight: FontWeight.w500,
                                       ),
@@ -668,7 +692,7 @@ class _PatientQueueState extends State<_PatientQueue> {
                                         fontSize: large ? 18 : 14,
                                         fontWeight: FontWeight.w600,
                                         color: row['status'] == 'DILEWATI'
-                                            ? const Color(0xFF945800)
+                                            ? QueueBStyle.warning
                                             : QueueBStyle.darkTeal,
                                       ),
                                     ),

@@ -97,3 +97,7 @@ Default production tetap **SAMAR**. Nama lengkap hanya diberikan jika operator s
 ![Daftar pasien dan status — fixture sintetis 1280x720](images/public-display-v3/patient-status-1280.png)
 
 Checkpoint finalisasi Git: pengulangan kedua tujuh suite E2E kembali **70/70 PASS**; tiga kasus hospital-integrasi yang sempat gagal setup semuanya PASS. Baseline test tetap 13 record, tidak berubah/hilang dan tidak ada fixture tersisa.
+
+## Final polishing — 27 Oktober 2026
+
+Nomor panggilan dan tujuan loket diperjelas, daftar pasien memakai tipografi serta lebar nomor yang lebih terbaca, kartu ruang dan kontrol footer dirapikan. Lihat [laporan final UI/UX](PUBLIC_DISPLAY_FINAL_POLISH.md) untuk hasil QA tiga resolusi, empat monitor, privasi dan batas uji TTS. Pairing, REST/Socket.IO, Queue Engine dan database tidak berubah.

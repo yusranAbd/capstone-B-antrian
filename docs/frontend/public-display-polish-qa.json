@@ -1,0 +1,116 @@
+{
+  "engine": "Google Chrome headless, two distinct persistent user-data directories",
+  "speech": "controlled id-ID Web Speech, not a speaker hardware test",
+  "cases": {
+    "differentClinicsSameProfile": true,
+    "twoChromeProfiles": true,
+    "otherProfileCannotBorrowCredential": true,
+    "httpOnlyAndNoStorageToken": true,
+    "crossClinicDenied": true,
+    "independentAudio": true,
+    "call": true,
+    "recall": true,
+    "reloadAndSocketReconnect": true,
+    "skip": true,
+    "requeueNoDuplicate": true,
+    "sameClinicConsistent": true,
+    "fullscreen": true,
+    "missingIndonesianVoice": true,
+    "autoPagination": true,
+    "rotationOnlyA": true,
+    "deactivationOnlyA": true,
+    "noUnexpected401403": true,
+    "noCrossClinicLeak": true,
+    "noScroll": true,
+    "noOverlappingSpeech": true
+  },
+  "profiles": 2,
+  "monitors": 4,
+  "unexpected401403": [],
+  "consoleErrors": [],
+  "failedRequests": [],
+  "canceledRequests": [
+    {
+      "index": 1,
+      "path": "/api/v1/display/f6f9340c-3d12-47b6-a358-9d3bd78fb7c2/snapshot",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "index": 0,
+      "path": "/api/v1/display/1147baac-cc02-4c95-aab7-a688644dc367/snapshot",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "index": 0,
+      "path": "/api/v1/display/1147baac-cc02-4c95-aab7-a688644dc367/snapshot",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "index": 2,
+      "path": "/api/v1/display/1147baac-cc02-4c95-aab7-a688644dc367/snapshot",
+      "error": "net::ERR_ABORTED"
+    }
+  ],
+  "apiErrors": [],
+  "layout": [
+    {
+      "width": 1280,
+      "height": 720,
+      "scrollWidth": 1280,
+      "scrollHeight": 720,
+      "noScroll": true
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "scrollWidth": 1366,
+      "scrollHeight": 768,
+      "noScroll": true
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "scrollWidth": 1920,
+      "scrollHeight": 1080,
+      "noScroll": true
+    }
+  ],
+  "phase": "disable",
+  "chromeVersion": "156.0.8078.48",
+  "connections": [
+    {
+      "monitor": 1,
+      "ready": 4,
+      "invalidations": 13,
+      "snapshots": 21
+    },
+    {
+      "monitor": 2,
+      "ready": 2,
+      "invalidations": 0,
+      "snapshots": 5
+    },
+    {
+      "monitor": 3,
+      "ready": 1,
+      "invalidations": 13,
+      "snapshots": 17
+    },
+    {
+      "monitor": 4,
+      "ready": 1,
+      "invalidations": 13,
+      "snapshots": 16
+    }
+  ],
+  "success": true,
+  "buildSha256": "690300498c9811a6900b7dc00304919fb825cf704adb0da53ab0565bfcf6c5c7",
+  "qaApiDefineOverride": "Serving QA only: localhost:3000 -> localhost:3003; disk artifact unchanged",
+  "database": "127.0.0.1:5433/capstone_antrean_test",
+  "integrity": {
+    "existing": 13,
+    "changed": 0,
+    "missing": 0,
+    "remaining": 0
+  }
+}

@@ -152,7 +152,7 @@ void main() {
     ];
     data['totalAntrianPasien'] = 10;
     await render();
-    for (var i = 0; i < 3 && find.text('QA-999').evaluate().isEmpty; i++) {
+    for (var i = 0; i < 10 && find.text('QA-999').evaluate().isEmpty; i++) {
       await tester.pump(const Duration(seconds: 12));
     }
     expect(find.text('QA-999'), findsOneWidget);

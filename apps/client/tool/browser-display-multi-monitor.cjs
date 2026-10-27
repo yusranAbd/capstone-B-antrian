@@ -13,6 +13,8 @@ module.exports = async ({
   output,
   profiles,
   fontFile,
+  engineRoot,
+  finalPolish = false,
 }) => {
   for (const raw of [webUrl, apiBase]) {
     const u = new URL(raw);
@@ -88,6 +90,24 @@ module.exports = async ({
           contentType: 'font/ttf',
           headers: { 'Access-Control-Allow-Origin': '*' },
         });
+      if (
+        engineRoot &&
+        u.hostname === 'www.gstatic.com' &&
+        u.pathname.startsWith('/flutter-canvaskit/')
+      ) {
+        const file = path.resolve(
+          engineRoot,
+          u.pathname.split('/').slice(3).join('/'),
+        );
+        assert.ok(file.startsWith(path.resolve(engineRoot) + path.sep));
+        return route.fulfill({
+          body: fs.readFileSync(file),
+          contentType: file.endsWith('.wasm')
+            ? 'application/wasm'
+            : 'text/javascript',
+          headers: { 'Access-Control-Allow-Origin': '*' },
+        });
+      }
       const allowed = [new URL(webUrl), new URL(apiBase)].some(
         (a) => a.origin === u.origin,
       );
@@ -113,12 +133,25 @@ module.exports = async ({
           default: true,
         },
       ];
-      let timer;
-      speechSynthesis.cancel = () => clearTimeout(timer);
+      let timer,
+        speaking = 0;
+      window.__qaSpeechMaxConcurrent = 0;
+      speechSynthesis.cancel = () => {
+        clearTimeout(timer);
+        speaking = 0;
+      };
       speechSynthesis.speak = (u) => {
         window.__qaSpeech.push(u.text);
+        speaking++;
+        window.__qaSpeechMaxConcurrent = Math.max(
+          window.__qaSpeechMaxConcurrent,
+          speaking,
+        );
         u.dispatchEvent(new Event('start'));
-        timer = setTimeout(() => u.dispatchEvent(new Event('end')), 25);
+        timer = setTimeout(() => {
+          speaking = 0;
+          u.dispatchEvent(new Event('end'));
+        }, 25);
       };
     });
     report.chromeVersion = context.browser().version();
@@ -471,6 +504,62 @@ module.exports = async ({
     }
     report.cases.requeueNoDuplicate = true;
     report.cases.sameClinicConsistent = true;
+    if (finalPolish) {
+      for (const [width, height] of [
+        [1280, 720],
+        [1366, 768],
+        [1920, 1080],
+      ]) {
+        await a.p.bringToFront();
+        await a.p.setViewportSize({ width, height });
+        await queueAction('CALL', '/queue/panggil');
+        await expect(
+          a.p.getByText('SEDANG DIPANGGIL', { exact: true }),
+        ).toBeVisible();
+        await shot(a, 'polish-call-' + width + '.png');
+        await queueAction('SKIP', '/queue/' + f.tickets[0] + '/lewati');
+        await queueAction('REQUEUE', '/queue/' + f.tickets[0] + '/antre-ulang');
+      }
+      await press(a, 'Layar penuh');
+      await expect
+        .poll(() => a.p.evaluate(() => !!document.fullscreenElement))
+        .toBe(true);
+      await press(a, 'Keluar fullscreen');
+      await expect
+        .poll(() => a.p.evaluate(() => !!document.fullscreenElement))
+        .toBe(false);
+      report.cases.fullscreen = true;
+      await d.p.evaluate(() => {
+        speechSynthesis.getVoices = () => [];
+      });
+      await press(d, 'Aktifkan suara');
+      await expect(
+        d.p.getByText('Suara tidak tersedia. Gunakan pengumuman visual.', {
+          exact: true,
+        }),
+      ).toBeVisible();
+      await expect(
+        d.p.getByRole('button', { name: 'Aktifkan suara', exact: true }),
+      ).toBeVisible();
+      report.cases.missingIndonesianVoice = true;
+      await f.addWaiting();
+      await press(a, 'Muat ulang');
+      await expect
+        .poll(async () => {
+          const r = await a.context.request.get(
+            apiBase + '/display/' + a.clinic + '/snapshot',
+            { headers: { 'x-display-device-id': a.id } },
+          );
+          const v = await r.json();
+          return v.totalAntrianPasien;
+        })
+        .toBe(14);
+      await expect(a.p.getByText('AN-014', { exact: true })).toBeVisible({
+        timeout: 45000,
+      });
+      report.cases.autoPagination = true;
+      await shot(a, 'polish-pagination-1920.png');
+    }
     report.phase = 'rotate';
     const code = (await post('/perangkat-display/' + a.id + '/aktivasi', {}))
       .kode;
@@ -530,6 +619,11 @@ module.exports = async ({
     report.cases.noUnexpected401403 = true;
     report.cases.noCrossClinicLeak = true;
     report.cases.noScroll = true;
+    for (const info of pages)
+      assert.ok(
+        await info.p.evaluate(() => window.__qaSpeechMaxConcurrent <= 1),
+      );
+    report.cases.noOverlappingSpeech = true;
     report.connections = pages.map((i) => ({
       monitor: i.index + 1,
       ready: i.ready,
