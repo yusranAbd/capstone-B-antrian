@@ -3,7 +3,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const http = require("node:http");
-const { randomUUID } = require("node:crypto");
+const { randomUUID, createHash } = require("node:crypto");
 const assert = require("node:assert/strict");
 const { chromium, expect: baseExpect } = require("@playwright/test");
 const { Server } = require("socket.io");
@@ -14,10 +14,15 @@ module.exports = async ({
   engineRoot,
   fontFile,
   baseline = false,
+  compact = false,
 }) => {
   fs.mkdirSync(output, { recursive: true });
   const report = {
     mode: "Synthetic API/Socket.IO fixtures; real Chrome release rendering, no database",
+    buildSha256: createHash("sha256")
+      .update(fs.readFileSync(path.join(build, "main.dart.js")))
+      .digest("hex"),
+    compact,
     states: {},
     viewports: [],
     errors: [],
@@ -171,24 +176,33 @@ module.exports = async ({
           );
         if (p === "/jadwal-praktik")
           return send(
-            rooms.map((id, i) => ({
-              id,
-              loketId: id,
-              loket: room(i),
-              tanggal: today,
-              aktif: true,
-              mulaiPada: `${today}T01:00:00Z`,
-              selesaiPada: `${today}T09:00:00Z`,
-              dokterLayanan: {
-                layanan: room(i).layanan,
-                dokter: {
-                  id: ids[i + 4],
-                  nama: i ? "dr. Dokter Bedah QA" : "dr. Sindi Fixture",
-                  spesialisasi: i ? "Bedah" : "Anak",
-                  fotoProfil: null,
+            rooms.flatMap((id, i) =>
+              (compact ? [0, 1] : [0]).map((doctorIndex) => ({
+                id: doctorIndex ? ids[i + 6] : id,
+                loketId: id,
+                loket: room(i),
+                tanggal: today,
+                aktif: true,
+                mulaiPada: today + (doctorIndex ? "T06:00:00Z" : "T01:00:00Z"),
+                selesaiPada:
+                  today + (doctorIndex ? "T09:00:00Z" : "T04:00:00Z"),
+                dokterLayanan: {
+                  layanan: room(i).layanan,
+                  dokter: {
+                    id: ids[i + 4],
+                    nama: doctorIndex
+                      ? i
+                        ? "dr. Ratih Candrakirana, Sp.B"
+                        : "dr. Bagas Wicaksana, Sp.A"
+                      : i
+                        ? "dr. Dokter Bedah QA"
+                        : "dr. Sindi Fixture",
+                    spesialisasi: i ? "Bedah Umum" : "Anak",
+                    fotoProfil: null,
+                  },
                 },
-              },
-            })),
+              })),
+            ),
           );
         if (p === "/queue/snapshot") {
           const i = rooms.indexOf(u.searchParams.get("loketId"));
@@ -397,14 +411,26 @@ module.exports = async ({
     await expect(text("dr. Sindi Fixture")).toBeVisible();
     await expect.poll(() => joins[0]).toBeGreaterThan(0);
     report.states.loginAndSchedule = true;
-    for (const [width, height] of [
-      [1366, 768],
-      [1440, 900],
-      [1920, 1080],
-      [768, 1024],
-      [375, 812],
-      [390, 844],
-    ]) {
+    for (const [width, height] of compact
+      ? [
+          [1280, 640],
+          [1280, 720],
+          [1366, 768],
+          [1440, 900],
+          [1920, 1080],
+          [768, 1024],
+          [320, 740],
+          [375, 812],
+          [414, 896],
+        ]
+      : [
+          [1366, 768],
+          [1440, 900],
+          [1920, 1080],
+          [768, 1024],
+          [375, 812],
+          [390, 844],
+        ]) {
       await page.setViewportSize({ width, height });
       await page.waitForTimeout(150);
       const metrics = await page.evaluate(() => ({
@@ -413,7 +439,7 @@ module.exports = async ({
         scrollWidth: document.scrollingElement.scrollWidth,
       }));
       assert.equal(metrics.width, metrics.scrollWidth);
-      if (width >= 1000) {
+      if (width >= 1000 && height >= 720) {
         for (const value of ["Panggil berikutnya", "Mulai Pindai QR"]) {
           const b = await page
             .getByRole("button", { name: value, exact: true })
@@ -427,7 +453,7 @@ module.exports = async ({
       }
       report.viewports.push({
         ...metrics,
-        desktopControlsFit: width >= 1000 ? true : undefined,
+        desktopControlsFit: width >= 1000 && height >= 720 ? true : undefined,
       });
       await page.screenshot({
         path: path.join(output, `staff-${width}x${height}.png`),
@@ -470,7 +496,12 @@ module.exports = async ({
     await rowAction("AN-003", "Masuk Antrean");
     await expect.poll(() => patients[0][2].status).toBe("MENUNGGU");
     report.states.legacyCheckInRow = true;
+    await expect(
+      page.getByRole("button", { name: "Mulai Pindai QR", exact: true }),
+    ).toBeEnabled();
     await text("Input Manual").click();
+    await page.waitForTimeout(300);
+    await page.mouse.wheel(0, 500);
     await type("Payload QR", "SQ1." + "A".repeat(43));
     await press("Proses QR & Masuk Antrean");
     await expect.poll(() => qrTicket.status).toBe("MENUNGGU");
@@ -524,6 +555,15 @@ module.exports = async ({
       .toBeGreaterThan(snapshots);
     await expect(text("Dilewati")).toHaveCount(0);
     report.states.reconnectAndRealtimeSnapshot = true;
+    if (compact) {
+      await page.getByLabel("Profil petugas", { exact: true }).click();
+      await expect(text("Profil Saya")).toBeVisible();
+      await press("Keluar Akun");
+      await expect(
+        page.getByRole("button", { name: "Masuk", exact: true }),
+      ).toBeVisible();
+      report.states.directProfileAndAccountLogout = true;
+    }
     assert.deepEqual(report.errors, []);
     report.success = true;
     fs.writeFileSync(

@@ -13,29 +13,29 @@ class StaffToolbar extends StatelessWidget implements PreferredSizeWidget {
     required this.avatar,
     required this.name,
     required this.onProfile,
-    required this.onLogout,
   });
   final Widget selection, avatar;
   final String name;
-  final VoidCallback onProfile, onLogout;
+  final VoidCallback onProfile;
   @override
-  Size get preferredSize => const Size.fromHeight(64);
+  Size get preferredSize => const Size.fromHeight(56);
   @override
   Widget build(BuildContext context) {
-    final wide = MediaQuery.sizeOf(context).width >= 700;
+    final wide = MediaQuery.sizeOf(context).width >= 900;
     return AppBar(
+      toolbarHeight: preferredSize.height,
       titleSpacing: wide ? 20 : 10,
       title: Row(
         children: [
           if (wide)
-            const SizedBox(width: 225, child: QueueBBrand(compact: true))
+            const SizedBox(width: 205, child: QueueBBrand(compact: true))
           else
             const Tooltip(
               message: 'QueueB Hospital',
               child: Icon(
                 Icons.local_hospital_rounded,
                 color: QueueBStyle.darkTeal,
-                size: 30,
+                size: 28,
               ),
             ),
           SizedBox(width: wide ? 16 : 8),
@@ -51,23 +51,23 @@ class StaffToolbar extends StatelessWidget implements PreferredSizeWidget {
         ],
       ),
       actions: [
-        PopupMenuButton<String>(
-          tooltip: 'Profil petugas',
-          onSelected: (v) => v == 'profil' ? onProfile() : onLogout(),
-          itemBuilder: (_) => const [
-            PopupMenuItem(value: 'profil', child: Text('Profil akun')),
-            PopupMenuItem(value: 'keluar', child: Text('Keluar akun')),
-          ],
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: wide ? 18 : 8),
+        Tooltip(
+          message: 'Profil petugas',
+          child: TextButton(
+            onPressed: onProfile,
+            style: TextButton.styleFrom(
+              foregroundColor: QueueBStyle.navy,
+              padding: EdgeInsets.symmetric(horizontal: wide ? 12 : 8),
+              minimumSize: const Size(44, 44),
+            ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 avatar,
                 if (wide) ...[
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 8),
                   SizedBox(
-                    width: 160,
+                    width: 142,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -77,14 +77,14 @@ class StaffToolbar extends StatelessWidget implements PreferredSizeWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                            fontSize: 14,
+                            fontSize: 13,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
                         const Text(
                           'Petugas pelayanan',
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 11,
                             color: QueueBStyle.muted,
                           ),
                         ),
@@ -92,12 +92,11 @@ class StaffToolbar extends StatelessWidget implements PreferredSizeWidget {
                     ),
                   ),
                 ],
-                const SizedBox(width: 6),
-                const Icon(Icons.expand_more, size: 18),
               ],
             ),
           ),
         ),
+        SizedBox(width: wide ? 8 : 2),
       ],
     );
   }
@@ -118,23 +117,24 @@ class StaffScheduledDoctors extends StatelessWidget {
   final bool loading, failed;
   @override
   Widget build(BuildContext context) => Material(
-    color: Colors.white,
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(StaffStyle.radius),
       side: const BorderSide(color: QueueBStyle.border),
     ),
+    color: Colors.white,
     child: Padding(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       child: schedules.isEmpty
           ? SizedBox(
-              height: 60,
+              height: 40,
               child: Row(
                 children: [
                   const Icon(
                     Icons.medical_services_outlined,
                     color: QueueBStyle.darkTeal,
+                    size: 20,
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       loading
@@ -143,7 +143,7 @@ class StaffScheduledDoctors extends StatelessWidget {
                           ? 'Jadwal belum dapat dimuat. Muat ulang antrean.'
                           : 'Tidak ada jadwal dokter untuk ruang dan tanggal ini.',
                       style: const TextStyle(
-                        fontSize: 13,
+                        fontSize: 12,
                         color: QueueBStyle.muted,
                       ),
                     ),
@@ -151,30 +151,39 @@ class StaffScheduledDoctors extends StatelessWidget {
                 ],
               ),
             )
-          : SizedBox(
-              height: schedules.length > 1
-                  ? 160
-                  : MediaQuery.sizeOf(context).width < 700
-                  ? 116
-                  : 76,
-              child: ListView.separated(
-                primary: false,
-                itemCount: schedules.length,
-                separatorBuilder: (_, i) => const Divider(height: 12),
-                itemBuilder: (context, i) {
-                  final s = schedules[i],
-                      doctor = object(object(s['dokterLayanan'])['dokter']);
-                  return LayoutBuilder(
-                    builder: (context, box) {
-                      final horizontal = box.maxWidth >= 600;
+          : LayoutBuilder(
+              builder: (context, box) {
+                final columns = box.maxWidth >= 1000 && schedules.length > 1
+                    ? 2
+                    : 1;
+                final horizontal =
+                    (box.maxWidth - (columns - 1) * 16) / columns >= 540;
+                final scale = MediaQuery.textScalerOf(context).scale(12) / 12;
+                final rowHeight = (horizontal ? 74.0 : 116.0) * scale;
+                final visibleRows =
+                    ((schedules.length + columns - 1) ~/ columns).clamp(1, 2);
+                return SizedBox(
+                  height: visibleRows * rowHeight + (visibleRows - 1) * 8,
+                  child: GridView.builder(
+                    primary: false,
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: columns,
+                      mainAxisExtent: rowHeight,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 8,
+                    ),
+                    itemCount: schedules.length,
+                    itemBuilder: (context, i) {
+                      final s = schedules[i],
+                          doctor = object(object(s['dokterLayanan'])['dokter']);
                       final identity = Row(
                         children: [
                           ProfessionalDoctorAvatar(
                             config: config,
                             photo: doctor['fotoProfil'],
-                            radius: 26,
+                            radius: 20,
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 10),
                           Expanded(
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
@@ -183,7 +192,8 @@ class StaffScheduledDoctors extends StatelessWidget {
                                 const Text(
                                   'Dokter terjadwal',
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: 11,
+                                    height: 1.2,
                                     color: QueueBStyle.muted,
                                   ),
                                 ),
@@ -192,8 +202,9 @@ class StaffScheduledDoctors extends StatelessWidget {
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w800,
+                                    fontSize: 15,
+                                    height: 1.2,
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
                                 Text(
@@ -205,7 +216,8 @@ class StaffScheduledDoctors extends StatelessWidget {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
-                                    fontSize: 12,
+                                    fontSize: 11,
+                                    height: 1.2,
                                     color: QueueBStyle.muted,
                                   ),
                                 ),
@@ -214,34 +226,47 @@ class StaffScheduledDoctors extends StatelessWidget {
                           ),
                         ],
                       );
-                      final time = Text(
-                        '${dateOnly(s['tanggal'])}\n${config.instantLabel(s['mulaiPada']).split(' ').last} – ${config.instantLabel(s['selesaiPada']).split(' ').last} · ${config.serviceTimeZone}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: QueueBStyle.muted,
-                        ),
+                      final time = Row(
+                        children: [
+                          const Icon(
+                            Icons.calendar_month_outlined,
+                            color: QueueBStyle.darkTeal,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '${dateOnly(s['tanggal'])}\n${config.instantLabel(s['mulaiPada']).split(' ').last} – ${config.instantLabel(s['selesaiPada']).split(' ').last} · ${config.serviceTimeZone}',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                height: 1.2,
+                                color: QueueBStyle.muted,
+                              ),
+                            ),
+                          ),
+                        ],
                       );
                       return horizontal
                           ? Row(
                               children: [
                                 Expanded(child: identity),
                                 const SizedBox(width: 12),
-                                const Icon(
-                                  Icons.calendar_month_outlined,
-                                  color: QueueBStyle.darkTeal,
-                                ),
-                                const SizedBox(width: 10),
-                                SizedBox(width: 190, child: time),
+                                SizedBox(width: 175, child: time),
                               ],
                             )
                           : Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [identity, time],
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                identity,
+                                const SizedBox(height: 6),
+                                time,
+                              ],
                             );
                     },
-                  );
-                },
-              ),
+                  ),
+                );
+              },
             ),
     ),
   );
@@ -305,7 +330,7 @@ class _StaffPatientListState extends State<StaffPatientList> {
                     ? 'Check-in'
                     : 'Dilewati',
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: FontWeight.w600,
                   color: waiting ? QueueBStyle.warning : QueueBStyle.navy,
                 ),
@@ -342,7 +367,7 @@ class _StaffPatientListState extends State<StaffPatientList> {
           '${t['nomorAntrean']}',
           style: const TextStyle(
             color: QueueBStyle.darkTeal,
-            fontSize: 15,
+            fontSize: 14,
             fontWeight: FontWeight.w800,
           ),
         );
@@ -354,7 +379,7 @@ class _StaffPatientListState extends State<StaffPatientList> {
               '${t['namaPasien'] ?? 'Nama belum tersedia'}',
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
             ),
             if (t['layakDipanggil'] == false)
               Text(
@@ -369,11 +394,11 @@ class _StaffPatientListState extends State<StaffPatientList> {
               ),
           ],
         );
-        return Column(
+        final content = Column(
           children: [
             if (table)
               Container(
-                height: 34,
+                height: 30,
                 color: QueueBStyle.background,
                 child: Row(
                   children: [
@@ -400,7 +425,7 @@ class _StaffPatientListState extends State<StaffPatientList> {
                           t['checkInPada'],
                         );
                         return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          padding: const EdgeInsets.symmetric(vertical: 6),
                           child: table
                               ? Row(
                                   children: [
@@ -412,7 +437,7 @@ class _StaffPatientListState extends State<StaffPatientList> {
                                       Text(
                                         time,
                                         style: const TextStyle(
-                                          fontSize: 12,
+                                          fontSize: 11,
                                           color: QueueBStyle.muted,
                                         ),
                                       ),
@@ -436,7 +461,7 @@ class _StaffPatientListState extends State<StaffPatientList> {
                                     Text(
                                       'Check-in: $time',
                                       style: const TextStyle(
-                                        fontSize: 12,
+                                        fontSize: 11,
                                         color: QueueBStyle.muted,
                                       ),
                                     ),
@@ -459,11 +484,21 @@ class _StaffPatientListState extends State<StaffPatientList> {
                 ),
                 IconButton(
                   tooltip: 'Halaman antrean sebelumnya',
+                  constraints: const BoxConstraints.tightFor(
+                    width: 36,
+                    height: 36,
+                  ),
+                  padding: EdgeInsets.zero,
                   onPressed: page > 0 ? () => setState(() => page--) : null,
                   icon: const Icon(Icons.chevron_left),
                 ),
                 IconButton(
                   tooltip: 'Halaman antrean berikutnya',
+                  constraints: const BoxConstraints.tightFor(
+                    width: 36,
+                    height: 36,
+                  ),
+                  padding: EdgeInsets.zero,
                   onPressed: page < last ? () => setState(() => page++) : null,
                   icon: const Icon(Icons.chevron_right),
                 ),
@@ -471,6 +506,13 @@ class _StaffPatientListState extends State<StaffPatientList> {
             ),
           ],
         );
+        final minimum = MediaQuery.textScalerOf(context)
+            .scale(table ? 140 : 160);
+        return box.hasBoundedHeight && box.maxHeight < minimum
+            ? SingleChildScrollView(
+                child: SizedBox(height: minimum, child: content),
+              )
+            : content;
       },
     );
   }

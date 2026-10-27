@@ -14,16 +14,27 @@ abstract final class StaffStyle {
       borderRadius: BorderRadius.circular(10),
     );
     return base.copyWith(
+      textTheme: base.textTheme.copyWith(
+        headlineSmall: base.textTheme.headlineSmall?.copyWith(fontSize: 20),
+        titleLarge: base.textTheme.titleLarge?.copyWith(fontSize: 17),
+        titleMedium: base.textTheme.titleMedium?.copyWith(fontSize: 14),
+        titleSmall: base.textTheme.titleSmall?.copyWith(fontSize: 13),
+        bodyLarge: base.textTheme.bodyLarge?.copyWith(fontSize: 13),
+        bodyMedium: base.textTheme.bodyMedium?.copyWith(fontSize: 12),
+        bodySmall: base.textTheme.bodySmall?.copyWith(fontSize: 11),
+        labelLarge: base.textTheme.labelLarge?.copyWith(fontSize: 12),
+        labelMedium: base.textTheme.labelMedium?.copyWith(fontSize: 11),
+      ),
       appBarTheme: base.appBarTheme.copyWith(
         backgroundColor: Colors.white,
-        toolbarHeight: 60,
+        toolbarHeight: 56,
         scrolledUnderElevation: 0,
       ),
       inputDecorationTheme: base.inputDecorationTheme.copyWith(
         isDense: true,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 12,
-          vertical: 12,
+          vertical: 10,
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
@@ -31,6 +42,7 @@ abstract final class StaffStyle {
           minimumSize: const Size(44, 44),
           shape: shape,
           textStyle: base.textTheme.labelLarge?.copyWith(
+            fontSize: 12,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -38,12 +50,22 @@ abstract final class StaffStyle {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           minimumSize: const Size(44, 44),
+          textStyle: const TextStyle(fontSize: 12),
           shape: shape,
           side: const BorderSide(color: QueueBStyle.border),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
+        style: TextButton.styleFrom(
+          minimumSize: const Size(44, 44),
+          textStyle: const TextStyle(fontSize: 12),
+        ),
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(
+          minimumSize: const Size(40, 40),
+          iconSize: 20,
+        ),
       ),
     );
   }
@@ -168,7 +190,7 @@ class StaffPanel extends StatelessWidget {
         borderRadius: BorderRadius.circular(StaffStyle.radius),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -176,7 +198,7 @@ class StaffPanel extends StatelessWidget {
               children: [
                 Icon(
                   icon,
-                  size: 20,
+                  size: 18,
                   color: dark ? QueueBStyle.mint : QueueBStyle.darkTeal,
                 ),
                 const SizedBox(width: 8),
@@ -184,7 +206,7 @@ class StaffPanel extends StatelessWidget {
                   child: Text(
                     title,
                     style: TextStyle(
-                      fontSize: 15,
+                      fontSize: 14,
                       fontWeight: FontWeight.w700,
                       color: dark ? Colors.white : QueueBStyle.navy,
                     ),
@@ -193,7 +215,7 @@ class StaffPanel extends StatelessWidget {
                 ?action,
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             if (expand) Expanded(child: child) else child,
           ],
         ),
@@ -272,7 +294,7 @@ class StaffEmpty extends StatelessWidget {
   final bool dark;
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 18),
+    padding: const EdgeInsets.symmetric(vertical: 10),
     child: Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [

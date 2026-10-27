@@ -429,10 +429,16 @@ class _QueuePageState extends State<QueuePage> with WidgetsBindingObserver {
               loading: scheduleLoading,
               failed: scheduleFailed,
             );
-            final mainHeight = (box.maxHeight - 202).clamp(390.0, 900.0);
+            final mainHeight = (box.maxHeight - 304).clamp(280.0, 560.0);
             return SingleChildScrollView(
               key: const ValueKey('staff-page-scroll'),
-              padding: const EdgeInsets.all(12),
+              padding: EdgeInsets.all(
+                box.maxWidth >= 1440
+                    ? 20
+                    : wide
+                    ? 16
+                    : 12,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -456,38 +462,29 @@ class _QueuePageState extends State<QueuePage> with WidgetsBindingObserver {
                       ),
                     ),
                   if (room != null) ...[
+                    doctor,
+                    const SizedBox(height: 16),
                     if (wide)
                       SizedBox(
                         height: mainHeight,
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
+                            Expanded(flex: 54, child: waitingPanel(context)),
+                            const SizedBox(width: 16),
                             Expanded(
-                              flex: 65,
-                              child: Column(
-                                children: [
-                                  doctor,
-                                  const SizedBox(height: 12),
-                                  Expanded(child: waitingPanel(context)),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              flex: 35,
+                              flex: 46,
                               child: servicePanel(context, height: mainHeight),
                             ),
                           ],
                         ),
                       )
                     else ...[
-                      doctor,
-                      const SizedBox(height: 12),
                       servicePanel(context),
                       const SizedBox(height: 12),
                       SizedBox(height: 450, child: waitingPanel(context)),
                     ],
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
                     checkInPanel(),
                   ],
                 ],
@@ -647,7 +644,7 @@ class _QueuePageState extends State<QueuePage> with WidgetsBindingObserver {
                 ),
                 Container(
                   margin: const EdgeInsets.symmetric(vertical: 12),
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: .06),
                     borderRadius: BorderRadius.circular(12),
@@ -662,17 +659,17 @@ class _QueuePageState extends State<QueuePage> with WidgetsBindingObserver {
                           '—',
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 52,
+                            fontSize: 36,
                             height: 1.2,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 8),
                         const Text(
                           'Belum ada tiket aktif',
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 15,
+                            fontSize: 14,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -691,7 +688,7 @@ class _QueuePageState extends State<QueuePage> with WidgetsBindingObserver {
                           '${t['nomorAntrean']}',
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 44,
+                            fontSize: 40,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
@@ -834,6 +831,8 @@ class _QueuePageState extends State<QueuePage> with WidgetsBindingObserver {
                 label: const Text('Mulai Pindai QR'),
               );
               final manual = ExpansionTile(
+                dense: true,
+                minTileHeight: 44,
                 key: const ValueKey('staff-manual-qr'),
                 initiallyExpanded: manualQrOpen,
                 onExpansionChanged: (v) => setState(() => manualQrOpen = v),

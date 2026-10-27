@@ -116,13 +116,6 @@ class _RootState extends State<_Root> {
             avatar: AccountAvatar(api: api, radius: 18),
             name: (api.user?['nama'] ?? 'Petugas').toString(),
             onProfile: openProfile,
-            onLogout: () async {
-              try {
-                await api.logout();
-              } catch (_) {
-                /* Session gate owns errors. */
-              }
-            },
           );
         }
         return AppBar(
