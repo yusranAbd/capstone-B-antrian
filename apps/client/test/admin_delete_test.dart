@@ -1,3 +1,5 @@
+import 'admin_action_helpers.dart';
+
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -160,8 +162,7 @@ void main() {
       'Salah',
     );
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.byTooltip('Hapus'));
-    await tester.tap(find.byTooltip('Hapus'));
+    await adminAction(tester, 'Hapus');
     await tester.pumpAndSettle();
     await tester.enterText(
       find.widgetWithText(TextField, 'Konfirmasi kode/nama'),
@@ -231,8 +232,7 @@ void main() {
         'TV QA',
       );
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.byTooltip('Hapus'));
-      await tester.tap(find.byTooltip('Hapus'));
+      await adminAction(tester, 'Hapus');
       await tester.pumpAndSettle();
       await tester.tap(find.text('Hapus Permanen'));
       await tester.pumpAndSettle();

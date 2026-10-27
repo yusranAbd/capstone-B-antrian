@@ -654,10 +654,20 @@ void main() {
       me.complete(reply(identity(role)));
       await tester.pumpAndSettle();
       await pending;
+      if (role == 'ADMIN') {
+        await tester.tap(
+          find.widgetWithText(OutlinedButton, 'Menu administrasi'),
+        );
+        await tester.pumpAndSettle();
+      }
       expect(
         find.byTooltip(role == 'PETUGAS' ? 'Profil petugas' : 'Profil akun'),
         findsOneWidget,
       );
+      if (role == 'ADMIN') {
+        await tester.tapAt(const Offset(5, 5));
+        await tester.pumpAndSettle();
+      }
       expect(
         find.text(switch (role) {
           'ADMIN' => 'Poliklinik',

@@ -1,3 +1,5 @@
+import 'admin_action_helpers.dart';
+
 import 'package:queueb_client/src/admin_ui.dart';
 
 import 'dart:convert';
@@ -241,7 +243,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Kode aktivasi / rotasi'));
+      await adminAction(tester, 'Kode aktivasi / rotasi');
       await tester.pumpAndSettle();
       await tester.tap(find.text('Lanjutkan'));
       await tester.pump();
@@ -249,14 +251,15 @@ void main() {
       expect(find.text('Kode aktivasi sekali pakai'), findsOneWidget);
       await tester.tap(find.text('Selesai'));
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text('Nonaktifkan'));
-      await tester.tap(find.text('Nonaktifkan'));
+      await adminAction(tester, 'Nonaktifkan');
       await tester.pumpAndSettle();
       await tester.tap(find.text('Lanjutkan'));
       await tester.pumpAndSettle();
       expect(posts.length, 2);
       expect(posts[0], endsWith('/aktivasi'));
       expect(posts[1], endsWith('/nonaktifkan'));
+      await tester.tap(find.byType(AdminRowActions));
+      await tester.pumpAndSettle();
       expect(find.text('Reaktivasi'), findsOneWidget);
       expect(tester.takeException(), isNull);
       await cleanup(tester, api);

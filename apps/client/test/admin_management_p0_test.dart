@@ -1,3 +1,5 @@
+import 'admin_action_helpers.dart';
+
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -8,6 +10,7 @@ import 'package:timezone/data/latest.dart' as tz;
 import 'package:queueb_client/src/admin.dart';
 import 'package:queueb_client/src/admin_data.dart';
 import 'package:queueb_client/src/admin_staff.dart';
+import 'package:queueb_client/src/admin_ui.dart';
 import 'package:queueb_client/src/api.dart';
 import 'package:queueb_client/src/config.dart';
 import 'package:queueb_client/src/doctor_account.dart';
@@ -258,17 +261,19 @@ void main() {
         'siti@example',
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Nonaktifkan akun'));
+      await adminAction(tester, 'Nonaktifkan akun');
       await tester.pumpAndSettle();
       await tester.tap(find.text('Kembali'));
       await tester.pumpAndSettle();
       expect(writes, 0);
-      await tester.tap(find.text('Nonaktifkan akun'));
+      await adminAction(tester, 'Nonaktifkan akun');
       await tester.pumpAndSettle();
       await tester.tap(find.text('Lanjutkan'));
       await tester.pumpAndSettle();
       expect(writes, 1);
       expect(reloads, 1);
+      await tester.tap(find.byType(AdminRowActions));
+      await tester.pumpAndSettle();
       expect(find.text('Aktifkan akun'), findsOneWidget);
       expect(
         tester

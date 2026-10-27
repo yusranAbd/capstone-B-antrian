@@ -21,11 +21,12 @@ class AdminNavigation extends StatelessWidget {
     required this.onSelect,
     this.collapsed = false,
     this.onToggle,
+    this.onProfile,
   });
   final int selected;
   final ValueChanged<int>? onSelect;
   final bool collapsed;
-  final VoidCallback? onToggle;
+  final VoidCallback? onToggle, onProfile;
   @override
   Widget build(BuildContext context) => ListView(
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
@@ -104,6 +105,23 @@ class AdminNavigation extends StatelessWidget {
               onTap: onSelect == null ? null : () => onSelect!(i),
             ),
           ),
+      if (onProfile != null) ...[
+        const Divider(height: 24),
+        Tooltip(
+          message: 'Profil akun',
+          child: collapsed
+              ? IconButton(
+                  onPressed: onProfile,
+                  icon: const Icon(Icons.person_outline),
+                  tooltip: 'Profil Saya',
+                )
+              : TextButton.icon(
+                  onPressed: onProfile,
+                  icon: const Icon(Icons.person_outline, size: 20),
+                  label: const Text('Profil Saya'),
+                ),
+        ),
+      ],
     ],
   );
 }

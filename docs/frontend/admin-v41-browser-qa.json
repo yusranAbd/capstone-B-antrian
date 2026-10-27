@@ -1,0 +1,36 @@
+{
+  "mode": "Real Chrome release Flutter, synthetic ADMIN API, no database",
+  "buildSha256": "ae49e75e8877125711a9f3e8175651fe394b847e8ae6de40ca406dd9acc7d2f9",
+  "states": {
+    "responsiveDoctorMenus": true,
+    "allModuleMenus": true,
+    "noDateRangeFilters": true,
+    "editDeactivateDeleteRetainsSearch": true,
+    "profileAndLogout": true
+  },
+  "viewports": [
+    {
+      "width": 1366,
+      "height": 768,
+      "scrollWidth": 1366
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "scrollWidth": 1920
+    },
+    {
+      "width": 768,
+      "height": 1024,
+      "scrollWidth": 768
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390
+    }
+  ],
+  "errors": [],
+  "chrome": "155.0.8059.86",
+  "success": true
+}

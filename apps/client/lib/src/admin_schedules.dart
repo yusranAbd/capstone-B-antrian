@@ -1,5 +1,3 @@
-import 'admin_delete.dart';
-
 import 'package:flutter/material.dart';
 
 import 'admin_schema.dart';
@@ -131,21 +129,31 @@ class GroupedClinicSchedules extends StatelessWidget {
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 stateChip(row['aktif'] == true ? 'AKTIF' : 'NONAKTIF'),
-                TextButton.icon(
-                  onPressed: busy ? null : () => onEdit(row),
-                  icon: const Icon(Icons.edit_outlined, size: 18),
-                  label: const Text('Ubah'),
+                AdminRowActions(
+                  tooltip: 'Aksi ${dayLabel(day)}',
+                  busy: busy,
+                  actions: [
+                    AdminRowAction(
+                      'Ubah',
+                      Icons.edit_outlined,
+                      () => onEdit(row),
+                    ),
+                    if (row['aktif'] == true)
+                      AdminRowAction(
+                        'Nonaktifkan',
+                        Icons.block_outlined,
+                        () => onDeactivate(row),
+                        danger: true,
+                      ),
+                    if (onDelete != null)
+                      AdminRowAction(
+                        'Hapus',
+                        Icons.delete_outline,
+                        () => onDelete!(row),
+                        danger: true,
+                      ),
+                  ],
                 ),
-                if (onDelete != null)
-                  AdminDeleteButton(
-                    onPressed: busy ? null : () => onDelete!(row),
-                  ),
-                if (row['aktif'] == true)
-                  TextButton.icon(
-                    icon: const Icon(Icons.block_outlined, size: 18),
-                    onPressed: busy ? null : () => onDeactivate(row),
-                    label: const Text('Nonaktifkan'),
-                  ),
               ],
             );
       return Column(
@@ -404,8 +412,6 @@ class _BulkScheduleEditorState extends State<BulkScheduleEditor> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Zona pelayanan: ${widget.api.config.serviceTimeZone}'),
-                const SizedBox(height: 16),
                 if (widget.clinics.length > 10)
                   AdminSearchChoice(
                     label: 'Poliklinik',

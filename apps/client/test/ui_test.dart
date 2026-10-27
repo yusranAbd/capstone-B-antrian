@@ -583,6 +583,7 @@ void main() {
     final server = FakeBackend('ADMIN');
     await launch(tester, server, size: const Size(390, 844));
     expect(find.byType(NavigationRail), findsNothing);
+    await press(tester, 'Menu administrasi');
     await tester.tap(find.byTooltip('Profil akun'));
     await tester.pumpAndSettle();
     expect(find.text('Profil Saya'), findsOneWidget);

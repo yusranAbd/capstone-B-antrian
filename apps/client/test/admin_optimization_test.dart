@@ -1,3 +1,5 @@
+import 'admin_action_helpers.dart';
+
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -140,10 +142,9 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Nonaktifkan profil'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Buat akun login'));
+      await adminAction(tester, 'Buat akun login');
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text('Hubungkan poliklinik'));
-      await tester.tap(find.text('Hubungkan poliklinik'));
+      await adminAction(tester, 'Hubungkan poliklinik');
       expect([edit, deactivate, account, links], [1, 1, 1, 1]);
       expect(tester.takeException(), isNull);
     },
@@ -228,7 +229,7 @@ void main() {
             .rowCount,
         440,
       );
-      expect(find.text('Ubah'), findsNWidgets(10));
+      expect(find.byType(AdminRowActions), findsNWidgets(10));
       await tester.enterText(
         find.widgetWithText(TextField, 'Cari nama atau kode'),
         'Dokter 21',
@@ -246,12 +247,14 @@ void main() {
         findsNWidgets(10),
       );
       expect(find.text('Poliklinik 10'), findsNWidgets(10));
-      await tester.enterText(
+      expect(
         find.widgetWithText(TextField, 'Dari tanggal (YYYY-MM-DD)'),
-        '2026-02-30',
+        findsNothing,
       );
-      await tester.pumpAndSettle();
-      expect(find.text('Gunakan tanggal kalender YYYY-MM-DD.'), findsOneWidget);
+      expect(
+        find.widgetWithText(TextField, 'Sampai tanggal (YYYY-MM-DD)'),
+        findsNothing,
+      );
       await tester.pumpWidget(const SizedBox());
       api.dispose();
     },
@@ -308,6 +311,9 @@ void main() {
       await tester.pumpAndSettle();
       expect(requests, 1);
       expect(find.text('Nonaktif'), findsOneWidget);
+      await tester.ensureVisible(find.byType(AdminRowActions));
+      await tester.tap(find.byType(AdminRowActions));
+      await tester.pumpAndSettle();
       expect(find.text('Ubah'), findsOneWidget);
       expect(find.text('Nonaktifkan'), findsNothing);
       await tester.pumpWidget(const SizedBox());

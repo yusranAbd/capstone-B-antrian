@@ -1,3 +1,5 @@
+import 'admin_action_helpers.dart';
+
 import 'dart:async';
 import 'dart:convert';
 
@@ -318,8 +320,8 @@ void main() {
         lessThan(tester.getTopLeft(find.text('Selasa')).dy),
       );
       expect(find.text('schedule-SENIN'), findsNothing);
-      await tester.tap(find.text('Ubah').first);
-      await tester.tap(find.text('Nonaktifkan').first);
+      await adminAction(tester, 'Ubah');
+      await adminAction(tester, 'Nonaktifkan');
       expect(actions, ['edit-SENIN', 'off-SENIN']);
     },
   );

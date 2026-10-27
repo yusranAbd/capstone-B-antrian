@@ -415,3 +415,89 @@ class _AdminSearchChoiceState extends State<AdminSearchChoice> {
         : null,
   );
 }
+
+/// One contextual popup for all ADMIN rows. Existing owners keep confirmations,
+/// API mutation, RBAC errors, reload and filter state.
+class AdminRowAction {
+  const AdminRowAction(
+    this.label,
+    this.icon,
+    this.onSelect, {
+    this.danger = false,
+    this.enabled = true,
+  });
+  final String label;
+  final IconData icon;
+  final VoidCallback onSelect;
+  final bool danger, enabled;
+}
+
+class AdminRowActions extends StatelessWidget {
+  const AdminRowActions({
+    super.key,
+    required this.actions,
+    this.busy = false,
+    required this.tooltip,
+  });
+  final List<AdminRowAction> actions;
+  final bool busy;
+  final String tooltip;
+  @override
+  Widget build(BuildContext context) => PopupMenuButton<AdminRowAction>(
+    tooltip: tooltip,
+    enabled: !busy && actions.any((a) => a.enabled),
+    position: PopupMenuPosition.under,
+    onSelected: (action) {
+      if (!busy && action.enabled) action.onSelect();
+    },
+    itemBuilder: (_) => [
+      for (var i = 0; i < actions.length; i++)
+        PopupMenuItem<AdminRowAction>(
+          value: actions[i],
+          enabled: actions[i].enabled,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                actions[i].icon,
+                size: 18,
+                color: actions[i].danger
+                    ? const Color(0xffb3261e)
+                    : QueueBStyle.muted,
+              ),
+              const SizedBox(width: 10),
+              Flexible(
+                child: Text(
+                  actions[i].label,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: actions[i].danger ? const Color(0xffb3261e) : null,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+    ],
+    child: Semantics(
+      button: true,
+      label: tooltip,
+      excludeSemantics: true,
+      child: const SizedBox(
+        width: 88,
+        height: 40,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'Aksi',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            ),
+            SizedBox(width: 4),
+            Icon(Icons.expand_more, size: 18),
+          ],
+        ),
+      ),
+    ),
+  );
+}

@@ -164,17 +164,19 @@ class _AdminStaffAccountsState extends State<AdminStaffAccounts> {
             AdminColumn(
               'Aksi',
               (_) => '',
-              cell: (a) => TextButton.icon(
-                onPressed: busy ? null : () => changeStatus(a),
-                icon: Icon(
-                  a['aktif'] == true
-                      ? Icons.block_outlined
-                      : Icons.check_circle_outline,
-                  size: 18,
-                ),
-                label: Text(
-                  a['aktif'] == true ? 'Nonaktifkan akun' : 'Aktifkan akun',
-                ),
+              cell: (a) => AdminRowActions(
+                tooltip: 'Aksi akun ${a['nama']}',
+                busy: busy,
+                actions: [
+                  AdminRowAction(
+                    a['aktif'] == true ? 'Nonaktifkan akun' : 'Aktifkan akun',
+                    a['aktif'] == true
+                        ? Icons.block_outlined
+                        : Icons.check_circle_outline,
+                    () => changeStatus(a),
+                    danger: a['aktif'] == true,
+                  ),
+                ],
               ),
             ),
           ],

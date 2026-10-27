@@ -18,10 +18,15 @@ import 'config.dart';
 import 'widgets.dart';
 
 class AdminPage extends StatefulWidget {
-  const AdminPage({super.key, required this.api, this.initialSection = -1})
-    : assert(initialSection >= -1 && initialSection < 8);
+  const AdminPage({
+    super.key,
+    required this.api,
+    this.initialSection = -1,
+    this.onProfile,
+  }) : assert(initialSection >= -1 && initialSection < 8);
   final QueueApi api;
   final int initialSection;
+  final VoidCallback? onProfile;
   @override
   State<AdminPage> createState() => _AdminPageState();
 }
@@ -221,6 +226,12 @@ class _AdminPageState extends State<AdminPage> {
           height: MediaQuery.sizeOf(context).height * .8,
           child: AdminNavigation(
             selected: selected,
+            onProfile: widget.onProfile == null
+                ? null
+                : () {
+                    Navigator.pop(sheetContext);
+                    widget.onProfile!();
+                  },
             onSelect: loading
                 ? null
                 : (value) {
@@ -277,7 +288,6 @@ class _AdminPageState extends State<AdminPage> {
                 resource.title,
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
-              Text('Zona pelayanan: ${widget.api.config.serviceTimeZone}'),
               error != null
                   ? AdminNotice(error!, error: true)
                   : const SizedBox.shrink(),
@@ -372,6 +382,7 @@ class _AdminPageState extends State<AdminPage> {
                           color: Colors.white,
                           child: AdminNavigation(
                             selected: selected,
+                            onProfile: widget.onProfile,
                             onSelect: loading ? null : selectResource,
                             collapsed: collapsed,
                             onToggle: () =>

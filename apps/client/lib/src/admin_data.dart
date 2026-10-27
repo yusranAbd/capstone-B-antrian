@@ -1,5 +1,3 @@
-import 'admin_delete.dart';
-
 import 'package:flutter/material.dart';
 
 import 'admin_schema.dart';
@@ -154,37 +152,7 @@ class AdminDataView extends StatefulWidget {
 }
 
 class _AdminDataViewState extends State<AdminDataView> {
-  String search = '',
-      status = '',
-      clinic = '',
-      doctor = '',
-      from = '',
-      until = '';
-  String? dateError;
-  final fromController = TextEditingController(),
-      untilController = TextEditingController();
-  @override
-  void dispose() {
-    fromController.dispose();
-    untilController.dispose();
-    super.dispose();
-  }
-
-  Future<void> pickFilterDate(bool first) async {
-    final chosen = await showDatePicker(
-      context: context,
-      initialDate:
-          DateTime.tryParse(first ? from : until) ??
-          DateTime.parse(widget.api.config.today),
-      firstDate: DateTime(1000),
-      lastDate: DateTime(9999, 12, 31),
-      initialEntryMode: DatePickerEntryMode.calendarOnly,
-    );
-    if (!mounted || chosen == null) return;
-    final value = calendarDate(chosen);
-    (first ? fromController : untilController).text = value;
-    changeDate(value, first);
-  }
+  String search = '', status = '', clinic = '', doctor = '';
 
   String get path => widget.resource.path;
   bool get sessions => ['/jadwal-praktik', '/slot-praktik'].contains(path);
@@ -222,10 +190,8 @@ class _AdminDataViewState extends State<AdminDataView> {
       }
     }
     if (sessions) {
-      final doc = doctorOf(r), date = dateOnly(r['tanggal']);
+      final doc = doctorOf(r);
       if (doctor.isNotEmpty && doc['id'] != doctor) return false;
-      if (from.isNotEmpty && date.compareTo(from) < 0) return false;
-      if (until.isNotEmpty && date.compareTo(until) > 0) return false;
     }
     final text = [
       r['nama'],
@@ -243,71 +209,55 @@ class _AdminDataViewState extends State<AdminDataView> {
     return text.contains(search);
   }
 
-  void changeDate(String value, bool first) {
-    final input = value.trim(), date = DateTime.tryParse(value.trim());
-    setState(() {
-      if (input.isNotEmpty &&
-          (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(input) ||
-              date == null ||
-              calendarDate(date) != input)) {
-        dateError = 'Gunakan tanggal kalender YYYY-MM-DD.';
-        return;
-      }
-      if (first) {
-        from = input;
-      } else {
-        until = input;
-      }
-      dateError =
-          from.isNotEmpty && until.isNotEmpty && from.compareTo(until) > 0
-          ? 'Tanggal akhir harus sama atau sesudah tanggal mulai.'
-          : null;
-    });
-  }
-
   Widget actions(Json row, {bool showStatus = true}) => Row(
     mainAxisSize: MainAxisSize.min,
-    spacing: 4,
-    crossAxisAlignment: CrossAxisAlignment.center,
     children: [
       if (showStatus) stateChip(row['aktif'] == true ? 'AKTIF' : 'NONAKTIF'),
-      TextButton.icon(
-        onPressed: widget.busy ? null : () => widget.onEdit(row),
-        icon: const Icon(Icons.edit_outlined),
-        label: const Text('Ubah'),
+      AdminRowActions(
+        tooltip: path == '/dokter'
+            ? 'Aksi profil dokter'
+            : 'Aksi ${label(row)}',
+        busy: widget.busy,
+        actions: [
+          AdminRowAction(
+            path == '/dokter' ? 'Ubah profil' : 'Ubah',
+            Icons.edit_outlined,
+            () => widget.onEdit(row),
+          ),
+          if (path == '/dokter')
+            AdminRowAction(
+              'Hubungkan poliklinik',
+              Icons.link,
+              () => widget.onDoctorLinks(row),
+            ),
+          if (path == '/dokter' && widget.onDoctorAccount != null)
+            AdminRowAction(
+              row['penggunaId'] == null
+                  ? 'Buat akun login'
+                  : 'Lihat akun login',
+              Icons.manage_accounts_outlined,
+              () => widget.onDoctorAccount!(row),
+              enabled: row['aktif'] == true || row['penggunaId'] != null,
+            ),
+          if (row['aktif'] == true)
+            AdminRowAction(
+              path == '/dokter' ? 'Nonaktifkan profil' : 'Nonaktifkan',
+              Icons.block_outlined,
+              () => widget.onDeactivate(row),
+              danger: true,
+            ),
+          if (widget.onDelete != null)
+            AdminRowAction(
+              path == '/dokter' ? 'Hapus profil' : 'Hapus',
+              Icons.delete_outline,
+              () => widget.onDelete!(row),
+              danger: true,
+            ),
+        ],
       ),
-      if (row['aktif'] == true)
-        IconButton(
-          tooltip: 'Nonaktifkan',
-          constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-          padding: EdgeInsets.zero,
-          onPressed: widget.busy ? null : () => widget.onDeactivate(row),
-          icon: const Icon(Icons.block_outlined, size: 20),
-        ),
-      if (widget.onDelete != null)
-        AdminDeleteButton(
-          onPressed: widget.busy ? null : () => widget.onDelete!(row),
-        ),
-      if (path == '/dokter' && widget.onDoctorAccount != null)
-        IconButton(
-          tooltip: row['penggunaId'] == null ? 'Akun dokter' : 'Akun ditautkan',
-          constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-          padding: EdgeInsets.zero,
-          onPressed: widget.busy || row['aktif'] != true
-              ? null
-              : () => widget.onDoctorAccount!(row),
-          icon: const Icon(Icons.manage_accounts_outlined, size: 20),
-        ),
-      if (path == '/dokter')
-        IconButton(
-          tooltip: 'Hubungkan poliklinik',
-          constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-          padding: EdgeInsets.zero,
-          onPressed: widget.busy ? null : () => widget.onDoctorLinks(row),
-          icon: const Icon(Icons.link_outlined, size: 20),
-        ),
     ],
   );
+
   Widget rowCard(Json r) => Section(
     title: switch (path) {
       '/penugasan-petugas' => label(object(r['petugas'])),
@@ -319,7 +269,7 @@ class _AdminDataViewState extends State<AdminDataView> {
   );
 
   Widget table(List<Json> items) => AdminTable(
-    key: ValueKey('$path:$search:$status:$clinic:$doctor:$from:$until'),
+    key: ValueKey('$path:$search:$status:$clinic:$doctor'),
     rows: items,
     compact: path != '/dokter',
     columns: [
@@ -423,10 +373,6 @@ class _AdminDataViewState extends State<AdminDataView> {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-                TextButton(
-                  onPressed: widget.busy ? null : () => widget.onDoctorLinks(r),
-                  child: const Text('Hubungkan poliklinik'),
-                ),
               ],
             ),
           ),
@@ -463,19 +409,6 @@ class _AdminDataViewState extends State<AdminDataView> {
                     'Akses portal diblokir profil',
                     style: TextStyle(fontSize: 12),
                   ),
-                TextButton(
-                  onPressed:
-                      widget.busy ||
-                          (r['aktif'] != true && r['penggunaId'] == null) ||
-                          widget.onDoctorAccount == null
-                      ? null
-                      : () => widget.onDoctorAccount!(r),
-                  child: Text(
-                    r['penggunaId'] == null
-                        ? 'Buat akun login'
-                        : 'Lihat akun login',
-                  ),
-                ),
               ],
             ),
           ),
@@ -532,56 +465,7 @@ class _AdminDataViewState extends State<AdminDataView> {
       AdminColumn(
         'Aksi',
         (_) => '',
-        cell: (r) => path != '/dokter'
-            ? actions(r, showStatus: false)
-            : PopupMenuButton<String>(
-                tooltip: 'Aksi profil dokter',
-                enabled: !widget.busy,
-                onSelected: (action) {
-                  switch (action) {
-                    case 'edit':
-                      widget.onEdit(r);
-                    case 'deactivate':
-                      widget.onDeactivate(r);
-                    case 'delete':
-                      widget.onDelete?.call(r);
-                  }
-                },
-                itemBuilder: (_) => [
-                  const PopupMenuItem(
-                    value: 'edit',
-                    child: Text('Ubah profil'),
-                  ),
-                  if (r['aktif'] == true)
-                    const PopupMenuItem(
-                      value: 'deactivate',
-                      child: Text('Nonaktifkan profil'),
-                    ),
-                  if (widget.onDelete != null)
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: Text(
-                        'Hapus profil',
-                        style: TextStyle(color: Color(0xffb3261e)),
-                      ),
-                    ),
-                ],
-                child: Semantics(
-                  button: true,
-                  label: 'Aksi profil dokter',
-                  excludeSemantics: true,
-                  child: const Padding(
-                    padding: EdgeInsets.all(8),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text('Aksi'),
-                        Icon(Icons.expand_more, size: 18),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+        cell: (r) => actions(r, showStatus: false),
       ),
     ],
   );
@@ -724,44 +608,11 @@ class _AdminDataViewState extends State<AdminDataView> {
                     onChanged: (value) => setState(() => doctor = value ?? ''),
                   ),
                 ),
-              if (sessions) ...[
-                SizedBox(
-                  width: 200,
-                  child: TextField(
-                    controller: fromController,
-                    decoration: InputDecoration(
-                      labelText: 'Dari tanggal (YYYY-MM-DD)',
-                      suffixIcon: IconButton(
-                        tooltip: 'Pilih tanggal mulai filter',
-                        onPressed: () => pickFilterDate(true),
-                        icon: const Icon(Icons.calendar_month_outlined),
-                      ),
-                    ),
-                    onChanged: (v) => changeDate(v, true),
-                  ),
-                ),
-                SizedBox(
-                  width: 200,
-                  child: TextField(
-                    controller: untilController,
-                    decoration: InputDecoration(
-                      labelText: 'Sampai tanggal (YYYY-MM-DD)',
-                      suffixIcon: IconButton(
-                        tooltip: 'Pilih tanggal akhir filter',
-                        onPressed: () => pickFilterDate(false),
-                        icon: const Icon(Icons.calendar_month_outlined),
-                      ),
-                    ),
-                    onChanged: (v) => changeDate(v, false),
-                  ),
-                ),
-              ],
 
               ...widget.toolbarActions,
             ],
           ),
         ),
-        if (dateError != null) AdminNotice(dateError!, error: true),
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Text(
@@ -918,30 +769,28 @@ class _AdminSlotSessionState extends State<AdminSlotSession> {
                     AdminColumn(
                       'Aksi',
                       (_) => '',
-                      cell: (s) => Row(
-                        mainAxisSize: MainAxisSize.min,
-                        spacing: 8,
-                        children: [
-                          TextButton.icon(
-                            icon: const Icon(Icons.edit_outlined, size: 18),
-                            onPressed: widget.busy
-                                ? null
-                                : () => widget.onEdit(s),
-                            label: const Text('Ubah'),
+                      cell: (s) => AdminRowActions(
+                        tooltip: 'Aksi slot ${s['id']}',
+                        busy: widget.busy,
+                        actions: [
+                          AdminRowAction(
+                            'Ubah',
+                            Icons.edit_outlined,
+                            () => widget.onEdit(s),
                           ),
-                          if (widget.onDelete != null)
-                            AdminDeleteButton(
-                              onPressed: widget.busy
-                                  ? null
-                                  : () => widget.onDelete!(s),
-                            ),
                           if (s['aktif'] == true)
-                            TextButton.icon(
-                              icon: const Icon(Icons.block_outlined, size: 18),
-                              onPressed: widget.busy
-                                  ? null
-                                  : () => widget.onDeactivate(s),
-                              label: const Text('Nonaktifkan'),
+                            AdminRowAction(
+                              'Nonaktifkan',
+                              Icons.block_outlined,
+                              () => widget.onDeactivate(s),
+                              danger: true,
+                            ),
+                          if (widget.onDelete != null)
+                            AdminRowAction(
+                              'Hapus',
+                              Icons.delete_outline,
+                              () => widget.onDelete!(s),
+                              danger: true,
                             ),
                         ],
                       ),

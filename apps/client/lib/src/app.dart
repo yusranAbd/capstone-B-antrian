@@ -127,7 +127,7 @@ class _RootState extends State<_Root> {
         }
         return AppBar(
           toolbarHeight: role == 'ADMIN'
-              ? 58
+              ? 52
               : role == 'DOKTER'
               ? 64
               : role == 'PETUGAS'
@@ -155,10 +155,10 @@ class _RootState extends State<_Root> {
                 icon: const Icon(Icons.notifications_none_rounded),
               ),
 
-            if (['DOKTER', 'ADMIN', 'PETUGAS'].contains(role) &&
+            if (['DOKTER', 'PETUGAS'].contains(role) &&
                 MediaQuery.sizeOf(context).width >= 700)
               ProfileHeaderIdentity(api: api),
-            if (role != 'USER')
+            if (role != 'USER' && role != 'ADMIN')
               IconButton(
                 tooltip: 'Profil akun',
                 icon: ExcludeSemantics(
@@ -195,7 +195,7 @@ class _RootState extends State<_Root> {
             child: KeyedSubtree(
               key: ValueKey(api.user!['id']),
               child: switch (role) {
-                'ADMIN' => AdminPage(api: api),
+                'ADMIN' => AdminPage(api: api, onProfile: openProfile),
                 'PETUGAS' => QueuePage(
                   api: api,
                   headerBuilder: (status) => header(staffContext: status),

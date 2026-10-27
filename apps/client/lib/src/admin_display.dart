@@ -299,35 +299,36 @@ class _AdminDisplayPageState extends State<AdminDisplayPage> {
             AdminColumn(
               'Aksi',
               (_) => '',
-              cell: (d) => Row(
-                mainAxisSize: MainAxisSize.min,
-                spacing: 4,
-                children: [
-                  OutlinedButton.icon(
-                    onPressed: busy || object(d['layanan'])['aktif'] != true
-                        ? null
-                        : () => activateDevice(d),
-                    icon: const Icon(Icons.key, size: 18),
-                    label: Text(
-                      d['aktif'] == true
-                          ? 'Kode aktivasi / rotasi'
-                          : 'Reaktivasi',
-                    ),
+              cell: (d) => AdminRowActions(
+                tooltip: 'Aksi display ${d['nama']}',
+                busy: busy,
+                actions: [
+                  AdminRowAction(
+                    d['aktif'] == true
+                        ? 'Kode aktivasi / rotasi'
+                        : 'Reaktivasi',
+                    Icons.key,
+                    () => activateDevice(d),
+                    enabled: object(d['layanan'])['aktif'] == true,
                   ),
-                  IconButton(
-                    tooltip: 'Ubah',
-                    onPressed: busy ? null : () => editDevice(d),
-                    icon: const Icon(Icons.edit_outlined, size: 20),
-                  ),
-                  AdminDeleteButton(
-                    onPressed: busy ? null : () => deleteDevice(d),
+                  AdminRowAction(
+                    'Ubah',
+                    Icons.edit_outlined,
+                    () => editDevice(d),
                   ),
                   if (d['aktif'] == true)
-                    TextButton.icon(
-                      icon: const Icon(Icons.block_outlined, size: 18),
-                      onPressed: busy ? null : () => deactivateDevice(d),
-                      label: const Text('Nonaktifkan'),
+                    AdminRowAction(
+                      'Nonaktifkan',
+                      Icons.block_outlined,
+                      () => deactivateDevice(d),
+                      danger: true,
                     ),
+                  AdminRowAction(
+                    'Hapus',
+                    Icons.delete_outline,
+                    () => deleteDevice(d),
+                    danger: true,
+                  ),
                 ],
               ),
             ),
