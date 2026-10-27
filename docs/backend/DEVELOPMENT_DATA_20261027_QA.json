@@ -1,0 +1,168 @@
+{
+  "dataset": "queueb-synthetic-20261027-v1",
+  "synthetic": true,
+  "target": "127.0.0.1:5433/capstone_antrean",
+  "serviceTimeZone": "Asia/Jakarta",
+  "period": [
+    "2026-10-27",
+    "2026-11-30"
+  ],
+  "counts": {
+    "pengguna": 59,
+    "layanan": 5,
+    "dokter": 10,
+    "dokterLayanan": 10,
+    "loket": 7,
+    "jadwalLayanan": 30,
+    "jadwalPraktik": 155,
+    "slotPraktik": 1425,
+    "penugasan": 7,
+    "tiket": 43,
+    "appointment": 30,
+    "peristiwa": 73,
+    "display": 5
+  },
+  "roles": [
+    {
+      "_count": 1,
+      "peran": "ADMIN"
+    },
+    {
+      "_count": 40,
+      "peran": "USER"
+    },
+    {
+      "_count": 8,
+      "peran": "PETUGAS"
+    },
+    {
+      "_count": 10,
+      "peran": "DOKTER"
+    }
+  ],
+  "status": [
+    {
+      "_count": 4,
+      "status": "DIBATALKAN"
+    },
+    {
+      "_count": 1,
+      "status": "DIPANGGIL"
+    },
+    {
+      "_count": 1,
+      "status": "DILEWATI"
+    },
+    {
+      "_count": 6,
+      "status": "MENUNGGU"
+    },
+    {
+      "_count": 1,
+      "status": "DILAYANI"
+    },
+    {
+      "_count": 1,
+      "status": "CHECK_IN"
+    },
+    {
+      "_count": 2,
+      "status": "SELESAI"
+    },
+    {
+      "_count": 27,
+      "status": "DIPESAN"
+    }
+  ],
+  "checks": {
+    "scheduleConflict": 0,
+    "period": 0,
+    "slotBounds": 0,
+    "slotOverlap": 0,
+    "slotCapacity": 0,
+    "dailyCapacity": 0,
+    "appointmentContext": 0,
+    "chronology": 0,
+    "assignmentConflict": 0,
+    "invalidAssignment": 0,
+    "missingRoom": 0,
+    "missingDoctorAccount": 0
+  },
+  "backup": {
+    "external": true,
+    "format": "PostgreSQL custom",
+    "tables": 17,
+    "sha256Verified": true,
+    "archiveList": true,
+    "fullOfflineDecode": true,
+    "restoredToDatabase": false
+  },
+  "reset": {
+    "removedRecords": 439,
+    "adminEntireRecordUnchanged": true,
+    "migrationHistoryIdentical": true,
+    "oldOperationalRecordsRemaining": 0,
+    "foreignKeyOrphans": 0,
+    "oldSessionsRemaining": 0,
+    "adminLoginConfirmedByUser": true
+  },
+  "domainSmoke": {
+    "activeAccountsLogin": 57,
+    "inactiveStaffRejected": true,
+    "doctorOwnScope": 5,
+    "crossClinicDoctorRejected": true,
+    "deviceIsolation": true,
+    "displayScopes": 5,
+    "displayCredentialsNotPersisted": true
+  },
+  "httpSmoke": {
+    "at": "2026-10-27T01:23:35.980Z",
+    "health": 200,
+    "roles": {
+      "USER": {
+        "login": true,
+        "profile": true,
+        "clinics": true,
+        "bookingCatalogAndHistory": true
+      },
+      "PETUGAS": {
+        "login": true,
+        "profile": true,
+        "clinics": true,
+        "waitingAndSnapshot": true
+      },
+      "DOKTER": {
+        "login": true,
+        "profile": true,
+        "clinics": true,
+        "liveSnapshot": true
+      }
+    },
+    "rbac": {
+      "USER": 403,
+      "PETUGAS": 403,
+      "DOKTER": 403
+    },
+    "synthetic": true,
+    "queueMutations": false
+  },
+  "idempotentRerunNoOp": true,
+  "tests": {
+    "toolSafety": 7,
+    "backendUnit": 679,
+    "e2ePassed": 36,
+    "e2eFailed": 0,
+    "e2eDatabase": "127.0.0.1:5433/capstone_antrean_test",
+    "testBaseline": {
+      "existing": 13,
+      "missing": 0,
+      "changed": 0,
+      "remaining": 0
+    },
+    "lint": true,
+    "typecheck": true,
+    "nestBuild": true
+  },
+  "frontendChanged": false,
+  "schemaChanged": false
+}
