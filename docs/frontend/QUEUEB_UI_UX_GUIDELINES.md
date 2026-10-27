@@ -27,7 +27,32 @@ Panduan mandiri untuk Flutter QueueB Hospital. Ini menjadi acuan seluruh penyemp
 
 Tidak ada framework/dependency baru. Theme dasar tetap cached. `QueueBStyle.operationalTextTheme` adalah skala khusus portal operasional; bukan pengganti seluruh tema aplikasi. Override per role yang sudah proporsional tetap boleh dipertahankan.
 
-### Warna dan visual
+### Pasien dan login: Ruang Tenang
+
+Persetujuan creative direction 27 Oktober 2026 mengizinkan identitas baru untuk Portal PASIEN dan pintu masuk login/registrasi. Acuan implementasi: `patient_design.dart` (cached ThemeData dan marker PatientAppearance); keputusan serta comparison ada di [FINAL_EXPERIENCE_DESIGN.md](FINAL_EXPERIENCE_DESIGN.md). Ini menggantikan palet teal/navy untuk scope tersebut, tanpa mengubah tema dashboard operasional atau TV.
+
+| Token pasien | HEX | Fungsi |
+|---|---|---|
+| Primary plum | #61486F | Aksi utama, tab aktif, fokus |
+| Hero plum | #45334F | Kunjungan terdekat, teks putih |
+| Terracotta | #AC4E35 | Aksen sekunder berfungsi |
+| Background ivory | #F7F3EE | Kanvas aplikasi |
+| Paper | #FFFDFA | Card, form, dialog |
+| Ink | #302B32 | Informasi utama |
+| Muted | #6E6470 | Metadata/caption dengan kontras |
+| Border | #E4DBD2 | Pemisah, outline halus |
+| Soft plum | #EEE7F3 | Pilihan/permukaan pendukung |
+| Success | #2B674B | Dilayani/selesai |
+| Waiting | #825400 | Check-in/menunggu |
+| Danger | #A43946 | Dibatalkan/error |
+
+Status tetap mengikuti API; `PatientDesign.statusInk/statusSurface/statusIcon` memisahkan DIPESAN, MENUNGGU, DIPANGGIL, DILAYANI, DILEWATI, SELESAI dan DIBATALKAN dengan label + ikon + warna. Teks normal pasangan tersebut diuji minimal 4.5:1. Jangan memperlakukan urutan warna sebagai algoritma antrean.
+
+Font Material bawaan (Roboto pada Android), tanpa font/dependency/ilustrasi baru. Ikon launcher/favicon/PWA template diganti ekspor geometris QueueB; branding in-app existing dipertahankan. Heading mobile 20–22, judul card 14–16, body 14, fakta 13, caption 11–12 dengan kontras memadai; target sentuh 44–48. Nomor tiket 30–34 dan QR mempunyai skala tersendiri. Card mengikuti isi; tipografi tidak diperkecil menggunakan FittedBox untuk memaksa muat. Spacing 4/8/12/16/24, radius input/tombol 14 dan card 20–24, elevation ringan.
+
+Lima navigasi pasien dan focus-scroll existing dipertahankan. Identitas tidak ditambahkan lagi ke header bersama. Agenda hanya memfilter tanggal appointment nyata, tiket memakai proyeksi terbaru, dan informasi teknis QR tidak mendominasi tampilan. Semua modal/picker menangkap tema dari scope USER di root, bukan mengubah theme global. Shared components membaca marker pasien dan kembali ke token lama pada portal lain.
+
+### Warna dan visual operasional existing
 
 Pertahankan token `QueueBStyle`: teal #009F9A, darkTeal #007F80, navy #102A43, background #F5F8FA, mint #E6F7F5, border #E2E8F0, muted #526C80, success #16804A, warning #996200, danger #BA303E. Variasi surface existing pada role boleh dipakai; jangan membuat palet baru per halaman.
 
@@ -117,7 +142,7 @@ Public Display **tidak memakai skala dashboard desktop**. Pertahankan skala resp
 - **PASIEN:** mobile-first, navigasi sederhana, booking/reservasi/tiket/QR. Jangan mengorbankan touch target/teks demi kepadatan desktop.
 - **PUBLIC DISPLAY:** informasi jarak jauh, tanpa scroll, pengumuman aktual, privasi dan keamanan perangkat.
 
-Login memiliki komposisi tersendiri yang sudah disetujui; jangan ikut mengubahnya hanya karena skala card operasional berubah.
+Login memakai komposisi Ruang Tenang (editorial dua kolom pada desktop, form berpusat pada mobile). Perubahan ini merupakan scope persetujuan Final Experience; jangan ikut mengubahnya saat memadatkan portal operasional lain.
 
 ## Audit fondasi dan keputusan tahap ini
 

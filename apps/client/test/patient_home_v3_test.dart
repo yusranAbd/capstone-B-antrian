@@ -297,7 +297,7 @@ void main() {
           ),
           findsOneWidget,
         );
-        expect(find.text('08:00 – 08:30 · Asia/Jakarta'), findsOneWidget);
+        expect(find.text('08:00 – 08:30'), findsOneWidget);
         expect(find.text('RU · Ruang Umum'), findsOneWidget);
         expect(
           tester.getTopLeft(card).dy,
@@ -367,7 +367,9 @@ void main() {
       }
       if (condition == 'readFailed') {
         expect(
-          find.text('Status tiket belum dapat diperiksa.'),
+          find.text(
+            'Layanan sedang mengalami gangguan. Muat ulang data dan coba lagi nanti.',
+          ),
           findsOneWidget,
         );
       }
@@ -401,7 +403,12 @@ void main() {
       b.failQr = true;
       b.qrGate!.complete();
       await tester.pumpAndSettle();
-      expect(find.text('Penerbitan QR gagal. Coba lagi.'), findsOneWidget);
+      expect(
+        find.text(
+          'Layanan sedang mengalami gangguan. Muat ulang data dan coba lagi nanti.',
+        ),
+        findsOneWidget,
+      );
       expect(find.byType(QrImageView), findsNothing);
       expect(b.requests.where((r) => r.$1 == 'POST'), hasLength(1));
       b.failQr = false;

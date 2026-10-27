@@ -77,7 +77,7 @@ void main() {
     Size(1920, 1080),
   ]) {
     testWidgets(
-      'Login V3 $size: centered card, all actions visible without scrolling',
+      'Ruang Tenang login $size: responsive composition and working actions',
       (tester) async {
         await launch(tester, size: size);
         expect(find.byType(LoginLayout), findsOneWidget);
@@ -100,7 +100,15 @@ void main() {
         expect(find.text('Akses sistem antrean rumah sakit'), findsOneWidget);
         final card = tester.getRect(find.byType(LoginFormCard));
         expect(card.width, lessThanOrEqualTo(LoginStyle.cardWidth));
-        expect(card.center.dx, closeTo(size.width / 2, .5));
+        if (size.width >= 960) {
+          expect(card.left, greaterThan(size.width / 2));
+          expect(
+            find.text('Lebih tenang.\nDari awal kunjungan.'),
+            findsOneWidget,
+          );
+        } else {
+          expect(card.center.dx, closeTo(size.width / 2, .5));
+        }
         expect(card.center.dy, closeTo(size.height / 2, .5));
         expect(card.top, greaterThanOrEqualTo(24));
         expect(card.bottom, lessThanOrEqualTo(size.height - 24));

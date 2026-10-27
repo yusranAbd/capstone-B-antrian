@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'config.dart';
 import 'mobile_ui.dart';
+import 'patient_design.dart';
 import 'doctor_professional.dart';
 
 // Tokens remain in QueueBStyle; no changes to shared themes or other roles.
@@ -24,6 +25,27 @@ String patientDate(String value) {
   ];
   const days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
   return '${days[day.weekday - 1]}, ${day.day} ${months[day.month - 1]} ${day.year}';
+}
+
+String patientCompactDate(String value) {
+  final date = DateTime.tryParse(dateOnly(value));
+  if (date == null) return 'Tanggal belum tersedia';
+  const days = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'Mei',
+    'Jun',
+    'Jul',
+    'Agu',
+    'Sep',
+    'Okt',
+    'Nov',
+    'Des',
+  ];
+  return '${days[date.weekday - 1]}, ${date.day} ${months[date.month - 1]}';
 }
 
 String patientTime(Json value, AppConfig config) =>
@@ -62,8 +84,8 @@ class PatientBottomNavigation extends StatelessWidget {
       constraints: const BoxConstraints(maxWidth: 520),
       child: DecoratedBox(
         decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(top: BorderSide(color: QueueBStyle.border)),
+          color: PatientDesign.paper,
+          border: Border(top: BorderSide(color: PatientDesign.border)),
         ),
         child: SafeArea(
           top: false,
@@ -73,8 +95,8 @@ class PatientBottomNavigation extends StatelessWidget {
                 (states) => IconThemeData(
                   size: 21,
                   color: states.contains(WidgetState.selected)
-                      ? QueueBStyle.darkTeal
-                      : QueueBStyle.muted,
+                      ? PatientDesign.darkTeal
+                      : PatientDesign.muted,
                 ),
               ),
               labelTextStyle: WidgetStateProperty.resolveWith(
@@ -84,13 +106,15 @@ class PatientBottomNavigation extends StatelessWidget {
                       ? FontWeight.w700
                       : FontWeight.w500,
                   color: states.contains(WidgetState.selected)
-                      ? QueueBStyle.darkTeal
-                      : QueueBStyle.muted,
+                      ? PatientDesign.darkTeal
+                      : PatientDesign.muted,
                 ),
               ),
             ),
             child: NavigationBar(
               height: 60,
+              backgroundColor: PatientDesign.paper,
+              indicatorColor: PatientDesign.soft,
               selectedIndex: selectedIndex,
               onDestinationSelected: onSelected,
               destinations: const [
@@ -157,14 +181,14 @@ class PatientHeading extends StatelessWidget {
                 title,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w800,
-                  color: QueueBStyle.navy,
+                  color: PatientDesign.navy,
                 ),
               ),
               if (caption != null)
                 Text(
                   caption!,
                   style: const TextStyle(
-                    color: QueueBStyle.muted,
+                    color: PatientDesign.muted,
                     fontSize: 12,
                   ),
                 ),
@@ -185,7 +209,7 @@ class PatientWelcome extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(20),
     decoration: BoxDecoration(
-      color: QueueBStyle.darkTeal,
+      color: PatientDesign.darkTeal,
       borderRadius: BorderRadius.circular(24),
     ),
     child: Column(
@@ -256,8 +280,8 @@ class PatientClinicGrid extends StatelessWidget {
                       children: [
                         CircleAvatar(
                           radius: 26,
-                          backgroundColor: QueueBStyle.mint,
-                          foregroundColor: QueueBStyle.darkTeal,
+                          backgroundColor: PatientDesign.mint,
+                          foregroundColor: PatientDesign.darkTeal,
                           child: Icon(clinicIcon(label(clinic))),
                         ),
                         const SizedBox(height: 8),
@@ -266,7 +290,7 @@ class PatientClinicGrid extends StatelessWidget {
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                             fontSize: 11,
-                            color: QueueBStyle.navy,
+                            color: PatientDesign.navy,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -316,14 +340,14 @@ class PatientDoctorCard extends StatelessWidget {
                     label(doctor),
                     style: const TextStyle(
                       fontWeight: FontWeight.w800,
-                      color: QueueBStyle.navy,
+                      color: PatientDesign.navy,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     '${doctor['spesialisasi'] ?? 'Spesialisasi belum dicantumkan'}',
                     style: const TextStyle(
-                      color: QueueBStyle.muted,
+                      color: PatientDesign.muted,
                       fontSize: 12,
                     ),
                   ),
@@ -338,11 +362,11 @@ class PatientDoctorCard extends StatelessWidget {
               .where((link) => link['aktif'] != false)
               .map((link) => label(object(link['layanan'])))
               .join(', '),
-          style: const TextStyle(color: QueueBStyle.muted, fontSize: 12),
+          style: const TextStyle(color: PatientDesign.muted, fontSize: 12),
         ),
         Text(
           schedule,
-          style: const TextStyle(color: QueueBStyle.darkTeal, fontSize: 12),
+          style: const TextStyle(color: PatientDesign.darkTeal, fontSize: 12),
         ),
         const SizedBox(height: 4),
         TextButton.icon(
@@ -372,8 +396,8 @@ class PatientInfoRow extends StatelessWidget {
       children: [
         CircleAvatar(
           radius: 18,
-          backgroundColor: QueueBStyle.mint,
-          foregroundColor: QueueBStyle.darkTeal,
+          backgroundColor: PatientDesign.mint,
+          foregroundColor: PatientDesign.darkTeal,
           child: Icon(icon, size: 20),
         ),
         const SizedBox(width: 12),
@@ -383,12 +407,15 @@ class PatientInfoRow extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: const TextStyle(color: QueueBStyle.muted, fontSize: 12),
+                style: const TextStyle(
+                  color: PatientDesign.muted,
+                  fontSize: 12,
+                ),
               ),
               Text(
                 value,
                 style: const TextStyle(
-                  color: QueueBStyle.navy,
+                  color: PatientDesign.navy,
                   fontWeight: FontWeight.w600,
                 ),
               ),

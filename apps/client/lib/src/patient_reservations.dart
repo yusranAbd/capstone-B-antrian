@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'config.dart';
 import 'doctor_professional.dart';
 import 'mobile_ui.dart';
+import 'patient_design.dart';
 import 'patient_ui.dart';
 
 /// Read model only. Ticket identity/status stays authoritative; no booking state.
@@ -102,26 +103,29 @@ class ReservationStatus extends StatelessWidget {
   final String value;
   @override
   Widget build(BuildContext context) {
-    final cancelled = value == 'DIBATALKAN';
-    final completed = value == 'SELESAI';
-    final color = cancelled
-        ? QueueBStyle.muted
-        : completed
-        ? const Color(0xff1766c5)
-        : QueueBStyle.darkTeal;
+    final color = PatientDesign.statusInk(value);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: .09),
+        color: PatientDesign.statusSurface(value),
         borderRadius: BorderRadius.circular(20),
       ),
-      child: Text(
-        reservationStatus(value),
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          color: color,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(PatientDesign.statusIcon(value), size: 13, color: color),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              reservationStatus(value),
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -146,9 +150,9 @@ class ReservationCard extends StatelessWidget {
     margin: const EdgeInsets.only(bottom: 12),
     padding: const EdgeInsets.all(14),
     decoration: BoxDecoration(
-      color: Colors.white,
+      color: PatientDesign.paper,
       borderRadius: BorderRadius.circular(18),
-      border: Border.all(color: QueueBStyle.border),
+      border: Border.all(color: PatientDesign.border),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -165,10 +169,10 @@ class ReservationCard extends StatelessWidget {
             else
               const CircleAvatar(
                 radius: 20,
-                backgroundColor: QueueBStyle.mint,
+                backgroundColor: PatientDesign.mint,
                 child: Icon(
                   Icons.local_hospital_outlined,
-                  color: QueueBStyle.darkTeal,
+                  color: PatientDesign.darkTeal,
                 ),
               ),
             const SizedBox(width: 10),
@@ -183,7 +187,7 @@ class ReservationCard extends StatelessWidget {
                     style: const TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 14,
-                      color: QueueBStyle.navy,
+                      color: PatientDesign.navy,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -197,7 +201,7 @@ class ReservationCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 12,
-                      color: QueueBStyle.muted,
+                      color: PatientDesign.muted,
                     ),
                   ),
                 ],
@@ -207,11 +211,11 @@ class ReservationCard extends StatelessWidget {
             ReservationStatus(item.status),
           ],
         ),
-        const SizedBox(height: 8),
+        const Divider(height: 24),
         Container(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.symmetric(vertical: 2),
           decoration: BoxDecoration(
-            color: QueueBStyle.background,
+            color: PatientDesign.paper,
             borderRadius: BorderRadius.circular(10),
           ),
           child: Wrap(
@@ -232,7 +236,7 @@ class ReservationCard extends StatelessWidget {
           const SizedBox(height: 6),
           const Text(
             'Tanpa slot konsultasi khusus.',
-            style: TextStyle(fontSize: 11, color: QueueBStyle.muted),
+            style: TextStyle(fontSize: 11, color: PatientDesign.muted),
           ),
         ],
         // Future API versions may have an independent appointment state. Never
@@ -263,7 +267,9 @@ class ReservationCard extends StatelessWidget {
                   label: const Text('Batalkan Reservasi'),
                 ),
             ];
-            return box.maxWidth < 345 && item.canCancel
+            return (box.maxWidth < 290 ||
+                        MediaQuery.textScalerOf(context).scale(13) > 17) &&
+                    item.canCancel
                 ? Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -289,7 +295,7 @@ class ReservationCard extends StatelessWidget {
   Widget _fact(IconData icon, String text) => Row(
     mainAxisSize: MainAxisSize.min,
     children: [
-      Icon(icon, size: 16, color: QueueBStyle.muted),
+      Icon(icon, size: 16, color: PatientDesign.muted),
       const SizedBox(width: 6),
       Flexible(
         child: Text(
@@ -297,7 +303,7 @@ class ReservationCard extends StatelessWidget {
           style: const TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w600,
-            color: QueueBStyle.navy,
+            color: PatientDesign.navy,
           ),
         ),
       ),
@@ -387,7 +393,7 @@ class _ReservationListState extends State<ReservationList> {
                           ? 'Reservasi belum dapat dimuat.'
                           : 'Belum ada reservasi yang sesuai.',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: QueueBStyle.muted),
+                      style: const TextStyle(color: PatientDesign.muted),
                     ),
                   )
                 : ReservationCard(
@@ -409,7 +415,7 @@ class _ReservationListState extends State<ReservationList> {
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w800,
-                        color: QueueBStyle.navy,
+                        color: PatientDesign.navy,
                       ),
                     ),
                   ),
@@ -424,7 +430,7 @@ class _ReservationListState extends State<ReservationList> {
               ),
               const Text(
                 'Kelola dan lihat riwayat reservasi Anda',
-                style: TextStyle(fontSize: 13, color: QueueBStyle.muted),
+                style: TextStyle(fontSize: 13, color: PatientDesign.muted),
               ),
               if (widget.error != null) ...[
                 const SizedBox(height: 8),
@@ -508,7 +514,7 @@ Future<String?> chooseReservationMethod(BuildContext context) =>
                     style: TextStyle(
                       fontSize: 23,
                       fontWeight: FontWeight.w800,
-                      color: QueueBStyle.navy,
+                      color: PatientDesign.navy,
                     ),
                   ),
                 ),
@@ -521,7 +527,7 @@ Future<String?> chooseReservationMethod(BuildContext context) =>
             ),
             const Text(
               'Pilih cara membuat reservasi.',
-              style: TextStyle(color: QueueBStyle.muted),
+              style: TextStyle(color: PatientDesign.muted),
             ),
             const SizedBox(height: 14),
             for (final choice in [
@@ -550,7 +556,7 @@ Future<String?> chooseReservationMethod(BuildContext context) =>
                   color: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
-                    side: const BorderSide(color: QueueBStyle.border),
+                    side: const BorderSide(color: PatientDesign.border),
                   ),
                   child: ListTile(
                     contentPadding: const EdgeInsets.symmetric(
@@ -558,8 +564,8 @@ Future<String?> chooseReservationMethod(BuildContext context) =>
                       vertical: 6,
                     ),
                     leading: CircleAvatar(
-                      backgroundColor: QueueBStyle.mint,
-                      child: Icon(choice.icon, color: QueueBStyle.darkTeal),
+                      backgroundColor: PatientDesign.mint,
+                      child: Icon(choice.icon, color: PatientDesign.darkTeal),
                     ),
                     title: Text(
                       choice.title,
@@ -572,7 +578,7 @@ Future<String?> chooseReservationMethod(BuildContext context) =>
                       choice.detail,
                       style: const TextStyle(
                         fontSize: 12,
-                        color: QueueBStyle.muted,
+                        color: PatientDesign.muted,
                       ),
                     ),
                     trailing: const Icon(Icons.chevron_right, size: 20),
@@ -607,7 +613,7 @@ class ReservationDoctorChoice extends StatelessWidget {
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(18),
-      border: Border.all(color: QueueBStyle.border),
+      border: Border.all(color: PatientDesign.border),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -631,7 +637,7 @@ class ReservationDoctorChoice extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w800,
-                      color: QueueBStyle.navy,
+                      color: PatientDesign.navy,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -645,7 +651,7 @@ class ReservationDoctorChoice extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 12,
-                      color: QueueBStyle.muted,
+                      color: PatientDesign.muted,
                     ),
                   ),
                 ],
@@ -657,7 +663,7 @@ class ReservationDoctorChoice extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: QueueBStyle.mint.withValues(alpha: .5),
+            color: PatientDesign.mint.withValues(alpha: .5),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Row(
@@ -665,7 +671,7 @@ class ReservationDoctorChoice extends StatelessWidget {
               const Icon(
                 Icons.calendar_month_outlined,
                 size: 20,
-                color: QueueBStyle.darkTeal,
+                color: PatientDesign.darkTeal,
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -673,7 +679,10 @@ class ReservationDoctorChoice extends StatelessWidget {
                   schedule == null
                       ? 'Belum ada jadwal praktik mendatang.'
                       : '${slot == null ? 'Jadwal terdekat' : 'Slot tersedia'}\n${patientDate('${schedule!['tanggal']}')} · ${patientTime(slot ?? schedule!, config)}',
-                  style: const TextStyle(fontSize: 12, color: QueueBStyle.navy),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: PatientDesign.navy,
+                  ),
                 ),
               ),
             ],
@@ -730,7 +739,7 @@ class _ReservationChoicesState extends State<ReservationChoices> {
                   'Halaman ${page + 1}/${max + 1}',
                   style: const TextStyle(
                     fontSize: 12,
-                    color: QueueBStyle.muted,
+                    color: PatientDesign.muted,
                   ),
                 ),
               ),

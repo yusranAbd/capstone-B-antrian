@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'config.dart';
 import 'mobile_ui.dart';
+import 'patient_design.dart';
 import 'api.dart';
 import 'image_sizing.dart';
 
@@ -29,12 +30,16 @@ class ProfessionalDoctorAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final url = doctorPhotoUrl(config, photo);
     Widget fallback() => ColoredBox(
-      color: QueueBStyle.mint,
+      color: PatientDesign.active(context)
+          ? PatientDesign.soft
+          : QueueBStyle.mint,
       child: Center(
         child: Icon(
           Icons.person_outline_rounded,
           size: radius,
-          color: QueueBStyle.darkTeal,
+          color: PatientDesign.active(context)
+              ? PatientDesign.primary
+              : QueueBStyle.darkTeal,
         ),
       ),
     );
@@ -86,11 +91,13 @@ class _DoctorBiographyState extends State<DoctorBiography> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
+          Text(
             'Tentang Dokter',
             style: TextStyle(
               fontWeight: FontWeight.w800,
-              color: QueueBStyle.navy,
+              color: PatientDesign.active(context)
+                  ? PatientDesign.ink
+                  : QueueBStyle.navy,
             ),
           ),
           const SizedBox(height: 8),
@@ -99,7 +106,12 @@ class _DoctorBiographyState extends State<DoctorBiography> {
               final text = bio.isEmpty
                   ? 'Informasi tentang dokter belum dicantumkan.'
                   : bio;
-              const style = TextStyle(color: QueueBStyle.muted, height: 1.5);
+              final style = TextStyle(
+                color: PatientDesign.active(context)
+                    ? PatientDesign.muted
+                    : QueueBStyle.muted,
+                height: 1.5,
+              );
               final painter = TextPainter(
                 text: TextSpan(text: text, style: style),
                 maxLines: 4,

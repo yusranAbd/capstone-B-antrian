@@ -233,6 +233,14 @@ class QueueApi extends ChangeNotifier {
       data = null;
     }
     if (response.statusCode >= 200 && response.statusCode < 300) return data;
+    if (response.statusCode >= 500) {
+      // Never surface a server stack, database error or proxy HTML to patients.
+      // Preserve the status for existing recovery logic; do not retry mutations.
+      throw ApiException(
+        response.statusCode,
+        'Layanan sedang mengalami gangguan. Muat ulang data dan coba lagi nanti.',
+      );
+    }
     final message = object(data)['message'];
     throw ApiException(
       response.statusCode,

@@ -244,7 +244,12 @@ void main() {
       await press(tester, find.text('Muat ulang jadwal'));
       await tester.drag(find.byType(Scrollable).first, const Offset(0, 4000));
       await tester.pumpAndSettle();
-      expect(find.textContaining('Jadwal gagal dimuat'), findsOneWidget);
+      expect(
+        find.textContaining(
+          'Layanan sedang mengalami gangguan. Muat ulang data dan coba lagi nanti.',
+        ),
+        findsOneWidget,
+      );
       backend.failSchedule = false;
       await press(tester, find.text('Coba lagi'));
       expect(tester.takeException(), isNull);

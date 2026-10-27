@@ -9,6 +9,7 @@ import 'config.dart';
 import 'doctor_professional.dart';
 import 'image_sizing.dart';
 import 'mobile_ui.dart';
+import 'patient_design.dart';
 
 String accountRole(Object? role) => switch (role) {
   'USER' => 'Pasien',
@@ -34,8 +35,12 @@ class AccountAvatar extends StatelessWidget {
           future: api.ownAvatar(),
           builder: (context, snapshot) => CircleAvatar(
             radius: radius,
-            backgroundColor: QueueBStyle.mint,
-            foregroundColor: QueueBStyle.darkTeal,
+            backgroundColor: PatientDesign.active(context)
+                ? PatientDesign.soft
+                : QueueBStyle.mint,
+            foregroundColor: PatientDesign.active(context)
+                ? PatientDesign.primary
+                : QueueBStyle.darkTeal,
             child: snapshot.data == null
                 ? Text(
                     name.isEmpty ? 'Q' : name.characters.first.toUpperCase(),
@@ -651,7 +656,9 @@ class _UserProfilePageState extends State<UserProfilePage> {
 
   @override
   Widget build(BuildContext context) => Theme(
-    data: QueueBStyle.theme,
+    data: api.user?['peran'] == 'USER'
+        ? PatientDesign.theme
+        : QueueBStyle.theme,
     child: ListenableBuilder(
       listenable: api,
       builder: (context, _) =>
@@ -770,7 +777,9 @@ class _UserProfilePageState extends State<UserProfilePage> {
                           final content = Container(
                             padding: const EdgeInsets.all(24),
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: api.user?['peran'] == 'USER'
+                                  ? PatientDesign.paper
+                                  : Colors.white,
                               borderRadius: BorderRadius.circular(
                                 QueueBStyle.radius,
                               ),
@@ -798,6 +807,117 @@ class _UserProfilePageState extends State<UserProfilePage> {
                               ],
                             ),
                           );
+                          if (api.user?['peran'] == 'USER') {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                if (widget.onReturnToPatient != null)
+                                  PatientPageIntro(
+                                    title: 'Profil Saya',
+                                    caption: 'Ruang pribadi untuk akun Anda.',
+                                    action: IconButton(
+                                      tooltip: 'Muat ulang profil',
+                                      onPressed: busy || loading ? null : load,
+                                      icon: const Icon(Icons.refresh),
+                                    ),
+                                  ),
+                                Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: PatientDesign.soft,
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      AccountAvatar(api: api, radius: 28),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              '${api.user?['nama'] ?? ''}',
+                                              style: const TextStyle(
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.w700,
+                                                color: PatientDesign.ink,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              api.user?['aktif'] == true
+                                                  ? 'Akun pasien aktif'
+                                                  : api.user?['aktif'] == false
+                                                  ? 'Akun nonaktif'
+                                                  : 'Akun pasien',
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                color: PatientDesign.primary,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: [
+                                    for (var i = 0; i < labels.length; i++)
+                                      SizedBox(
+                                        width: (constraints.maxWidth - 8) / 2,
+                                        child: OutlinedButton.icon(
+                                          style: OutlinedButton.styleFrom(
+                                            backgroundColor: selected == i
+                                                ? PatientDesign.soft
+                                                : PatientDesign.paper,
+                                            foregroundColor: selected == i
+                                                ? PatientDesign.primary
+                                                : PatientDesign.muted,
+                                            alignment: Alignment.centerLeft,
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 10,
+                                              vertical: 10,
+                                            ),
+                                          ),
+                                          onPressed: busy
+                                              ? null
+                                              : () => setState(() {
+                                                  selected = i;
+                                                  error = null;
+                                                  message = null;
+                                                }),
+                                          icon: Icon(icons[i], size: 18),
+                                          label: Text(
+                                            labels[i],
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+                                content,
+                                const SizedBox(height: 12),
+                                OutlinedButton.icon(
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: PatientDesign.danger,
+                                  ),
+                                  onPressed: busy
+                                      ? null
+                                      : () => run(api.logout, ''),
+                                  icon: const Icon(Icons.logout, size: 18),
+                                  label: const Text('Keluar Akun'),
+                                ),
+                              ],
+                            );
+                          }
                           return wide
                               ? Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,

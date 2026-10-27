@@ -141,7 +141,12 @@ void main() {
       await open(tester, fail: true);
       expect(find.text('—'), findsNWidgets(4));
       expect(find.text('Data belum tersedia'), findsNWidgets(4));
-      expect(find.text('Katalog gagal dimuat'), findsOneWidget);
+      expect(
+        find.text(
+          'Layanan sedang mengalami gangguan. Muat ulang data dan coba lagi nanti.',
+        ),
+        findsOneWidget,
+      );
     },
   );
 

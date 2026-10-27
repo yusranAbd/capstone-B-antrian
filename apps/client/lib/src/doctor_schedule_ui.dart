@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'config.dart';
 import 'mobile_ui.dart';
+import 'patient_design.dart';
 import 'doctor_professional.dart';
 
 // QueueB existing tokens and navigation; reference: doctor profile + calendar.
@@ -24,7 +25,7 @@ class DoctorProfileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => AppCard(
-    color: detail ? QueueBStyle.mint : null,
+    color: detail ? PatientDesign.mint : null,
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -43,18 +44,20 @@ class DoctorProfileCard extends StatelessWidget {
                 children: [
                   Text(
                     label(doctor),
-                    style: Theme.of(context).textTheme.titleMedium
-                        ?.copyWith(fontWeight: FontWeight.w700),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      fontSize: detail ? 20 : 16,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     '${doctor['spesialisasi'] ?? 'Spesialisasi belum dicantumkan'}',
-                    style: const TextStyle(color: QueueBStyle.muted),
+                    style: const TextStyle(color: PatientDesign.muted),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     clinics,
-                    style: const TextStyle(color: QueueBStyle.darkTeal),
+                    style: const TextStyle(color: PatientDesign.darkTeal),
                   ),
                 ],
               ),
@@ -68,7 +71,7 @@ class DoctorProfileCard extends StatelessWidget {
               const Icon(
                 Icons.event_available_outlined,
                 size: 18,
-                color: QueueBStyle.muted,
+                color: PatientDesign.muted,
               ),
               const SizedBox(width: 6),
               Expanded(
@@ -76,7 +79,7 @@ class DoctorProfileCard extends StatelessWidget {
                   availability!,
                   style: const TextStyle(
                     fontSize: 12,
-                    color: QueueBStyle.muted,
+                    color: PatientDesign.muted,
                   ),
                 ),
               ),
@@ -163,10 +166,12 @@ class _PracticeDateStripState extends State<PracticeDateStrip> {
             child: OutlinedButton(
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                backgroundColor: selected ? QueueBStyle.darkTeal : Colors.white,
-                foregroundColor: selected ? Colors.white : QueueBStyle.navy,
+                backgroundColor: selected
+                    ? PatientDesign.darkTeal
+                    : Colors.white,
+                foregroundColor: selected ? Colors.white : PatientDesign.navy,
                 side: BorderSide(
-                  color: selected ? QueueBStyle.teal : QueueBStyle.border,
+                  color: selected ? PatientDesign.teal : PatientDesign.border,
                 ),
               ),
               onPressed: widget.enabled ? () => widget.onChanged(text) : null,
@@ -243,12 +248,12 @@ class ConsultationSlotGrid extends StatelessWidget {
                       vertical: 12,
                     ),
                     backgroundColor: value == slot['id']
-                        ? QueueBStyle.mint
+                        ? PatientDesign.mint
                         : null,
                     side: BorderSide(
                       color: value == slot['id']
-                          ? QueueBStyle.teal
-                          : QueueBStyle.border,
+                          ? PatientDesign.teal
+                          : PatientDesign.border,
                     ),
                   ),
                   onPressed:

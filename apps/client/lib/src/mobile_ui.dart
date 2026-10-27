@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'patient_design.dart';
+
 abstract final class QueueBStyle {
   static const teal = Color(0xff009f9a);
   static const darkTeal = Color(0xff007f80);
@@ -176,12 +178,22 @@ class EmptyState extends StatelessWidget {
     padding: const EdgeInsets.symmetric(vertical: QueueBStyle.mediumSpace),
     child: Column(
       children: [
-        Icon(icon, size: 32, color: QueueBStyle.darkTeal),
+        Icon(
+          icon,
+          size: 32,
+          color: PatientDesign.active(context)
+              ? PatientDesign.primary
+              : QueueBStyle.darkTeal,
+        ),
         const SizedBox(height: QueueBStyle.smallSpace),
         Text(
           text,
           textAlign: TextAlign.center,
-          style: const TextStyle(color: QueueBStyle.muted),
+          style: TextStyle(
+            color: PatientDesign.active(context)
+                ? PatientDesign.muted
+                : QueueBStyle.muted,
+          ),
         ),
       ],
     ),
@@ -228,11 +240,23 @@ class ClinicCard extends StatelessWidget {
   Widget build(BuildContext context) => Semantics(
     selected: selected,
     child: Material(
-      color: selected ? QueueBStyle.mint : Colors.white,
+      color: selected
+          ? (PatientDesign.active(context)
+                ? PatientDesign.soft
+                : QueueBStyle.mint)
+          : (PatientDesign.active(context)
+                ? PatientDesign.paper
+                : Colors.white),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: selected ? QueueBStyle.teal : QueueBStyle.border,
+          color: selected
+              ? (PatientDesign.active(context)
+                    ? PatientDesign.primary
+                    : QueueBStyle.teal)
+              : (PatientDesign.active(context)
+                    ? PatientDesign.border
+                    : QueueBStyle.border),
         ),
       ),
       child: InkWell(
@@ -243,9 +267,11 @@ class ClinicCard extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
+              Icon(
                 Icons.local_hospital_outlined,
-                color: QueueBStyle.darkTeal,
+                color: PatientDesign.active(context)
+                    ? PatientDesign.primary
+                    : QueueBStyle.darkTeal,
                 size: 28,
               ),
               const SizedBox(height: 8),
@@ -382,7 +408,9 @@ class MobileNotice extends StatelessWidget {
     decoration: BoxDecoration(
       color: error
           ? Theme.of(context).colorScheme.errorContainer
-          : QueueBStyle.mint,
+          : (PatientDesign.active(context)
+                ? PatientDesign.soft
+                : QueueBStyle.mint),
       borderRadius: BorderRadius.circular(16),
     ),
     child: SelectableText(
@@ -390,7 +418,9 @@ class MobileNotice extends StatelessWidget {
       style: TextStyle(
         color: error
             ? Theme.of(context).colorScheme.onErrorContainer
-            : QueueBStyle.navy,
+            : (PatientDesign.active(context)
+                  ? PatientDesign.ink
+                  : QueueBStyle.navy),
       ),
     ),
   );

@@ -1,24 +1,23 @@
 import 'package:flutter/material.dart';
 
 import 'config.dart';
-import 'mobile_ui.dart';
+import 'patient_design.dart';
 import 'patient_ui.dart';
 import 'doctor_professional.dart';
 
 abstract final class PatientHomeStyle {
-  static const background = Color(0xfff7fafc);
-  static const welcomeTint = Color(0xffeaf8fc);
-  static const shadow = Color(0x06007f80);
-  static const heroStart = Color(0xff006c75);
-  static const heroEnd = Color(0xff008184);
-  static const clinicSurface = Color(0xffe7f8f7);
-  static const appointmentInk = Color(0xff1766c5);
-  static const appointmentSurface = Color(0xffeaf3ff);
-  static const ticketInk = Color(0xffb94a2c);
-  static const ticketSurface = Color(0xfffff1e9);
-  static const historyInk = Color(0xff64509c);
-  static const historySurface = Color(0xfff1edfc);
-  static const visitSurface = Color(0xffeaf8f7);
+  static const background = PatientDesign.background;
+  static const welcomeTint = PatientDesign.soft;
+  static const shadow = Color(0x06302b32);
+  static const heroStart = PatientDesign.hero, heroEnd = PatientDesign.hero;
+  static const clinicSurface = PatientDesign.soft;
+  static const appointmentInk = PatientDesign.primary;
+  static const appointmentSurface = PatientDesign.soft;
+  static const ticketInk = PatientDesign.accent;
+  static const ticketSurface = Color(0xfffaece3);
+  static const historyInk = PatientDesign.success;
+  static const historySurface = Color(0xffe6f0e7);
+  static const visitSurface = PatientDesign.soft;
 }
 
 // Home-only visual layer. Existing booking, session and realtime owners stay in
@@ -32,7 +31,7 @@ class PatientHomeBrand extends StatelessWidget {
         width: 34,
         height: 34,
         decoration: BoxDecoration(
-          color: QueueBStyle.teal,
+          color: PatientDesign.teal,
           borderRadius: BorderRadius.circular(10),
         ),
         child: const Icon(
@@ -49,7 +48,7 @@ class PatientHomeBrand extends StatelessWidget {
               TextSpan(text: 'QueueB\n'),
               TextSpan(
                 text: 'Hospital',
-                style: TextStyle(color: QueueBStyle.darkTeal),
+                style: TextStyle(color: PatientDesign.darkTeal),
               ),
             ],
           ),
@@ -57,7 +56,7 @@ class PatientHomeBrand extends StatelessWidget {
             fontSize: 17,
             height: 1.05,
             fontWeight: FontWeight.w800,
-            color: QueueBStyle.navy,
+            color: PatientDesign.navy,
           ),
         ),
       ),
@@ -69,7 +68,7 @@ class PatientHomeSurface extends StatelessWidget {
   const PatientHomeSurface({
     super.key,
     required this.child,
-    this.color = Colors.white,
+    this.color = PatientDesign.paper,
   });
   final Widget child;
   final Color color;
@@ -78,7 +77,7 @@ class PatientHomeSurface extends StatelessWidget {
     decoration: BoxDecoration(
       color: color,
       borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: QueueBStyle.border.withValues(alpha: .6)),
+      border: Border.all(color: PatientDesign.border.withValues(alpha: .6)),
       boxShadow: const [
         BoxShadow(
           color: PatientHomeStyle.shadow,
@@ -98,10 +97,12 @@ class PatientHomeWelcome extends StatelessWidget {
     required this.name,
     required this.onSearch,
     this.avatar,
+    this.controller,
   });
   final String name;
   final ValueChanged<String> onSearch;
   final Widget? avatar;
+  final TextEditingController? controller;
   @override
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -117,13 +118,13 @@ class PatientHomeWelcome extends StatelessWidget {
                 children: [
                   const Text(
                     'Selamat datang,',
-                    style: TextStyle(color: QueueBStyle.muted, fontSize: 13),
+                    style: TextStyle(color: PatientDesign.muted, fontSize: 13),
                   ),
                   Text(
                     name,
                     style: const TextStyle(
                       fontWeight: FontWeight.w700,
-                      color: QueueBStyle.navy,
+                      color: PatientDesign.navy,
                     ),
                   ),
                 ],
@@ -134,22 +135,46 @@ class PatientHomeWelcome extends StatelessWidget {
         const SizedBox(height: 20),
       ],
       const Text(
+        'QUEUEB · UNTUK HARI YANG LEBIH SEHAT',
+        style: TextStyle(
+          fontSize: 10,
+          letterSpacing: 1.3,
+          fontWeight: FontWeight.w700,
+          color: PatientDesign.primary,
+        ),
+      ),
+      const SizedBox(height: 8),
+      const Text(
         'Bagaimana kabar Anda hari ini?',
         style: TextStyle(
           fontSize: 20,
           height: 1.25,
           fontWeight: FontWeight.w600,
-          color: QueueBStyle.navy,
+          color: PatientDesign.navy,
         ),
       ),
       const SizedBox(height: 16),
       TextField(
+        controller: controller,
         onChanged: onSearch,
         textInputAction: TextInputAction.search,
         decoration: InputDecoration(
           hintText: 'Cari dokter, poliklinik, atau layanan...',
-          hintStyle: const TextStyle(fontSize: 12, color: QueueBStyle.muted),
-          prefixIcon: const Icon(Icons.search_rounded, color: QueueBStyle.navy),
+          suffixIcon: controller != null && controller!.text.isNotEmpty
+              ? IconButton(
+                  tooltip: 'Bersihkan pencarian',
+                  onPressed: () {
+                    controller!.clear();
+                    onSearch('');
+                  },
+                  icon: const Icon(Icons.close_rounded, size: 18),
+                )
+              : null,
+          hintStyle: const TextStyle(fontSize: 12, color: PatientDesign.muted),
+          prefixIcon: const Icon(
+            Icons.search_rounded,
+            color: PatientDesign.navy,
+          ),
           filled: true,
           fillColor: Colors.white,
           contentPadding: const EdgeInsets.symmetric(
@@ -158,11 +183,11 @@ class PatientHomeWelcome extends StatelessWidget {
           ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(18),
-            borderSide: const BorderSide(color: QueueBStyle.border),
+            borderSide: const BorderSide(color: PatientDesign.border),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(18),
-            borderSide: const BorderSide(color: QueueBStyle.border),
+            borderSide: const BorderSide(color: PatientDesign.border),
           ),
         ),
       ),
@@ -192,14 +217,14 @@ class PatientHomeIdentity extends StatelessWidget {
           children: [
             const Text(
               'Selamat datang,',
-              style: TextStyle(color: QueueBStyle.muted, fontSize: 11),
+              style: TextStyle(color: PatientDesign.muted, fontSize: 11),
             ),
             Text(
               name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                color: QueueBStyle.navy,
+                color: PatientDesign.navy,
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
@@ -256,7 +281,7 @@ class PatientHomeBanner extends StatelessWidget {
                   onPressed: onRegister,
                   style: FilledButton.styleFrom(
                     backgroundColor: Colors.white,
-                    foregroundColor: QueueBStyle.darkTeal,
+                    foregroundColor: PatientDesign.darkTeal,
                     minimumSize: const Size(0, 44),
                     padding: const EdgeInsets.symmetric(horizontal: 14),
                   ),
@@ -319,7 +344,7 @@ class PatientHomeShortcuts extends StatelessWidget {
       children: [
         const Text(
           'Akses cepat',
-          style: TextStyle(fontSize: 12, color: QueueBStyle.muted),
+          style: TextStyle(fontSize: 12, color: PatientDesign.muted),
         ),
         const SizedBox(height: 10),
         LayoutBuilder(
@@ -334,7 +359,7 @@ class PatientHomeShortcuts extends StatelessWidget {
                       (
                         'Poliklinik dan Dokter',
                         Icons.medical_services_outlined,
-                        QueueBStyle.darkTeal,
+                        PatientDesign.darkTeal,
                         PatientHomeStyle.clinicSurface,
                         onClinics,
                       ),
@@ -388,7 +413,7 @@ class PatientHomeShortcuts extends StatelessWidget {
                                   fontSize: 11,
                                   height: 1.35,
                                   fontWeight: FontWeight.w600,
-                                  color: QueueBStyle.navy,
+                                  color: PatientDesign.navy,
                                 ),
                               ),
                             ],
@@ -425,7 +450,7 @@ class PatientHomeSectionTitle extends StatelessWidget {
           style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w800,
-            color: QueueBStyle.navy,
+            color: PatientDesign.navy,
           ),
         ),
       ),
@@ -461,171 +486,206 @@ class PatientHomeVisit extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) => Container(
-    key: const ValueKey('patient-nearest-visit'),
-    decoration: BoxDecoration(
-      color: QueueBStyle.navy,
-      borderRadius: BorderRadius.circular(18),
-    ),
-    padding: const EdgeInsets.all(14),
-    child: DefaultTextStyle.merge(
-      style: const TextStyle(color: Colors.white, fontSize: 13),
+  Widget build(BuildContext context) {
+    final clinic = label(object(ticket['layanan']));
+    final day = '${ticket['tanggalPelayanan'] ?? ticket['tanggalAntrean']}';
+    final status = '${ticket['status'] ?? '—'}';
+    final slot = object(appointment?['slotPraktik']);
+    final when = Tooltip(
+      message: config.serviceTimeZone,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (doctor['id'] != null) ...[
-                ProfessionalDoctorAvatar(
-                  config: config,
-                  photo: doctor['fotoProfil'],
-                  radius: 22,
-                ),
-                const SizedBox(width: 10),
-              ],
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      doctor['nama'] != null
-                          ? label(doctor)
-                          : label(object(ticket['layanan'])),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        height: 1.2,
-                      ),
-                    ),
-                    if (doctor['spesialisasi'] != null)
+          Text(
+            '${patientCompactDate(day)} ${DateTime.tryParse(dateOnly(day))?.year ?? ''}',
+            style: const TextStyle(
+              fontSize: 12,
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          if (slot['mulaiPada'] != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                patientTime(slot, config),
+                style: const TextStyle(fontSize: 13, color: Colors.white),
+              ),
+            ),
+          if (room.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                [
+                  room['kode'],
+                  room['nama'],
+                ].whereType<String>().where((v) => v.isNotEmpty).join(' · '),
+                style: const TextStyle(fontSize: 11, color: Colors.white),
+              ),
+            ),
+        ],
+      ),
+    );
+    final number = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Nomor antrean',
+          style: TextStyle(fontSize: 11, color: Colors.white),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          '${ticket['nomorAntrean'] ?? 'Nomor belum tersedia'}',
+          style: const TextStyle(
+            fontSize: 34,
+            letterSpacing: -1,
+            height: 1.1,
+            fontWeight: FontWeight.w800,
+            color: Colors.white,
+          ),
+        ),
+      ],
+    );
+    return Container(
+      key: const ValueKey('patient-nearest-visit'),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: PatientDesign.hero,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: DefaultTextStyle.merge(
+        style: const TextStyle(color: Colors.white, fontSize: 13),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (doctor['id'] != null) ...[
+                  ProfessionalDoctorAvatar(
+                    config: config,
+                    photo: doctor['fotoProfil'],
+                    radius: 22,
+                  ),
+                  const SizedBox(width: 10),
+                ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        '${doctor['spesialisasi']}',
+                        doctor['nama'] != null
+                            ? label(doctor)
+                            : 'Kunjungan poliklinik',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          height: 1.25,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        [
+                          if (doctor['spesialisasi'] != null)
+                            '${doctor['spesialisasi']}',
+                          clinic,
+                        ].join(' · '),
                         style: const TextStyle(
                           fontSize: 12,
                           color: Colors.white,
                         ),
                       ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 6,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  '${ticket['status'] ?? '—'}'.replaceAll('_', ' '),
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: QueueBStyle.navy,
-                    fontWeight: FontWeight.w700,
+                    ],
                   ),
                 ),
-              ),
-              Text(
-                label(object(ticket['layanan'])),
-                style: const TextStyle(fontSize: 12),
-              ),
-            ],
-          ),
-          if (room.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 5),
-              child: Text(
-                [
-                  room['kode'],
-                  room['nama'],
-                ].whereType<String>().where((s) => s.isNotEmpty).join(' · '),
-                style: const TextStyle(fontSize: 12),
-              ),
-            ),
-          const SizedBox(height: 10),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Nomor antrean',
-                      style: TextStyle(fontSize: 11, color: Colors.white),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 5,
                     ),
-                    Text(
-                      '${ticket['nomorAntrean'] ?? 'Nomor belum tersedia'}',
-                      style: const TextStyle(
-                        fontSize: 28,
-                        height: 1.1,
-                        fontWeight: FontWeight.w800,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      status.replaceAll('_', ' '),
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: PatientDesign.statusInk(status),
                       ),
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            patientDate(
-              '${ticket['tanggalPelayanan'] ?? ticket['tanggalAntrean']}',
+              ],
             ),
-            style: const TextStyle(fontSize: 12),
-          ),
-          if (appointment != null)
-            Text(
-              '${patientTime(object(appointment!['slotPraktik']), config)} · ${config.serviceTimeZone}',
-              style: const TextStyle(fontSize: 12),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 4),
+              child: Divider(color: Color(0x44ffffff)),
             ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: onTicket,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    side: const BorderSide(color: Colors.white),
-                    minimumSize: const Size(0, 44),
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                  ),
-                  child: const Text(
-                    'Lihat Detail',
-                    style: TextStyle(fontSize: 12),
+            LayoutBuilder(
+              builder: (context, box) =>
+                  box.maxWidth >= 290 &&
+                      MediaQuery.textScalerOf(context).scale(13) < 17
+                  ? Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(child: number),
+                        const SizedBox(width: 12),
+                        Expanded(child: when),
+                      ],
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [number, const SizedBox(height: 10), when],
+                    ),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: onTicket,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side: const BorderSide(color: Color(0xffc9bccf)),
+                      minimumSize: const Size(0, 44),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                    child: const Text(
+                      'Lihat Detail',
+                      style: TextStyle(fontSize: 12),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: FilledButton.icon(
-                  onPressed: onQr,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: QueueBStyle.navy,
-                    minimumSize: const Size(0, 44),
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: onQr,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: PatientDesign.hero,
+                      minimumSize: const Size(0, 44),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                    icon: const Icon(Icons.qr_code_rounded, size: 18),
+                    label: const Text(
+                      'QR Code',
+                      style: TextStyle(fontSize: 12),
+                    ),
                   ),
-                  icon: const Icon(Icons.qr_code_rounded, size: 18),
-                  label: const Text('QR Code', style: TextStyle(fontSize: 12)),
                 ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class PatientHomeEmpty extends StatelessWidget {
@@ -644,7 +704,7 @@ class PatientHomeEmpty extends StatelessWidget {
       children: [
         const Icon(
           Icons.event_note_outlined,
-          color: QueueBStyle.teal,
+          color: PatientDesign.teal,
           size: 27,
         ),
         const SizedBox(width: 12),
@@ -657,7 +717,7 @@ class PatientHomeEmpty extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 12,
                   height: 1.4,
-                  color: QueueBStyle.muted,
+                  color: PatientDesign.muted,
                 ),
               ),
               if (action != null)
@@ -690,7 +750,7 @@ class PatientHomeLoading extends StatelessWidget {
             Container(
               height: 12,
               decoration: BoxDecoration(
-                color: QueueBStyle.border,
+                color: PatientDesign.border,
                 borderRadius: BorderRadius.circular(6),
               ),
             ),
@@ -701,7 +761,7 @@ class PatientHomeLoading extends StatelessWidget {
               child: Container(
                 height: 12,
                 decoration: BoxDecoration(
-                  color: QueueBStyle.border,
+                  color: PatientDesign.border,
                   borderRadius: BorderRadius.circular(6),
                 ),
               ),
@@ -845,10 +905,10 @@ class PatientHomeDoctor extends StatelessWidget {
   final bool scheduleUnavailable;
   @override
   Widget build(BuildContext context) => Material(
-    color: Colors.white,
+    color: PatientDesign.paper,
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(18),
-      side: const BorderSide(color: QueueBStyle.border),
+      side: const BorderSide(color: PatientDesign.border),
     ),
     child: InkWell(
       borderRadius: BorderRadius.circular(18),
@@ -870,9 +930,9 @@ class PatientHomeDoctor extends StatelessWidget {
                   Text(
                     label(preview.doctor),
                     style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                      color: QueueBStyle.navy,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: PatientDesign.navy,
                     ),
                   ),
                   const SizedBox(height: 3),
@@ -880,7 +940,7 @@ class PatientHomeDoctor extends StatelessWidget {
                     '${preview.doctor['spesialisasi'] ?? 'Spesialisasi belum dicantumkan'} · ${label(preview.clinic)}',
                     style: const TextStyle(
                       fontSize: 11,
-                      color: QueueBStyle.muted,
+                      color: PatientDesign.muted,
                     ),
                   ),
                   const SizedBox(height: 7),
@@ -893,7 +953,7 @@ class PatientHomeDoctor extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 11,
                       height: 1.4,
-                      color: QueueBStyle.darkTeal,
+                      color: PatientDesign.darkTeal,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -902,7 +962,7 @@ class PatientHomeDoctor extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
-                      color: QueueBStyle.darkTeal,
+                      color: PatientDesign.darkTeal,
                     ),
                   ),
                 ],
@@ -911,7 +971,7 @@ class PatientHomeDoctor extends StatelessWidget {
             const SizedBox(width: 4),
             const Icon(
               Icons.chevron_right_rounded,
-              color: QueueBStyle.darkTeal,
+              color: PatientDesign.darkTeal,
               size: 20,
             ),
           ],
@@ -925,12 +985,12 @@ class PatientHomeTip extends StatelessWidget {
   const PatientHomeTip({super.key});
   @override
   Widget build(BuildContext context) => PatientHomeSurface(
-    color: QueueBStyle.mint,
+    color: PatientDesign.mint,
     child: const Row(
       children: [
         Icon(
           Icons.lightbulb_outline_rounded,
-          color: QueueBStyle.darkTeal,
+          color: PatientDesign.darkTeal,
           size: 30,
         ),
         SizedBox(width: 12),
@@ -942,7 +1002,7 @@ class PatientHomeTip extends StatelessWidget {
                 'Tips Cepat',
                 style: TextStyle(
                   fontWeight: FontWeight.w800,
-                  color: QueueBStyle.navy,
+                  color: PatientDesign.navy,
                 ),
               ),
               SizedBox(height: 4),
@@ -951,7 +1011,7 @@ class PatientHomeTip extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12,
                   height: 1.4,
-                  color: QueueBStyle.muted,
+                  color: PatientDesign.muted,
                 ),
               ),
             ],

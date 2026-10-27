@@ -12,6 +12,7 @@ import 'patient.dart';
 import 'queue.dart';
 import 'mobile_ui.dart';
 import 'login_ui.dart';
+import 'patient_design.dart';
 import 'staff_v4.dart';
 
 class QueueBApp extends StatelessWidget {
@@ -178,6 +179,8 @@ class _RootState extends State<_Root> {
             ? AdminStyle.theme
             : role == 'DOKTER'
             ? DoctorStyle.theme
+            : role == 'USER'
+            ? PatientDesign.theme
             : QueueBStyle.theme,
         child: Scaffold(
           appBar: role == 'USER' || role == 'PETUGAS' ? null : header(),
@@ -332,7 +335,7 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) => Theme(
-    data: QueueBStyle.theme,
+    data: PatientDesign.theme,
     child: Builder(
       builder: (context) => Scaffold(
         backgroundColor: LoginStyle.paper,
@@ -355,7 +358,7 @@ class _LoginPageState extends State<LoginPage> {
                         style: const TextStyle(
                           fontSize: 25,
                           fontWeight: FontWeight.w800,
-                          color: QueueBStyle.navy,
+                          color: PatientDesign.ink,
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -365,7 +368,7 @@ class _LoginPageState extends State<LoginPage> {
                             : 'Akses sistem antrean rumah sakit',
                         textAlign: TextAlign.center,
                         style: const TextStyle(
-                          color: QueueBStyle.muted,
+                          color: PatientDesign.muted,
                           fontSize: 13,
                           height: 1.5,
                         ),
@@ -518,7 +521,7 @@ class _LoginPageState extends State<LoginPage> {
                               child: Text(
                                 'atau',
                                 style: TextStyle(
-                                  color: QueueBStyle.muted,
+                                  color: PatientDesign.muted,
                                   fontSize: 12,
                                 ),
                               ),
@@ -529,8 +532,8 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       OutlinedButton.icon(
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: QueueBStyle.darkTeal,
-                          side: const BorderSide(color: QueueBStyle.darkTeal),
+                          foregroundColor: PatientDesign.primary,
+                          side: const BorderSide(color: PatientDesign.primary),
                           minimumSize: const Size(48, 48),
                           padding: const EdgeInsets.symmetric(horizontal: 10),
                           shape: RoundedRectangleBorder(

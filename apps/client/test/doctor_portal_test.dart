@@ -166,7 +166,12 @@ void main() {
     );
     expect(find.byType(LinearProgressIndicator), findsOneWidget);
     await tester.pumpAndSettle();
-    expect(find.textContaining('Koneksi gagal'), findsOneWidget);
+    expect(
+      find.textContaining(
+        'Layanan sedang mengalami gangguan. Muat ulang data dan coba lagi nanti.',
+      ),
+      findsOneWidget,
+    );
     fail = false;
     await tester.tap(find.byTooltip('Muat ulang portal'));
     await tester.pumpAndSettle();

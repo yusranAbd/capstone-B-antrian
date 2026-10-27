@@ -14,6 +14,7 @@ module.exports = async ({
   fontFile,
   patientV5 = false,
   patientFocus = false,
+  finalExperience = false,
 }) => {
   fs.mkdirSync(output, { recursive: true });
   const report = {
@@ -188,7 +189,11 @@ module.exports = async ({
         if (p === "/auth/logout") return send({ ok: true });
         if (req.headers.authorization !== "Bearer " + auth.accessToken)
           return send({}, 401);
-        if (p === "/auth/me") return send(auth.user);
+        if (p === "/auth/me") {
+          if (req.method === "PATCH")
+            auth.user = { ...auth.user, nama: body.nama };
+          return send(auth.user);
+        }
         if (p === "/layanan") return send(clinics);
         if (p === "/dokter") return send([doctor]);
         if (p === "/jadwal-praktik")
@@ -265,12 +270,13 @@ module.exports = async ({
       if (file.endsWith("main.dart.js")) {
         const source = bytes.toString();
         const defines = [
+          "https://api.queueb.invalid/api/v1",
           "http://localhost:3000/api/v1",
           "http://127.0.0.1:3003/api/v1",
           "http://localhost:3001/api/v1",
         ];
         const define = defines.find((v) => source.includes(v));
-        assert.ok(define, "Expected local QA API define absent");
+        assert.ok(define, "Expected isolated QA API define absent");
         bytes = Buffer.from(source.replaceAll(define, base + "/api/v1"));
       }
       const mime = {
@@ -343,15 +349,36 @@ module.exports = async ({
     });
     page = await context.newPage();
     page.on("pageerror", (e) => report.errors.push(e.message));
+    const perf = await context.newCDPSession(page);
+    await perf.send("Performance.enable");
+    async function memorySample() {
+      const raw = await perf.send("Performance.getMetrics");
+      const metrics = Object.fromEntries(
+        raw.metrics.map((m) => [m.name, m.value]),
+      );
+      return {
+        jsHeapMiB: +(metrics.JSHeapUsedSize / 1024 / 1024).toFixed(2),
+        taskSeconds: metrics.TaskDuration,
+        nodes: metrics.Nodes,
+        activeSockets: ns.sockets.size,
+      };
+    }
     const text = (value) =>
       page.getByText(value).or(page.getByLabel(value)).last();
-    const press = (name) =>
+    // Flutter's generated semantics can temporarily omit an accessible name
+    // after engine reload. Match the exact rendered button text as fallback.
+    const button = (name) =>
       page
-        .getByRole("button", {
-          name: new RegExp("^" + name + "$"),
-          includeHidden: true,
-        })
-        .click();
+        .getByRole("button", { name, exact: true, includeHidden: true })
+        .or(
+          page.locator('[role="button"]').filter({
+            hasText: new RegExp(
+              "^" + name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$",
+            ),
+          }),
+        )
+        .last();
+    const press = (name) => button(name).click();
     async function type(name, value) {
       const field = page
         .getByRole("textbox", { name: new RegExp(name), includeHidden: true })
@@ -385,21 +412,43 @@ module.exports = async ({
       .locator("flt-glass-pane")
       .waitFor({ state: "attached", timeout: 60000 });
     await expect
-      .poll(async () => {
-        const p = page.locator("flt-semantics-placeholder");
-        if (await p.count()) await p.evaluate((el) => el.click());
-        return page
-          .getByRole("button", {
-            name: "Masuk",
-            exact: true,
-            includeHidden: true,
-          })
-          .count();
-      })
+      .poll(
+        async () => {
+          const p = page.locator("flt-semantics-placeholder");
+          if (await p.count()) await p.evaluate((el) => el.click());
+          return button("Masuk").count();
+        },
+        { timeout: 90000 },
+      )
       .toBe(1);
+    if (finalExperience) {
+      for (const [width, height] of [
+        [320, 568],
+        [390, 844],
+        [1366, 768],
+        [1920, 1080],
+      ]) {
+        await page.setViewportSize({ width, height });
+        await page.waitForTimeout(250);
+        const widthActual = await page.evaluate(
+          () => document.scrollingElement.scrollWidth,
+        );
+        assert.equal(widthActual, width);
+        await page.screenshot({
+          path: path.join(output, `login-${width}.png`),
+        });
+      }
+      await page.setViewportSize({ width: 390, height: 844 });
+      await press("Pasien baru? Daftar");
+      await page.screenshot({ path: path.join(output, "register-390.png") });
+      await press("Sudah punya akun? Masuk");
+    }
     await type("Email", "fixture@test.local");
     await type("Kata sandi", "fixture-only");
     await press("Masuk");
+    await expect(page.getByRole("progressbar")).toHaveCount(0);
+    await expect.poll(() => ns.sockets.size).toBe(1);
+    report.performance = { initial: await memorySample() };
     if (patientV5) {
       for (const [width, height] of [
         [390, 844],
@@ -499,6 +548,21 @@ module.exports = async ({
       await expect(text("UM-001")).toBeVisible();
       report.states.appointmentAndWalkInHome = true;
     }
+    if (finalExperience) {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.getByLabel("Beranda", { exact: true }).click();
+      await page
+        .getByRole("button", { name: /Detail Dokter/ })
+        .last()
+        .click();
+      await expect(
+        page.getByRole("button", { name: "Buat Janji Temu", exact: true }),
+      ).toBeVisible();
+      await page.screenshot({
+        path: path.join(output, "doctor-detail-390.png"),
+      });
+      report.states.doctorDetail = true;
+    }
     await reservations();
     await expect(text("Reservasi Saya")).toBeVisible();
     await expect(
@@ -514,6 +578,8 @@ module.exports = async ({
       [390, 844],
       [412, 915],
       [768, 1024],
+      [1366, 768],
+      [1920, 1080],
     ]) {
       await page.setViewportSize({ width, height });
       await page.waitForTimeout(150);
@@ -575,7 +641,13 @@ module.exports = async ({
     await press("Pilih Jadwal");
     await press("Lihat slot");
     await text("Sisa slot 2").click();
+    if (finalExperience)
+      await page.screenshot({ path: path.join(output, "booking-390.png") });
     await press("Lanjutkan");
+    if (finalExperience)
+      await page.screenshot({
+        path: path.join(output, "confirmation-390.png"),
+      });
     await press("Konfirmasi Janji Temu");
     await expect.poll(() => tickets.length).toBe(4);
     assert.equal(
@@ -622,17 +694,14 @@ module.exports = async ({
     report.states.realtimeAndReconnect = true;
     await page.reload({ waitUntil: "domcontentloaded" });
     await expect
-      .poll(async () => {
-        const p = page.locator("flt-semantics-placeholder");
-        if (await p.count()) await p.evaluate((el) => el.click());
-        return page
-          .getByRole("button", {
-            name: "Masuk",
-            exact: true,
-            includeHidden: true,
-          })
-          .count();
-      })
+      .poll(
+        async () => {
+          const p = page.locator("flt-semantics-placeholder");
+          if (await p.count()) await p.evaluate((el) => el.click());
+          return button("Masuk").count();
+        },
+        { timeout: 90000 },
+      )
       .toBe(1);
     // Existing Web policy is memory-only; Android secure persistence is unchanged.
     await type("Email", "fixture@test.local");
@@ -641,6 +710,48 @@ module.exports = async ({
     await reservations();
     await expect(text("Reservasi Saya")).toBeVisible();
     report.states.reloadAndLoginAgain = true;
+    if (finalExperience) {
+      await page.getByLabel("Profil", { exact: true }).click();
+      await type("Nama lengkap", "Gilang QA Terverifikasi");
+      await press("Simpan Perubahan");
+      await expect.poll(() => auth.user.nama).toBe("Gilang QA Terverifikasi");
+      report.states.profileSaved = true;
+      await press("Keluar Akun");
+      await expect(button("Masuk")).toBeVisible();
+      await type("Email", "fixture@test.local");
+      await type("Kata sandi", "fixture-only");
+      await press("Masuk");
+      await expect(page.getByLabel("Beranda", { exact: true })).toBeVisible();
+      await expect.poll(() => ns.sockets.size).toBe(1);
+      report.states.logoutAndLoginAgain = true;
+    }
+    report.performance.afterFlows = await memorySample();
+    report.performance.navigationCycles = [];
+    if (finalExperience) {
+      for (let round = 0; round < 3; round++) {
+        for (const label of [
+          "Beranda",
+          "Reservasi",
+          "Tiket Saya",
+          "Janji Temu",
+          "Profil",
+        ]) {
+          const target = page.getByLabel(label, { exact: true });
+          if (!(await target.isVisible())) {
+            await page.mouse.move(195, 422);
+            await page.mouse.wheel(0, -5000);
+            await expect(target).toBeVisible();
+          }
+          await target.click();
+          await page.waitForTimeout(350);
+        }
+        report.performance.navigationCycles.push(await memorySample());
+      }
+      await page.waitForTimeout(5000);
+      report.performance.afterIdle = await memorySample();
+      assert.equal(ns.sockets.size, 1);
+      report.states.navigationResourceCheck = true;
+    }
     assert.deepEqual(report.errors, []);
     report.success = true;
     fs.writeFileSync(
@@ -650,7 +761,7 @@ module.exports = async ({
     return report;
   } catch (e) {
     report.requests = requests;
-    report.error = e.message;
+    report.error = e.stack || e.message;
     if (page) {
       report.roles = await page
         .locator("[role]")

@@ -7,6 +7,8 @@ import 'api.dart';
 import 'config.dart';
 import 'widgets.dart';
 import 'mobile_ui.dart';
+import 'patient_design.dart';
+import 'patient_agenda.dart';
 import 'patient_sync.dart';
 import 'doctor_schedule_ui.dart';
 import 'doctor_professional.dart';
@@ -55,6 +57,8 @@ class _PatientPageState extends State<PatientPage> {
   bool appointment = true, bookingStage = false, doctorDetail = false;
   bool reviewing = false;
   String search = '', channel = 'Semua';
+  String homeQuery = '';
+  final homeSearch = TextEditingController();
   String? homeClinicId;
   List<Json> clinicSchedules = [], homeSchedules = [];
   String? homeScheduleError;
@@ -619,6 +623,7 @@ class _PatientPageState extends State<PatientPage> {
     updates.dispose();
     overview.dispose();
     date.dispose();
+    homeSearch.dispose();
     super.dispose();
   }
 
@@ -912,7 +917,7 @@ class _PatientPageState extends State<PatientPage> {
                   ? 'Belum ada slot tersedia yang sesuai.'
                   : 'Tidak ada dokter yang sesuai.',
               textAlign: TextAlign.center,
-              style: const TextStyle(color: QueueBStyle.muted),
+              style: const TextStyle(color: PatientDesign.muted),
             ),
           ),
         // The outer booking list owns scrolling. Only the nearest view is bounded
@@ -1009,15 +1014,15 @@ class _PatientPageState extends State<PatientPage> {
     ];
   }
 
-  List<Json> get visibleClinics => services
+  List<Json> clinicsForQuery(String query) => services
       .where(
         (clinic) =>
-            label(clinic).toLowerCase().contains(search) ||
+            label(clinic).toLowerCase().contains(query) ||
             doctors.any(
               (doctor) =>
                   ('${label(doctor)} ${doctor['spesialisasi'] ?? ''}')
                       .toLowerCase()
-                      .contains(search) &&
+                      .contains(query) &&
                   rows(doctor['dokterLayanan']).any(
                     (link) =>
                         link['layananId'] == clinic['id'] &&
@@ -1050,7 +1055,7 @@ class _PatientPageState extends State<PatientPage> {
       services,
       homeSchedules,
       widget.api.config,
-      search,
+      homeQuery,
       clinicId: services.any((c) => c['id'] == homeClinicId)
           ? homeClinicId
           : null,
@@ -1060,7 +1065,8 @@ class _PatientPageState extends State<PatientPage> {
       children: [
         PatientHomeWelcome(
           name: '${widget.api.user?['nama'] ?? 'Pasien'}',
-          onSearch: (v) => setState(() => search = v.toLowerCase().trim()),
+          controller: homeSearch,
+          onSearch: (v) => setState(() => homeQuery = v.toLowerCase().trim()),
           // Patient identity is available exclusively from the Profile tab.
         ),
         const SizedBox(height: 16),
@@ -1097,7 +1103,7 @@ class _PatientPageState extends State<PatientPage> {
             children: [
               for (final clinic in <Json>[
                 {'nama': 'Semua'},
-                ...visibleClinics,
+                ...clinicsForQuery(homeQuery),
               ])
                 Padding(
                   padding: const EdgeInsets.only(right: 8),
@@ -1105,11 +1111,11 @@ class _PatientPageState extends State<PatientPage> {
                     label: Text(label(clinic)),
                     selected: clinic['id'] == homeClinicId,
                     showCheckmark: false,
-                    selectedColor: QueueBStyle.teal,
+                    selectedColor: PatientDesign.teal,
                     labelStyle: TextStyle(
                       color: clinic['id'] == homeClinicId
                           ? Colors.white
-                          : QueueBStyle.navy,
+                          : PatientDesign.navy,
                       fontSize: 12,
                     ),
                     onSelected: busy
@@ -1145,7 +1151,10 @@ class _PatientPageState extends State<PatientPage> {
               padding: const EdgeInsets.only(bottom: 8),
               child: Text(
                 homeScheduleError!,
-                style: const TextStyle(color: QueueBStyle.muted, fontSize: 12),
+                style: const TextStyle(
+                  color: PatientDesign.muted,
+                  fontSize: 12,
+                ),
               ),
             ),
           for (final preview in previews.take(3))
@@ -1235,7 +1244,7 @@ class _PatientPageState extends State<PatientPage> {
           ? FloatingActionButton.extended(
               heroTag: 'create-reservation',
               onPressed: busy || loading ? null : createReservation,
-              backgroundColor: QueueBStyle.darkTeal,
+              backgroundColor: PatientDesign.darkTeal,
               foregroundColor: Colors.white,
               elevation: 2,
               icon: const Icon(Icons.add),
@@ -1259,7 +1268,9 @@ class _PatientPageState extends State<PatientPage> {
               }),
       ),
       body: ColoredBox(
-        color: tab == 0 ? PatientHomeStyle.background : QueueBStyle.background,
+        color: tab == 0
+            ? PatientHomeStyle.background
+            : PatientDesign.background,
         child: Align(
           alignment: Alignment.topCenter,
           child: ConstrainedBox(
@@ -1291,6 +1302,17 @@ class _PatientPageState extends State<PatientPage> {
                 ),
                 tab == 1
                     ? _tickets(context)
+                    : tab == 3
+                    ? PatientAgenda(
+                        appointments: appointments,
+                        config: widget.api.config,
+                        loading: loading,
+                        busy: busy,
+                        error: error,
+                        message: message,
+                        onRefresh: load,
+                        onTicket: (ticket) => openTicket(ticket),
+                      )
                     : ListView(
                         key: PageStorageKey(
                           '$tab:$serviceId:$bookingStage:$doctorDetail',
@@ -1313,7 +1335,6 @@ class _PatientPageState extends State<PatientPage> {
                           if (tab == 0) _home(context),
                           if (tab == 2) _registration(context),
                           if (tab == 4) _history(context),
-                          if (tab == 3) _appointments(context),
                         ],
                       ),
                 if (profileVisited)
@@ -1328,35 +1349,6 @@ class _PatientPageState extends State<PatientPage> {
           ),
         ),
       ),
-    ),
-  );
-
-  Widget _appointments(BuildContext context) => Section(
-    title: 'Janji temu saya',
-    action: IconButton(
-      tooltip: 'Muat ulang janji temu',
-      onPressed: busy || loading ? null : load,
-      icon: const Icon(Icons.refresh),
-    ),
-    child: Column(
-      children: [
-        if (appointments.isEmpty && !loading)
-          const EmptyState(text: 'Belum ada janji temu.'),
-        for (final a in appointments)
-          AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(appointmentDetails(a, widget.api.config)),
-                StatusBadge(object(a['tiket'])['status']),
-                TextButton(
-                  onPressed: () => setState(() => tab = 1),
-                  child: const Text('Lihat tiket'),
-                ),
-              ],
-            ),
-          ),
-      ],
     ),
   );
 
@@ -1577,7 +1569,7 @@ class _PatientPageState extends State<PatientPage> {
           ),
           for (final s in schedules)
             AppCard(
-              color: sessionId == s['id'] ? QueueBStyle.mint : null,
+              color: sessionId == s['id'] ? PatientDesign.mint : null,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -1609,7 +1601,7 @@ class _PatientPageState extends State<PatientPage> {
             const SizedBox(height: 6),
             const Text(
               'Pilih jam tersedia. Kapasitas mengikuti data terbaru dari server.',
-              style: TextStyle(fontSize: 12, color: QueueBStyle.muted),
+              style: TextStyle(fontSize: 12, color: PatientDesign.muted),
             ),
             const SizedBox(height: 12),
             if (!slots.any((s) => s['tersedia'] == true))
@@ -1675,7 +1667,7 @@ class _PatientPageState extends State<PatientPage> {
           if (slotId != null)
             Text(
               'Tanggal terpilih: ${date.text}',
-              style: const TextStyle(color: QueueBStyle.darkTeal),
+              style: const TextStyle(color: PatientDesign.darkTeal),
             ),
           const SizedBox(height: 8),
           FilledButton.icon(
@@ -1911,94 +1903,127 @@ class _TicketDialogState extends State<_TicketDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => PopScope(
-    canPop: !busy,
-    child: AlertDialog(
-      insetPadding: const EdgeInsets.all(16),
-      contentPadding: const EdgeInsets.all(16),
-      title: Text('Tiket ${data['nomorAntrean']}'),
-      content: SizedBox(
-        width: 420,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const QueueBBrand(compact: true),
-              const SizedBox(height: 24),
-              Text(
-                '${data['nomorAntrean']}',
-                style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: QueueBStyle.navy,
-                ),
-              ),
-              Text(
-                '${label(object(data['layanan']))} · ${dateOnly(data['tanggalPelayanan'] ?? data['tanggalAntrean'])}',
-              ),
-              StatusBadge(data['status']),
-              SelectableText(
-                'ID tiket: ${data['id']}',
-                style: const TextStyle(fontSize: 11, color: QueueBStyle.muted),
-              ),
-              if (error != null) MobileNotice(error!, error: true),
-              if (loading || busy)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  child: LinearProgressIndicator(
-                    semanticsLabel: widget.issueQrOnOpen
-                        ? 'Memuat QR check-in'
-                        : 'Memuat tiket',
-                  ),
-                ),
-              if (qr != null && remaining > 0) ...[
-                LayoutBuilder(
-                  builder: (context, box) => QrImageView(
-                    data: '${qr!['qrPayload']}',
-                    size: box.maxWidth.clamp(0, 240),
-                    backgroundColor: Colors.white,
-                    semanticsLabel: 'QR check-in tiket ${data['nomorAntrean']}',
-                  ),
-                ),
-                Text('Berlaku $remaining detik · sekali pakai'),
-                const Text('Tempel payload hanya kepada petugas berwenang.'),
-                SelectableText(
-                  '${qr!['qrPayload']}',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: QueueBStyle.muted,
-                  ),
-                ),
-              ],
-              if (widget.appointment != null)
-                MobileNotice(
-                  appointmentDetails(widget.appointment!, widget.api.config),
-                ),
-              if (canIssue) ...[
-                const MobileNotice(
-                  'QR diterbitkan pada hari pelayanan, berlaku 10 menit. QR baru menggantikan QR sebelumnya.',
-                ),
-                FilledButton(
-                  onPressed: busy || loading ? null : issue,
-                  child: Text(qr == null ? 'Terbitkan QR' : 'Perbarui QR'),
-                ),
-              ] else
-                MobileNotice(
-                  'QR tersedia untuk tiket DIPESAN pada tanggal pelayanan (${dateOnly(data['tanggalPelayanan'] ?? data['tanggalAntrean'])}). Status disinkronkan secara berkala.',
-                ),
-            ],
+  Widget build(BuildContext context) {
+    final slot = object(widget.appointment?['slotPraktik']);
+    final session = object(slot['jadwalPraktik']);
+    final doctor = object(object(session['dokterLayanan'])['dokter']);
+    final room = object(session['loket']);
+    return PopScope(
+      canPop: !busy,
+      child: AlertDialog(
+        insetPadding: const EdgeInsets.all(16),
+        contentPadding: const EdgeInsets.all(16),
+        title: Text(
+          'Tiket ${data['nomorAntrean']}',
+          style: const TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -.4,
           ),
         ),
+        content: SizedBox(
+          width: 420,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '${label(object(data['layanan']))} · ${patientDate('${data['tanggalPelayanan'] ?? data['tanggalAntrean']}')}',
+                ),
+                ReservationStatus('${data['status'] ?? '—'}'),
+                if (doctor['nama'] != null)
+                  Text(
+                    label(doctor),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                if (room.isNotEmpty)
+                  Text(
+                    label(room),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: PatientDesign.muted,
+                    ),
+                  ),
+                if (slot['mulaiPada'] != null)
+                  Text(
+                    '${patientTime(slot, widget.api.config)} · ${widget.api.config.serviceTimeZone}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: PatientDesign.muted,
+                    ),
+                  ),
+                const SizedBox(height: 8),
+                if (error != null) MobileNotice(error!, error: true),
+                if (loading || busy)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: LinearProgressIndicator(
+                      semanticsLabel: widget.issueQrOnOpen
+                          ? 'Memuat QR check-in'
+                          : 'Memuat tiket',
+                    ),
+                  ),
+                if (qr != null && remaining > 0) ...[
+                  LayoutBuilder(
+                    builder: (context, box) => QrImageView(
+                      data: '${qr!['qrPayload']}',
+                      size: box.maxWidth.clamp(0, 240),
+                      backgroundColor: Colors.white,
+                      semanticsLabel:
+                          'QR check-in tiket ${data['nomorAntrean']}',
+                    ),
+                  ),
+                  Text('Berlaku $remaining detik · sekali pakai'),
+                  ExpansionTile(
+                    title: const Text(
+                      'Detail teknis tiket',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    children: [
+                      SelectableText('ID tiket: ${data['id']}'),
+                      SelectableText(
+                        '${qr!['qrPayload']}',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: PatientDesign.muted,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                if (canIssue) ...[
+                  const MobileNotice(
+                    'QR diterbitkan pada hari pelayanan, berlaku 10 menit. QR baru menggantikan QR sebelumnya.',
+                  ),
+                  FilledButton(
+                    onPressed: busy || loading ? null : issue,
+                    child: Text(qr == null ? 'Terbitkan QR' : 'Perbarui QR'),
+                  ),
+                ] else
+                  MobileNotice(
+                    'QR tersedia untuk tiket DIPESAN pada tanggal pelayanan (${dateOnly(data['tanggalPelayanan'] ?? data['tanggalAntrean'])}). Status disinkronkan secara berkala.',
+                  ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: busy || loading ? null : refresh,
+            child: const Text('Muat ulang status'),
+          ),
+          TextButton(
+            onPressed: busy ? null : () => Navigator.pop(context),
+            child: const Text('Tutup'),
+          ),
+        ],
       ),
-      actions: [
-        TextButton(
-          onPressed: busy || loading ? null : refresh,
-          child: const Text('Muat ulang status'),
-        ),
-        TextButton(
-          onPressed: busy ? null : () => Navigator.pop(context),
-          child: const Text('Tutup'),
-        ),
-      ],
-    ),
-  );
+    );
+  }
 }

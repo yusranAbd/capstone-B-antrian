@@ -12,6 +12,7 @@ import 'package:queueb_client/src/app.dart';
 import 'package:queueb_client/src/config.dart';
 import 'package:queueb_client/src/mobile_ui.dart';
 import 'package:queueb_client/src/patient_reservations.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 const uid = '11111111-1111-4111-8111-111111111111';
 
@@ -514,6 +515,19 @@ void main() {
     expect(find.text('UM-001'), findsOneWidget);
     await press(tester, 'Lihat Tiket / QR');
     await press(tester, 'Terbitkan QR');
+    expect(find.byType(QrImageView), findsOneWidget);
+    expect(find.text('SQ1.fixture'), findsNothing);
+    expect(
+      server.requests
+          .where((r) => r.$1 == 'POST' && r.$2.endsWith('/qr'))
+          .length,
+      1,
+    );
+    final technical = find.text('Detail teknis tiket');
+    await tester.ensureVisible(technical);
+    await tester.pumpAndSettle();
+    await tester.tap(technical);
+    await tester.pumpAndSettle();
     expect(find.text('SQ1.fixture'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await press(tester, 'Tutup');
@@ -648,10 +662,20 @@ void main() {
     server.offline = true;
     server.catalogGate!.complete();
     await tester.pumpAndSettle();
-    expect(find.textContaining('Koneksi layanan terputus.'), findsOneWidget);
+    expect(
+      find.textContaining(
+        'Layanan sedang mengalami gangguan. Muat ulang data dan coba lagi nanti.',
+      ),
+      findsOneWidget,
+    );
     server.offline = false;
     await press(tester, 'Coba lagi');
-    expect(find.textContaining('Koneksi layanan terputus.'), findsNothing);
+    expect(
+      find.textContaining(
+        'Layanan sedang mengalami gangguan. Muat ulang data dan coba lagi nanti.',
+      ),
+      findsNothing,
+    );
     await tester.pumpWidget(const SizedBox());
     api.dispose();
   });
@@ -673,7 +697,13 @@ void main() {
       await press(tester, 'Tiket Saya');
       expect(find.text(reservationStatus(status)), findsOneWidget);
       await press(tester, 'Lihat Tiket / QR');
-      expect(find.text(status.replaceAll('_', ' ')), findsWidgets);
+      expect(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.text(reservationStatus(status)),
+        ),
+        findsOneWidget,
+      );
       if (status != 'DIPESAN') expect(find.text('Terbitkan QR'), findsNothing);
       expect(tester.takeException(), isNull);
       await press(tester, 'Tutup');
