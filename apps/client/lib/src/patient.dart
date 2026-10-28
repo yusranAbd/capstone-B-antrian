@@ -14,6 +14,7 @@ import 'doctor_schedule_ui.dart';
 import 'doctor_professional.dart';
 import 'patient_ui.dart';
 import 'patient_home.dart';
+import 'patient_home_v6.dart';
 import 'user_profile.dart';
 import 'patient_reservations.dart';
 import 'patient_mobile_v5.dart';
@@ -58,6 +59,7 @@ class _PatientPageState extends State<PatientPage> {
   bool reviewing = false;
   String search = '', channel = 'Semua';
   String homeQuery = '';
+  PatientHomeMode homeMode = PatientHomeMode.walkIn;
   final homeSearch = TextEditingController();
   String? homeClinicId;
   List<Json> clinicSchedules = [], homeSchedules = [];
@@ -1050,183 +1052,191 @@ class _PatientPageState extends State<PatientPage> {
       ...?doctors.where((d) => d['id'] == bookedDoctor['id']).firstOrNull,
       ...bookedDoctor,
     };
+    final appointmentClinics = services.where(supportsHomeAppointment).toList();
     final previews = homeDoctorPreviews(
       doctors,
-      services,
+      appointmentClinics,
       homeSchedules,
       widget.api.config,
       homeQuery,
-      clinicId: services.any((c) => c['id'] == homeClinicId)
+      clinicId: appointmentClinics.any((c) => c['id'] == homeClinicId)
           ? homeClinicId
           : null,
     );
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        PatientHomeWelcome(
-          name: '${widget.api.user?['nama'] ?? 'Pasien'}',
-          controller: homeSearch,
-          onSearch: (v) => setState(() => homeQuery = v.toLowerCase().trim()),
-          // Patient identity is available exclusively from the Profile tab.
-        ),
-        const SizedBox(height: 16),
-        if (active != null) ...[
-          PatientHomeSectionTitle(
-            'Kunjungan Terdekat',
-            action: 'Lihat Semua',
-            onPressed: busy ? null : () => setState(() => tab = 1),
-          ),
-          const SizedBox(height: 8),
-          PatientHomeVisit(
-            ticket: active,
-            doctor: doctor,
-            appointment: visit,
-            config: widget.api.config,
-            onTicket: busy ? null : () => openTicket(active),
-            onQr: busy ? null : () => openTicket(active, issueQrOnOpen: true),
-          ),
-          const SizedBox(height: 20),
-        ],
-        PatientHomeSectionTitle(
-          'Cari Dokter Spesialis',
-          action: 'Lihat Semua',
-          onPressed: busy
-              ? null
-              : () {
-                  startRegistration(true);
-                  setState(() => channel = 'Semua');
-                },
-        ),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              for (final clinic in <Json>[
-                {'nama': 'Semua'},
-                ...clinicsForQuery(homeQuery),
-              ])
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChip(
-                    label: Text(label(clinic)),
-                    selected: clinic['id'] == homeClinicId,
-                    showCheckmark: false,
-                    selectedColor: PatientDesign.teal,
-                    labelStyle: TextStyle(
-                      color: clinic['id'] == homeClinicId
-                          ? Colors.white
-                          : PatientDesign.navy,
-                      fontSize: 12,
-                    ),
-                    onSelected: busy
-                        ? null
-                        : (_) => setState(
-                            () => homeClinicId = clinic['id'] as String?,
+    final walkIns = homeWalkInClinics(services, doctors, homeQuery);
+    final isWalkIn = homeMode == PatientHomeMode.walkIn;
+    final count = isWalkIn ? walkIns.length : previews.length;
+    return CustomScrollView(
+      key: const PageStorageKey('patient-home-v6'),
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          sliver: SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                PatientHomeHeaderV6(
+                  name: '${widget.api.user?['nama'] ?? 'Pasien'}',
+                ),
+                if (loading)
+                  const LinearProgressIndicator(
+                    semanticsLabel: 'Memuat data pelayanan',
+                  ),
+                const SizedBox(height: 14),
+                PatientHomeWelcome(
+                  name: '${widget.api.user?['nama'] ?? 'Pasien'}',
+                  controller: homeSearch,
+                  onSearch: (v) =>
+                      setState(() => homeQuery = v.toLowerCase().trim()),
+                ),
+                if (error != null) ...[
+                  const SizedBox(height: 8),
+                  MobileNotice(error!, error: true),
+                  TextButton.icon(
+                    onPressed: busy || loading ? null : load,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Coba lagi'),
+                  ),
+                ],
+                ValueListenableBuilder<String>(
+                  valueListenable: updates.status,
+                  builder: (_, status, _) =>
+                      status.contains('terputus') ||
+                          status.contains('belum tersambung')
+                      ? const Padding(
+                          padding: EdgeInsets.only(top: 8),
+                          child: Text(
+                            'Koneksi terputus. Data terakhir ditampilkan; pembaruan berkala tetap berjalan.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: PatientDesign.muted,
+                            ),
                           ),
-                  ),
+                        )
+                      : const SizedBox.shrink(),
                 ),
-            ],
+                if (active != null) ...[
+                  const SizedBox(height: 10),
+                  PatientHomeSectionTitle(
+                    'Kunjungan Terdekat',
+                    action: 'Lihat Semua',
+                    onPressed: busy ? null : () => setState(() => tab = 1),
+                  ),
+                  const SizedBox(height: 4),
+                  PatientHomeVisit(
+                    ticket: active,
+                    doctor: doctor,
+                    appointment: visit,
+                    config: widget.api.config,
+                    onTicket: busy ? null : () => openTicket(active),
+                    onQr: busy
+                        ? null
+                        : () => openTicket(active, issueQrOnOpen: true),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                PatientHomeModes(
+                  value: homeMode,
+                  onChanged: busy
+                      ? null
+                      : (mode) => setState(() => homeMode = mode),
+                ),
+                const SizedBox(height: 10),
+                if (!isWalkIn) ...[
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        for (final clinic in <Json>[
+                          {'nama': 'Semua'},
+                          ...appointmentClinics,
+                        ])
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: ChoiceChip(
+                              label: Text(label(clinic)),
+                              selected: clinic['id'] == homeClinicId,
+                              showCheckmark: false,
+                              selectedColor: PatientDesign.primary,
+                              labelStyle: TextStyle(
+                                fontSize: 12,
+                                color: clinic['id'] == homeClinicId
+                                    ? Colors.white
+                                    : PatientDesign.ink,
+                              ),
+                              onSelected: busy
+                                  ? null
+                                  : (_) => setState(
+                                      () => homeClinicId =
+                                          clinic['id'] as String?,
+                                    ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  if (homeScheduleError != null)
+                    PatientHomeEmpty(
+                      text: homeScheduleError!,
+                      action: 'Muat ulang jadwal',
+                      onPressed: busy || loading ? null : load,
+                    ),
+                ],
+                if (loading)
+                  const PatientHomeLoading()
+                else if (count == 0)
+                  PatientHomeEmpty(
+                    text: isWalkIn
+                        ? 'Tidak ada layanan antrean harian yang sesuai pencarian.'
+                        : 'Belum ada dokter yang sesuai pencarian.',
+                  ),
+              ],
+            ),
           ),
         ),
-        const SizedBox(height: 16),
-        PatientHomeSectionTitle(
-          'Dokter Pilihan',
-          action: 'Lihat Semua',
-          onPressed: busy
-              ? null
-              : () {
-                  startRegistration(true);
-                  setState(() => channel = 'Semua');
-                },
-        ),
-        if (loading)
-          const PatientHomeLoading()
-        else if (previews.isEmpty)
-          const PatientHomeEmpty(
-            text: 'Belum ada dokter yang sesuai pencarian.',
-          )
-        else ...[
-          if (homeScheduleError != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Text(
-                homeScheduleError!,
-                style: const TextStyle(
-                  color: PatientDesign.muted,
-                  fontSize: 12,
-                ),
+        if (!loading)
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+            sliver: SliverList.builder(
+              itemCount: count,
+              itemBuilder: (context, index) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: isWalkIn
+                    ? PatientHomeService(
+                        clinic: walkIns[index],
+                        onTap: busy
+                            ? null
+                            : () {
+                                // Explicit channel prevents a hybrid clinic defaulting to appointment.
+                                startRegistration(false);
+                                selectService('${walkIns[index]['id']}');
+                              },
+                      )
+                    : PatientHomeDoctorV6(
+                        preview: previews[index],
+                        config: widget.api.config,
+                        scheduleUnavailable: homeScheduleError != null,
+                        onTap: busy
+                            ? null
+                            : () async {
+                                startRegistration(true);
+                                final pending = selectService(
+                                  '${previews[index].clinic['id']}',
+                                );
+                                final revision = catalogRevision;
+                                await pending;
+                                if (mounted &&
+                                    revision == catalogRevision &&
+                                    error == null &&
+                                    tab == 2) {
+                                  await chooseDoctor(previews[index].doctor);
+                                }
+                              },
+                      ),
               ),
             ),
-          for (final preview in previews.take(3))
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: PatientHomeDoctor(
-                preview: preview,
-                config: widget.api.config,
-                scheduleUnavailable: homeScheduleError != null,
-                onTap: busy || loading
-                    ? null
-                    : () async {
-                        final pending = selectService(
-                          '${preview.clinic['id']}',
-                        );
-                        final revision = catalogRevision;
-                        await pending;
-                        if (mounted &&
-                            revision == catalogRevision &&
-                            error == null &&
-                            tab == 2) {
-                          await chooseDoctor(preview.doctor);
-                        }
-                      },
-              ),
-            ),
-        ],
-        const SizedBox(height: 12),
-        PatientHomeShortcuts(
-          enabled: !busy,
-          onClinics: () {
-            startRegistration(true);
-            setState(() => channel = 'Semua');
-          },
-          onAppointment: () => startRegistration(true),
-          onTickets: () => setState(() => tab = 1),
-          onHistory: () => setState(() => tab = 4),
-        ),
-        const SizedBox(height: 16),
-        OutlinedButton.icon(
-          onPressed: busy ? null : () => startRegistration(false),
-          icon: const Icon(Icons.directions_walk),
-          label: const Text('Daftar Walk-in'),
-        ),
-        TextButton.icon(
-          onPressed: busy
-              ? null
-              : () => showDialog<void>(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('Public Display'),
-                    content: const Text(
-                      'Public Display rumah sakit memakai token perangkat dari pengelola. Tiket pribadi tersedia di Tiket Saya.',
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Tutup'),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          widget.onDisplay?.call();
-                        },
-                        child: const Text('Buka Public Display'),
-                      ),
-                    ],
-                  ),
-                ),
-          icon: const Icon(Icons.connected_tv_outlined),
-          label: const Text('Informasi Antrean'),
-        ),
+          ),
       ],
     );
   }
@@ -1237,9 +1247,8 @@ class _PatientPageState extends State<PatientPage> {
     child: PatientScrollShell(
       pageKey:
           '$tab:$reservationCreating:$serviceId:$bookingStage:$doctorDetail',
-      header: tab == 0
-          ? widget.headerBuilder?.call(true, () => setState(() => tab = 1))
-          : null,
+      // Home owns its compact identity; no duplicate app bar or notification.
+      header: null,
       floatingActionButton: tab == 2 && !reservationCreating
           ? FloatingActionButton.extended(
               heroTag: 'create-reservation',
@@ -1300,7 +1309,9 @@ class _PatientPageState extends State<PatientPage> {
                       openTicket(r.ticket, issueQrOnOpen: !r.terminal),
                   onCancel: (r) => cancel(r.appointment!),
                 ),
-                tab == 1
+                tab == 0
+                    ? _home(context)
+                    : tab == 1
                     ? _tickets(context)
                     : tab == 3
                     ? PatientAgenda(
@@ -1332,7 +1343,6 @@ class _PatientPageState extends State<PatientPage> {
                             const LinearProgressIndicator(
                               semanticsLabel: 'Memuat data pelayanan',
                             ),
-                          if (tab == 0) _home(context),
                           if (tab == 2) _registration(context),
                           if (tab == 4) _history(context),
                         ],

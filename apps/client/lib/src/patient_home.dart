@@ -135,16 +135,6 @@ class PatientHomeWelcome extends StatelessWidget {
         const SizedBox(height: 20),
       ],
       const Text(
-        'QUEUEB · UNTUK HARI YANG LEBIH SEHAT',
-        style: TextStyle(
-          fontSize: 10,
-          letterSpacing: 1.3,
-          fontWeight: FontWeight.w700,
-          color: PatientDesign.primary,
-        ),
-      ),
-      const SizedBox(height: 8),
-      const Text(
         'Bagaimana kabar Anda hari ini?',
         style: TextStyle(
           fontSize: 20,
@@ -153,7 +143,7 @@ class PatientHomeWelcome extends StatelessWidget {
           color: PatientDesign.navy,
         ),
       ),
-      const SizedBox(height: 16),
+      const SizedBox(height: 12),
       TextField(
         controller: controller,
         onChanged: onSearch,
@@ -491,40 +481,105 @@ class PatientHomeVisit extends StatelessWidget {
     final day = '${ticket['tanggalPelayanan'] ?? ticket['tanggalAntrean']}';
     final status = '${ticket['status'] ?? '—'}';
     final slot = object(appointment?['slotPraktik']);
-    final when = Tooltip(
-      message: config.serviceTimeZone,
-      child: Column(
+    Widget fact(IconData icon, String text) => Padding(
+      padding: const EdgeInsets.only(top: 5),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '${patientCompactDate(day)} ${DateTime.tryParse(dateOnly(day))?.year ?? ''}',
-            style: const TextStyle(
-              fontSize: 12,
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
+          Icon(icon, color: Colors.white, size: 15),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                fontSize: 12,
+                height: 1.3,
+                color: Colors.white,
+              ),
             ),
           ),
-          if (slot['mulaiPada'] != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                patientTime(slot, config),
-                style: const TextStyle(fontSize: 13, color: Colors.white),
-              ),
-            ),
-          if (room.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                [
-                  room['kode'],
-                  room['nama'],
-                ].whereType<String>().where((v) => v.isNotEmpty).join(' · '),
-                style: const TextStyle(fontSize: 11, color: Colors.white),
-              ),
-            ),
         ],
       ),
+    );
+    final details = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          clinic,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+          ),
+        ),
+        if (doctor['nama'] != null) ...[
+          const SizedBox(height: 5),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ProfessionalDoctorAvatar(
+                config: config,
+                photo: doctor['fotoProfil'],
+                radius: 16,
+              ),
+              const SizedBox(width: 7),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${doctor['nama']}',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                    if (doctor['spesialisasi'] != null)
+                      Text(
+                        '${doctor['spesialisasi']}',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Colors.white,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+        const SizedBox(height: 7),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: PatientDesign.statusSurface(status),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            status.replaceAll('_', ' '),
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: PatientDesign.statusInk(status),
+            ),
+          ),
+        ),
+        if (room.isNotEmpty)
+          fact(
+            Icons.place_outlined,
+            [
+              room['kode'],
+              room['nama'],
+            ].whereType<String>().where((v) => v.isNotEmpty).join(' · '),
+          ),
+        fact(
+          Icons.calendar_today_outlined,
+          '${patientCompactDate(day)} ${DateTime.tryParse(dateOnly(day))?.year ?? ''}',
+        ),
+        if (slot['mulaiPada'] != null)
+          fact(Icons.schedule_outlined, patientTime(slot, config)),
+      ],
     );
     final number = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -537,8 +592,7 @@ class PatientHomeVisit extends StatelessWidget {
         Text(
           '${ticket['nomorAntrean'] ?? 'Nomor belum tersedia'}',
           style: const TextStyle(
-            fontSize: 34,
-            letterSpacing: -1,
+            fontSize: 30,
             height: 1.1,
             fontWeight: FontWeight.w800,
             color: Colors.white,
@@ -548,141 +602,73 @@ class PatientHomeVisit extends StatelessWidget {
     );
     return Container(
       key: const ValueKey('patient-nearest-visit'),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: PatientDesign.hero,
-        borderRadius: BorderRadius.circular(24),
+        color: const Color(0xff075461),
+        borderRadius: BorderRadius.circular(20),
       ),
-      child: DefaultTextStyle.merge(
-        style: const TextStyle(color: Colors.white, fontSize: 13),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (doctor['id'] != null) ...[
-                  ProfessionalDoctorAvatar(
-                    config: config,
-                    photo: doctor['fotoProfil'],
-                    radius: 22,
-                  ),
-                  const SizedBox(width: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          LayoutBuilder(
+            builder: (context, box) {
+              if (box.maxWidth < 310 ||
+                  MediaQuery.textScalerOf(context).scale(14) > 19) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [details, const SizedBox(height: 10), number],
+                );
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(flex: 3, child: details),
+                  const SizedBox(width: 12),
+                  Expanded(flex: 2, child: number),
                 ],
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        doctor['nama'] != null
-                            ? label(doctor)
-                            : 'Kunjungan poliklinik',
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          height: 1.25,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        [
-                          if (doctor['spesialisasi'] != null)
-                            '${doctor['spesialisasi']}',
-                          clinic,
-                        ].join(' · '),
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
+              );
+            },
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: onTicket,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: const BorderSide(color: Colors.white70),
+                    minimumSize: const Size(0, 44),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                  ),
+                  child: const Text(
+                    'Lihat Detail',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 12),
                   ),
                 ),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      status.replaceAll('_', ' '),
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        color: PatientDesign.statusInk(status),
-                      ),
-                    ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: onQr,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xff075461),
+                    minimumSize: const Size(0, 44),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                  ),
+                  icon: const Icon(Icons.qr_code_rounded, size: 18),
+                  label: const Text(
+                    'QR Code',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 12),
                   ),
                 ),
-              ],
-            ),
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 4),
-              child: Divider(color: Color(0x44ffffff)),
-            ),
-            LayoutBuilder(
-              builder: (context, box) =>
-                  box.maxWidth >= 290 &&
-                      MediaQuery.textScalerOf(context).scale(13) < 17
-                  ? Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(child: number),
-                        const SizedBox(width: 12),
-                        Expanded(child: when),
-                      ],
-                    )
-                  : Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [number, const SizedBox(height: 10), when],
-                    ),
-            ),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: onTicket,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      side: const BorderSide(color: Color(0xffc9bccf)),
-                      minimumSize: const Size(0, 44),
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                    ),
-                    child: const Text(
-                      'Lihat Detail',
-                      style: TextStyle(fontSize: 12),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: onQr,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: PatientDesign.hero,
-                      minimumSize: const Size(0, 44),
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                    ),
-                    icon: const Icon(Icons.qr_code_rounded, size: 18),
-                    label: const Text(
-                      'QR Code',
-                      style: TextStyle(fontSize: 12),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -790,11 +776,19 @@ List<HomeDoctorPreview> homeDoctorPreviews(
 }) {
   final result = <HomeDoctorPreview>[];
   for (final doctor in doctors.where((d) => d['aktif'] != false)) {
+    final doctorMatches = '${label(doctor)} ${doctor['spesialisasi'] ?? ''}'
+        .toLowerCase()
+        .contains(search);
     final links = rows(doctor['dokterLayanan']).where(
       (l) =>
           l['aktif'] == true &&
           (clinicId == null || l['layananId'] == clinicId) &&
-          clinics.any((c) => c['id'] == l['layananId'] && c['aktif'] != false),
+          clinics.any(
+            (c) =>
+                c['id'] == l['layananId'] &&
+                c['aktif'] != false &&
+                (doctorMatches || label(c).toLowerCase().contains(search)),
+          ),
     );
     if (links.isEmpty) continue;
     final upcoming =

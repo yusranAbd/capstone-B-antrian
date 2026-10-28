@@ -52,7 +52,15 @@ Status tetap mengikuti API; `PatientDesign.statusInk/statusSurface/statusIcon` m
 
 Font Material bawaan (Roboto pada Android), tanpa font/dependency/ilustrasi baru. Ikon launcher/favicon/PWA template diganti ekspor geometris QueueB; branding in-app existing dipertahankan. Heading mobile 20–22, judul card 14–16, body 14, fakta 13, caption 11–12 dengan kontras memadai; target sentuh 44–48. Nomor tiket 30–34 dan QR mempunyai skala tersendiri. Card mengikuti isi; tipografi tidak diperkecil menggunakan FittedBox untuk memaksa muat. Spacing 4/8/12/16/24, radius input/tombol 14 dan card 20–24, elevation ringan.
 
-Lima navigasi pasien dan focus-scroll existing dipertahankan. Identitas tidak ditambahkan lagi ke header bersama. Agenda hanya memfilter tanggal appointment nyata, tiket memakai proyeksi terbaru, dan informasi teknis QR tidak mendominasi tampilan. Semua modal/picker menangkap tema dari scope USER di root, bukan mengubah theme global. Shared components membaca marker pasien untuk variasi komponen; seluruh role kini mengambil warna dasar yang sama dari QueueBPalette.
+Lima navigasi pasien dan focus-scroll existing dipertahankan. Pada Beranda V6, branding dan sapaan tampil sekali di dalam konten yang ikut scroll; tanpa avatar, notifikasi backlog atau app bar kedua. Halaman lain tidak mendapat identitas tambahan. Agenda hanya memfilter tanggal appointment nyata, tiket memakai proyeksi terbaru, dan informasi teknis QR tidak mendominasi tampilan. Semua modal/picker menangkap tema dari scope USER di root, bukan mengubah theme global. Shared components membaca marker pasien untuk variasi komponen; seluruh role kini mengambil warna dasar yang sama dari QueueBPalette.
+
+### Beranda pasien V6 — dua mode
+
+Beranda memakai pilihan konten **Ambil Antrean** (default) dan **Janji Temu**. Pilihan ini tidak mengganti lima tujuan bottom navigation. Header, pencarian dan kunjungan terdekat tidak berganti saat mode berubah; pencarian/filter dan pilihan mode dipertahankan saat berpindah tab. Daftar memakai sliver builder agar item di luar viewport tidak dibuat sekaligus.
+
+Aksen teal #007C80 khusus kanal antrean harian, primary periwinkle existing untuk janji temu, dan solid #075461 dengan teks putih untuk kartu kunjungan. Perubahan lokal pada Beranda ini tidak mengganti tema role lain. Nama/status/tanggal/ruang/nomor berasal dari proyeksi REST existing; kartu hilang seluruhnya bila tidak ada kunjungan relevan. QR berupa aksi untuk workflow penerbitan existing, bukan gambar QR dekoratif pada kartu.
+
+Hanya mode API ANTREAN_HARIAN/HIBRIDA yang masuk daftar harian, dan JANJI_TEMU_DOKTER/HIBRIDA yang masuk filter dokter. Nilai mode tidak dikenal tidak diasumsikan dapat dipesan. Jangan menampilkan kata "buka", kuota tersedia atau estimasi menunggu dari keberadaan layanan saja. Klik membuka formulir/detail existing; mutasi tetap membutuhkan konfirmasi. [Implementasi dan QA V6](PATIENT_HOME_V6.md).
 
 ### Warna dan visual operasional
 

@@ -676,7 +676,7 @@ void main() {
         find.text(switch (role) {
           'ADMIN' => 'Poliklinik',
           'PETUGAS' => 'Ruang yang ditugaskan',
-          _ => 'Akses cepat',
+          _ => 'Bagaimana kabar Anda hari ini?',
         }),
         findsWidgets,
       );

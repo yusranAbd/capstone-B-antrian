@@ -1,3 +1,5 @@
+import 'patient_test_navigation.dart';
+
 import 'dart:async';
 import 'dart:convert';
 
@@ -318,7 +320,7 @@ void main() {
     'Calendar remains usable after manual date outside supported range',
     (tester) async {
       await launch(tester, FakeBackend('USER'));
-      await press(tester, 'Daftar Walk-in');
+      await openPatientCatalog(tester, walkIn: true);
       await tester.tap(find.byType(ClinicCard).first);
       await tester.pumpAndSettle();
       for (final input in ['2020-01-01', '2099-12-31', 'tidak valid']) {
@@ -612,9 +614,9 @@ void main() {
     tester,
   ) async {
     await launch(tester, FakeBackend('USER'), size: const Size(375, 812));
-    expect(find.text('Selamat datang,'), findsNothing);
-    await press(tester, 'Daftar Walk-in');
-    expect(find.text('Poliklinik & Dokter'), findsOneWidget);
+    expect(find.text('Selamat datang,'), findsOneWidget);
+    await openPatientCatalog(tester);
+    expect(find.text('Buat Reservasi'), findsOneWidget);
     await tester.enterText(
       find.widgetWithText(TextField, 'Cari poliklinik atau dokter'),
       'Tidak ada',
@@ -728,7 +730,7 @@ void main() {
     (tester) async {
       final server = FakeBackend('USER')..slotsAvailable = false;
       await launch(tester, server, size: const Size(375, 900));
-      await press(tester, 'Janji Temu Dokter');
+      await openPatientCatalog(tester);
       await tester.tap(find.byType(ClinicCard).first);
       await tester.pumpAndSettle();
       await press(tester, 'Lihat Detail Dokter');

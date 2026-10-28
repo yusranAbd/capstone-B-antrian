@@ -1,3 +1,5 @@
+import 'patient_test_navigation.dart';
+
 import 'dart:async';
 import 'dart:convert';
 
@@ -101,7 +103,7 @@ void main() {
     addTearDown(api.dispose);
     await tester.pumpWidget(QueueBApp(api: api));
     await tester.pumpAndSettle();
-    await press(tester, find.text('Janji Temu Dokter'));
+    await openPatientCatalog(tester);
     await press(tester, find.byType(ClinicCard).first);
     return api;
   }
@@ -269,7 +271,7 @@ void main() {
       );
       backend.emptyDoctors = false;
       await press(tester, find.text('Beranda'));
-      await press(tester, find.text('Janji Temu Dokter'));
+      await openPatientCatalog(tester);
       await press(tester, find.byType(ClinicCard).first);
       // Reconcile through existing foreground lifecycle, not a second socket.
       for (final state in [

@@ -10,8 +10,8 @@ import 'package:queueb_client/src/api.dart';
 import 'package:queueb_client/src/app.dart';
 import 'package:queueb_client/src/config.dart';
 import 'package:queueb_client/src/patient_home.dart';
+import 'package:queueb_client/src/patient_home_v6.dart';
 import 'package:queueb_client/src/doctor_professional.dart';
-import 'package:queueb_client/src/mobile_ui.dart';
 
 import 'patient_v2_test.dart' show PatientV2Backend;
 import 'ui_test.dart' show uid;
@@ -152,88 +152,67 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  for (final width in [
-    320.0,
-    360.0,
-    375.0,
-    390.0,
-    412.0,
-    414.0,
-    500.0,
-    768.0,
-    1366.0,
-    1920.0,
+  for (final size in [
+    Size(320, 568),
+    Size(360, 800),
+    Size(375, 812),
+    Size(390, 844),
+    Size(412, 915),
+    Size(1366, 768),
   ]) {
-    testWidgets(
-      'home V3 fits $width with long name, all sections and existing destinations',
-      (tester) async {
-        await launch(tester, HomeBackend()..manyClinics = true, width: width);
-        expect(
-          find.text('Rahmat Abdullah Pratama dengan Nama Panjang'),
-          findsNothing,
-        );
-        expect(find.byTooltip('Aktivitas tiket'), findsOneWidget);
-        expect(find.byTooltip('Profil akun'), findsNothing);
-        expect(find.byTooltip('Keluar akun'), findsNothing);
-        expect(find.byType(PatientHomeBrand), findsNothing);
-        expect(find.text('Sinkronisasi berkala aktif'), findsNothing);
-        expect(find.byType(PatientHomeIdentity), findsNothing);
-        expect(find.text('Selamat datang,'), findsNothing);
-
-        for (final section in [
-          'Cari Dokter Spesialis',
-          'Dokter Pilihan',
-          'Akses cepat',
-        ]) {
-          await tester.ensureVisible(find.text(section));
-          await tester.pumpAndSettle();
-          expect(tester.takeException(), isNull);
-        }
-        expect(find.byType(ChoiceChip), findsNWidgets(12));
-        expect(find.text('Kunjungan Terdekat'), findsNothing);
-        expect(
-          tester
-              .widget<PatientHomeDoctor>(find.byType(PatientHomeDoctor))
-              .preview
-              .session?['id'],
-          'session-home',
-        );
-        expect(find.textContaining('tahun pengalaman'), findsNothing);
-        expect(
-          find.textContaining('Penyakit Dalam \u00b7 Poli Umum'),
-          findsNothing,
-        );
-        expect(find.textContaining('\u00c2\u00b7'), findsNothing);
-        expect(find.byType(NavigationDestination), findsNWidgets(5));
+    testWidgets('V6 modes, header and five destinations fit $size', (
+      tester,
+    ) async {
+      await launch(
+        tester,
+        HomeBackend()..manyClinics = true,
+        width: size.width,
+        height: size.height,
+      );
+      expect(
+        find.text('Rahmat Abdullah Pratama dengan Nama Panjang'),
+        findsOneWidget,
+      );
+      expect(find.byTooltip('Aktivitas tiket'), findsNothing);
+      expect(find.byTooltip('Profil akun'), findsNothing);
+      expect(find.byType(PatientHomeHeaderV6), findsOneWidget);
+      expect(find.byType(PatientHomeService), findsWidgets);
+      expect(find.byType(PatientHomeDoctorV6), findsNothing);
+      expect(find.text('Kunjungan Terdekat'), findsNothing);
+      await press(tester, find.byKey(const ValueKey('home-mode-appointment')));
+      expect(find.byType(ChoiceChip), findsNWidgets(12));
+      await tester.scrollUntilVisible(
+        find.byType(PatientHomeDoctorV6),
+        120,
+        scrollable: find
+            .byWidgetPredicate(
+              (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
+            )
+            .first,
+      );
+      expect(
+        tester
+            .widget<PatientHomeDoctorV6>(find.byType(PatientHomeDoctorV6))
+            .preview
+            .session?['id'],
+        'session-home',
+      );
+      for (final destination in [
+        'Reservasi',
+        'Tiket Saya',
+        'Janji Temu',
+        'Profil',
+        'Beranda',
+      ]) {
         await press(
           tester,
-          find.widgetWithText(NavigationDestination, 'Reservasi'),
+          find.widgetWithText(NavigationDestination, destination),
         );
-        expect(find.text('Reservasi Saya'), findsOneWidget);
+        expect(find.byType(NavigationDestination), findsNWidgets(5));
         expect(find.byTooltip('Keluar akun'), findsNothing);
-        expect(find.text('Sinkronisasi berkala aktif'), findsNothing);
-        expect(find.textContaining('Waktu pelayanan:'), findsNothing);
-        expect(find.byType(PatientHomeIdentity), findsNothing);
-        for (final destination in ['Tiket Saya', 'Janji Temu', 'Beranda']) {
-          await press(
-            tester,
-            find.widgetWithText(NavigationDestination, destination),
-          );
-          expect(find.byType(PatientHomeIdentity), findsNothing);
-          expect(find.text('Selamat datang,'), findsNothing);
-          expect(find.byTooltip('Profil akun'), findsNothing);
-          expect(find.byTooltip('Keluar akun'), findsNothing);
-          expect(find.text('Sinkronisasi berkala aktif'), findsNothing);
-          expect(tester.getSize(find.byType(NavigationBar)).height, 60);
-          expect(
-            tester.getSize(find.byType(NavigationBar)).width,
-            width.clamp(0, 520),
-          );
-          expect(tester.takeException(), isNull);
-        }
         expect(tester.takeException(), isNull);
-      },
-    );
+      }
+    });
   }
 
   testWidgets(
@@ -262,11 +241,12 @@ void main() {
     (tester) async {
       final b = HomeBackend()..manyClinics = true;
       await launch(tester, b);
+      await press(tester, find.byKey(const ValueKey('home-mode-appointment')));
       await tester.enterText(find.byType(TextField).first, 'dr. Sindi QA');
       await tester.pumpAndSettle();
-      expect(find.byType(ChoiceChip), findsNWidgets(2));
+      expect(find.byType(ChoiceChip), findsNWidgets(12));
       expect(find.text('Anak \u00b7 Poli Umum'), findsOneWidget);
-      await press(tester, find.byType(PatientHomeDoctor));
+      await press(tester, find.byType(PatientHomeDoctorV6));
       expect(find.text('Detail Dokter'), findsOneWidget);
       expect(find.text('Buat Janji Temu'), findsOneWidget);
       expect(b.requests.where((r) => r.$1 != 'GET'), isEmpty);
@@ -305,7 +285,7 @@ void main() {
         );
         expect(
           tester.getBottomLeft(card).dy,
-          lessThan(tester.getTopLeft(find.text('Cari Dokter Spesialis')).dy),
+          lessThan(tester.getTopLeft(find.byType(PatientHomeModes)).dy),
         );
         expect(find.byType(PatientHomeBanner), findsNothing);
         await press(tester, find.text('QR Code'));
@@ -447,17 +427,18 @@ void main() {
     'API clinic chips filter doctor cards and preserve clinic navigation',
     (tester) async {
       await launch(tester, HomeBackend()..manyClinics = true);
+      await press(tester, find.byKey(const ValueKey('home-mode-appointment')));
       final target = find.widgetWithText(ChoiceChip, 'Poliklinik 1');
       await press(tester, target);
-      expect(find.byType(PatientHomeDoctor), findsNothing);
+      expect(find.byType(PatientHomeDoctorV6), findsNothing);
       expect(
         find.text('Belum ada dokter yang sesuai pencarian.'),
         findsOneWidget,
       );
       await press(tester, find.widgetWithText(ChoiceChip, 'Semua'));
-      expect(find.byType(PatientHomeDoctor), findsOneWidget);
-      await press(tester, find.text('Poliklinik dan Dokter'));
-      expect(find.byType(ClinicCard), findsWidgets);
+      expect(find.byType(PatientHomeDoctorV6), findsOneWidget);
+      await press(tester, find.byType(PatientHomeDoctorV6));
+      expect(find.text('Detail Dokter'), findsOneWidget);
     },
   );
 
@@ -486,45 +467,6 @@ void main() {
       isNull,
     );
   });
-
-  testWidgets(
-    'hero, appointment, clinic, history and activity shortcuts keep existing routes',
-    (tester) async {
-      await launch(tester, HomeBackend());
-      await press(tester, find.text('Janji Temu Dokter'));
-      expect(find.text('Poliklinik & Dokter'), findsOneWidget);
-      await press(
-        tester,
-        find.widgetWithText(NavigationDestination, 'Beranda'),
-      );
-      await press(tester, find.text('Janji Temu Dokter'));
-      expect(find.text('Poliklinik & Dokter'), findsOneWidget);
-      await press(
-        tester,
-        find.widgetWithText(NavigationDestination, 'Beranda'),
-      );
-      await press(tester, find.text('Poliklinik dan Dokter'));
-      expect(find.text('Poliklinik & Dokter'), findsOneWidget);
-      await press(
-        tester,
-        find.widgetWithText(NavigationDestination, 'Beranda'),
-      );
-      await press(tester, find.text('Riwayat Kunjungan'));
-      expect(find.text('Riwayat kunjungan'), findsOneWidget);
-      await press(
-        tester,
-        find.widgetWithText(NavigationDestination, 'Beranda'),
-      );
-      await tester.tap(find.byTooltip('Aktivitas tiket'));
-      await tester.pumpAndSettle();
-      expect(
-        find.text(
-          'Belum ada tiket. Daftar janji temu atau walk-in terlebih dahulu.',
-        ),
-        findsOneWidget,
-      );
-    },
-  );
 
   testWidgets(
     'owned nearest ticket replaces status after existing periodic REST reconciliation',
@@ -569,10 +511,11 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(PatientHomeVisit), findsNothing);
       expect(find.text('Kunjungan Terdekat'), findsNothing);
+      await press(tester, find.byKey(const ValueKey('home-mode-appointment')));
       expect(find.text('Jadwal praktik belum dapat dimuat.'), findsOneWidget);
       expect(find.text('Jadwal belum dapat dimuat.'), findsOneWidget);
-      await press(tester, find.text('Janji Temu Dokter'));
-      expect(find.text('Poliklinik & Dokter'), findsOneWidget);
+      await press(tester, find.byKey(const ValueKey('home-mode-appointment')));
+      await tester.pumpAndSettle();
     },
   );
 

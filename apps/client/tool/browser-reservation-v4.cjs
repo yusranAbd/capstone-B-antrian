@@ -15,6 +15,7 @@ module.exports = async ({
   patientV5 = false,
   patientFocus = false,
   finalExperience = false,
+  homeV6 = false,
 }) => {
   fs.mkdirSync(output, { recursive: true });
   const report = {
@@ -449,7 +450,133 @@ module.exports = async ({
     await expect(page.getByRole("progressbar")).toHaveCount(0);
     await expect.poll(() => ns.sockets.size).toBe(1);
     report.performance = { initial: await memorySample() };
-    if (patientV5) {
+    if (homeV6) {
+      const home = async () => {
+        const nav = page.getByLabel("Beranda", { exact: true });
+        if (!(await nav.isVisible())) {
+          await page.mouse.move(195, 300);
+          await page.mouse.wheel(0, -6000);
+        }
+        await nav.click();
+        await page.mouse.wheel(0, -6000);
+        await expect(button("Ambil Antrean")).toBeVisible();
+      };
+      const capture = async (name) => {
+        await page.mouse.move(1, 1);
+        await page.waitForTimeout(500);
+        assert.equal(
+          await page.evaluate(() => document.scrollingElement.scrollWidth),
+          page.viewportSize().width,
+        );
+        await page.screenshot({ path: path.join(output, name + ".png") });
+      };
+      for (const [width, height] of [
+        [320, 568],
+        [360, 800],
+        [375, 812],
+        [390, 844],
+        [412, 915],
+      ]) {
+        await page.setViewportSize({ width, height });
+        await home();
+        await press("Ambil Antrean");
+        await capture(`home-walk-in-${width}`);
+        await press("Janji Temu");
+        await capture(`home-appointment-${width}`);
+        report.viewports.push({
+          width,
+          height,
+          page: "home",
+          horizontalOverflow: false,
+        });
+      }
+      await page.setViewportSize({ width: 390, height: 844 });
+      await home();
+      await press("Ambil Antrean");
+      const savedStatuses = tickets.map((t) => t.status);
+      tickets.forEach((t) => (t.status = "SELESAI"));
+      invalidate();
+      await expect(text("Kunjungan Terdekat")).toHaveCount(0);
+      await capture("home-without-visit-390");
+      tickets.forEach((t, i) => (t.status = savedStatuses[i]));
+      tickets[2].status = "SELESAI";
+      invalidate();
+      await expect(text("PD-032")).toBeVisible();
+      await capture("home-with-visit-390");
+      await press("Lihat Detail");
+      assert.equal(
+        requests.filter((r) => r.method === "POST" && r.path.endsWith("/qr"))
+          .length,
+        0,
+      );
+      await press("Tutup");
+      await press("QR Code");
+      await expect(button("Perbarui QR")).toBeVisible();
+      await capture("home-live-qr-390");
+      await press("Tutup");
+      report.states.homeDetailAndFreshQr = true;
+      // Snapshot invalidation for operational transitions, with stale appointment
+      // copies retained to prove the owned ticket snapshot takes precedence.
+      for (const status of [
+        "CHECK_IN",
+        "MENUNGGU",
+        "DIPANGGIL",
+        "DILEWATI",
+        "MENUNGGU",
+        "DILAYANI",
+        "SELESAI",
+      ]) {
+        tickets[0].status = status;
+        const reads = requests.filter((r) => r.path === "/tiket/saya").length;
+        invalidate();
+        await expect
+          .poll(() => requests.filter((r) => r.path === "/tiket/saya").length)
+          .toBeGreaterThan(reads);
+        if (status === "SELESAI") await expect(text("PD-032")).toHaveCount(0);
+        else await expect(text(status.replaceAll("_", " "))).toBeVisible();
+      }
+      tickets[0].status = savedStatuses[0];
+      tickets[2].status = savedStatuses[2];
+      invalidate();
+      await expect(text("UM-001")).toBeVisible();
+      await press("Janji Temu");
+      await type("Cari dokter, poliklinik", "tidak cocok");
+      await expect(
+        text("Belum ada dokter yang sesuai pencarian."),
+      ).toBeVisible();
+      await page
+        .getByRole("button", { name: "Bersihkan pencarian", exact: true })
+        .click();
+      await page.getByLabel("Penyakit Dalam", { exact: true }).click();
+      await expect(text(doctor.nama)).toBeVisible();
+      await capture("home-filtered-doctors-390");
+      await page
+        .getByRole("button")
+        .filter({ hasText: doctor.nama })
+        .last()
+        .click();
+      await expect(text("Detail Dokter")).toBeVisible();
+      await home();
+      await press("Ambil Antrean");
+      const posts = requests.filter(
+        (r) => r.method === "POST" && r.path === "/reservasi",
+      ).length;
+      await page
+        .getByRole("button")
+        .filter({ hasText: "Poli Walk-in" })
+        .last()
+        .click();
+      await expect(button("Reservasi walk-in")).toBeVisible();
+      assert.equal(
+        requests.filter((r) => r.method === "POST" && r.path === "/reservasi")
+          .length,
+        posts,
+      );
+      report.states.homeModesSearchFilterAndSafeServiceEntry = true;
+      report.states.homeRealtimeStatusReconciliation = true;
+      await reservations();
+    }
+    if (patientV5 && !homeV6) {
       for (const [width, height] of [
         [390, 844],
         [320, 568],
@@ -611,7 +738,7 @@ module.exports = async ({
               r.path === "/tiket/" + tickets[0].id + "/qr",
           ).length,
       )
-      .toBe(1);
+      .toBe(homeV6 ? 2 : 1);
     await page.screenshot({ path: path.join(output, "correct-ticket-qr.png") });
     assert.ok(
       requests.some(

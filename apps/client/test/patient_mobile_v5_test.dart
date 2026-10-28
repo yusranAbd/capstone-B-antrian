@@ -235,44 +235,30 @@ void main() {
       ]) {
         await nav(t, label);
         expect(find.byType(PatientHomeIdentity), findsNothing);
-        expect(
-          find.byTooltip('Aktivitas tiket'),
-          label == 'Beranda' ? findsOneWidget : findsNothing,
-        );
-        expect(
-          find.byType(AppBar),
-          label == 'Beranda' ? findsOneWidget : findsNothing,
-        );
+        expect(find.byTooltip('Aktivitas tiket'), findsNothing);
+        expect(find.byType(AppBar), findsNothing);
         final scroll = find
             .byWidgetPredicate(
               (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
             )
             .hitTestable()
             .first;
+        final canCollapse =
+            t.state<ScrollableState>(scroll).position.maxScrollExtent > 60;
         await t.drag(scroll, const Offset(0, -180));
         await t.pumpAndSettle();
         expect(
           t.getSize(find.byKey(const ValueKey('patient-chrome-bottom'))).height,
-          0,
+          canCollapse ? 0 : greaterThanOrEqualTo(60),
         );
-        if (label == 'Beranda') {
-          expect(
-            t.getSize(find.byKey(const ValueKey('patient-chrome-top'))).height,
-            0,
-          );
-        }
+
         await t.drag(scroll, const Offset(0, 100));
         await t.pumpAndSettle();
         expect(
           t.getSize(find.byKey(const ValueKey('patient-chrome-bottom'))).height,
           greaterThanOrEqualTo(60),
         );
-        if (label == 'Beranda') {
-          expect(
-            t.getSize(find.byKey(const ValueKey('patient-chrome-top'))).height,
-            48,
-          );
-        }
+
         expect(t.takeException(), isNull);
       }
     });

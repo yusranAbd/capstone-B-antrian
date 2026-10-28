@@ -1,3 +1,5 @@
+import 'patient_test_navigation.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -122,7 +124,7 @@ void main() {
   }
 
   Future<void> clinic(WidgetTester tester) async {
-    await press(tester, find.text('Janji Temu Dokter'));
+    await openPatientCatalog(tester);
     await press(tester, find.byType(ClinicCard).first);
   }
 
@@ -142,6 +144,7 @@ void main() {
     'home clinic grid contains all eleven API clinics and omits inactive entries',
     (tester) async {
       await launch(tester, PatientV2Backend()..manyClinics = true);
+      await press(tester, find.byKey(const ValueKey('home-mode-appointment')));
       await tester.ensureVisible(find.byType(ChoiceChip).first);
       expect(find.byType(ChoiceChip), findsNWidgets(12));
       expect(find.text('Poliklinik Nonaktif'), findsNothing);
@@ -159,8 +162,9 @@ void main() {
       );
       await tester.enterText(find.byType(TextField).first, 'Penyakit Dalam');
       await tester.pumpAndSettle();
+      await press(tester, find.byKey(const ValueKey('home-mode-appointment')));
       await tester.ensureVisible(find.byType(ChoiceChip).first);
-      expect(find.byType(ChoiceChip), findsNWidgets(2));
+      expect(find.byType(ChoiceChip), findsNWidgets(12));
       expect(find.widgetWithText(ChoiceChip, 'Poli Umum'), findsOneWidget);
     },
   );
@@ -228,7 +232,7 @@ void main() {
     (tester) async {
       final backend = PatientV2Backend()..walkOnly = true;
       await launch(tester, backend);
-      await press(tester, find.text('Daftar Walk-in'));
+      await openPatientCatalog(tester);
       await press(tester, find.byType(ClinicCard).first);
       await press(tester, find.text('Lihat Detail Dokter'));
       expect(
@@ -317,10 +321,13 @@ void main() {
     await tester.ensureVisible(find.text('Kunjungan Terdekat'));
     expect(find.text('Kunjungan Terdekat'), findsOneWidget);
     expect(find.text('UM-001'), findsOneWidget);
-    await press(tester, find.text('Riwayat Kunjungan'));
-    expect(find.text('Riwayat kunjungan'), findsOneWidget);
-    expect(find.text('UM-004 · Poli Umum'), findsOneWidget);
-    expect(find.text('UM-001 · Poli Umum'), findsNothing);
+    await press(
+      tester,
+      find.widgetWithText(NavigationDestination, 'Tiket Saya'),
+    );
+    expect(find.text('Tiket Saya'), findsWidgets);
+    expect(find.text('UM-004'), findsOneWidget);
+    expect(find.text('UM-001'), findsOneWidget);
   });
 
   test('calendar DATE and slot labels follow configured service timezone', () {
