@@ -1,6 +1,6 @@
 {
-  "buildSha256": "7594489d63b67985a045ffa80eaa6a8ab5c83e03398c0da6f5a9c44d4ff35ccb",
-  "testedAt": "2026-10-28T01:44:43.251Z",
+  "buildSha256": "39cdde0b62287f896dceb5703881df9da091fc1212bea4268f9f7b77059d5d17",
+  "testedAt": "2026-10-28T02:39:16.323Z",
   "mode": "Real Chrome release Flutter; synthetic HTTP/Socket.IO, no database or real credentials",
   "states": {
     "homeDetailAndFreshQr": true,
@@ -90,15 +90,15 @@
   "chrome": "156.0.8078.48",
   "performance": {
     "initial": {
-      "jsHeapMiB": 35.48,
-      "taskSeconds": 4.589152,
-      "nodes": 186,
+      "jsHeapMiB": 43.94,
+      "taskSeconds": 5.432645,
+      "nodes": 184,
       "activeSockets": 1
     },
     "afterFlows": {
-      "jsHeapMiB": 63.9,
-      "taskSeconds": 4.843664,
-      "nodes": 280,
+      "jsHeapMiB": 54.41,
+      "taskSeconds": 3.95266,
+      "nodes": 310,
       "activeSockets": 1
     },
     "navigationCycles": []

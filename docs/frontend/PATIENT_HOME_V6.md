@@ -5,8 +5,8 @@ Revisi 28 Oktober 2026, mengikuti referensi dua mode pengguna dan pedoman QueueB
 ## Perubahan
 
 - Satu identitas QueueB, sapaan dan nama login di konten Beranda; tidak ada avatar berulang atau notifikasi yang belum didukung.
-- Greeting 20 logical px, pencarian compact, kunjungan terdekat solid teal gelap. Kartu adaptif dua area; pada layar sempit/teks besar menjadi vertikal. Foto dokter hanya bila profil terkait tersedia, tidak menambahkan dokter/slot untuk walk-in.
-- Ambil Antrean sebagai default: layanan aktif ANTREAN_HARIAN/HIBRIDA dari API. Janji Temu: chip poli aktif JANJI_TEMU_DOKTER/HIBRIDA dan dokter berelasi aktif. Data tak dikenal tidak diterjemahkan menjadi kanal baru.
+- Greeting 20 logical px, pencarian compact. Sesuai revisi pengguna, kartu Kunjungan Terdekat dipulihkan persis ke komposisi sebelum V6 (de56b16) dan Beranda memakai lagi palet biru periwinkle bersama; tidak ada aksen teal baru. Foto dokter hanya bila profil terkait tersedia, tanpa dokter/slot fiktif untuk walk-in.
+- Ambil Antrean sebagai default hanya memuat layanan pendukung Pendaftaran/Apotek/Administrasi dari API. Penjelajahan Janji Temu memuat semua poli klinis dan dokter berelasi aktif, termasuk poli yang mode servernya masih ANTREAN_HARIAN. Data tak dikenal tidak diterjemahkan menjadi kanal booking baru.
 - Pencarian mengikuti mode, termasuk nama/spesialisasi dokter terkait pada walk-in. Semua filter poli berasal dari katalog API; dokter multi-poli dicari melalui relasi yang cocok.
 - Daftar lazy melalui SliverList.builder, tidak dibatasi tiga dokter. Kontrol, search dan mode bertahan saat berganti tab. Lima navigasi dan perilaku focus-scroll tetap.
 - Kartu layanan membuka selectService existing dengan kanal walk-in eksplisit (termasuk HIBRIDA). Kartu dokter membuka chooseDoctor/detail existing. Konfirmasi, validasi tanggal/kuota/slot dan POST tetap dimiliki PatientPage; tidak ada workflow booking kedua.
@@ -15,7 +15,17 @@ Revisi 28 Oktober 2026, mengikuti referensi dua mode pengguna dan pedoman QueueB
 
 ## Batas perubahan
 
-Tidak ada perubahan backend, database, migration, Queue Engine, RBAC, pairing Public Display maupun layout role operasional. Akses seluruh fitur pasien tetap melalui lima menu dan alur reservasi existing. Pintasan Beranda lama diganti dua mode, bukan menghapus fungsi booking/riwayat.
+Tidak ada perubahan source backend, schema, migration, Queue Engine, RBAC, pairing Public Display maupun layout role operasional. Akses seluruh fitur pasien tetap melalui lima menu dan alur reservasi existing. Pintasan Beranda lama diganti dua mode, bukan menghapus fungsi booking/riwayat.
+
+### Kategori dan data demo pendukung
+
+API existing belum memiliki field kategori layanan. UI menggunakan kode eksplisit PENDAFTARAN, REGISTRASI, ADMINISTRASI, APOTEK dan APOTIK untuk memisahkan layanan pendukung dari poli; nama tampilan tetap dari API. Jangan memakai mode ANTREAN_HARIAN sebagai penanda bahwa sebuah layanan adalah administrasi. Kode baru di luar konvensi tersebut perlu keputusan kategorisasi, bukan ditebak dari kata dalam nama.
+
+Project Lead memilih mempertahankan mode booking existing. Poli Bedah Umum tetap ANTREAN_HARIAN. Dokternya dapat ditemukan di bagian Janji Temu, tetapi booking slot tetap dinonaktifkan dan tersedia aksi Daftar antrean poliklinik menuju formulir walk-in existing. Tidak mengubah mode layanan atau mengirim appointment yang ditolak backend.
+
+Pada development `127.0.0.1:5433/capstone_antrean`, penambahan aditif yang diminta pengguna membuat 2 layanan (PENDAFTARAN/PDF dan APOTEK/APT), 2 loket (PDF01/APT01), serta 12 jadwal Senin–Sabtu 07:00–17:00 Asia/Jakarta, kapasitas demo 80 per hari mengikuti pola seed existing. Bukan modul obat, resep atau farmasi klinis. Tidak membuat dokter, akun, booking atau tiket demo tambahan.
+
+Backup PostgreSQL custom penuh di luar repository telah diverifikasi checksum, daftar arsip dan decode offline sebelum penambahan. Service dan DTO NestJS existing digunakan dalam satu transaksi Serializable; seluruh 2.016 record existing identik pada pemeriksaan transaksi. Tidak ada update/hapus/reset/restore/migration. Pembacaan HTTP USER existing memverifikasi 7 layanan aktif, dua layanan baru tersedia, API health 200, dan mode BEDAH tetap ANTREAN_HARIAN. Verifikasi HTTP hanya membuat/mengakhiri sesi autentikasi normal; tidak membuat booking pada development. Backup dan kredensial tidak masuk Git.
 
 ## QA
 
@@ -25,8 +35,7 @@ Tool `browser-reservation-v4.cjs` dengan opsi `homeV6` memakai HTTP/Socket.IO si
 |---|---|
 | Format file terkait | 0 perubahan pada pemeriksaan akhir |
 | Flutter analyze | 0 issue |
-| Seluruh Flutter test lokal | 508 PASS, 1 SKIP |
-| Regresi V6 dan sesi terarah | 32 PASS |
+| Seluruh Flutter test lokal | 509 PASS, 1 SKIP |
 | Web release | PASS; hash build yang diuji tercantum di laporan browser |
 | APK release ARM64 split | PASS, 30.5 MiB; arsip native hanya arm64-v8a |
 | Responsive widget | 320×568, 360×800, 375×812, 390×844, 412×915; skala teks 1.5 dan kontrol V6 skala 2 |
@@ -49,7 +58,7 @@ Render Flutter release di Chrome, bukan mockup. Nama, poli, slot dan tiket pada 
 - [QR diterbitkan melalui workflow tiket](images/patient-home-v6/home-live-qr-390.png)
 - [Laporan browser dan hash build](images/patient-home-v6/qa.json)
 
-Dibanding referensi, notifikasi dan QR dekoratif di kartu sengaja tidak ditampilkan: notifikasi belum didukung, sedangkan QR harus diperoleh secara sah saat diminta. Layanan Administrasi/Apotek tidak dibuat. Ruang kosong setelah daftar pendek dibiarkan sebagai kanvas, tidak diisi data atau kartu buatan. Pada 320×568, konten panjang tetap scroll wajar dan navigasi dapat kembali melalui scroll ke atas.
+Dibanding referensi, notifikasi dan QR dekoratif di kartu tidak ditampilkan: notifikasi belum didukung, sedangkan QR harus diperoleh secara sah saat diminta. Revisi terbaru menambahkan data antrean Pendaftaran/Apotek pada development melalui layanan generik existing, tanpa modul klinis/farmasi baru. Ruang kosong setelah daftar pendek dibiarkan sebagai kanvas, tidak diisi data atau kartu buatan. Pada 320×568, konten panjang tetap scroll wajar dan navigasi dapat kembali melalui scroll ke atas.
 
 ## Batas validasi dan distribusi
 

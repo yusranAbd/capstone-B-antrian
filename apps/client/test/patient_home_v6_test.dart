@@ -26,24 +26,47 @@ void main() {
           <String, dynamic>{
             'id': mode,
             'nama': mode,
+            'kode': 'POLI$mode',
             'modeReservasi': mode,
             'aktif': true,
           },
         {'id': 'closed', 'modeReservasi': 'HIBRIDA', 'aktif': false},
         {'id': 'missing'},
       ];
-      expect(homeWalkInClinics(clinics, [], '').map((c) => c['id']), [
-        'ANTREAN_HARIAN',
-        'HIBRIDA',
-      ]);
+      expect(homeWalkInClinics(clinics, [], ''), isEmpty);
+      final auxiliary = <Json>[
+        {
+          'id': 'registration',
+          'kode': 'PENDAFTARAN',
+          'nama': 'Pendaftaran',
+          'modeReservasi': 'ANTREAN_HARIAN',
+        },
+        {
+          'id': 'pharmacy',
+          'kode': 'APOTEK',
+          'nama': 'Apotek',
+          'modeReservasi': 'ANTREAN_HARIAN',
+        },
+      ];
+      expect(
+        homeWalkInClinics(
+          [...clinics, ...auxiliary],
+          [],
+          '',
+        ).map((c) => c['id']),
+        ['registration', 'pharmacy'],
+      );
+      expect(auxiliary.where(supportsHomeAppointment), isEmpty);
       expect(clinics.where(supportsHomeAppointment).map((c) => c['id']), [
+        'ANTREAN_HARIAN',
         'HIBRIDA',
         'JANJI_TEMU_DOKTER',
       ]);
       expect(homeWalkInClinics(clinics, [], 'unknown'), isEmpty);
       final service = {
         'id': 'a',
-        'nama': 'Poli Anak',
+        'nama': 'Pendaftaran',
+        'kode': 'PENDAFTARAN',
         'modeReservasi': 'HIBRIDA',
       };
       final doctor = {
@@ -108,9 +131,9 @@ void main() {
   });
 
   testWidgets(
-    'home service list builds lazily and reaches every backend clinic',
+    'home doctor list builds lazily and reaches every backend doctor',
     (t) async {
-      final b = HomeBackend()..manyClinics = true;
+      final b = HomeBackend()..manyHomeDoctors = true;
       t.view.physicalSize = const Size(390, 844);
       t.view.devicePixelRatio = 1;
       addTearDown(t.view.resetPhysicalSize);
@@ -128,9 +151,11 @@ void main() {
       addTearDown(api.dispose);
       await t.pumpWidget(QueueBApp(api: api));
       await t.pumpAndSettle();
-      expect(find.byType(PatientHomeService).evaluate().length, lessThan(11));
+      await t.tap(find.byKey(const ValueKey('home-mode-appointment')));
+      await t.pumpAndSettle();
+      expect(find.byType(PatientHomeDoctorV6).evaluate().length, lessThan(30));
       await t.scrollUntilVisible(
-        find.text('Poliklinik 10'),
+        find.text('dr. Sindi QA 29'),
         160,
         scrollable: find
             .byWidgetPredicate(
@@ -138,7 +163,7 @@ void main() {
             )
             .first,
       );
-      expect(find.text('Poliklinik 10'), findsOneWidget);
+      expect(find.text('dr. Sindi QA 29'), findsOneWidget);
       expect(find.text('Poliklinik Nonaktif'), findsNothing);
       expect(t.takeException(), isNull);
     },
@@ -192,6 +217,56 @@ void main() {
         'Sindi',
       );
       expect(find.byType(PatientHomeDoctorV6), findsOneWidget);
+      expect(t.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'daily-only clinical service is discoverable under Janji Temu but keeps its walk-in flow',
+    (t) async {
+      final b = HomeBackend()..walkOnly = true;
+      t.view.physicalSize = const Size(390, 844);
+      t.view.devicePixelRatio = 1;
+      addTearDown(t.view.resetPhysicalSize);
+      addTearDown(t.view.resetDevicePixelRatio);
+      final api =
+          QueueApi(
+              config: AppConfig(
+                apiBaseUrl: 'http://localhost/api/v1',
+                realtime: false,
+              ),
+              client: MockClient(b.handle),
+            )
+            ..accessToken = 'test'
+            ..user = b.user;
+      addTearDown(api.dispose);
+      await t.pumpWidget(QueueBApp(api: api));
+      await t.pumpAndSettle();
+      expect(
+        find.widgetWithText(PatientHomeService, 'Poli Umum'),
+        findsNothing,
+      );
+      await t.tap(find.byKey(const ValueKey('home-mode-appointment')));
+      await t.pumpAndSettle();
+      await t.tap(find.byType(PatientHomeDoctorV6));
+      await t.pumpAndSettle();
+      expect(
+        t
+            .widget<FilledButton>(
+              find.widgetWithText(FilledButton, 'Buat Janji Temu'),
+            )
+            .onPressed,
+        isNull,
+      );
+      final action = find.text('Daftar antrean poliklinik');
+      await t.ensureVisible(action);
+      await t.pumpAndSettle();
+      await t.ensureVisible(action);
+      await t.pumpAndSettle();
+      await t.tap(action);
+      await t.pumpAndSettle();
+      expect(find.text('Reservasi walk-in'), findsOneWidget);
+      expect(b.requests.where((r) => r.$1 == 'POST'), isEmpty);
       expect(t.takeException(), isNull);
     },
   );

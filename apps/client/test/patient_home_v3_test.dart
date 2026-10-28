@@ -17,6 +17,7 @@ import 'patient_v2_test.dart' show PatientV2Backend;
 import 'ui_test.dart' show uid;
 
 class HomeBackend extends PatientV2Backend {
+  bool manyHomeDoctors = false;
   Completer<void>? homeGate;
   bool failHomeSchedule = false;
   bool expiredQr = false;
@@ -49,19 +50,39 @@ class HomeBackend extends PatientV2Backend {
   };
   @override
   Future<http.Response> handle(http.Request request) async {
+    if (request.url.path.endsWith('/layanan')) {
+      final items = manyClinics
+          ? [
+              service,
+              for (var i = 1; i < 11; i++)
+                {...service, 'id': 'clinic-$i', 'nama': 'Poliklinik $i'},
+            ]
+          : [service];
+      return reply([
+        ...items,
+        {
+          ...service,
+          'id': 'aux-registration',
+          'kode': 'PENDAFTARAN',
+          'nama': 'Pendaftaran',
+          'modeReservasi': 'HIBRIDA',
+        },
+      ]);
+    }
     if (request.url.path.endsWith('/dokter')) {
       return reply([
-        {
-          'id': uid,
-          'nama': 'dr. Sindi QA',
-          'spesialisasi': 'Anak',
-          'aktif': true,
-          'fotoProfil':
-              '/media/dokter/11111111-1111-4111-8111-111111111111.webp',
-          'dokterLayanan': [
-            {'id': uid, 'aktif': true, 'layananId': uid, 'layanan': service},
-          ],
-        },
+        for (var i = 0; i < (manyHomeDoctors ? 30 : 1); i++)
+          {
+            'id': i == 0 ? uid : 'doctor-$i',
+            'nama': i == 0 ? 'dr. Sindi QA' : 'dr. Sindi QA $i',
+            'spesialisasi': 'Anak',
+            'aktif': true,
+            'fotoProfil':
+                '/media/dokter/11111111-1111-4111-8111-111111111111.webp',
+            'dokterLayanan': [
+              {'id': uid, 'aktif': true, 'layananId': uid, 'layanan': service},
+            ],
+          },
       ]);
     }
     if (request.url.path.endsWith('/tiket/$uid') && failTicketRead) {

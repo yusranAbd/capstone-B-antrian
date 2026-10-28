@@ -10,18 +10,35 @@ import 'patient_ui.dart';
 enum PatientHomeMode { walkIn, appointment }
 
 abstract final class PatientHomeV6Style {
-  static const walkIn = Color(0xff007c80);
-  static const visit = Color(0xff075461);
-  static const soft = Color(0xffe6f5f4);
+  static const walkIn = PatientDesign.primary;
+  static const visit = PatientDesign.hero;
+  static const soft = PatientDesign.soft;
 }
+
+// The existing API has no service-category field. These explicit service codes
+// identify auxiliary desks, independently of the booking mode. No catalog rows
+// are invented here; administrators still own the actual records in the API.
+bool isAuxiliaryHomeService(Json clinic) => const {
+  'PENDAFTARAN',
+  'REGISTRASI',
+  'ADMINISTRASI',
+  'APOTEK',
+  'APOTIK',
+}.contains('${clinic['kode'] ?? ''}'.toUpperCase());
 
 bool supportsHomeWalkIn(Json clinic) =>
     clinic['aktif'] != false &&
+    isAuxiliaryHomeService(clinic) &&
     ['ANTREAN_HARIAN', 'HIBRIDA'].contains(clinic['modeReservasi']);
 
 bool supportsHomeAppointment(Json clinic) =>
     clinic['aktif'] != false &&
-    ['JANJI_TEMU_DOKTER', 'HIBRIDA'].contains(clinic['modeReservasi']);
+    !isAuxiliaryHomeService(clinic) &&
+    [
+      'ANTREAN_HARIAN',
+      'JANJI_TEMU_DOKTER',
+      'HIBRIDA',
+    ].contains(clinic['modeReservasi']);
 
 List<Json> homeWalkInClinics(
   List<Json> clinics,
@@ -231,7 +248,9 @@ class PatientHomeDoctorV6 extends StatelessWidget {
         '${preview.doctor['spesialisasi']}',
       label(preview.clinic),
     ].join(' · '),
-    note: scheduleUnavailable
+    note: preview.clinic['modeReservasi'] == 'ANTREAN_HARIAN'
+        ? 'Layanan poli ini menggunakan antrean harian.'
+        : scheduleUnavailable
         ? 'Jadwal belum dapat dimuat.'
         : preview.session == null
         ? 'Jadwal belum tersedia.'

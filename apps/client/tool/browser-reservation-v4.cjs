@@ -53,13 +53,22 @@ module.exports = async ({
     },
     {
       id: ids[1],
-      nama: "Poli Walk-in",
-      kode: "UM",
+      nama: "Pendaftaran",
+      kode: "PENDAFTARAN",
       prefixAntrean: "UM",
       aktif: true,
       modeReservasi: "ANTREAN_HARIAN",
     },
   ];
+  if (homeV6)
+    clinics.push({
+      id: randomUUID(),
+      nama: "Apotek",
+      kode: "APOTEK",
+      prefixAntrean: "APT",
+      aktif: true,
+      modeReservasi: "ANTREAN_HARIAN",
+    });
   const doctor = {
     id: ids[2],
     nama: "dr. Indah Suci Permatasari, Sp.PD",
@@ -563,7 +572,7 @@ module.exports = async ({
       ).length;
       await page
         .getByRole("button")
-        .filter({ hasText: "Poli Walk-in" })
+        .filter({ hasText: "Pendaftaran" })
         .last()
         .click();
       await expect(button("Reservasi walk-in")).toBeVisible();
@@ -786,7 +795,7 @@ module.exports = async ({
     await reservations();
     await press("Buat Reservasi");
     await text("Pilih Poliklinik").click();
-    await text("Poli Walk-in").click();
+    await text("Pendaftaran").click();
     await type("Tanggal pelayanan", today);
     await press("Reservasi walk-in");
     await press("Lanjutkan");

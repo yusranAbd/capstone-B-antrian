@@ -1518,6 +1518,21 @@ class _PatientPageState extends State<PatientPage> {
                 : () => setState(() => doctorDetail = false),
             child: const Text('Buat Janji Temu'),
           ),
+          if (selectedService?['modeReservasi'] == 'ANTREAN_HARIAN') ...[
+            const MobileNotice(
+              'Poliklinik ini menggunakan antrean harian, bukan booking slot dokter.',
+            ),
+            OutlinedButton.icon(
+              onPressed: busy || loading
+                  ? null
+                  : () => setState(() {
+                      bookingStage = doctorDetail = appointment = false;
+                      doctorId = sessionId = slotId = null;
+                    }),
+              icon: const Icon(Icons.confirmation_number_outlined),
+              label: const Text('Daftar antrean poliklinik'),
+            ),
+          ],
           OutlinedButton.icon(
             onPressed: busy || loading ? null : load,
             icon: const Icon(Icons.refresh),
