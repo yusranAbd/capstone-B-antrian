@@ -12,6 +12,7 @@ import 'package:timezone/data/latest.dart' as tz;
 import 'package:queueb_client/src/api.dart';
 import 'package:queueb_client/src/app.dart';
 import 'package:queueb_client/src/config.dart';
+import 'package:queueb_client/src/staff_qr_scanner.dart';
 import 'package:queueb_client/src/mobile_ui.dart';
 import 'package:queueb_client/src/patient_reservations.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -477,12 +478,14 @@ void main() {
     (tester) async {
       final server = FakeBackend('PETUGAS');
       await launch(tester, server);
-      await press(tester, 'Input Manual');
-      await tester.enterText(
-        find.widgetWithText(TextField, 'Payload QR (SQ1…)'),
-        'SQ1.${'A' * 43}',
-      );
-      await press(tester, 'Proses QR & Masuk Antrean', type: OutlinedButton);
+      await tester.tap(find.byType(FloatingActionButton));
+      await tester.pumpAndSettle();
+      final scanned = tester
+          .widget<StaffQrScanner>(find.byType(StaffQrScanner))
+          .onScan('SQ1.${'A' * 43}');
+      await tester.pumpAndSettle();
+      await scanned;
+      await press(tester, 'Tutup');
       expect(server.status, 'MENUNGGU');
       expect(server.requests.where((r) => r.$2.endsWith('/masuk')), isEmpty);
       expect(server.status, 'MENUNGGU');

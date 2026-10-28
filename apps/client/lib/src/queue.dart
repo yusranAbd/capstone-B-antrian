@@ -28,7 +28,6 @@ class _QueuePageState extends State<QueuePage> with WidgetsBindingObserver {
   String liveStatus = 'Menghubungkan realtime…';
   bool loading = true, busy = false;
   String? pendingPath;
-  final qr = TextEditingController();
   final search = TextEditingController();
   SnapshotLoader? loader;
   RealtimeFeed? feed;
@@ -85,9 +84,6 @@ class _QueuePageState extends State<QueuePage> with WidgetsBindingObserver {
     scheduleLoading = true;
     scheduleFailed = false;
     scheduleVersion++;
-    lastScan = null;
-    manualQrOpen = false;
-    qr.clear();
     message = null;
     final room = selectedRoom;
     if (room == null) return;
@@ -139,7 +135,6 @@ class _QueuePageState extends State<QueuePage> with WidgetsBindingObserver {
               schedules = [];
               scheduleLoading = false;
               scheduleVersion++;
-              lastScan = null;
             }
           });
         }
@@ -213,9 +208,6 @@ class _QueuePageState extends State<QueuePage> with WidgetsBindingObserver {
     }
   }
 
-  Json? lastScan;
-  bool manualQrOpen = false;
-
   Future<Json> submitQr(String value) async {
     if (!mounted) {
       throw const ApiException(
@@ -237,7 +229,6 @@ class _QueuePageState extends State<QueuePage> with WidgetsBindingObserver {
       pendingPath = '/check-in/auto-antrean';
       error = null;
       message = null;
-      lastScan = null;
     });
     String? failure;
     try {
@@ -259,12 +250,6 @@ class _QueuePageState extends State<QueuePage> with WidgetsBindingObserver {
           409,
           'Status belum MENUNGGU. Periksa antrean sebelum mencoba kembali.',
         );
-      }
-      if (mounted) {
-        setState(() {
-          lastScan = result;
-          qr.clear();
-        });
       }
       return result;
     } catch (e) {
@@ -297,7 +282,6 @@ class _QueuePageState extends State<QueuePage> with WidgetsBindingObserver {
     feed?.dispose();
     loader?.dispose();
     poll?.cancel();
-    qr.dispose();
     search.dispose();
     super.dispose();
   }
@@ -418,6 +402,15 @@ class _QueuePageState extends State<QueuePage> with WidgetsBindingObserver {
     child: Builder(
       builder: (context) => Scaffold(
         appBar: widget.headerBuilder?.call(roomChoice()),
+        floatingActionButton: selectedRoom == null
+            ? null
+            : FloatingActionButton.extended(
+                key: const ValueKey('staff-scan-fab'),
+                onPressed: busy || loading || snapshot == null ? null : scan,
+                tooltip: 'Pindai QR pasien',
+                icon: const Icon(Icons.qr_code_scanner_rounded),
+                label: const Text('Pindai QR'),
+              ),
         body: LayoutBuilder(
           builder: (context, box) {
             final wide = box.maxWidth >= 1000;
@@ -429,15 +422,14 @@ class _QueuePageState extends State<QueuePage> with WidgetsBindingObserver {
               loading: scheduleLoading,
               failed: scheduleFailed,
             );
-            final mainHeight = (box.maxHeight - 304).clamp(280.0, 560.0);
+            final mainHeight = (box.maxHeight - 264).clamp(320.0, 560.0);
             return SingleChildScrollView(
               key: const ValueKey('staff-page-scroll'),
-              padding: EdgeInsets.all(
-                box.maxWidth >= 1440
-                    ? 20
-                    : wide
-                    ? 16
-                    : 12,
+              padding: EdgeInsets.fromLTRB(
+                wide ? 16 : 12,
+                wide ? 16 : 12,
+                wide ? 16 : 12,
+                room == null ? 16 : 88,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -484,8 +476,6 @@ class _QueuePageState extends State<QueuePage> with WidgetsBindingObserver {
                       const SizedBox(height: 12),
                       SizedBox(height: 450, child: waitingPanel(context)),
                     ],
-                    const SizedBox(height: 16),
-                    checkInPanel(),
                   ],
                 ],
               ),
@@ -809,88 +799,4 @@ class _QueuePageState extends State<QueuePage> with WidgetsBindingObserver {
       ],
     );
   }
-
-  Widget checkInPanel() => RepaintBoundary(
-    key: const ValueKey('staff-qr-panel'),
-    child: StaffPanel(
-      title: 'QR Check-in Otomatis',
-      icon: Icons.qr_code_scanner_rounded,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text(
-            'Pindai QR pasien untuk langsung memasukkannya ke antrean.',
-            style: TextStyle(fontSize: 12, color: QueueBStyle.muted),
-          ),
-          const SizedBox(height: 8),
-          LayoutBuilder(
-            builder: (context, box) {
-              final scanButton = FilledButton.icon(
-                onPressed: busy ? null : scan,
-                icon: const Icon(Icons.qr_code_scanner),
-                label: const Text('Mulai Pindai QR'),
-              );
-              final manual = ExpansionTile(
-                dense: true,
-                minTileHeight: 44,
-                key: const ValueKey('staff-manual-qr'),
-                initiallyExpanded: manualQrOpen,
-                onExpansionChanged: (v) => setState(() => manualQrOpen = v),
-                tilePadding: EdgeInsets.zero,
-                title: const Text(
-                  'Input Manual',
-                  style: TextStyle(fontSize: 13),
-                ),
-                children: [
-                  TextField(
-                    controller: qr,
-                    enabled: !busy,
-                    obscureText: true,
-                    autocorrect: false,
-                    enableSuggestions: false,
-                    decoration: const InputDecoration(
-                      labelText: 'Payload QR (SQ1…)',
-                      prefixIcon: Icon(Icons.qr_code),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  OutlinedButton(
-                    onPressed: busy
-                        ? null
-                        : () async {
-                            try {
-                              await submitQr(qr.text);
-                            } catch (_) {
-                              /* Visible error; no optimistic status. */
-                            }
-                          },
-                    child: const Text('Proses QR & Masuk Antrean'),
-                  ),
-                ],
-              );
-              return box.maxWidth >= 850
-                  ? Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(flex: 4, child: scanButton),
-                        const SizedBox(width: 32),
-                        Expanded(flex: 6, child: manual),
-                      ],
-                    )
-                  : Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [scanButton, manual],
-                    );
-            },
-          ),
-          if (busy && pendingPath == '/check-in/auto-antrean')
-            const LinearProgressIndicator(),
-          if (lastScan != null) ...[
-            const SizedBox(height: 8),
-            StaffScanResult(result: lastScan!),
-          ],
-        ],
-      ),
-    ),
-  );
 }

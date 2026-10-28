@@ -1,6 +1,6 @@
 # Portal PETUGAS V4
 
-Workbench operasional mengikuti referensi yang disetujui: header satu baris dengan pemilih ruang penugasan dan menu profil/logout; dokter terjadwal; daftar pasien terpadu dominan di kiri; panel pelayanan navy di kanan; QR otomatis di bawah. Statistik atas, informasi header berulang, panel Tiket diterima/dilewati dan formulir UUID pemulihan tidak dirender. Desain role lain dipertahankan.
+Workbench operasional mengikuti referensi yang disetujui: header satu baris dengan pemilih ruang penugasan dan akses langsung ke profil; dokter terjadwal; daftar pasien terpadu dominan di kiri; panel pelayanan navy di kanan; pemindai QR otomatis dibuka melalui FloatingActionButton.extended di kanan bawah. Statistik atas, informasi header berulang, panel Tiket diterima/dilewati dan formulir UUID pemulihan tidak dirender. Desain role lain dipertahankan.
 
 ## Sumber data dan perilaku
 
@@ -9,7 +9,7 @@ Workbench operasional mengikuti referensi yang disetujui: header satu baris deng
 - Daftar: field daftarPasien pada GET /queue/snapshot, bukan cache event SKIP. MENUNGGU mempertahankan ranking server; SKIP/CHECK_IN ditambahkan untuk tindak lanjut. Nama adalah identitas minimal dari pemilik tiket, tanpa usia/jenis kelamin/keluhan rekaan.
 - Tabel memakai lima row per halaman lokal dan pencarian nomor/nama pada data dimuat. Backend mempertahankan 100 row menunggu legacy dan 100 tindak lanjut per batch. Kontrol batch tindak lanjut hanya muncul jika diperlukan; batch di luar 100 pertama tetap dapat dipulihkan tanpa UUID. Filter dipertahankan saat refresh/tindakan; REQUEUE memperbarui row berdasarkan ID dan hasil REST, tanpa duplikasi.
 - Aksi menu sesuai status/flag: Detail tiket; Kembalikan ke Antrean pada DILEWATI loket asal; Masuk Antrean pada CHECK_IN yang relevan. CALL memilih server, tidak memilih row yang difilter. Semua endpoint transisi existing tetap digunakan.
-- QR kamera dan deduplikasi frame existing dipertahankan. Input manual tetap eksplisit dan hanya memanggil POST /check-in/auto-antrean. CHECK_IN legacy dapat dipulihkan dari row; tidak ada tahap ENQUEUE kedua untuk QR baru.
+- QR kamera dan deduplikasi frame existing dipertahankan. Tombol mengambang Pindai QR membuka dialog kamera dan hanya memanggil POST /check-in/auto-antrean. Panel bawah dan input payload manual dihapus sesuai revisi 28 Oktober 2026. CHECK_IN legacy tetap dapat dipulihkan dari row; tidak ada tahap ENQUEUE kedua untuk QR baru. Hasil scan tetap tampil dalam dialog. Lihat [QA FAB pemindai](STAFF_SCAN_FAB.md).
 - Realtime /queue, join layanan, invalidasi dan reconnect tetap memicu snapshot. Polling/resume/disposal existing dipertahankan. Hasil jadwal terlambat tidak dapat mengganti ruang baru. Penolakan 401/403 mengosongkan cache nama pasien, jadwal dan hasil scan; gangguan jaringan tidak mengarang keberhasilan tindakan.
 
 ## Backend minimum

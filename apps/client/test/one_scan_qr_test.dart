@@ -152,7 +152,7 @@ void main() {
   );
   for (final size in [const Size(1366, 768), const Size(375, 900)]) {
     testWidgets(
-      'manual input explicit, snapshot updates only after server, result fits $size',
+      'native scan FAB opens camera; server check-in refreshes snapshot $size',
       (tester) async {
         tester.view.physicalSize = size;
         tester.view.devicePixelRatio = 1;
@@ -175,59 +175,53 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        await tester.scrollUntilVisible(
-          find.text('Input Manual'),
-          200,
-          scrollable: find.byType(Scrollable).first,
+        final fab = find.byType(FloatingActionButton);
+        expect(fab, findsOneWidget);
+        expect(find.byKey(const ValueKey('staff-qr-panel')), findsNothing);
+        expect(find.text('Input Manual'), findsNothing);
+        expect(
+          find.widgetWithText(TextField, 'Payload QR (SQ1…)'),
+          findsNothing,
         );
+        await tester.tap(fab);
         await tester.pumpAndSettle();
-        await tester.ensureVisible(find.text('Input Manual'));
-        await tester.tap(find.text('Input Manual'));
-        await tester.pumpAndSettle();
-        final field = find.widgetWithText(TextField, 'Payload QR (SQ1…)');
-        await tester.enterText(field, 'SQ1.partial');
+        final scanner = tester.widget<StaffQrScanner>(
+          find.byType(StaffQrScanner),
+        );
+        final invalid = scanner.onScan('SQ1.partial');
+        await expectLater(invalid, throwsA(isA<ApiException>()));
         await tester.pumpAndSettle();
         expect(
           backend.requests.where((r) => r.$2 == '/check-in/auto-antrean'),
           isEmpty,
         );
-        final button = find.text('Proses QR & Masuk Antrean');
-        await tester.ensureVisible(button);
-        await tester.pumpAndSettle();
-        await tester.tap(button);
-        await tester.pumpAndSettle();
-        expect(
-          backend.requests.where((r) => r.$2 == '/check-in/auto-antrean'),
-          isEmpty,
-        );
-        await tester.enterText(field, qrA);
-        await tester.pumpAndSettle();
         expect(backend.status, 'DIPESAN');
-        await tester.ensureVisible(button);
+        // Exercise the real dialog callback; frame deduplication is tested above.
+        final pending = scanner.onScan(qrA);
         await tester.pumpAndSettle();
-        await tester.tap(button);
-        await tester.pumpAndSettle();
+        expect((await pending)['status'], 'MENUNGGU');
         expect(backend.status, 'MENUNGGU');
         expect(
           backend.requests.where((r) => r.$2 == '/check-in/auto-antrean'),
           hasLength(1),
         );
         expect(backend.requests.where((r) => r.$2.endsWith('/masuk')), isEmpty);
-        expect(
-          find.text('Pasien Uji'),
-          findsNWidgets(2),
-        ); // Snapshot row + transient scan receipt.
-        expect(find.text('UM-001 · MENUNGGU'), findsOneWidget);
+        await tester.tap(find.text('Tutup'));
+        await tester.pumpAndSettle();
+        expect(find.byType(StaffQrScanner), findsNothing);
+        expect(find.text('Pasien Uji'), findsOneWidget);
+        await tester.tap(fab);
+        await tester.pumpAndSettle();
+        expect(find.byType(StaffQrScanner), findsOneWidget);
+        await tester.tap(find.text('Tutup'));
+        await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
         final capture = Platform.environment['QUEUEB_QR_CAPTURE_DIR'];
         if (capture != null) {
-          await tester.ensureVisible(find.text('QR Check-in Otomatis'));
           await tester.pumpAndSettle();
           await tester.runAsync(() async {
             final image = await tester
-                .renderObject<RenderRepaintBoundary>(
-                  find.byKey(const ValueKey('staff-qr-panel')),
-                )
+                .renderObject<RenderRepaintBoundary>(find.byKey(key))
                 .toImage();
             final bytes = await image.toByteData(
               format: ui.ImageByteFormat.png,

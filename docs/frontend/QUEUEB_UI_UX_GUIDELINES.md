@@ -153,7 +153,7 @@ Public Display **tidak memakai skala dashboard desktop**. Pertahankan skala resp
 ## Perbedaan lima portal
 
 - **ADMIN:** kepadatan tabel, CRUD, search/filter/form. Informasi nama/status utama; identifier teknis tidak menjadi input manual bila ada pilihan data.
-- **PETUGAS:** antrean dan aksi pelayanan adalah fokus. Panel pelayanan cukup dominan; QR One-Scan, dokter terjadwal dan status antrean tetap terlihat. Urutan/prioritas mengikuti server.
+- **PETUGAS:** antrean dan aksi pelayanan adalah fokus. Panel pelayanan cukup dominan; QR One-Scan dibuka lewat FloatingActionButton.extended Pindai QR, tanpa panel bawah/input manual. Sisakan inset bawah agar FAB tidak menutupi aksi terakhir; dokter terjadwal dan status antrean tetap terlihat. Urutan/prioritas mengikuti server.
 - **DOKTER:** monitoring jadwal/appointment/antrean read-only. Jangan menambahkan aksi pelayanan PETUGAS, rekam medis, atau data pasien yang tidak tersedia.
 - **PASIEN:** mobile-first, navigasi sederhana, booking/reservasi/tiket/QR. Jangan mengorbankan touch target/teks demi kepadatan desktop.
 - **PUBLIC DISPLAY:** informasi jarak jauh, tanpa scroll, pengumuman aktual, privasi dan keamanan perangkat.

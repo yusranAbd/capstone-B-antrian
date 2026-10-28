@@ -101,6 +101,9 @@ void main() {
         await launch(tester, backend, size);
         expect(find.text('dr. Sekar Larasati, Sp.PD'), findsOneWidget);
         expect(tester.takeException(), isNull);
+        expect(find.byType(FloatingActionButton), findsOneWidget);
+        expect(find.text('Input Manual'), findsNothing);
+        expect(find.byKey(const ValueKey('staff-qr-panel')), findsNothing);
         if (size.width >= 1000) {
           final left = tester.getSize(find.byType(StaffPatientList)).width;
           final service = find.byWidgetPredicate(
@@ -109,7 +112,7 @@ void main() {
           final right = tester.getSize(service).width;
           expect(right / (left + right), greaterThan(.43));
           expect(
-            tester.getBottomLeft(find.text('Mulai Pindai QR')).dy,
+            tester.getBottomLeft(find.text('Pindai QR')).dy,
             lessThan(size.height),
           );
           expect(find.text('Tindak lanjut: 1/2'), findsOneWidget);

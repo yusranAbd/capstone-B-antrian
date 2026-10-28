@@ -15,6 +15,7 @@ module.exports = async ({
   fontFile,
   baseline = false,
   compact = false,
+  cameraVideo,
 }) => {
   fs.mkdirSync(output, { recursive: true });
   const report = {
@@ -270,6 +271,7 @@ module.exports = async ({
       if (file.endsWith("main.dart.js")) {
         const source = bytes.toString();
         const defines = [
+          "https://api.queueb.invalid/api/v1",
           "http://localhost:3000/api/v1",
           "http://127.0.0.1:3003/api/v1",
           "http://localhost:3001/api/v1",
@@ -318,13 +320,23 @@ module.exports = async ({
   try {
     await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
     base = "http://127.0.0.1:" + server.address().port;
-    browser = await chromium.launch({ channel: "chrome", headless: true });
+    browser = await chromium.launch({
+      channel: "chrome",
+      headless: true,
+      args: cameraVideo
+        ? [
+            "--use-fake-device-for-media-stream",
+            "--use-file-for-fake-video-capture=" + path.resolve(cameraVideo),
+          ]
+        : [],
+    });
     report.chrome = browser.version();
     const context = await browser.newContext({
       viewport: { width: 1366, height: 768 },
       serviceWorkers: "block",
+      permissions: cameraVideo ? ["camera"] : [],
     });
-    await context.route("**/*", (route) => {
+    await context.route("**/*", async (route) => {
       const u = new URL(route.request().url());
       if (u.hostname === "fonts.gstatic.com")
         return route.fulfill({
@@ -349,6 +361,27 @@ module.exports = async ({
           headers: { "Access-Control-Allow-Origin": "*" },
         });
       }
+      // mobile_scanner's pinned ZXing reader is required for the real camera
+      // fixture on desktop browsers without native BarcodeDetector support.
+      if (
+        cameraVideo &&
+        ["cdn.jsdelivr.net", "fastly.jsdelivr.net"].includes(u.hostname) &&
+        u.pathname.startsWith("/npm/zxing-wasm@3.1.3/")
+      ) {
+        // Fetch the identical pinned asset through the CDN hostname reachable
+        // from this QA host; the package's alternate Fastly host may time out.
+        const response = await fetch("https://cdn.jsdelivr.net" + u.pathname, {
+          signal: AbortSignal.timeout(15000),
+        });
+        assert.ok(response.ok, "Pinned camera decoder unavailable");
+        return route.fulfill({
+          body: Buffer.from(await response.arrayBuffer()),
+          contentType: u.pathname.endsWith(".wasm")
+            ? "application/wasm"
+            : "text/javascript",
+          headers: { "Access-Control-Allow-Origin": "*" },
+        });
+      }
       return u.origin === base ? route.continue() : route.abort();
     });
     page = await context.newPage();
@@ -358,7 +391,8 @@ module.exports = async ({
     const press = (name) =>
       page
         .getByRole("button", {
-          name: new RegExp("^" + name + "$"),
+          name:
+            name === "Pindai QR" ? /Pindai QR/ : new RegExp("^" + name + "$"),
           includeHidden: true,
         })
         .click();
@@ -379,7 +413,11 @@ module.exports = async ({
     await expect
       .poll(async () => {
         const p = page.locator("flt-semantics-placeholder");
-        if (await p.count()) await p.evaluate((el) => el.click());
+        if (
+          await page.getByRole("button", { name: "Masuk", exact: true }).count()
+        )
+          return 1;
+        if (await p.count()) await p.click({ timeout: 1000 }).catch(() => {});
         return page.getByRole("button", { name: "Masuk", exact: true }).count();
       })
       .toBe(1);
@@ -440,15 +478,31 @@ module.exports = async ({
       }));
       assert.equal(metrics.width, metrics.scrollWidth);
       if (width >= 1000 && height >= 720) {
-        for (const value of ["Panggil berikutnya", "Mulai Pindai QR"]) {
-          const b = await page
-            .getByRole("button", { name: value, exact: true })
-            .boundingBox();
-          assert.ok(b.y + b.height <= height, value + " below viewport");
+        for (const value of ["Panggil berikutnya", "Pindai QR"]) {
+          const control = page.getByRole("button", {
+            name: value,
+            exact: value !== "Pindai QR",
+          });
+          await expect
+            .poll(
+              async () => {
+                const b = await control.boundingBox();
+                return b !== null && b.y + b.height <= height;
+              },
+              { message: value + " must fit viewport" },
+            )
+            .toBe(true);
         }
         for (const value of ["AN-001", "AN-002", "AN-003"]) {
-          const b = await text(value).boundingBox();
-          assert.ok(b.y + b.height <= height);
+          await expect
+            .poll(
+              async () => {
+                const b = await text(value).boundingBox();
+                return b !== null && b.y + b.height <= height;
+              },
+              { message: value + " must fit viewport" },
+            )
+            .toBe(true);
         }
       }
       report.viewports.push({
@@ -496,25 +550,36 @@ module.exports = async ({
     await rowAction("AN-003", "Masuk Antrean");
     await expect.poll(() => patients[0][2].status).toBe("MENUNGGU");
     report.states.legacyCheckInRow = true;
-    await expect(
-      page.getByRole("button", { name: "Mulai Pindai QR", exact: true }),
-    ).toBeEnabled();
-    await text("Input Manual").click();
-    await page.waitForTimeout(300);
-    await page.mouse.wheel(0, 500);
-    await type("Payload QR", "SQ1." + "A".repeat(43));
-    await press("Proses QR & Masuk Antrean");
-    await expect.poll(() => qrTicket.status).toBe("MENUNGGU");
-    assert.equal(
-      requests.filter((r) => r.path === "/check-in/auto-antrean").length,
-      1,
-    );
-    assert.equal(
-      requests.filter((r) => r.path === "/queue/" + qrTicket.tiketId + "/masuk")
-        .length,
-      0,
-    );
-    report.states.oneScanManual = true;
+    await expect(page.getByRole("button", { name: /Pindai QR/ })).toBeEnabled();
+    await expect(text("Input Manual")).toHaveCount(0);
+    await press("Pindai QR");
+    await expect(text("QR Check-in Otomatis")).toBeVisible();
+    if (cameraVideo) {
+      await expect
+        .poll(() => qrTicket.status, { timeout: 60000 })
+        .toBe("MENUNGGU");
+      await expect(text("AN-004 · MENUNGGU")).toBeVisible();
+      await page.waitForTimeout(1200); // Repeated video frames must stay deduplicated.
+      assert.equal(
+        requests.filter((r) => r.path === "/check-in/auto-antrean").length,
+        1,
+      );
+      assert.equal(
+        requests.filter(
+          (r) => r.path === "/queue/" + qrTicket.tiketId + "/masuk",
+        ).length,
+        0,
+      );
+      report.states.oneScanCameraFixture = true;
+    } else {
+      await expect(
+        text("Kamera tidak tersedia atau izin ditolak."),
+      ).toBeVisible();
+      report.states.cameraUnavailableGuidance = true;
+    }
+    await page.screenshot({ path: path.join(output, "scan-dialog.png") });
+    await press("Tutup");
+    report.states.nativeScanFabAndNoManualInput = true;
     async function changeRoom(from, to) {
       await text(from).click();
       await text(to).click();
@@ -576,6 +641,50 @@ module.exports = async ({
     report.joins = joins;
     report.today = today;
     if (page) {
+      if (cameraVideo)
+        report.cameraDiagnostics = await page
+          .evaluate(async () => {
+            const v = document.querySelector("video");
+            const info = {
+              nativeDetector: typeof BarcodeDetector,
+              wasmReader: typeof window.ZXingWASM,
+              video: v
+                ? {
+                    width: v.videoWidth,
+                    height: v.videoHeight,
+                    paused: v.paused,
+                    ready: v.readyState,
+                  }
+                : null,
+            };
+            if (v && window.ZXingWASM) {
+              const c = document.createElement("canvas");
+              c.width = v.videoWidth;
+              c.height = v.videoHeight;
+              const ctx = c.getContext("2d");
+              ctx.drawImage(v, 0, 0);
+              try {
+                const r = await Promise.race([
+                  window.ZXingWASM.readBarcodes(
+                    ctx.getImageData(0, 0, c.width, c.height),
+                    { formats: ["QRCode"], tryHarder: true },
+                  ),
+                  new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error("decode timeout")), 5000),
+                  ),
+                ]);
+                info.decode = r.map((x) => ({
+                  format: x.format,
+                  valid: x.isValid,
+                  expected: x.text === "SQ1." + "A".repeat(43),
+                }));
+              } catch (e) {
+                info.decodeError = e.message;
+              }
+            }
+            return info;
+          })
+          .catch((e) => ({ error: e.message }));
       report.text = await page
         .locator("body")
         .innerText()

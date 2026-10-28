@@ -249,13 +249,7 @@ void main() {
         expect(find.text('Pasien menunggu'), findsNothing);
         expect(find.text('Tiket diterima / dilewati'), findsNothing);
         if (size.width >= 1000) {
-          for (final name in [
-            'UM-001',
-            'UM-002',
-            'UM-003',
-            'Mulai Pindai QR',
-            'Input Manual',
-          ]) {
+          for (final name in ['UM-001', 'UM-002', 'UM-003', 'Pindai QR']) {
             expect(find.text(name), findsOneWidget);
             expect(t.getBottomLeft(find.text(name)).dy, lessThan(size.height));
           }

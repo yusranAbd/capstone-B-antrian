@@ -99,7 +99,7 @@ class _StaffQrScannerState extends State<StaffQrScanner>
     } catch (_) {
       if (mounted && state == AppLifecycleState.resumed) {
         setState(
-          () => error = 'Kamera belum dapat dibuka kembali. Tutup lalu gunakan Input Manual.',
+          () => error = 'Kamera belum dapat dibuka kembali. Tutup pemindai lalu coba lagi.',
         );
       }
     }
@@ -166,7 +166,7 @@ class _StaffQrScannerState extends State<StaffQrScanner>
                       },
                       errorBuilder: (_, _) => const Center(
                         child: Text(
-                          'Kamera tidak tersedia atau izin ditolak. Tutup kamera lalu gunakan Input Manual.',
+                          'Kamera tidak tersedia atau izin ditolak. Izinkan akses kamera di pengaturan browser/perangkat, lalu buka pemindai kembali.',
                         ),
                       ),
                     ),
