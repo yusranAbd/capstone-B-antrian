@@ -1215,15 +1215,17 @@ class _PatientPageState extends State<PatientPage> {
                   ),
                 if (loading)
                   const PatientHomeLoading()
-                else if (previews.isEmpty)
-                  const PatientHomeEmpty(
-                    text: 'Belum ada dokter yang sesuai pencarian.',
+                else if (homeScheduleError == null && previews.isEmpty)
+                  PatientHomeEmpty(
+                    text: homeQuery.isEmpty && homeClinicId == null
+                        ? 'Belum ada dokter dengan jadwal praktik hari ini.'
+                        : 'Tidak ada dokter praktik hari ini yang sesuai pencarian atau poliklinik.',
                   ),
               ],
             ),
           ),
         ),
-        if (!loading)
+        if (!loading && homeScheduleError == null)
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
             sliver: SliverList.builder(

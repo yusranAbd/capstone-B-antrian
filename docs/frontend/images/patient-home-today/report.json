@@ -1,0 +1,111 @@
+{
+  "buildSha256": "7d61f0026efca191dc6252c820e005a8afc2ceaebff9dcb8edd3e20a7ed53586",
+  "testedAt": "2026-10-28T05:38:05.626Z",
+  "mode": "Real Chrome release Flutter; synthetic HTTP/Socket.IO, no database or real credentials",
+  "states": {
+    "nativeTouchSwipeBothDirections": true,
+    "mouseDragHomeTab": true,
+    "previousDoctorCardWithActualSchedule": true,
+    "homeUsesTodayScheduleInsteadOfTomorrow": true,
+    "homeDetailAndFreshQr": true,
+    "homeModesSearchFilterAndSafeServiceEntry": true,
+    "homeRealtimeStatusReconciliation": true,
+    "openCorrectTicketQr": true,
+    "serverCancellation": true,
+    "doctorBooking": true,
+    "walkInBooking": true,
+    "nearestActualSlot": true,
+    "realtimeAndReconnect": true,
+    "reloadAndLoginAgain": true
+  },
+  "viewports": [
+    {
+      "width": 320,
+      "height": 568,
+      "page": "home",
+      "horizontalOverflow": false
+    },
+    {
+      "width": 360,
+      "height": 800,
+      "page": "home",
+      "horizontalOverflow": false
+    },
+    {
+      "width": 375,
+      "height": 812,
+      "page": "home",
+      "horizontalOverflow": false
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "page": "home",
+      "horizontalOverflow": false
+    },
+    {
+      "width": 412,
+      "height": 915,
+      "page": "home",
+      "horizontalOverflow": false
+    },
+    {
+      "width": 320,
+      "height": 568,
+      "scrollWidth": 320
+    },
+    {
+      "width": 375,
+      "height": 812,
+      "scrollWidth": 375
+    },
+    {
+      "width": 360,
+      "height": 800,
+      "scrollWidth": 360
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390
+    },
+    {
+      "width": 412,
+      "height": 915,
+      "scrollWidth": 412
+    },
+    {
+      "width": 768,
+      "height": 1024,
+      "scrollWidth": 768
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "scrollWidth": 1366
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "scrollWidth": 1920
+    }
+  ],
+  "errors": [],
+  "chrome": "156.0.8078.48",
+  "performance": {
+    "initial": {
+      "jsHeapMiB": 44.58,
+      "taskSeconds": 3.715827,
+      "nodes": 199,
+      "activeSockets": 1
+    },
+    "afterFlows": {
+      "jsHeapMiB": 99.11,
+      "taskSeconds": 2.728686,
+      "nodes": 1056,
+      "activeSockets": 1
+    },
+    "navigationCycles": []
+  },
+  "success": true
+}

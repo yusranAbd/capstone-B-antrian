@@ -17,6 +17,7 @@ module.exports = async ({
   finalExperience = false,
   homeV6 = false,
   homeSwipe = false,
+  homeToday = homeV6,
 }) => {
   fs.mkdirSync(output, { recursive: true });
   const report = {
@@ -209,7 +210,20 @@ module.exports = async ({
         if (p === "/dokter") return send([doctor]);
         if (p === "/jadwal-praktik")
           return send(
-            u.searchParams.get("layananId") === clinics[1].id ? [] : [schedule],
+            u.searchParams.get("layananId") === clinics[1].id
+              ? []
+              : homeToday && !u.searchParams.size
+                ? [
+                    {
+                      ...schedule,
+                      id: "today-home-session",
+                      tanggal: today,
+                      mulaiPada: today + "T00:00:00+07:00",
+                      selesaiPada: today + "T00:01:00+07:00",
+                    },
+                    schedule,
+                  ]
+                : [schedule],
           );
         if (p === "/slot-praktik") return send([slot]);
         if (p === "/tiket/saya") return send(tickets);
@@ -585,6 +599,10 @@ module.exports = async ({
         report.states.nativeTouchSwipeBothDirections = true;
         report.states.mouseDragHomeTab = true;
         report.states.previousDoctorCardWithActualSchedule = true;
+        if (homeToday) {
+          await expect(text("00:00 – 00:01")).toBeVisible();
+          report.states.homeUsesTodayScheduleInsteadOfTomorrow = true;
+        }
       }
       const savedStatuses = tickets.map((t) => t.status);
       tickets.forEach((t) => (t.status = "SELESAI"));
@@ -635,7 +653,9 @@ module.exports = async ({
       await press("Janji Temu");
       await type("Cari dokter, poliklinik", "tidak cocok");
       await expect(
-        text("Belum ada dokter yang sesuai pencarian."),
+        text(
+          "Tidak ada dokter praktik hari ini yang sesuai pencarian atau poliklinik.",
+        ),
       ).toBeVisible();
       await page
         .getByRole("button", { name: "Bersihkan pencarian", exact: true })

@@ -18,6 +18,7 @@ import 'ui_test.dart' show uid;
 
 class HomeBackend extends PatientV2Backend {
   bool manyHomeDoctors = false;
+  String? homeScheduleDay;
   Completer<void>? homeGate;
   bool failHomeSchedule = false;
   bool expiredQr = false;
@@ -114,17 +115,23 @@ class HomeBackend extends PatientV2Backend {
       if (failHomeSchedule) {
         return reply({'message': 'Jadwal tidak tersedia'}, 503);
       }
+      final day = homeScheduleDay ?? today;
       return reply([
-        {
-          'id': 'session-home',
-          'aktif': true,
-          'tanggal': tomorrow,
-          'mulaiPada': '${tomorrow}T02:00:00Z',
-          'selesaiPada': '${tomorrow}T04:00:00Z',
-          'dokterLayananId': uid,
-          'dokterLayanan': {'aktif': true, 'dokterId': uid, 'layananId': uid},
-          'loket': room,
-        },
+        for (var i = 0; i < (manyHomeDoctors ? 30 : 1); i++)
+          {
+            'id': i == 0 ? 'session-home' : 'session-home-$i',
+            'aktif': true,
+            'tanggal': day,
+            'mulaiPada': '${day}T02:00:00Z',
+            'selesaiPada': '${day}T04:00:00Z',
+            'dokterLayananId': uid,
+            'dokterLayanan': {
+              'aktif': true,
+              'dokterId': i == 0 ? uid : 'doctor-$i',
+              'layananId': uid,
+            },
+            'loket': room,
+          },
       ]);
     }
     return super.handle(request);
@@ -455,7 +462,9 @@ void main() {
       await press(tester, target);
       expect(find.byType(PatientHomeDoctorV6), findsNothing);
       expect(
-        find.text('Belum ada dokter yang sesuai pencarian.'),
+        find.text(
+          'Tidak ada dokter praktik hari ini yang sesuai pencarian atau poliklinik.',
+        ),
         findsOneWidget,
       );
       await press(tester, find.widgetWithText(ChoiceChip, 'Semua'));
@@ -536,7 +545,7 @@ void main() {
       expect(find.text('Kunjungan Terdekat'), findsNothing);
       await press(tester, find.byKey(const ValueKey('home-mode-appointment')));
       expect(find.text('Jadwal praktik belum dapat dimuat.'), findsOneWidget);
-      expect(find.text('Jadwal belum dapat dimuat.'), findsOneWidget);
+      expect(find.byType(PatientHomeDoctorV6), findsNothing);
       await press(tester, find.byKey(const ValueKey('home-mode-appointment')));
       await tester.pumpAndSettle();
     },

@@ -103,7 +103,7 @@ void main() {
     }
   });
 
-  test('doctor search matches a second clinic relation without fabricating schedules', () {
+  test('doctor search never shows an unscheduled doctor', () {
     final config = AppConfig(apiBaseUrl: 'http://localhost/api/v1');
     final clinics = <Json>[
       {'id': 'a', 'nama': 'Poli Satu', 'modeReservasi': 'HIBRIDA'},
@@ -126,8 +126,7 @@ void main() {
       config,
       'poli dua',
     );
-    expect(results.single.clinic['id'], 'b');
-    expect(results.single.session, isNull);
+    expect(results, isEmpty);
   });
 
   testWidgets(

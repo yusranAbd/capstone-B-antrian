@@ -2,11 +2,17 @@
 
 Revisi 28 Oktober 2026, mengikuti referensi dua mode pengguna dan pedoman QueueB mandiri.
 
+## Revisi daftar dokter — hari pelayanan
+
+Revisi 28 Oktober 2026 membatasi kartu dokter pada tab Janji Temu Beranda ke dokter dengan jadwal praktik aktif **hari ini**, berdasarkan tanggal pelayanan Asia/Jakarta dari AppConfig. Dokter, relasi poli dan ruang harus aktif. Jadwal besok/masa lalu, dokter tanpa jadwal hari ini dan jadwal nonaktif tidak menghasilkan kartu. Satu dokter tetap tampil sekali memakai sesi pertama hari ini yang relevan dengan pencarian/filter poli; seluruh sesi hari ini termasuk yang sudah selesai tetap merupakan jadwal hari ini, bukan indikator kehadiran/live.
+
+Desain kartu, tab swipe, pencarian/filter dan Ambil Antrean pendukung tidak diubah. Katalog jadwal semua tanggal tetap dibaca untuk kebutuhan alur reservasi existing; filter ini hanya untuk proyeksi Beranda, tidak membatasi kalender/booking tanggal lain. Saat pembacaan jadwal gagal, kartu jadwal tidak ditampilkan sebagai data yang terverifikasi; tersedia retry. Refresh/realtime existing memuat ulang data yang sama tanpa socket/timer tambahan.
+
 ## Perubahan
 
 - Satu identitas QueueB, sapaan dan nama login di konten Beranda; tidak ada avatar berulang atau notifikasi yang belum didukung.
 - Greeting 20 logical px, pencarian compact. Sesuai revisi pengguna, kartu Kunjungan Terdekat dipulihkan persis ke komposisi sebelum V6 (de56b16) dan Beranda memakai lagi palet biru periwinkle bersama; tidak ada aksen teal baru. Foto dokter hanya bila profil terkait tersedia, tanpa dokter/slot fiktif untuk walk-in.
-- Ambil Antrean sebagai default hanya memuat layanan pendukung Pendaftaran/Apotek/Administrasi dari API. Penjelajahan Janji Temu memuat semua poli klinis dan dokter berelasi aktif, termasuk poli yang mode servernya masih ANTREAN_HARIAN. Data tak dikenal tidak diterjemahkan menjadi kanal booking baru.
+- Ambil Antrean sebagai default hanya memuat layanan pendukung Pendaftaran/Apotek/Administrasi dari API. Penjelajahan Janji Temu memuat filter semua poli klinis dan kartu dokter berelasi aktif yang mempunyai jadwal hari ini, termasuk poli yang mode servernya masih ANTREAN_HARIAN. Data tak dikenal tidak diterjemahkan menjadi kanal booking baru.
 - Pencarian mengikuti mode, termasuk nama/spesialisasi dokter terkait pada walk-in. Semua filter poli berasal dari katalog API; dokter multi-poli dicari melalui relasi yang cocok.
 - Dua pilihan layanan menjadi TabBar/TabBarView native dengan swipe sentuh kiri–kanan dan drag mouse Web. NestedScrollView menjaga header bersama dan tab tetap terlihat setelah header digulir. Overlap absorber/injector mencegah tab menutupi filter atau kartu pertama. Posisi scroll tiap daftar memakai PageStorage; daftar tetap lazy melalui SliverList.builder, tidak dibatasi tiga dokter.
 - Kartu dokter kembali memakai komponen PatientHomeDoctor sebelum V6: foto 48 logical px, nama/spesialisasi/poli, jadwal aktual dan Detail Dokter. Tidak membuat data jadwal baru; kondisi jadwal kosong/gagal tetap eksplisit.
@@ -77,3 +83,14 @@ Build APK awal bersamaan dengan tes gagal karena generated Android plugin regist
 Dari `apps/client`: `flutter analyze`, `flutter test`, `flutter build web --release`, kemudian `flutter build apk --release --split-per-abi --target-platform android-arm64 --dart-define=API_BASE_URL=https://api.queueb.invalid/api/v1` (QA saja), secara berurutan.
 
 Untuk QA Chrome panggil modul `apps/client/tool/browser-reservation-v4.cjs` dengan `{ build: 'apps/client/build/web', output: 'tmp/patient-v6-browser', patientV5: true, homeV6: true, homeSwipe: true, engineRoot, fontFile }`. `engineRoot` menunjuk cache `flutter_web_sdk/canvaskit` SDK dan `fontFile` menunjuk Roboto lokal SDK. Modul mengembalikan Promise laporan. `homeSwipe` memakai CDP touchStart/move/end untuk swipe nyata dan pointer mouse untuk drag; bukan mengganti state aplikasi melalui JavaScript. Resolusi Node membutuhkan tooling Playwright existing dan Socket.IO dari dependency API; tidak menambah dependency runtime Flutter. Server memilih port loopback sementara, mengisolasi URL API hanya pada respons file build di memori, lalu menutup browser/server setelah selesai. Source dan build di disk tidak diubah oleh QA.
+
+### QA terbaru — dokter hari ini
+
+- Format: PASS, Flutter analyze: 0 issue.
+- Seluruh Flutter test: **518 PASS, 1 live integration opsional SKIP**. Regresi mencakup tanggal Jakarta saat UTC masih hari sebelumnya, dokter besok/masa lalu/tanpa jadwal, status jadwal/ruang/relasi/dokter nonaktif, tidak ada kartu duplikat, pencarian/filter, refresh, API gagal dan retry.
+- Flutter Web release: PASS (JavaScript; peringatan WASM dependency existing tidak berubah).
+- Chrome release: PASS. Fixture menyediakan sesi hari ini yang telah berakhir dan sesi booking besok; kartu Beranda tetap mengambil hari ini. Native swipe, filter/pencarian, QR dinamis, booking appointment/walk-in, pembatalan, reconnect dan realtime tetap PASS. Satu socket sebelum/sesudah alur, 0 page error.
+- Home responsive 320×568, 360×800, 375×812, 390×844, 412×915 tanpa horizontal overflow. Tidak ada pengujian perangkat Android fisik atau perubahan database pada revisi ini.
+- [Screenshot 390](images/patient-home-today/home-appointment-390.png) · [Screenshot 320](images/patient-home-today/home-appointment-320.png) · [JSON QA](images/patient-home-today/report.json). Seluruh data browser adalah fixture sintetis, bukan data pasien development.
+
+Runner browser menggunakan opsi `homeV6: true`, `homeSwipe: true`, dan `homeToday: true` (default homeToday mengikuti homeV6). Evidence QA V6 sebelumnya tetap disimpan sebagai riwayat revisi.

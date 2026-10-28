@@ -779,6 +779,7 @@ List<HomeDoctorPreview> homeDoctorPreviews(
   String? clinicId,
 }) {
   final result = <HomeDoctorPreview>[];
+  final today = config.today;
   for (final doctor in doctors.where((d) => d['aktif'] != false)) {
     final doctorMatches = '${label(doctor)} ${doctor['spesialisasi'] ?? ''}'
         .toLowerCase()
@@ -795,7 +796,7 @@ List<HomeDoctorPreview> homeDoctorPreviews(
           ),
     );
     if (links.isEmpty) continue;
-    final upcoming =
+    final todaySessions =
         sessions.where((s) {
             final link = object(s['dokterLayanan']);
             return s['aktif'] != false &&
@@ -809,14 +810,12 @@ List<HomeDoctorPreview> homeDoctorPreviews(
                       l['layananId'] == link['layananId'] ||
                       l['layananId'] == object(link['layanan'])['id'],
                 ) &&
-                dateOnly(s['tanggal']).compareTo(config.today) >= 0 &&
-                (DateTime.tryParse('${s['selesaiPada']}')
-                        ?.isAfter(config.now) ??
-                    false);
+                dateOnly(s['tanggal']) == today;
           }).toList()
           ..sort((a, b) => '${a['mulaiPada']}'.compareTo('${b['mulaiPada']}'));
-    final session = upcoming.firstOrNull;
-    final sl = object(session?['dokterLayanan']);
+    final session = todaySessions.firstOrNull;
+    if (session == null) continue;
+    final sl = object(session['dokterLayanan']);
     final previewClinicId =
         sl['layananId'] ??
         object(sl['layanan'])['id'] ??
