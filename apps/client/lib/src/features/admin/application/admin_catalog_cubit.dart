@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../api.dart';
@@ -52,7 +54,12 @@ abstract class AdminCatalogCubit extends Cubit<AdminCatalogState> {
     if (!_current) return Future.value();
     // Forward every invalidation to the repository even when this Cubit waits.
     final read = refreshRecords(paths ?? {...adminMasterPaths, path});
-    if (_refresh != null) return _refresh!;
+    if (_refresh != null) {
+      // Adapters may wrap the same catalog drain in distinct Futures. Observe
+      // every wrapper's failure while the first waiter publishes the outcome.
+      unawaited(read.catchError((Object _) {}));
+      return _refresh!;
+    }
     emit(
       AdminCatalogState(
         snapshot: repository.snapshot,

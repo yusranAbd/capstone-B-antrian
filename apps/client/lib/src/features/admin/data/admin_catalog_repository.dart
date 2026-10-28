@@ -4,6 +4,7 @@ import '../../../api.dart';
 import '../../../config.dart';
 import '../models/admin_catalog_models.dart';
 import '../models/admin_staff_models.dart';
+import '../models/admin_display_models.dart';
 
 const adminMasterPaths = {'/layanan', '/dokter', '/loket'};
 
@@ -61,8 +62,17 @@ class AdminCatalogRepository extends ChangeNotifier {
       _dirty.clear();
       final values = await Future.wait(
         paths.map((path) async {
-          final result = await api.request('GET', path);
-          return adminStaffPaths.contains(path)
+          Object? result;
+          try {
+            result = await api.request('GET', path);
+          } catch (error) {
+            // Reconciliation from another module may also read devices.
+            if (path == adminDisplayPath) throw safeDisplayError(error);
+            rethrow;
+          }
+          return path == adminDisplayPath
+              ? displayCollection(result)
+              : adminStaffPaths.contains(path)
               ? staffCollection(path, result)
               : rows(result);
         }),

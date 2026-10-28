@@ -221,8 +221,11 @@ void main() {
           posts.add(r.url.path);
           if (r.url.path.endsWith('/aktivasi')) {
             return reply({
-              'kode': '123456',
-              'berlakuHingga': '2026-10-23T08:05:00Z',
+              'kode': '001234567890',
+              'berlakuHingga': DateTime.now()
+                  .toUtc()
+                  .add(const Duration(minutes: 5))
+                  .toIso8601String(),
             });
           }
           active = false;

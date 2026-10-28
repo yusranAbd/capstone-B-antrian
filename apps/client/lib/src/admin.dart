@@ -26,6 +26,9 @@ import 'features/admin/application/slot_session_cubit.dart';
 import 'features/admin/data/admin_slot_repository.dart';
 import 'features/admin/data/admin_staff_repository.dart';
 import 'features/admin/application/staff_management_cubit.dart';
+import 'features/admin/application/display_management_cubit.dart';
+import 'features/admin/application/display_management_state.dart';
+import 'features/admin/data/admin_display_repository.dart';
 
 class AdminPage extends StatefulWidget {
   const AdminPage({
@@ -51,6 +54,7 @@ class _AdminPageState extends State<AdminPage> {
   late final AdminSlotRepository slotRepository;
   late final StaffAccountCubit staffAccounts;
   late final AssignmentCubit assignments;
+  late final DisplayManagementCubit displayManagement;
   final slotSessions = <String, SlotSessionCubit>{};
   SlotSessionCubit slotsFor(Json session) => slotSessions.putIfAbsent(
     '${session['id']}',
@@ -77,9 +81,7 @@ class _AdminPageState extends State<AdminPage> {
             ? staffAccounts
             : assignments
       : null;
-  List<Json> _data = [];
-  List<Json> get data => masterCubit?.rows ?? _data;
-  set data(List<Json> value) => _data = value;
+  List<Json> get data => masterCubit?.rows ?? const [];
   String? session, _error, message;
   String? get error => selected == 6 && staffTab == 0
       ? _error
@@ -87,7 +89,9 @@ class _AdminPageState extends State<AdminPage> {
   set error(String? value) => _error = value;
   String scheduleSearch = '';
   bool _loading = true;
-  bool get loading => masterCubit?.state.busy ?? _loading;
+  bool get loading => selected == 7
+      ? displayManagement.state.busy
+      : masterCubit?.state.busy ?? _loading;
   set loading(bool value) => _loading = value;
   int revision = 0;
   int _requestRevision = 0;
@@ -99,6 +103,9 @@ class _AdminPageState extends State<AdminPage> {
     catalogRepository = AdminCatalogRepository(widget.api);
     scheduleRepository = AdminScheduleRepository(catalogRepository);
     slotRepository = AdminSlotRepository(catalogRepository);
+    displayManagement = DisplayManagementCubit(
+      AdminDisplayRepository(catalogRepository),
+    );
     final staffRepository = AdminStaffRepository(catalogRepository);
     staffAccounts = StaffAccountCubit(staffRepository);
     assignments = AssignmentCubit(staffRepository);
@@ -122,7 +129,10 @@ class _AdminPageState extends State<AdminPage> {
         revision++;
         if (!catalogRepository.active) {
           _requestRevision++;
-          _data = [];
+          session = null;
+          _error = null;
+          message = null;
+          _loading = false;
         }
       });
     }
@@ -137,11 +147,16 @@ class _AdminPageState extends State<AdminPage> {
     for (final cubit in slotSessions.values) {
       cubit.close();
     }
+    displayManagement.close();
     catalogRepository.dispose();
     super.dispose();
   }
 
   Future<void> load({bool reloadCatalog = false}) async {
+    if (selected == 7) {
+      await displayManagement.refresh();
+      return;
+    }
     final openSlots = selected == 5
         ? {
             for (final c in slotSessions.values.where((c) => c.expanded))
@@ -179,20 +194,12 @@ class _AdminPageState extends State<AdminPage> {
         ),
       );
       final next = catalog;
-      List<Json> items;
-      if (selectedResource.path == '/slot-praktik') {
+      if (mounted &&
+          current == _requestRevision &&
+          selectedResource.path == '/slot-praktik') {
         if (!next['/jadwal-praktik']!.any((v) => v['id'] == session)) {
           session = next['/jadwal-praktik']!.firstOrNull?['id'];
         }
-        items =
-            []; // Slots are fetched lazily when a practice session is expanded.
-      } else {
-        items = next[selectedResource.path]!;
-      }
-      if (mounted && current == _requestRevision) {
-        setState(() {
-          data = items;
-        });
       }
     } catch (e) {
       if (mounted && current == _requestRevision) setState(() => error = '$e');
@@ -392,7 +399,6 @@ class _AdminPageState extends State<AdminPage> {
       selected = value;
       message = null;
       error = null;
-      data = [];
     });
     if (value != 7) load();
   }
@@ -442,8 +448,15 @@ class _AdminPageState extends State<AdminPage> {
       ),
       BlocProvider<StaffAccountCubit>.value(value: staffAccounts),
       BlocProvider<AssignmentCubit>.value(value: assignments),
+      BlocProvider<DisplayManagementCubit>.value(value: displayManagement),
     ],
-    child: masterCubit == null
+    child: selected == 7
+        ? BlocSelector<DisplayManagementCubit, DisplayManagementState, bool>(
+            bloc: displayManagement,
+            selector: (s) => s.busy,
+            builder: (context, _) => _buildContent(context),
+          )
+        : masterCubit == null
         ? _buildContent(context)
         : BlocBuilder<AdminCatalogCubit, AdminCatalogState>(
             bloc: masterCubit,
@@ -465,7 +478,7 @@ class _AdminPageState extends State<AdminPage> {
       ),
     ];
     final content = selected == 7
-        ? AdminDisplayPage(api: widget.api)
+        ? AdminDisplayPage(api: widget.api, cubit: displayManagement)
         : selected == -1
         ? ListView(
             padding: const EdgeInsets.all(AdminStyle.pagePadding),

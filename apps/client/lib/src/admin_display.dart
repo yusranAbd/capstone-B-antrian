@@ -1,6 +1,16 @@
 import 'admin_delete.dart';
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import 'features/admin/application/admin_catalog_state.dart';
+import 'features/admin/application/display_management_cubit.dart';
+import 'features/admin/application/display_management_state.dart';
+import 'features/admin/data/admin_catalog_repository.dart';
+import 'features/admin/data/admin_display_repository.dart';
+import 'features/admin/models/admin_display_models.dart';
 
 import 'api.dart';
 import 'admin_ui.dart';
@@ -8,120 +18,114 @@ import 'config.dart';
 import 'widgets.dart';
 
 class AdminDisplayPage extends StatefulWidget {
-  const AdminDisplayPage({super.key, required this.api});
+  const AdminDisplayPage({super.key, required this.api, this.cubit});
   final QueueApi api;
+  final DisplayManagementCubit? cubit;
   @override
   State<AdminDisplayPage> createState() => _AdminDisplayPageState();
 }
 
 class _AdminDisplayPageState extends State<AdminDisplayPage> {
-  List<Json> devices = [], clinics = [];
-  bool busy = false;
+  late final DisplayManagementCubit controller;
+  AdminCatalogRepository? ownedCatalog;
+  List<Json> get devices => controller.devices;
+  List<Json> get clinics => controller.clinics;
+  bool get busy => controller.state.busy;
   String search = '';
-  String? error, clinic;
+  String? clinic;
+  String? get error => controller.state.error?.toString();
   @override
   void initState() {
     super.initState();
-    load();
+    ownedCatalog = widget.cubit == null
+        ? AdminCatalogRepository(widget.api)
+        : null;
+    controller =
+        widget.cubit ??
+        DisplayManagementCubit(AdminDisplayRepository(ownedCatalog!));
+    if (controller.state.load == CatalogLoadStatus.initial) {
+      controller.refresh();
+    }
   }
 
-  Future<void> load() async {
-    setState(() {
-      busy = true;
-      error = null;
-    });
-    try {
-      final data = await Future.wait([
-        widget.api.request('GET', '/perangkat-display'),
-        widget.api.request('GET', '/layanan'),
-      ]);
-      if (mounted) {
-        setState(() {
-          devices = rows(data[0]);
-          clinics = rows(data[1]);
-        });
-      }
-    } catch (e) {
-      if (mounted) setState(() => error = '$e');
-    } finally {
-      if (mounted) setState(() => busy = false);
-    }
+  @override
+  void dispose() {
+    if (ownedCatalog != null) controller.close();
+    ownedCatalog?.dispose();
+    super.dispose();
   }
 
   Future<void> addDevice() async {
-    final changed = await showDialog<bool>(
+    await showDialog<bool>(
       context: context,
-      builder: (_) => _DeviceEditor(
-        api: widget.api,
-        clinics: clinics.where((c) => c['aktif'] == true).toList(),
-      ),
+      builder: (_) => _DeviceEditor(cubit: controller),
     );
-    if (mounted && changed == true) {
-      await load();
-    }
   }
 
   Future<void> activateDevice(Json device) async {
     if (!await confirm(
       context,
-      'Buat kode aktivasi untuk ${device['nama']}? Koneksi dan kredensial lama langsung dicabut. Kode sebelumnya tidak berlaku.',
+      '${controller.state.uncertainActivations.contains(device['id']) ? 'Hasil rotasi sebelumnya belum pasti. Kode sekali tampil tidak dapat dipulihkan dari metadata. Penerbitan ini adalah rotasi baru. ' : ''}Buat kode aktivasi untuk ${device['nama']}? Koneksi dan kredensial lama langsung dicabut. Kode sebelumnya tidak berlaku.',
     )) {
       return;
     }
     if (!mounted) return;
-    setState(() {
-      busy = true;
-      error = null;
-    });
+    DisplayActivation? activation;
     try {
-      final result = object(
-        await widget.api.request(
-          'POST',
-          '/perangkat-display/${device['id']}/aktivasi',
-        ),
+      activation = await controller.activate(
+        '${device['id']}',
+        confirmedReplacement: true,
       );
       if (!mounted) return;
       await showDialog<void>(
         context: context,
         barrierDismissible: false,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Kode aktivasi sekali pakai'),
-          content: SizedBox(
-            width: 400,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('${device['nama']} · ${label(object(device['layanan']))}'),
-                const SizedBox(height: 20),
-                SelectableText(
-                  '${result['kode']}',
-                  style: Theme.of(ctx).textTheme.headlineLarge
-                      ?.copyWith(letterSpacing: 3, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Berlaku hingga ${widget.api.config.instantLabel(result['berlakuHingga'])} (${widget.api.config.serviceTimeZone}), maksimal 5 menit.',
-                ),
-                const Text(
-                  'Berikan melalui saluran aman. Kode hanya ditampilkan sekarang; jangan bagikan tangkapan layar atau menaruhnya dalam URL.',
-                ),
-              ],
+        builder: (ctx) => _ActivationScope(
+          api: widget.api,
+          activation: activation!,
+          child: AlertDialog(
+            title: const Text('Kode aktivasi sekali pakai'),
+            content: SizedBox(
+              width: 400,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '${device['nama']} · ${label(object(device['layanan']))}',
+                  ),
+                  const SizedBox(height: 20),
+                  SelectableText(
+                    activation.code ?? '',
+                    style: Theme.of(ctx).textTheme.headlineLarge?.copyWith(
+                      letterSpacing: 3,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Berlaku hingga ${widget.api.config.instantLabel(activation.expiresAt.toIso8601String())} (${widget.api.config.serviceTimeZone}), maksimal 5 menit.',
+                  ),
+                  const Text(
+                    'Berikan melalui saluran aman. Kode hanya ditampilkan sekarang; jangan bagikan tangkapan layar atau menaruhnya dalam URL.',
+                  ),
+                ],
+              ),
             ),
+            actions: [
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Selesai'),
+              ),
+            ],
           ),
-          actions: [
-            FilledButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Selesai'),
-            ),
-          ],
         ),
       );
-    } catch (e) {
-      if (mounted) setState(() => error = '$e');
+    } catch (_) {
+      // The Cubit publishes only a safe error, never the one-time response.
     } finally {
-      if (mounted) setState(() => busy = false);
+      activation?.clear();
+      controller.finishDisclosure();
     }
-    if (mounted && error == null) await load();
   }
 
   Future<void> deactivateDevice(Json device) async {
@@ -132,35 +136,18 @@ class _AdminDisplayPageState extends State<AdminDisplayPage> {
       return;
     }
     if (!mounted) return;
-    setState(() {
-      busy = true;
-      error = null;
-    });
     try {
-      await widget.api.request(
-        'POST',
-        '/perangkat-display/${device['id']}/nonaktifkan',
-      );
-      await load();
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          error = '$e';
-          busy = false;
-        });
-      }
+      await controller.revoke('${device['id']}');
+    } catch (_) {
+      /* Safe operation state is rendered below. */
     }
   }
 
   Future<void> editDevice(Json device) async {
-    final changed = await showDialog<bool>(
+    await showDialog<bool>(
       context: context,
-      builder: (_) =>
-          _DeviceEditor(api: widget.api, clinics: clinics, device: device),
+      builder: (_) => _DeviceEditor(device: device, cubit: controller),
     );
-    if (mounted && changed == true) {
-      await load();
-    }
   }
 
   Future<void> deleteDevice(Json device) async {
@@ -169,6 +156,7 @@ class _AdminDisplayPageState extends State<AdminDisplayPage> {
       widget.api,
       '/perangkat-display',
       device,
+      onDelete: () => controller.delete('${device['id']}'),
     );
     if (!mounted) return;
     if (result == AdminDeleteResult.deactivate) {
@@ -176,7 +164,6 @@ class _AdminDisplayPageState extends State<AdminDisplayPage> {
       return;
     }
     if (result == AdminDeleteResult.deleted) {
-      await load();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Perangkat berhasil dihapus permanen.')),
@@ -186,7 +173,14 @@ class _AdminDisplayPageState extends State<AdminDisplayPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => BlocProvider.value(
+    value: controller,
+    child: BlocBuilder<DisplayManagementCubit, DisplayManagementState>(
+      bloc: controller,
+      builder: (context, _) => content(context),
+    ),
+  );
+  Widget content(BuildContext context) {
     final filtered = devices
         .where(
           (d) =>
@@ -252,7 +246,7 @@ class _AdminDisplayPageState extends State<AdminDisplayPage> {
                 label: const Text('Tambah perangkat'),
               ),
               OutlinedButton.icon(
-                onPressed: busy ? null : load,
+                onPressed: busy ? null : controller.refresh,
                 icon: const Icon(Icons.refresh, size: 18),
                 label: const Text('Muat ulang'),
               ),
@@ -340,10 +334,9 @@ class _AdminDisplayPageState extends State<AdminDisplayPage> {
 }
 
 class _DeviceEditor extends StatefulWidget {
-  const _DeviceEditor({required this.api, required this.clinics, this.device});
-  final QueueApi api;
-  final List<Json> clinics;
+  const _DeviceEditor({this.device, required this.cubit});
   final Json? device;
+  final DisplayManagementCubit cubit;
   @override
   State<_DeviceEditor> createState() => _DeviceEditorState();
 }
@@ -372,29 +365,31 @@ class _DeviceEditorState extends State<_DeviceEditor> {
       error = null;
     });
     try {
-      await widget.api.request(
-        widget.device == null ? 'POST' : 'PATCH',
-        widget.device == null
-            ? '/perangkat-display'
-            : '/perangkat-display/${widget.device!['id']}',
-        body: {
+      if (widget.device == null) {
+        await widget.cubit.create({
           'nama': name.text.trim(),
-          if (widget.device == null) 'layananId': clinic,
-        },
-      );
+          'layananId': clinic,
+        });
+      } else {
+        await widget.cubit.update('${widget.device!['id']}', name.text.trim());
+      }
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
         setState(() {
           busy = false;
-          error = '$e';
+          error = '${safeDisplayError(e)}';
         });
       }
     }
   }
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: widget.cubit.repository.catalog,
+    builder: (context, _) => dialog(context),
+  );
+  Widget dialog(BuildContext context) => AlertDialog(
     title: Text(
       widget.device == null
           ? 'Tambah perangkat display'
@@ -419,10 +414,18 @@ class _DeviceEditorState extends State<_DeviceEditor> {
               ),
               if (widget.device == null)
                 DropdownButtonFormField<String>(
+                  key: ValueKey(
+                    widget.cubit.clinics
+                        .where((c) => c['aktif'] == true)
+                        .map((c) => c['id'])
+                        .join(','),
+                  ),
                   isExpanded: true,
                   decoration: const InputDecoration(labelText: 'Poliklinik'),
                   items: [
-                    for (final c in widget.clinics)
+                    for (final c in widget.cubit.clinics.where(
+                      (c) => c['aktif'] == true,
+                    ))
                       DropdownMenuItem(
                         value: '${c['id']}',
                         child: Text(label(c)),
@@ -430,7 +433,11 @@ class _DeviceEditorState extends State<_DeviceEditor> {
                   ],
                   onChanged: busy ? null : (v) => clinic = v,
                   validator: (v) =>
-                      v == null ? 'Pilih poliklinik aktif.' : null,
+                      widget.cubit.clinics.any(
+                        (c) => c['id'] == v && c['aktif'] == true,
+                      )
+                      ? null
+                      : 'Pilih poliklinik aktif.',
                 ),
             ],
           ),
@@ -448,4 +455,72 @@ class _DeviceEditorState extends State<_DeviceEditor> {
       ),
     ],
   );
+}
+
+/// Ephemeral presentation scope: clears the one-time code on close, expiry or
+/// account/role change. This timer is cleanup, not device polling.
+class _ActivationScope extends StatefulWidget {
+  const _ActivationScope({
+    required this.api,
+    required this.activation,
+    required this.child,
+  });
+  final QueueApi api;
+  final DisplayActivation activation;
+  final Widget child;
+  @override
+  State<_ActivationScope> createState() => _ActivationScopeState();
+}
+
+class _ActivationScopeState extends State<_ActivationScope> {
+  late final (Object?, Object?) identity;
+  Timer? expiry;
+  bool closing = false;
+  @override
+  void initState() {
+    super.initState();
+    identity = (widget.api.user?['id'], widget.api.user?['peran']);
+    widget.api.addListener(sessionChanged);
+    final remaining = widget.activation.expiresAt.difference(
+      widget.api.config.now,
+    );
+    expiry = Timer(
+      remaining.isNegative
+          ? Duration.zero
+          : remaining > const Duration(minutes: 5)
+          ? const Duration(minutes: 5)
+          : remaining,
+      dismiss,
+    );
+  }
+
+  void sessionChanged() {
+    if (identity != (widget.api.user?['id'], widget.api.user?['peran']) ||
+        widget.api.sessionPhase != SessionPhase.ready) {
+      dismiss();
+    }
+  }
+
+  void dismiss() {
+    widget.activation.clear();
+    if (!mounted || closing) return;
+    closing = true;
+    final route = ModalRoute.of(context);
+    if (route?.isCurrent == true) {
+      Navigator.of(context).pop();
+    } else if (route != null && route.isActive) {
+      route.navigator?.removeRoute(route);
+    }
+  }
+
+  @override
+  void dispose() {
+    expiry?.cancel();
+    widget.api.removeListener(sessionChanged);
+    widget.activation.clear();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }

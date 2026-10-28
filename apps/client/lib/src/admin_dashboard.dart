@@ -62,7 +62,15 @@ class AdminDashboard extends StatelessWidget {
                     width: (box.maxWidth - 12 * (columns - 1)) / columns,
                     child: _MasterMetric(
                       title: item.$1,
-                      count: catalog.isEmpty ? null : item.$2.length,
+                      count:
+                          catalog.containsKey(switch (item.$4) {
+                            0 => '/layanan',
+                            1 => '/dokter',
+                            2 => '/loket',
+                            _ => '/jadwal-praktik',
+                          })
+                          ? item.$2.length
+                          : null,
                       active: item.$2.where((r) => r['aktif'] == true).length,
                       icon: item.$3,
                       blue: item.$4 == 1 || item.$4 == 4,
@@ -110,7 +118,9 @@ class AdminDashboard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 12),
-              if (clinics.isEmpty && !loading && catalog.isNotEmpty)
+              if (clinics.isEmpty &&
+                  !loading &&
+                  catalog.containsKey('/layanan'))
                 const Notice(
                   'Belum ada poliklinik. Tambahkan master data untuk memulai.',
                 ),

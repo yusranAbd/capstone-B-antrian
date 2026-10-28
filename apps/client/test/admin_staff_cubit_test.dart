@@ -275,6 +275,23 @@ void main() {
           await c.close();
         },
       );
+      test('failed burst observes every adapter future and recovers without unhandled errors', () async {
+        final c = create(), gate = Completer<void>();
+        f.gates[(path, 1)] = gate;
+        f.readError = 503;
+        final first = c.refresh(paths: [path]);
+        await f.waitRead(path, 1);
+        final burst = [
+          for (var i = 0; i < 10; i++) c.refresh(paths: [path]),
+        ];
+        gate.complete();
+        await Future.wait([first, ...burst]);
+        expect(c.state.load, CatalogLoadStatus.failure);
+        f.readError = null;
+        await c.refresh();
+        expect(c.state.load, CatalogLoadStatus.loaded);
+        await c.close();
+      });
       for (final ending in ['close', 'logout', 'account', 'role']) {
         test('$ending discards pending old response', () async {
           final c = create(), gate = Completer<void>();
