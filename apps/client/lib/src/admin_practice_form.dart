@@ -4,6 +4,7 @@ import 'admin_schedules.dart';
 import 'api.dart';
 import 'config.dart';
 import 'mobile_ui.dart';
+import 'features/admin/data/admin_catalog_repository.dart';
 
 abstract final class _PracticeStyle {
   static const accent = QueueBStyle.darkTeal;
@@ -21,17 +22,23 @@ class PracticeScheduleEditor extends StatefulWidget {
     required this.api,
     required this.catalog,
     this.row,
+    this.onSave,
+    this.catalogSource,
   });
 
   final QueueApi api;
   final Map<String, List<Json>> catalog;
   final Json? row;
+  final Future<Json> Function(Json)? onSave;
+  final AdminCatalogRepository? catalogSource;
 
   @override
   State<PracticeScheduleEditor> createState() => _PracticeScheduleEditorState();
 }
 
 class _PracticeScheduleEditorState extends State<PracticeScheduleEditor> {
+  Map<String, List<Json>> get catalog =>
+      widget.catalogSource?.snapshot.collections ?? widget.catalog;
   final form = GlobalKey<FormState>();
   final doctorText = TextEditingController();
   late final TextEditingController dateText, startText, endText;
@@ -93,7 +100,7 @@ class _PracticeScheduleEditorState extends State<PracticeScheduleEditor> {
 
   List<_DoctorChoice> get doctors {
     final choices = <String, _DoctorChoice>{};
-    for (final doctor in widget.catalog['/dokter'] ?? <Json>[]) {
+    for (final doctor in catalog['/dokter'] ?? <Json>[]) {
       for (final link in rows(doctor['dokterLayanan'])) {
         final clinic = object(link['layanan']);
         if (link['id'] is! String) continue;
@@ -129,7 +136,7 @@ class _PracticeScheduleEditorState extends State<PracticeScheduleEditor> {
     final clinic = selectedDoctor?.clinicId;
     if (clinic == null) return [];
     final all = <String, Json>{
-      for (final r in widget.catalog['/loket'] ?? <Json>[]) '${r['id']}': r,
+      for (final r in catalog['/loket'] ?? <Json>[]) '${r['id']}': r,
     };
     final current = object(widget.row?['loket']);
     if (current['id'] is String) {
@@ -230,11 +237,15 @@ class _PracticeScheduleEditorState extends State<PracticeScheduleEditor> {
       error = null;
     });
     try {
-      await widget.api.request(
-        editing ? 'PATCH' : 'POST',
-        '/jadwal-praktik${editing ? '/${widget.row!['id']}' : ''}',
-        body: body,
-      );
+      if (widget.onSave != null) {
+        await widget.onSave!(body);
+      } else {
+        await widget.api.request(
+          editing ? 'PATCH' : 'POST',
+          '/jadwal-praktik${editing ? '/${widget.row!['id']}' : ''}',
+          body: body,
+        );
+      }
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
@@ -514,7 +525,13 @@ class _PracticeScheduleEditorState extends State<PracticeScheduleEditor> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => widget.catalogSource == null
+      ? _dialog(context)
+      : ListenableBuilder(
+          listenable: widget.catalogSource!,
+          builder: (context, _) => _dialog(context),
+        );
+  Widget _dialog(BuildContext context) {
     final base = Theme.of(context);
     final theme = base.copyWith(
       colorScheme: base.colorScheme.copyWith(

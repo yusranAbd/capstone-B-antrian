@@ -1,4 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import 'features/admin/application/schedule_batch_cubit.dart';
+import 'features/admin/application/schedule_batch_state.dart';
+import 'features/admin/data/admin_catalog_repository.dart';
+import 'features/admin/data/admin_schedule_repository.dart';
+import 'features/admin/models/admin_schedule_models.dart';
+export 'features/admin/models/admin_schedule_models.dart';
+export 'features/admin/data/admin_schedule_repository.dart'
+    show createScheduleDays;
 
 import 'admin_schema.dart';
 import 'admin_ui.dart';
@@ -6,15 +16,6 @@ import 'api.dart';
 import 'config.dart';
 import 'widgets.dart';
 
-const scheduleDays = [
-  'SENIN',
-  'SELASA',
-  'RABU',
-  'KAMIS',
-  'JUMAT',
-  'SABTU',
-  'MINGGU',
-];
 String dayLabel(String day) => day[0] + day.substring(1).toLowerCase();
 
 /// Keep the existing selectable appearance and announce ADMIN operation results.
@@ -251,147 +252,71 @@ class GroupedClinicSchedules extends StatelessWidget {
   }
 }
 
-enum ScheduleOutcome { created, existing, failed, uncertain }
-
-class ScheduleResult {
-  const ScheduleResult(this.day, this.outcome, this.message);
-  final String day, message;
-  final ScheduleOutcome outcome;
-}
-
-/// Fresh preflight includes inactive records. Never overwrites or retries POST.
-/// The database unique key also protects against a concurrent ADMIN save.
-Future<List<ScheduleResult>> createScheduleDays(
-  QueueApi api, {
-  required String clinicId,
-  required Set<String> days,
-  required String opens,
-  required String closes,
-  required int capacity,
-  void Function(List<ScheduleResult>)? onProgress,
-}) async {
-  final existing = rows(await api.request('GET', '/jadwal-layanan'));
-  final results = <ScheduleResult>[];
-  for (final day in scheduleDays.where(days.contains)) {
-    if (existing.any((r) => r['layananId'] == clinicId && r['hari'] == day)) {
-      results.add(
-        ScheduleResult(
-          day,
-          ScheduleOutcome.existing,
-          'Jadwal sudah ada (termasuk yang nonaktif). Gunakan Ubah pada daftar.',
-        ),
-      );
-    } else {
-      try {
-        await api.request(
-          'POST',
-          '/jadwal-layanan',
-          body: {
-            'layananId': clinicId,
-            'hari': day,
-            'jamBuka': opens,
-            'jamTutup': closes,
-            'kapasitasHarian': capacity,
-          },
-        );
-        results.add(
-          ScheduleResult(day, ScheduleOutcome.created, 'Berhasil disimpan.'),
-        );
-      } catch (error) {
-        // A timeout/5xx can happen after COMMIT. Reconcile before any new action.
-        bool found = false;
-        try {
-          final latest = rows(await api.request('GET', '/jadwal-layanan'));
-          found = latest.any(
-            (r) => r['layananId'] == clinicId && r['hari'] == day,
-          );
-        } catch (_) {
-          /* Report unverified; never retry the mutation here. */
-        }
-        final uncertain =
-            error is! ApiException || error.status == 0 || error.status >= 500;
-        results.add(
-          ScheduleResult(
-            day,
-            found
-                ? ScheduleOutcome.existing
-                : uncertain
-                ? ScheduleOutcome.uncertain
-                : ScheduleOutcome.failed,
-            found
-                ? 'Jadwal ditemukan setelah pemeriksaan ulang. Gunakan Ubah untuk memeriksanya.'
-                : uncertain
-                ? '$error Hasil belum terverifikasi. Muat ulang daftar sebelum mencoba lagi.'
-                : '$error',
-          ),
-        );
-      }
-    }
-    onProgress?.call(List.unmodifiable(results));
-  }
-  return results;
-}
-
 class BulkScheduleEditor extends StatefulWidget {
   const BulkScheduleEditor({
     super.key,
     required this.api,
     required this.clinics,
+    this.repository,
   });
   final QueueApi api;
   final List<Json> clinics;
+  final AdminScheduleRepository? repository;
   @override
   State<BulkScheduleEditor> createState() => _BulkScheduleEditorState();
 }
 
 class _BulkScheduleEditorState extends State<BulkScheduleEditor> {
+  late final AdminCatalogRepository? ownedCatalog;
+  late final ScheduleBatchCubit batch;
+  List<Json> get clinics =>
+      widget.repository?.catalog.snapshot.rowsFor('/layanan') ?? widget.clinics;
   final form = GlobalKey<FormState>();
   final opens = TextEditingController(text: '08:00');
   final closes = TextEditingController(text: '16:00');
   final capacity = TextEditingController(text: '24');
   final days = scheduleDays.take(5).toSet();
-  String? clinic, error;
-  bool busy = false, finished = false;
-  List<ScheduleResult> results = [];
+  String? clinic, validationError;
+  String? get error => validationError ?? batch.state.error;
+  bool get busy => batch.state.busy;
+  bool get finished => batch.state.finished;
+  List<ScheduleResult> get results => batch.state.results;
+  @override
+  void initState() {
+    super.initState();
+    ownedCatalog = widget.repository == null
+        ? AdminCatalogRepository(widget.api)
+        : null;
+    batch = ScheduleBatchCubit(
+      widget.repository ?? AdminScheduleRepository(ownedCatalog!),
+    );
+  }
+
   bool get locked => busy || finished;
   Future<void> save() async {
     if (locked) return;
     final valid = form.currentState!.validate();
     if (!valid || days.isEmpty) {
-      setState(() => error = days.isEmpty ? 'Pilih minimal satu hari.' : null);
+      setState(
+        () =>
+            validationError = days.isEmpty ? 'Pilih minimal satu hari.' : null,
+      );
       return;
     }
-    setState(() {
-      busy = true;
-      error = null;
-    });
-    try {
-      await createScheduleDays(
-        widget.api,
-        clinicId: clinic!,
-        days: days,
-        opens: opens.text.trim(),
-        closes: closes.text.trim(),
-        capacity: int.parse(capacity.text.trim()),
-        onProgress: (next) {
-          if (mounted) setState(() => results = next);
-        },
-      );
-      if (mounted) setState(() => finished = true);
-    } catch (e) {
-      if (mounted) {
-        setState(
-          () => error =
-              'Tidak dapat memeriksa jadwal. Tidak ada jadwal baru dikirim. $e',
-        );
-      }
-    } finally {
-      if (mounted) setState(() => busy = false);
-    }
+    setState(() => validationError = null);
+    await batch.submit(
+      clinicId: clinic!,
+      days: days,
+      opens: opens.text.trim(),
+      closes: closes.text.trim(),
+      capacity: int.parse(capacity.text.trim()),
+    );
   }
 
   @override
   void dispose() {
+    batch.close();
+    ownedCatalog?.dispose();
     opens.dispose();
     closes.dispose();
     capacity.dispose();
@@ -399,7 +324,13 @@ class _BulkScheduleEditorState extends State<BulkScheduleEditor> {
   }
 
   @override
-  Widget build(BuildContext context) => PopScope(
+  Widget build(BuildContext context) => BlocProvider.value(
+    value: batch,
+    child: BlocBuilder<ScheduleBatchCubit, ScheduleBatchState>(
+      builder: (context, _) => _dialog(context),
+    ),
+  );
+  Widget _dialog(BuildContext context) => PopScope(
     canPop: !busy,
     child: AlertDialog(
       title: const Text('Tambah Jam & Kapasitas'),
@@ -412,11 +343,11 @@ class _BulkScheduleEditorState extends State<BulkScheduleEditor> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (widget.clinics.length > 10)
+                if (clinics.length > 10)
                   AdminSearchChoice(
                     label: 'Poliklinik',
                     choices: choicesOf(
-                      widget.clinics.where((c) => c['aktif'] == true).toList(),
+                      clinics.where((c) => c['aktif'] == true).toList(),
                     ),
                     value: clinic,
                     onChanged: locked
@@ -427,7 +358,7 @@ class _BulkScheduleEditorState extends State<BulkScheduleEditor> {
                   ChoiceField(
                     label: 'Poliklinik',
                     choices: choicesOf(
-                      widget.clinics.where((c) => c['aktif'] == true).toList(),
+                      clinics.where((c) => c['aktif'] == true).toList(),
                     ),
                     value: clinic,
                     required: true,

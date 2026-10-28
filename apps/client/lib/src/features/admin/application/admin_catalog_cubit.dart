@@ -46,7 +46,7 @@ abstract class AdminCatalogCubit extends Cubit<AdminCatalogState> {
   Future<void> refresh({Iterable<String>? paths}) {
     if (!_current) return Future.value();
     // Forward every invalidation to the repository even when this Cubit waits.
-    final read = repository.refresh(paths ?? adminMasterPaths);
+    final read = repository.refresh(paths ?? {...adminMasterPaths, path});
     if (_refresh != null) return _refresh!;
     emit(
       AdminCatalogState(
@@ -100,6 +100,16 @@ abstract class AdminCatalogCubit extends Cubit<AdminCatalogState> {
   Future<Json> delete(String id) => _write('DELETE', id: id, permanent: true);
   Future<Json> deactivate(String id) => _write('DELETE', id: id);
 
+  /// Resource adapters may share the catalog without duplicating its cache.
+  Future<Json> writeRecord(
+    String method, {
+    String? id,
+    Json? body,
+    bool permanent = false,
+  }) =>
+      repository.write(path, method, id: id, body: body, permanent: permanent);
+  Future<void> reconcileAfterMutation() => repository.reconcile();
+
   Future<Json> _write(
     String method, {
     String? id,
@@ -129,8 +139,7 @@ abstract class AdminCatalogCubit extends Cubit<AdminCatalogState> {
       Json? result;
       Object? failure, refreshError;
       try {
-        result = await repository.write(
-          path,
+        result = await writeRecord(
           method,
           id: id,
           body: body,
@@ -145,7 +154,7 @@ abstract class AdminCatalogCubit extends Cubit<AdminCatalogState> {
       // Re-read after success or an uncertain outcome. Never retry a mutation.
       if (failure == null || uncertain) {
         try {
-          if (repository.active) await repository.reconcile();
+          if (repository.active) await reconcileAfterMutation();
         } catch (error) {
           refreshError = error;
         }

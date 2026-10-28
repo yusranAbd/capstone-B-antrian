@@ -20,6 +20,8 @@ import 'widgets.dart';
 import 'features/admin/application/admin_catalog_cubit.dart';
 import 'features/admin/application/admin_catalog_state.dart';
 import 'features/admin/data/admin_catalog_repository.dart';
+import 'features/admin/data/admin_schedule_repository.dart';
+import 'features/admin/application/practice_schedule_cubit.dart';
 
 class AdminPage extends StatefulWidget {
   const AdminPage({
@@ -41,9 +43,10 @@ class _AdminPageState extends State<AdminPage> {
   bool collapsed = false;
   late final AdminCatalogRepository catalogRepository;
   late final List<AdminCatalogCubit> catalogCubits;
+  late final AdminScheduleRepository scheduleRepository;
   Map<String, List<Json>> get catalog => catalogRepository.snapshot.collections;
   AdminCatalogCubit? get masterCubit =>
-      selected >= 0 && selected < 3 ? catalogCubits[selected] : null;
+      selected >= 0 && selected < 5 ? catalogCubits[selected] : null;
   List<Json> _data = [];
   List<Json> get data => masterCubit?.rows ?? _data;
   set data(List<Json> value) => _data = value;
@@ -62,10 +65,13 @@ class _AdminPageState extends State<AdminPage> {
   void initState() {
     super.initState();
     catalogRepository = AdminCatalogRepository(widget.api);
+    scheduleRepository = AdminScheduleRepository(catalogRepository);
     catalogCubits = [
       PolyclinicCubit(catalogRepository),
       DoctorCatalogCubit(catalogRepository),
       RoomCubit(catalogRepository),
+      ServiceScheduleCubit(scheduleRepository),
+      PracticeScheduleCubit(scheduleRepository),
     ];
     catalogRepository.addListener(_catalogChanged);
     selected = widget.initialSection;
@@ -151,9 +157,18 @@ class _AdminPageState extends State<AdminPage> {
           ? BulkScheduleEditor(
               api: widget.api,
               clinics: catalog['/layanan'] ?? [],
+              repository: scheduleRepository,
             )
           : resource.path == '/jadwal-praktik'
-          ? PracticeScheduleEditor(api: widget.api, catalog: catalog, row: row)
+          ? PracticeScheduleEditor(
+              api: widget.api,
+              catalog: catalog,
+              catalogSource: catalogRepository,
+              row: row,
+              onSave: cubit == null
+                  ? null
+                  : (body) => cubit.save(body, id: row?['id'] as String?),
+            )
           : resource.path == '/dokter'
           ? AdminDoctorEditor(
               api: widget.api,
@@ -168,6 +183,9 @@ class _AdminPageState extends State<AdminPage> {
               row: row,
               catalog: catalog,
               initialSession: session,
+              catalogSource: resource.path == '/jadwal-layanan'
+                  ? catalogRepository
+                  : null,
               onSave: cubit == null
                   ? null
                   : (body) => cubit.save(body, id: row?['id'] as String?),
@@ -184,9 +202,9 @@ class _AdminPageState extends State<AdminPage> {
             ? 'Profil dokter disimpan. Lanjutkan Hubungkan poliklinik, lalu Buat akun login pada baris dokter.'
             : 'Data disimpan.',
       );
-      // Professional photos/accounts remain separate flows and need a final
-      // reconciliation. Ordinary master mutations already reconciled in Cubit.
-      if (cubit == null || resource.path == '/dokter') {
+      // Keep the batch close refresh, including recovery after a failed final
+      // reconciliation. Photos/accounts still remain separate doctor flows.
+      if (bulk || cubit == null || resource.path == '/dokter') {
         await load(reloadCatalog: true);
       }
     }
@@ -333,6 +351,12 @@ class _AdminPageState extends State<AdminPage> {
         value: catalogCubits[1] as DoctorCatalogCubit,
       ),
       BlocProvider<RoomCubit>.value(value: catalogCubits[2] as RoomCubit),
+      BlocProvider<ServiceScheduleCubit>.value(
+        value: catalogCubits[3] as ServiceScheduleCubit,
+      ),
+      BlocProvider<PracticeScheduleCubit>.value(
+        value: catalogCubits[4] as PracticeScheduleCubit,
+      ),
     ],
     child: masterCubit == null
         ? _buildContent(context)
@@ -564,9 +588,11 @@ class _AdminEditor extends StatefulWidget {
     this.row,
     this.initialSession,
     this.onSave,
+    this.catalogSource,
   });
   final QueueApi api;
   final Future<Json> Function(Json)? onSave;
+  final AdminCatalogRepository? catalogSource;
   final AdminResource resource;
   final Map<String, List<Json>> catalog;
   final Json? row;
@@ -576,6 +602,8 @@ class _AdminEditor extends StatefulWidget {
 }
 
 class _AdminEditorState extends State<_AdminEditor> {
+  Map<String, List<Json>> get catalog =>
+      widget.catalogSource?.snapshot.collections ?? widget.catalog;
   final form = GlobalKey<FormState>();
   final Map<String, TextEditingController> controllers = {};
   final Map<String, String> values = {};
@@ -609,17 +637,17 @@ class _AdminEditorState extends State<_AdminEditor> {
       return field.options.map((v) => (v, v.replaceAll('_', ' '))).toList();
     }
     if (field.key == 'layananId') {
-      return choicesOf(widget.catalog['/layanan'] ?? []);
+      return choicesOf(catalog['/layanan'] ?? []);
     }
     if (field.key == 'loketId') {
-      final links = (widget.catalog['/dokter'] ?? []).expand(
+      final links = (catalog['/dokter'] ?? []).expand(
         (d) => rows(d['dokterLayanan']),
       );
       final service = links
           .where((v) => v['id'] == values['dokterLayananId'])
           .firstOrNull?['layananId'];
       return choicesOf(
-        (widget.catalog['/loket'] ?? [])
+        (catalog['/loket'] ?? [])
             .where(
               (v) =>
                   (service == null || v['layananId'] == service) &&
@@ -633,7 +661,7 @@ class _AdminEditorState extends State<_AdminEditor> {
     }
     if (field.key == 'dokterLayananId') {
       return [
-        for (final d in widget.catalog['/dokter'] ?? <Json>[])
+        for (final d in catalog['/dokter'] ?? <Json>[])
           for (final l in rows(
             d['dokterLayanan'],
           ).where((v) => v['aktif'] == true))
@@ -641,7 +669,7 @@ class _AdminEditorState extends State<_AdminEditor> {
       ];
     }
     if (field.key == 'jadwalPraktikId') {
-      return (widget.catalog['/jadwal-praktik'] ?? [])
+      return (catalog['/jadwal-praktik'] ?? [])
           .map(
             (v) => (
               '${v['id']}',
@@ -656,7 +684,7 @@ class _AdminEditorState extends State<_AdminEditor> {
   Future<void> pick(AdminField f) async {
     if (busy) return;
     var input = values[f.key] ?? '';
-    final session = (widget.catalog['/jadwal-praktik'] ?? [])
+    final session = (catalog['/jadwal-praktik'] ?? [])
         .where((s) => s['id'] == values['jadwalPraktikId'])
         .firstOrNull;
     var day =
@@ -755,7 +783,7 @@ class _AdminEditorState extends State<_AdminEditor> {
   );
 
   Widget staffField(AdminField f) {
-    final accounts = widget.catalog['/akun-petugas'] ?? <Json>[];
+    final accounts = catalog['/akun-petugas'] ?? <Json>[];
     final eligible = accounts
         .where((a) => a['aktif'] == true || a['id'] == widget.row?['petugasId'])
         .toList();
@@ -878,7 +906,13 @@ class _AdminEditorState extends State<_AdminEditor> {
   }
 
   @override
-  Widget build(BuildContext context) => PopScope(
+  Widget build(BuildContext context) => widget.catalogSource == null
+      ? _dialog(context)
+      : ListenableBuilder(
+          listenable: widget.catalogSource!,
+          builder: (context, _) => _dialog(context),
+        );
+  Widget _dialog(BuildContext context) => PopScope(
     canPop: !busy,
     child: AlertDialog(
       title: Column(
