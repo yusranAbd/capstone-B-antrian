@@ -22,6 +22,8 @@ import 'features/admin/application/admin_catalog_state.dart';
 import 'features/admin/data/admin_catalog_repository.dart';
 import 'features/admin/data/admin_schedule_repository.dart';
 import 'features/admin/application/practice_schedule_cubit.dart';
+import 'features/admin/application/slot_session_cubit.dart';
+import 'features/admin/data/admin_slot_repository.dart';
 
 class AdminPage extends StatefulWidget {
   const AdminPage({
@@ -44,6 +46,25 @@ class _AdminPageState extends State<AdminPage> {
   late final AdminCatalogRepository catalogRepository;
   late final List<AdminCatalogCubit> catalogCubits;
   late final AdminScheduleRepository scheduleRepository;
+  late final AdminSlotRepository slotRepository;
+  final slotSessions = <String, SlotSessionCubit>{};
+  SlotSessionCubit slotsFor(Json session) => slotSessions.putIfAbsent(
+    '${session['id']}',
+    () => SlotSessionCubit(slotRepository, session),
+  );
+  SlotSessionCubit slotsById(String id) {
+    final session = (catalog['/jadwal-praktik'] ?? [])
+        .where((r) => r['id'] == id)
+        .firstOrNull;
+    if (session == null) {
+      throw const ApiException(
+        404,
+        'Sesi praktik tidak lagi tersedia. Muat ulang daftar.',
+      );
+    }
+    return slotsFor(session);
+  }
+
   Map<String, List<Json>> get catalog => catalogRepository.snapshot.collections;
   AdminCatalogCubit? get masterCubit =>
       selected >= 0 && selected < 5 ? catalogCubits[selected] : null;
@@ -66,6 +87,7 @@ class _AdminPageState extends State<AdminPage> {
     super.initState();
     catalogRepository = AdminCatalogRepository(widget.api);
     scheduleRepository = AdminScheduleRepository(catalogRepository);
+    slotRepository = AdminSlotRepository(catalogRepository);
     catalogCubits = [
       PolyclinicCubit(catalogRepository),
       DoctorCatalogCubit(catalogRepository),
@@ -96,11 +118,20 @@ class _AdminPageState extends State<AdminPage> {
     for (final cubit in catalogCubits) {
       cubit.close();
     }
+    for (final cubit in slotSessions.values) {
+      cubit.close();
+    }
     catalogRepository.dispose();
     super.dispose();
   }
 
   Future<void> load({bool reloadCatalog = false}) async {
+    final openSlots = selected == 5
+        ? {
+            for (final c in slotSessions.values.where((c) => c.expanded))
+              c: c.invalidationRevision,
+          }
+        : <SlotSessionCubit, int>{};
     final current = ++_requestRevision;
     final selectedResource = resource;
     setState(() {
@@ -122,6 +153,15 @@ class _AdminPageState extends State<AdminPage> {
         return;
       }
       await catalogRepository.refresh(paths);
+      // A manual page reload refreshes open sessions even if their reference
+      // projection is unchanged; dependency invalidations already start a read.
+      await Future.wait(
+        openSlots.entries.map(
+          (e) => e.key.invalidationRevision == e.value
+              ? e.key.refresh()
+              : e.key.settled,
+        ),
+      );
       final next = catalog;
       List<Json> items;
       if (selectedResource.path == '/slot-praktik') {
@@ -149,6 +189,7 @@ class _AdminPageState extends State<AdminPage> {
 
   Future<void> edit([Json? row]) async {
     final cubit = masterCubit;
+    final slot = resource.path == '/slot-praktik';
     final bulk = resource.path == '/jadwal-layanan' && row == null;
     final changed = await showDialog<bool>(
       context: context,
@@ -187,12 +228,16 @@ class _AdminPageState extends State<AdminPage> {
                   ? catalogRepository
                   : null,
               onSave: cubit == null
-                  ? null
+                  ? slot
+                        ? (body) => slotsById(
+                            '${row?['jadwalPraktikId'] ?? body['jadwalPraktikId']}',
+                          ).save(body, id: row?['id'] as String?)
+                        : null
                   : (body) => cubit.save(body, id: row?['id'] as String?),
             ),
     );
     if (mounted && (changed == true || bulk || resource.path == '/dokter')) {
-      if (cubit != null && changed == true) _error = null;
+      if ((cubit != null || slot) && changed == true) _error = null;
       setState(
         () => message = changed != true
             ? null
@@ -204,7 +249,7 @@ class _AdminPageState extends State<AdminPage> {
       );
       // Keep the batch close refresh, including recovery after a failed final
       // reconciliation. Photos/accounts still remain separate doctor flows.
-      if (bulk || cubit == null || resource.path == '/dokter') {
+      if (bulk || (cubit == null && !slot) || resource.path == '/dokter') {
         await load(reloadCatalog: true);
       }
     }
@@ -212,13 +257,20 @@ class _AdminPageState extends State<AdminPage> {
 
   Future<void> deleteRow(Json row) async {
     final cubit = masterCubit;
+    final slot = resource.path == '/slot-praktik'
+        ? slotsById('${row['jadwalPraktikId']}')
+        : null;
     final result = await showAdminDelete(
       context,
       widget.api,
       resource.path,
       row,
       onDelete: cubit == null
-          ? null
+          ? slot == null
+                ? null
+                : () async {
+                    await slot.delete('${row['id']}');
+                  }
           : () async {
               await cubit.delete('${row['id']}');
             },
@@ -236,7 +288,7 @@ class _AdminPageState extends State<AdminPage> {
     if (result == AdminDeleteResult.deleted) {
       _error = null;
       setState(() => message = 'Data berhasil dihapus permanen.');
-      if (cubit == null) await load(reloadCatalog: true);
+      if (cubit == null && slot == null) await load(reloadCatalog: true);
     }
   }
 
@@ -245,6 +297,19 @@ class _AdminPageState extends State<AdminPage> {
       context,
       'Nonaktifkan ${resource.path == '/jadwal-layanan' ? '${label(object(row['layanan']))} · ${dayLabel('${row['hari']}')}' : label(row)}? Riwayat tetap disimpan.',
     )) {
+      return;
+    }
+    if (resource.path == '/slot-praktik') {
+      setState(() {
+        _error = null;
+        message = null;
+      });
+      try {
+        await slotsById('${row['jadwalPraktikId']}').deactivate('${row['id']}');
+        if (mounted) setState(() => message = 'Data dinonaktifkan.');
+      } catch (e) {
+        if (mounted) setState(() => error = '$e');
+      }
       return;
     }
     if (masterCubit case final cubit?) {
@@ -476,6 +541,7 @@ class _AdminPageState extends State<AdminPage> {
                 )
               else
                 AdminDataView(
+                  slotSession: slotsFor,
                   toolbarActions: toolbarActions,
                   key: ValueKey(resource.path),
                   resource: resource,

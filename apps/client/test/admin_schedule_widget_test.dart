@@ -12,6 +12,7 @@ import 'package:queueb_client/src/admin_practice_form.dart';
 import 'package:queueb_client/src/admin_schedules.dart';
 import 'package:queueb_client/src/admin_ui.dart';
 import 'package:queueb_client/src/features/admin/application/practice_schedule_cubit.dart';
+import 'package:queueb_client/src/features/admin/application/slot_session_cubit.dart';
 import 'package:queueb_client/src/features/admin/application/admin_catalog_state.dart';
 
 import 'admin_action_helpers.dart';
@@ -266,7 +267,11 @@ void main() {
       expect(reads.single.url.queryParameters, {
         'jadwalPraktikId': 'practice-1',
       });
-      await tester.runAsync(() => c.save({'aktif': false}, id: 'practice-1'));
+      final slots = tester.element(tile.first).read<SlotSessionCubit>();
+      await tester.runAsync(() async {
+        await c.save({'aktif': false}, id: 'practice-1');
+        await slots.settled;
+      });
       await tester.pumpAndSettle();
       expect(
         f.calls.where((r) => r.url.path.endsWith('/slot-praktik')),

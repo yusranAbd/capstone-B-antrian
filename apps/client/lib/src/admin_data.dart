@@ -1,4 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import 'features/admin/application/slot_session_cubit.dart';
+import 'features/admin/application/slot_session_state.dart';
+import 'features/admin/data/admin_catalog_repository.dart';
+import 'features/admin/data/admin_slot_repository.dart';
 
 import 'admin_schema.dart';
 import 'admin_practice_agenda.dart';
@@ -137,6 +143,7 @@ class AdminDataView extends StatefulWidget {
     this.toolbarActions = const [],
     required this.detail,
     required this.revision,
+    this.slotSession,
   });
   final List<Widget> toolbarActions;
   final AdminResource resource;
@@ -149,6 +156,7 @@ class AdminDataView extends StatefulWidget {
   final ValueChanged<Json>? onDoctorAccount;
   final String Function(Json) detail;
   final int revision;
+  final SlotSessionCubit Function(Json)? slotSession;
   @override
   State<AdminDataView> createState() => _AdminDataViewState();
 }
@@ -532,6 +540,7 @@ class _AdminDataViewState extends State<AdminDataView> {
                 key: ValueKey('${r['id']}'),
                 revision: widget.revision,
                 session: r,
+                cubit: widget.slotSession?.call(r),
                 api: widget.api,
                 status: status,
                 search: search,
@@ -670,8 +679,10 @@ class AdminSlotSession extends StatefulWidget {
     required this.onEdit,
     required this.onDeactivate,
     this.onDelete,
+    this.cubit,
   });
   final Json session;
+  final SlotSessionCubit? cubit;
   final QueueApi api;
   final String status, search;
   final int revision;
@@ -683,44 +694,66 @@ class AdminSlotSession extends StatefulWidget {
 }
 
 class _AdminSlotSessionState extends State<AdminSlotSession> {
-  List<Json>? slots;
-  String? error;
-  bool loading = false, expanded = false;
+  late SlotSessionCubit controller;
+  AdminCatalogRepository? ownedCatalog;
+  bool expanded = false;
+  void attach() {
+    ownedCatalog = widget.cubit == null
+        ? AdminCatalogRepository(widget.api)
+        : null;
+    controller =
+        widget.cubit ??
+        SlotSessionCubit(AdminSlotRepository(ownedCatalog!), widget.session);
+  }
+
+  void detach() {
+    controller.setExpanded(false);
+    // Recreated cards verify server availability on their next expansion.
+    controller.invalidate();
+    if (ownedCatalog != null) controller.close();
+    ownedCatalog?.dispose();
+    ownedCatalog = null;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    attach();
+  }
+
+  @override
+  void dispose() {
+    detach();
+    super.dispose();
+  }
+
   @override
   void didUpdateWidget(covariant AdminSlotSession oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.revision != widget.revision && expanded) {
+    if (oldWidget.session['id'] != widget.session['id'] ||
+        oldWidget.cubit != widget.cubit) {
+      detach();
+      attach();
+      controller.setExpanded(expanded);
+    } else if (widget.cubit == null && oldWidget.revision != widget.revision) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) load();
+        if (mounted) controller.invalidate();
       });
     }
   }
 
-  Future<void> load() async {
-    if (loading) return;
-    setState(() {
-      loading = true;
-      error = null;
-    });
-    try {
-      final result = rows(
-        await widget.api.request(
-          'GET',
-          '/slot-praktik',
-          query: {'jadwalPraktikId': '${widget.session['id']}'},
-        ),
-      );
-      if (mounted) setState(() => slots = result);
-    } catch (e) {
-      if (mounted) setState(() => error = '$e');
-    } finally {
-      if (mounted) setState(() => loading = false);
-    }
-  }
-
   @override
-  Widget build(BuildContext context) {
-    final visible = (slots ?? [])
+  Widget build(BuildContext context) => BlocProvider.value(
+    value: controller,
+    child: BlocBuilder<SlotSessionCubit, SlotSessionState>(
+      bloc: controller,
+      builder: (context, state) => content(context, state),
+    ),
+  );
+  Widget content(BuildContext context, SlotSessionState state) {
+    final loading = state.loading;
+    final error = state.error?.toString();
+    final visible = state.slots
         .where((s) => widget.status.isEmpty || '${s['aktif']}' == widget.status)
         .toList();
     return Card(
@@ -737,19 +770,22 @@ class _AdminSlotSessionState extends State<AdminSlotSession> {
         expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
         onExpansionChanged: (v) {
           setState(() => expanded = v);
-          if (v && slots == null) load();
+          controller.setExpanded(v);
         },
         children: !expanded
             ? const []
             : [
                 if (loading) const LinearProgressIndicator(),
-                if (error != null) AdminNotice(error!, error: true),
+                if (error != null) AdminNotice(error, error: true),
                 TextButton.icon(
-                  onPressed: loading ? null : load,
+                  onPressed: loading ? null : controller.refresh,
                   icon: const Icon(Icons.refresh),
                   label: const Text('Muat ulang slot'),
                 ),
-                if (slots != null && visible.isEmpty)
+                if (state.hasLoaded &&
+                    !loading &&
+                    state.load != SlotLoadStatus.failure &&
+                    visible.isEmpty)
                   const AdminNotice('Tidak ada slot yang sesuai filter.'),
                 AdminTable(
                   rows: visible,
@@ -788,25 +824,34 @@ class _AdminSlotSessionState extends State<AdminSlotSession> {
                       (_) => '',
                       cell: (s) => AdminRowActions(
                         tooltip: 'Aksi slot ${s['id']}',
-                        busy: widget.busy,
+                        busy: widget.busy || state.mutating,
                         actions: [
                           AdminRowAction(
                             'Ubah',
                             Icons.edit_outlined,
-                            () => widget.onEdit(s),
+                            () => widget.onEdit({
+                              ...s,
+                              'jadwalPraktikId': state.sessionId,
+                            }),
                           ),
                           if (s['aktif'] == true)
                             AdminRowAction(
                               'Nonaktifkan',
                               Icons.block_outlined,
-                              () => widget.onDeactivate(s),
+                              () => widget.onDeactivate({
+                                ...s,
+                                'jadwalPraktikId': state.sessionId,
+                              }),
                               danger: true,
                             ),
                           if (widget.onDelete != null)
                             AdminRowAction(
                               'Hapus',
                               Icons.delete_outline,
-                              () => widget.onDelete!(s),
+                              () => widget.onDelete!({
+                                ...s,
+                                'jadwalPraktikId': state.sessionId,
+                              }),
                               danger: true,
                             ),
                         ],
