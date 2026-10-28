@@ -1,287 +1,123 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-
-import 'staff_qr_scanner.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'api.dart';
 import 'config.dart';
-import 'realtime.dart';
+import 'features/staff/application/staff_queue_bloc.dart';
+import 'features/staff/application/staff_queue_event.dart';
+import 'features/staff/application/staff_queue_state.dart';
+import 'features/staff/data/staff_queue_repository.dart';
+import 'features/staff/models/staff_queue_models.dart';
+import 'staff_qr_scanner.dart';
 import 'widgets.dart';
 import 'mobile_ui.dart';
 import 'staff_ui.dart';
 import 'staff_v4.dart';
 
 class QueuePage extends StatefulWidget {
-  const QueuePage({super.key, required this.api, this.headerBuilder});
+  const QueuePage({
+    super.key,
+    required this.api,
+    this.headerBuilder,
+    this.repository,
+  });
   final QueueApi api;
+  final StaffQueueRepository? repository;
   final PreferredSizeWidget Function(Widget context)? headerBuilder;
   @override
   State<QueuePage> createState() => _QueuePageState();
 }
 
 class _QueuePageState extends State<QueuePage> with WidgetsBindingObserver {
-  List<Json> assignments = [];
-  Json? snapshot;
-  int followupPage = 1;
-  String? roomId, error, message;
-  String liveStatus = 'Menghubungkan realtime…';
-  bool loading = true, busy = false;
-  String? pendingPath;
+  late final repository = widget.repository ?? StaffQueueRepository(widget.api);
+  late final bloc = StaffQueueBloc(repository);
   final search = TextEditingController();
-  SnapshotLoader? loader;
-  RealtimeFeed? feed;
-  Timer? poll;
-  List<Json> get validAssignments => assignments
-      .where((a) => assignmentValid(a, widget.api.config.today))
-      .toList();
-  Json? get selectedRoom => validAssignments
-      .where((a) => a['loketId'] == roomId)
-      .map((a) => object(a['loket']))
-      .firstOrNull;
-  List<Json> get active =>
-      rows(snapshot?['loket'])
-          .where((l) => l['id'] == roomId)
-          .expand((l) => rows(l['tiketAktif']))
-          .toList();
+  DialogRoute<void>? _scanRoute;
+  DialogRoute<void>? _detailRoute;
+  NavigatorState? _scannerNavigator;
+  StaffQueueState get state => bloc.state;
+  List<Json> get validAssignments => state.assignments;
+  Json? get selectedRoom => state.room;
+  String? get roomId => state.roomId;
+  Json? get snapshot => state.snapshot;
+  List<Json> get active => state.active;
+  List<Json> get patients => state.patients;
+  List<Json> get schedules => state.schedules;
+  bool get scheduleLoading => state.scheduleLoading;
+  bool get scheduleFailed => state.scheduleFailed;
+  bool get loading => state.loading;
+  bool get busy => state.blocked;
+  String? get error => state.error;
+  String? get message => state.message;
+  int get followupPage => state.page;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    loadAssignments();
+    unawaited(bloc.refresh(assignments: true));
   }
 
-  Future<void> loadAssignments() async {
-    setState(() {
-      loading = true;
-      error = null;
-    });
-    try {
-      final list = rows(await widget.api.request('GET', '/penugasan-petugas'));
-      if (!mounted) return;
-      setState(() {
-        final previous = roomId;
-        assignments = list;
-        roomId = validAssignments.any((a) => a['loketId'] == previous)
-            ? previous
-            : validAssignments.firstOrNull?['loketId'];
-      });
-      setupRoom();
-    } catch (e) {
-      if (mounted) setState(() => error = '$e');
-    } finally {
-      if (mounted) setState(() => loading = false);
-    }
-  }
-
-  void setupRoom() {
-    feed?.dispose();
-    loader?.dispose();
-    poll?.cancel();
-    snapshot = null;
-    followupPage = 1;
-    schedules = [];
-    scheduleLoading = true;
-    scheduleFailed = false;
-    scheduleVersion++;
-    message = null;
-    final room = selectedRoom;
-    if (room == null) return;
-    final selected = roomId!;
-    loader = SnapshotLoader(
-      fetch: () async {
-        final data = object(
-          await widget.api.request(
-            'GET',
-            '/queue/snapshot',
-            query: {
-              'loketId': selected,
-              'halamanTindakLanjut': '$followupPage',
-            },
-          ),
-        );
-        if (mounted && selected == roomId) {
-          unawaited(
-            loadSchedules(selected, data['tanggalPelayanan'].toString()),
-          );
-        }
-        return data;
-      },
-      onData: (data) {
-        final pages =
-            object(data['daftarPasien'])['jumlahHalamanTindakLanjut'] ?? 1;
-        if (mounted && selected == roomId && followupPage > pages) {
-          setState(() => followupPage = pages);
-          loader?.refresh();
-          return;
-        }
-        if (mounted &&
-            selected == roomId &&
-            (object(data['daftarPasien'])['halamanTindakLanjut'] ??
-                    followupPage) ==
-                followupPage) {
-          setState(() {
-            snapshot = data;
-            error = null;
-          });
-        }
-      },
-      onError: (e) {
-        if (mounted && selected == roomId) {
-          setState(() {
-            error = e.toString();
-            if (e is ApiException && [401, 403].contains(e.status)) {
-              snapshot = null;
-              schedules = [];
-              scheduleLoading = false;
-              scheduleVersion++;
-            }
-          });
-        }
-      },
-    );
-    feed = RealtimeFeed(
-      api: widget.api,
-      layananId: '${object(room['layanan'])['id']}',
-      onRefresh: () => loader?.refresh(),
-      onStatus: (status) {
-        if (mounted) setState(() => liveStatus = status);
-      },
-    );
-    loader!.refresh();
-    poll = Timer.periodic(const Duration(seconds: 15), (_) {
-      if (selectedRoom == null) {
-        feed?.dispose();
-        loader?.dispose();
-        poll?.cancel();
-        if (mounted) {
-          setState(() {
-            roomId = null;
-            snapshot = null;
-            message = 'Penugasan berubah tanggal. Muat ulang penugasan.';
-          });
-        }
-      } else {
-        loader?.refresh();
-      }
-    });
-  }
-
+  Future<void> loadAssignments() => bloc.refresh(assignments: true);
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) loader?.refresh();
+    if (state == AppLifecycleState.resumed) unawaited(bloc.refresh());
   }
 
-  Future<void> action(String path, {Json? body}) async {
-    if (busy || selectedRoom == null) return;
-    setState(() {
-      busy = true;
-      pendingPath = path;
-      error = null;
-      message = null;
-    });
+  Future<void> action(String path) async {
+    final parts = path.split('/');
+    final operation = StaffOperation.values
+        .where((o) => o.route == parts.last)
+        .first;
     try {
-      final result = object(
-        await widget.api.request(
-          'POST',
-          path,
-          body: body ?? {'loketId': roomId},
-        ),
+      await bloc.execute(
+        operation,
+        ticketId: parts.length == 4 ? parts[2] : null,
       );
-      if (mounted) {
-        setState(() {
-          message = '${result['nomorAntrean']} · ${result['status']}';
-        });
-      }
-    } catch (e) {
-      if (mounted) setState(() => error = '$e');
-    } finally {
-      final actionError = error;
-      await loader?.refresh();
-      if (mounted) {
-        setState(() {
-          busy = false;
-          pendingPath = null;
-          if (actionError != null) error = actionError;
-        });
-      }
+    } on ApiException {
+      // Feedback comes from feature state; no transport or snapshot lives here.
     }
   }
 
-  Future<Json> submitQr(String value) async {
-    if (!mounted) {
-      throw const ApiException(
-        401,
-        'Sesi petugas telah berakhir. Tutup pemindai dan login kembali.',
-      );
-    }
-    final payload = value.trim();
-    if (busy || selectedRoom == null) {
-      throw const ApiException(409, 'Tunggu proses sebelumnya selesai.');
-    }
-    if (!validCheckInQr(payload)) {
-      const message = 'Format QR tidak lengkap atau tidak valid.';
-      setState(() => error = message);
-      throw const ApiException(400, message);
-    }
-    setState(() {
-      busy = true;
-      pendingPath = '/check-in/auto-antrean';
-      error = null;
-      message = null;
-    });
-    String? failure;
-    try {
-      final result = object(
-        await widget.api.request(
-          'POST',
-          '/check-in/auto-antrean',
-          body: {'qrPayload': payload, 'loketId': roomId},
-        ),
-      );
-      if (!mounted) {
-        throw const ApiException(
-          401,
-          'Sesi petugas telah berakhir. Tutup pemindai dan login kembali.',
-        );
-      }
-      if (result['status'] != 'MENUNGGU') {
-        throw const ApiException(
-          409,
-          'Status belum MENUNGGU. Periksa antrean sebelum mencoba kembali.',
-        );
-      }
-      return result;
-    } catch (e) {
-      failure = '$e';
-      if (mounted) setState(() => error = failure);
-      rethrow;
-    } finally {
-      await loader?.refresh();
-      if (mounted) {
-        setState(() {
-          busy = false;
-          pendingPath = null;
-          if (failure != null) error = failure;
-        });
-      }
-    }
-  }
-
+  Future<Json> submitQr(String value) =>
+      bloc.execute(StaffOperation.scan, qr: value.trim());
   Future<void> scan() async {
-    await showDialog<void>(
+    final navigator = Navigator.of(context, rootNavigator: true);
+    final route = DialogRoute<void>(
       context: context,
       barrierDismissible: false,
       builder: (_) => StaffQrScanner(onScan: submitQr),
     );
+    _scanRoute = route;
+    _scannerNavigator = navigator;
+    try {
+      await navigator.push(route);
+    } finally {
+      if (identical(_scanRoute, route)) _scanRoute = null;
+    }
+  }
+
+  void _closeDialogs() {
+    final routes = [_scanRoute, _detailRoute], navigator = _scannerNavigator;
+    _scanRoute = null;
+    _detailRoute = null;
+    scheduleMicrotask(() {
+      for (final route in routes) {
+        if (navigator != null && navigator.mounted && route?.isActive == true) {
+          navigator.removeRoute(route!);
+        }
+      }
+    });
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    feed?.dispose();
-    loader?.dispose();
-    poll?.cancel();
+    _closeDialogs();
+    unawaited(bloc.close());
+    if (widget.repository == null) repository.dispose();
     search.dispose();
     super.dispose();
   }
@@ -297,81 +133,47 @@ class _QueuePageState extends State<QueuePage> with WidgetsBindingObserver {
                   '${label(object(a['loket']))} · ${label(object(object(a['loket'])['layanan']))}',
           }.entries.map((e) => (e.key, e.value)).toList(),
           value: roomId,
-          onChanged: busy || loading
+          onChanged: state.busy || loading
               ? null
-              : (v) => setState(() {
-                  roomId = v;
-                  error = null;
+              : (value) {
+                  if (value == null) return;
                   search.clear();
-                  setupRoom();
-                }),
+                  bloc.add(StaffRoomSelected(value));
+                },
         ),
       ),
       IconButton(
         tooltip: 'Muat ulang penugasan',
-        onPressed: busy || loading ? null : loadAssignments,
+        onPressed: state.busy || loading ? null : loadAssignments,
         icon: const Icon(Icons.refresh, size: 20),
       ),
     ],
   );
-
-  List<Json> schedules = [];
-  bool scheduleLoading = false, scheduleFailed = false;
-  int scheduleVersion = 0;
-  Future<void> loadSchedules(String selected, String date) async {
-    final version = ++scheduleVersion;
-    try {
-      final list = rows(
-        await widget.api.request(
-          'GET',
-          '/jadwal-praktik',
-          query: {
-            'layananId': '${object(selectedRoom?['layanan'])['id']}',
-            'tanggal': date,
-          },
-        ),
-      );
-      if (mounted && selected == roomId && version == scheduleVersion) {
-        setState(() {
-          schedules = list
-              .where(
-                (s) =>
-                    (s['loketId'] ?? object(s['loket'])['id']) == selected &&
-                    dateOnly(s['tanggal']) == date &&
-                    s['aktif'] != false,
-              )
-              .toList();
-          scheduleLoading = false;
-          scheduleFailed = false;
-        });
-      }
-    } catch (_) {
-      if (mounted && selected == roomId && version == scheduleVersion) {
-        setState(() {
-          schedules = [];
-          scheduleLoading = false;
-          scheduleFailed = true;
-        });
-      }
-    }
-  }
-
-  List<Json> get patients {
-    final source = snapshot?['daftarPasien'] is Map
-        ? rows(object(snapshot?['daftarPasien'])['tiket'])
-        : rows(object(snapshot?['menunggu'])['tiket'])
-              .map((t) => {'status': 'MENUNGGU', ...t})
-              .toList();
-    final unique = <String, Json>{};
-    for (final t in source) {
-      unique.putIfAbsent('${t['tiketId']}', () => t);
-    }
-    return unique.values.toList();
-  }
-
+  @override
+  Widget build(BuildContext context) => BlocProvider.value(
+    value: bloc,
+    child: BlocConsumer<StaffQueueBloc, StaffQueueState>(
+      // Connection-only changes rebuild the status selector below.
+      buildWhen: (previous, next) =>
+          previous.liveStatus == next.liveStatus ||
+          previous.roomId != next.roomId ||
+          previous.load != next.load ||
+          previous.command != next.command,
+      listenWhen: (previous, next) =>
+          (previous.load != next.load && next.load == StaffLoad.ended) ||
+          previous.roomId != next.roomId ||
+          previous.date != next.date,
+      listener: (context, value) {
+        search.clear();
+        _closeDialogs();
+      },
+      builder: (context, _) => buildPortal(context),
+    ),
+  );
   void rowAction(Json row, String route) {
     if (route == 'detail') {
-      showDialog<void>(
+      final navigator = Navigator.of(context, rootNavigator: true);
+      final detail = DialogRoute<void>(
         context: context,
         builder: (context) => AlertDialog(
           title: Text('${row['nomorAntrean']}'),
@@ -386,6 +188,13 @@ class _QueuePageState extends State<QueuePage> with WidgetsBindingObserver {
           ],
         ),
       );
+      _detailRoute = detail;
+      _scannerNavigator = navigator;
+      unawaited(
+        navigator.push(detail).whenComplete(() {
+          if (identical(_detailRoute, detail)) _detailRoute = null;
+        }),
+      );
     } else if (row['status'] == 'DILEWATI' &&
             row['bisaAntreUlang'] == true &&
             route == 'antre-ulang' ||
@@ -396,8 +205,7 @@ class _QueuePageState extends State<QueuePage> with WidgetsBindingObserver {
     }
   }
 
-  @override
-  Widget build(BuildContext context) => Theme(
+  Widget buildPortal(BuildContext context) => Theme(
     data: StaffStyle.theme,
     child: Builder(
       builder: (context) => Scaffold(
@@ -439,7 +247,7 @@ class _QueuePageState extends State<QueuePage> with WidgetsBindingObserver {
                     const LinearProgressIndicator(
                       semanticsLabel: 'Memuat penugasan',
                     ),
-                  if (busy)
+                  if (state.busy)
                     const LinearProgressIndicator(
                       semanticsLabel: 'Memproses tindakan',
                     ),
@@ -502,21 +310,24 @@ class _QueuePageState extends State<QueuePage> with WidgetsBindingObserver {
       action: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Tooltip(
-            message: liveStatus,
-            child: Icon(
-              liveStatus == 'Realtime terhubung'
-                  ? Icons.wifi_rounded
-                  : Icons.sync_rounded,
-              size: 16,
-              color: liveStatus == 'Realtime terhubung'
-                  ? QueueBStyle.success
-                  : QueueBStyle.warning,
+          BlocSelector<StaffQueueBloc, StaffQueueState, String>(
+            selector: (state) => state.liveStatus,
+            builder: (context, liveStatus) => Tooltip(
+              message: liveStatus,
+              child: Icon(
+                liveStatus == 'Realtime terhubung'
+                    ? Icons.wifi_rounded
+                    : Icons.sync_rounded,
+                size: 16,
+                color: liveStatus == 'Realtime terhubung'
+                    ? QueueBStyle.success
+                    : QueueBStyle.warning,
+              ),
             ),
           ),
           IconButton(
             tooltip: 'Muat ulang antrean',
-            onPressed: busy ? null : () => loader?.refresh(),
+            onPressed: state.busy ? null : () => bloc.refresh(),
             icon: const Icon(Icons.refresh_rounded),
           ),
         ],
@@ -560,8 +371,7 @@ class _QueuePageState extends State<QueuePage> with WidgetsBindingObserver {
                   onPressed: busy || followupPage <= 1
                       ? null
                       : () {
-                          setState(() => followupPage--);
-                          loader?.refresh();
+                          bloc.add(StaffPageSelected(followupPage - 1));
                         },
                   icon: const Icon(Icons.chevron_left),
                 ),
@@ -576,8 +386,7 @@ class _QueuePageState extends State<QueuePage> with WidgetsBindingObserver {
                                   1)
                       ? null
                       : () {
-                          setState(() => followupPage++);
-                          loader?.refresh();
+                          bloc.add(StaffPageSelected(followupPage + 1));
                         },
                   icon: const Icon(Icons.chevron_right),
                 ),
@@ -780,7 +589,9 @@ class _QueuePageState extends State<QueuePage> with WidgetsBindingObserver {
   );
 
   Widget operationLabel(String path, String text, {bool onLight = false}) {
-    if (!busy || pendingPath != path) return Text(text);
+    if (!state.busy || !path.endsWith('/${state.pending?.route}')) {
+      return Text(text);
+    }
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [

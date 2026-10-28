@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import 'config.dart';
+import 'api.dart';
 import 'mobile_ui.dart';
 
 bool validCheckInQr(String value) =>
@@ -125,7 +126,11 @@ class _StaffQrScannerState extends State<StaffQrScanner>
         );
       }
     } catch (e) {
-      if (mounted) setState(() => error = '$e');
+      if (mounted) {
+        setState(
+          () => error = e is ApiException ? e.message : 'Pemindaian belum dapat dipastikan. Periksa antrean sebelum mencoba kembali.',
+        );
+      }
     } finally {
       if (mounted) setState(() => processing = false);
     }
@@ -134,6 +139,9 @@ class _StaffQrScannerState extends State<StaffQrScanner>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    lastPayload = null;
+    result = null;
+    error = null;
     controller.dispose();
     super.dispose();
   }
