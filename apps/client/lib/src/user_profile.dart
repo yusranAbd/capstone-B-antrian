@@ -3,6 +3,10 @@ import 'dart:typed_data';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import 'features/account/application/account_profile_cubit.dart';
+import 'features/account/data/account_profile_repository.dart';
 
 import 'api.dart';
 import 'config.dart';
@@ -147,12 +151,19 @@ class _UserProfilePageState extends State<UserProfilePage> {
       newPassword = TextEditingController(),
       confirmPassword = TextEditingController();
   int selected = 0;
-  bool busy = false, loading = true;
-  String? error, message;
+  late final AccountProfileCubit controller;
+  bool picking = false;
+  bool get busy => picking || controller.state.busy;
+  bool get loading => controller.state.loading;
+  String? localError;
+  String? get error => localError ?? controller.state.error;
+  set error(String? value) => localError = value;
+  String? get message => controller.state.message;
+  set message(String? value) => controller.clearFeedback();
   Uint8List? preview;
-  Future<dynamic>? roleData;
+
   late final Object? profileOwner;
-  Object? roleDataRole;
+
   static const labels = [
     'Informasi Pribadi',
     'Ubah Foto Profil',
@@ -170,58 +181,46 @@ class _UserProfilePageState extends State<UserProfilePage> {
   void initState() {
     super.initState();
     profileOwner = api.user?['id'];
+    controller = AccountProfileCubit(AccountProfileRepository(api));
     load();
   }
 
   Future<void> load() async {
-    setState(() => loading = true);
-    try {
-      await api.reloadOwnProfile();
-      if (!mounted) return;
-      name.text = '${api.user?['nama'] ?? ''}';
-      final role = api.user?['peran'];
-      roleDataRole = role;
-      roleData = role == 'PETUGAS'
-          ? api.request('GET', '/penugasan-petugas')
-          : role == 'DOKTER'
-          ? Future.wait([
-              api.request('GET', '/portal-dokter/profil'),
-              api.request(
-                'GET',
-                '/portal-dokter/jadwal',
-                query: {'tanggal': api.config.today},
-              ),
-            ])
-          : null;
-      // FutureBuilder attaches immediately on selection; capture errors until then.
-      roleData?.then<void>((_) {}, onError: (Object _) {});
-      error = null;
-    } catch (e) {
-      if (mounted) error = '$e';
-    } finally {
-      if (mounted) setState(() => loading = false);
+    await controller.load();
+    if (mounted && !controller.state.ended) {
+      setState(() {
+        name.text = '${api.user?['nama'] ?? ''}';
+        localError = null;
+      });
     }
   }
 
+  // File selection and preview are presentation-only; backend operations use Cubit.
   Future<void> run(Future<void> Function() action, String success) async {
     if (busy) return;
     setState(() {
-      busy = true;
-      error = null;
-      message = null;
+      picking = true;
+      localError = null;
     });
     try {
       await action();
-      if (mounted) setState(() => message = success);
     } catch (e) {
-      if (mounted) setState(() => error = '$e');
+      if (mounted) setState(() => localError = '$e');
     } finally {
-      if (mounted) setState(() => busy = false);
+      if (mounted) setState(() => picking = false);
+    }
+  }
+
+  void clearSensitiveInputs() {
+    for (final input in [oldPassword, newPassword, confirmPassword]) {
+      input.clear();
     }
   }
 
   @override
   void dispose() {
+    clearSensitiveInputs();
+    controller.close();
     for (final c in [name, oldPassword, newPassword, confirmPassword]) {
       c.dispose();
     }
@@ -308,10 +307,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                 ? null
                 : () {
                     if (nameForm.currentState!.validate()) {
-                      run(
-                        () => api.updateOwnName(name.text),
-                        'Nama berhasil diperbarui.',
-                      );
+                      controller.updateName(name.text);
                     }
                   },
             icon: const Icon(Icons.save_outlined),
@@ -378,10 +374,10 @@ class _UserProfilePageState extends State<UserProfilePage> {
             FilledButton.icon(
               onPressed: busy
                   ? null
-                  : () => run(() async {
-                      await api.uploadOwnAvatar(preview!);
-                      if (mounted) setState(() => preview = null);
-                    }, 'Foto profil berhasil diperbarui.'),
+                  : () async {
+                      final saved = await controller.uploadAvatar(preview!);
+                      if (mounted && saved) setState(() => preview = null);
+                    },
               icon: const Icon(Icons.cloud_upload_outlined),
               label: const Text('Simpan Foto'),
             ),
@@ -415,10 +411,8 @@ class _UserProfilePageState extends State<UserProfilePage> {
                         ),
                       );
                       if (confirmed == true) {
-                        run(() async {
-                          await api.removeOwnAvatar();
-                          if (mounted) setState(() => preview = null);
-                        }, 'Foto profil dihapus.');
+                        final removed = await controller.removeAvatar();
+                        if (mounted && removed) setState(() => preview = null);
                       }
                     },
               icon: const Icon(Icons.delete_outline),
@@ -479,15 +473,16 @@ class _UserProfilePageState extends State<UserProfilePage> {
           child: FilledButton.icon(
             onPressed: busy
                 ? null
-                : () {
+                : () async {
                     if (passwordForm.currentState!.validate()) {
-                      run(
-                        () => api.changeOwnPassword(
+                      try {
+                        await controller.changePassword(
                           oldPassword.text,
                           newPassword.text,
-                        ),
-                        '',
-                      );
+                        );
+                      } finally {
+                        if (mounted) clearSensitiveInputs();
+                      }
                     }
                   },
             icon: const Icon(Icons.lock_reset),
@@ -522,20 +517,17 @@ class _UserProfilePageState extends State<UserProfilePage> {
             label: const Text('Kembali ke aplikasi pasien'),
           ),
         ],
-        if (roleData != null &&
-            roleDataRole == role &&
-            ['PETUGAS', 'DOKTER'].contains(role))
-          FutureBuilder<dynamic>(
-            future: roleData,
-            builder: (context, s) {
-              if (s.connectionState != ConnectionState.done) {
+        if (['PETUGAS', 'DOKTER'].contains(role))
+          Builder(
+            builder: (context) {
+              if (controller.state.roleLoading) {
                 return const LinearProgressIndicator();
               }
-              if (s.hasError) {
+              if (controller.state.roleError != null) {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    note('${s.error}', danger: true),
+                    note(controller.state.roleError!, danger: true),
                     TextButton(
                       onPressed: load,
                       child: const Text('Muat ulang informasi role'),
@@ -544,7 +536,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                 );
               }
               if (role == 'PETUGAS') {
-                final assignments = rows(s.data);
+                final assignments = rows(controller.state.roleData);
                 return assignments.isEmpty
                     ? const Text('Belum ada penugasan loket.')
                     : Column(
@@ -578,7 +570,9 @@ class _UserProfilePageState extends State<UserProfilePage> {
                         ],
                       );
               }
-              final data = s.data as List<dynamic>,
+              final data =
+                      controller.state.roleData as List<dynamic>? ??
+                      [const {}, const []],
                   doctor = object(data[0]),
                   schedules = rows(data[1]);
               return Column(
@@ -655,14 +649,33 @@ class _UserProfilePageState extends State<UserProfilePage> {
   }
 
   @override
-  Widget build(BuildContext context) => Theme(
+  Widget build(BuildContext context) => BlocProvider.value(
+    value: controller,
+    child: BlocConsumer<AccountProfileCubit, AccountProfileState>(
+      bloc: controller,
+      listener: (context, state) {
+        if (state.ended) {
+          clearSensitiveInputs();
+          setState(() {
+            name.clear();
+            preview = null;
+            localError = null;
+          });
+        }
+      },
+      builder: (context, _) => content(context),
+    ),
+  );
+  Widget content(BuildContext context) => Theme(
     data: api.user?['peran'] == 'USER'
         ? PatientDesign.theme
         : QueueBStyle.theme,
     child: ListenableBuilder(
       listenable: api,
       builder: (context, _) =>
-          api.user == null || api.user?['id'] != profileOwner
+          controller.state.ended ||
+              api.user == null ||
+              api.user?['id'] != profileOwner
           ? const SizedBox.shrink()
           : Scaffold(
               appBar: widget.onReturnToPatient != null
@@ -770,7 +783,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                                 iconColor: QueueBStyle.danger,
                                 leading: const Icon(Icons.logout),
                                 title: const Text('Keluar Akun'),
-                                onTap: busy ? null : () => run(api.logout, ''),
+                                onTap: busy ? null : controller.logout,
                               ),
                             ],
                           );
@@ -909,9 +922,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                                   style: OutlinedButton.styleFrom(
                                     foregroundColor: PatientDesign.danger,
                                   ),
-                                  onPressed: busy
-                                      ? null
-                                      : () => run(api.logout, ''),
+                                  onPressed: busy ? null : controller.logout,
                                   icon: const Icon(Icons.logout, size: 18),
                                   label: const Text('Keluar Akun'),
                                 ),

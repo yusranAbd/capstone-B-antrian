@@ -67,6 +67,9 @@ class PatientUpdates extends ChangeNotifier with WidgetsBindingObserver {
   final Duration debounce, fallbackInterval, reconcileInterval;
   final status = ValueNotifier('Menghubungkan realtime…');
   final _seen = <String>{};
+  final _pendingKinds = <String>{};
+  Set<String> _lastKinds = const {'TIKET', 'KATALOG'};
+  Set<String> get lastKinds => _lastKinds;
   io.Socket? _socket;
   Timer? _poll, _debouncer;
   String? _token;
@@ -119,7 +122,7 @@ class PatientUpdates extends ChangeNotifier with WidgetsBindingObserver {
         return;
       }
       if (_seen.length > 256) _seen.remove(_seen.first);
-      invalidate();
+      invalidate(kinds: {'${event['jenis']}'});
     });
     socket.on('disconnect', (dynamic reason) {
       if (!current()) return;
@@ -148,11 +151,15 @@ class PatientUpdates extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
-  void invalidate() {
-    if (_disposed || !_foreground || _debouncer?.isActive == true) return;
+  void invalidate({Set<String> kinds = const {'TIKET', 'KATALOG'}}) {
+    if (_disposed || !_foreground) return;
+    _pendingKinds.addAll(kinds);
+    if (_debouncer?.isActive == true) return;
     _debouncer = Timer(debounce, () {
       if (!_disposed && _foreground) {
         _lastRefresh = DateTime.now();
+        _lastKinds = Set.unmodifiable(_pendingKinds);
+        _pendingKinds.clear();
         notifyListeners();
       }
     });

@@ -1,6 +1,16 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import 'features/patient/data/patient_repository.dart';
+import 'features/patient/application/patient_overview_cubit.dart';
+import 'features/patient/application/patient_booking_cubit.dart';
+import 'features/patient/data/patient_booking_repository.dart';
+import 'features/patient/models/patient_models.dart';
+import 'features/patient/application/patient_reservations_cubit.dart';
+import 'features/patient/application/patient_ticket_cubit.dart';
+
 import 'package:qr_flutter/qr_flutter.dart';
 
 import 'api.dart';
@@ -33,8 +43,12 @@ class PatientPage extends StatefulWidget {
     required this.api,
     this.onDisplay,
     this.headerBuilder,
+    this.repository,
   });
   final QueueApi api;
+
+  /// Optional externally-owned scope, useful for dependency injection.
+  final PatientRepository? repository;
   final VoidCallback? onDisplay;
   final PreferredSizeWidget Function(bool home, VoidCallback activity)?
   headerBuilder;
@@ -43,34 +57,76 @@ class PatientPage extends StatefulWidget {
 }
 
 class _PatientPageState extends State<PatientPage> {
-  late final PatientUpdates updates;
-  late final RefreshGate overview;
-  int tab = 0, catalogRevision = 0;
+  late final PatientRepository repository;
+  late final PatientOverviewCubit overviewCubit;
+  PatientUpdates get updates => repository.updates;
+  late final PatientBookingCubit booking;
+  late final PatientReservationsCubit reservations;
+  int tab = 0;
+  int get catalogRevision => booking.revision;
   bool profileVisited = false;
-  bool busy = false, loading = true;
+  bool get busy => reservations.busy || booking.busy;
+  bool get loading =>
+      [
+        PatientLoad.initial,
+        PatientLoad.loading,
+        PatientLoad.refreshing,
+      ].contains(overviewCubit.state.load) ||
+      booking.state.loading;
   bool ticketDialogOpen = false, cancelReviewing = false;
-  bool reservationCreating = false, nearestLoading = false;
+  bool reservationCreating = false;
+  bool get nearestLoading => booking.state.values['nearestLoading'] == true;
+  set nearestLoading(bool value) => booking.change({'nearestLoading': value});
   String reservationMode = 'legacy', reservationQuery = '';
-  String? reservationClinicId, nearestError;
-  int nearestRevision = 0, reservationFlowVersion = 0;
-  List<Json> nearestChoices = [];
-  String? error, message, serviceId, doctorId, sessionId, slotId;
-  bool appointment = true, bookingStage = false, doctorDetail = false;
+  String? reservationClinicId;
+  String? get nearestError => booking.state.values['nearestError'] as String?;
+  set nearestError(String? value) => booking.change({'nearestError': value});
+  int reservationFlowVersion = 0;
+  List<Json> get nearestChoices => booking.state.rows('nearestChoices');
+  String? _error, message;
+  String? get error =>
+      _error ??
+      booking.state.error ??
+      reservations.state.error ??
+      overviewCubit.state.error;
+  set error(String? value) => _error = value;
+  String? get serviceId => booking.serviceId;
+  set serviceId(String? value) => booking.change({'serviceId': value});
+  String? get doctorId => booking.doctorId;
+  set doctorId(String? value) => booking.change({'doctorId': value});
+  String? get sessionId => booking.sessionId;
+  set sessionId(String? value) => booking.change({'sessionId': value});
+  String? get slotId => booking.slotId;
+  set slotId(String? value) => booking.change({'slotId': value});
+  bool get appointment => booking.appointment;
+  set appointment(bool value) => booking.change({'appointment': value});
+  bool bookingStage = false, doctorDetail = false;
   bool reviewing = false;
   String search = '', channel = 'Semua';
   String homeQuery = '';
   PatientHomeMode homeMode = PatientHomeMode.walkIn;
   final homeSearch = TextEditingController();
   String? homeClinicId;
-  List<Json> clinicSchedules = [], homeSchedules = [];
-  String? homeScheduleError;
-  final Map<String, String> clinicAvailability = {};
-  List<Json> services = [],
-      doctors = [],
-      schedules = [],
-      slots = [],
-      tickets = [],
-      appointments = [];
+  List<Json> get clinicSchedules => booking.state.rows('clinicSchedules');
+  set clinicSchedules(List<Json> value) =>
+      booking.change({'clinicSchedules': value});
+  List<Json> get homeSchedules => overviewCubit.state.snapshot.schedules;
+  String? get homeScheduleError => overviewCubit.state.scheduleError;
+  Map<String, String> get clinicAvailability =>
+      (booking.state.values['availability'] as Map? ?? const {})
+          .cast<String, String>();
+  List<Json> get services => overviewCubit.state.snapshot.services
+      .where((s) => s['aktif'] != false)
+      .toList();
+  List<Json> get doctors => overviewCubit.state.snapshot.doctors
+      .where((d) => d['aktif'] != false)
+      .toList();
+  List<Json> get schedules => booking.state.rows('schedules');
+  set schedules(List<Json> value) => booking.change({'schedules': value});
+  List<Json> get slots => booking.state.rows('slots');
+  set slots(List<Json> value) => booking.change({'slots': value});
+  List<Json> get tickets => reservations.state.snapshot.tickets;
+  List<Json> get appointments => reservations.state.snapshot.appointments;
   late final date = TextEditingController(text: widget.api.config.today);
   Json? get selectedService =>
       services.where((s) => s['id'] == serviceId).firstOrNull;
@@ -121,83 +177,7 @@ class _PatientPageState extends State<PatientPage> {
     return '${patientDate('${future.first['tanggal']}')} · ${patientTime(future.first, widget.api.config)}\n${clinicAvailability['${doctor['id']}'] ?? 'Lihat slot untuk ketersediaan aktual'}';
   }
 
-  // One nearest dated session per doctor, with bounded parallel reads. This is
-  // a preview only: the chosen session is always fetched again before booking.
-  Future<void> readAvailability(List<Json> sessions, int revision) async {
-    final nearest = <String, Json>{};
-    final ordered = [...sessions]
-      ..sort((a, b) => '${a['mulaiPada']}'.compareTo('${b['mulaiPada']}'));
-    for (final s in ordered) {
-      final doctor =
-          object(s['dokterLayanan'])['dokterId'] ??
-          object(object(s['dokterLayanan'])['dokter'])['id'];
-      if (doctor is String &&
-          s['aktif'] != false &&
-          dateOnly(s['tanggal']).compareTo(widget.api.config.today) >= 0) {
-        nearest.putIfAbsent(doctor, () => s);
-      }
-    }
-    final entries = nearest.entries.toList();
-    for (var i = 0; i < entries.length; i += 4) {
-      if (!mounted || revision != catalogRevision) return;
-      await Future.wait(
-        entries.skip(i).take(4).map((entry) async {
-          String status;
-          try {
-            final items = rows(
-              await widget.api.request(
-                'GET',
-                '/slot-praktik',
-                query: {'jadwalPraktikId': '${entry.value['id']}'},
-              ),
-            );
-            final available = items
-                .where((s) => s['aktif'] != false && s['tersedia'] == true)
-                .length;
-            status = available > 0
-                ? '$available slot tersedia pada sesi terdekat'
-                : 'Belum ada slot tersedia pada sesi terdekat';
-          } catch (_) {
-            status = 'Ketersediaan slot belum dapat dimuat';
-          }
-          if (mounted && revision == catalogRevision) {
-            setState(() => clinicAvailability[entry.key] = status);
-          }
-        }),
-      );
-    }
-  }
-
-  Future<List<Json>> fetchClinicSchedules(String clinic) async => rows(
-    await widget.api.request(
-      'GET',
-      '/jadwal-praktik',
-      query: {'layananId': clinic},
-    ),
-  );
-
-  Future<void> loadClinicSchedules() async {
-    final clinic = serviceId;
-    if (clinic == null) return;
-    final current = ++catalogRevision;
-    setState(() {
-      loading = true;
-      error = null;
-    });
-    try {
-      final result = await fetchClinicSchedules(clinic);
-      if (mounted && current == catalogRevision) {
-        setState(() => clinicSchedules = result);
-        await readAvailability(result, current);
-      }
-    } catch (e) {
-      if (mounted && current == catalogRevision) setState(() => error = '$e');
-    } finally {
-      if (mounted && current == catalogRevision) {
-        setState(() => loading = false);
-      }
-    }
-  }
+  Future<void> loadClinicSchedules() => booking.loadClinicSchedules();
 
   Future<void> chooseDoctor(Json doctor) async {
     setState(() {
@@ -221,331 +201,97 @@ class _PatientPageState extends State<PatientPage> {
   @override
   void initState() {
     super.initState();
-    overview = RefreshGate(readOverview);
-    updates = PatientUpdates(api: widget.api)..addListener(autoRefresh);
+    repository = widget.repository ?? PatientRepository(widget.api);
+    overviewCubit = PatientOverviewCubit(repository);
+    booking = PatientBookingCubit(PatientBookingRepository(repository));
+    reservations = PatientReservationsCubit(repository);
+    repository.addListener(_scopeChanged);
     load();
+  }
+
+  void _scopeChanged() {
+    if (mounted && !repository.active) {
+      setState(() {
+        _error = message = null;
+        reservationCreating = reviewing = cancelReviewing = false;
+        homeSearch.clear();
+        date.clear();
+        homeQuery = search = reservationQuery = '';
+      });
+    }
   }
 
   Future<void> load() async {
     if (!mounted) return;
     setState(() {
-      loading = true;
       error = null;
     });
-    await overview.refresh();
-    if (mounted) setState(() => loading = false);
-  }
-
-  void autoRefresh() {
-    overview.refresh();
+    await readOverview();
   }
 
   Future<void> readOverview() async {
-    final errors = <String>[];
-    await Future.wait([
-      (() async {
-        try {
-          final values = await Future.wait(
-            [
-              '/tiket/saya',
-              '/janji-temu',
-            ].map((p) async => rows(await widget.api.request('GET', p))),
-          );
-          if (mounted) {
-            setState(() {
-              tickets = values[0];
-              appointments = values[1];
-            });
-          }
-        } catch (e) {
-          errors.add('$e');
-        }
-      })(),
-      (() async {
-        try {
-          final result = rows(
-            await widget.api.request('GET', '/jadwal-praktik'),
-          );
-          if (mounted) {
-            setState(() {
-              homeSchedules = result;
-              homeScheduleError = null;
-            });
-          }
-        } catch (_) {
-          if (mounted) {
-            setState(
-              () => homeScheduleError = 'Jadwal praktik belum dapat dimuat.',
-            );
-          }
-        }
-      })(),
-      readCatalog().catchError((Object e) {
-        errors.add('$e');
-      }),
-    ]);
-    if (mounted) {
-      setState(() => error = errors.firstOrNull);
-      if (tab == 2 &&
-          reservationCreating &&
-          reservationMode == 'nearest' &&
-          serviceId == null) {
-        unawaited(loadNearest());
-      }
-    }
-  }
-
-  Future<void> readCatalog() async {
-    final current = catalogRevision;
-    final selectedDoctor = doctorId,
-        selectedClinic = serviceId,
-        selectedSession = sessionId;
-    try {
-      final values = await Future.wait(
-        [
-          '/layanan',
-          '/dokter',
-        ].map((p) async => rows(await widget.api.request('GET', p))),
-      );
-      if (mounted) {
-        setState(() {
-          services = values[0].where((s) => s['aktif'] != false).toList();
-          doctors = values[1].where((d) => d['aktif'] != false).toList();
-          if (current == catalogRevision &&
-              selectedClinic != null &&
-              (!services.any((s) => s['id'] == selectedClinic) ||
-                  (selectedDoctor != null &&
-                      !matchingDoctors.any(
-                        (d) => d['id'] == selectedDoctor,
-                      )))) {
-            serviceId = services.any((s) => s['id'] == selectedClinic)
-                ? selectedClinic
-                : null;
-            doctorId = sessionId = slotId = null;
-            schedules = [];
-            slots = [];
-            clinicSchedules = [];
-            bookingStage = false;
-            loading = false;
-            catalogRevision++;
-          }
-        });
-      }
-      if (mounted && current == catalogRevision && selectedClinic != null) {
-        final nextCalendar = await fetchClinicSchedules(selectedClinic);
-        if (mounted && current == catalogRevision) {
-          setState(() => clinicSchedules = nextCalendar);
-          await readAvailability(nextCalendar, current);
-        }
-      }
-      if (!mounted ||
-          current != catalogRevision ||
-          !bookingStage ||
-          selectedDoctor == null ||
-          selectedClinic == null) {
-        return;
-      }
-      final nextSchedules = rows(
-        await widget.api.request(
-          'GET',
-          '/jadwal-praktik',
-          query: {
-            'layananId': selectedClinic,
-            'dokterId': selectedDoctor,
-            'tanggal': date.text.trim(),
-          },
-        ),
-      );
-      final sessionExists = nextSchedules.any(
-        (s) => s['id'] == selectedSession,
-      );
-      final nextSlots = !sessionExists
-          ? <Json>[]
-          : rows(
-              await widget.api.request(
-                'GET',
-                '/slot-praktik',
-                query: {'jadwalPraktikId': selectedSession!},
-              ),
-            );
-      if (mounted && current == catalogRevision) {
-        setState(() {
-          schedules = nextSchedules;
-          slots = nextSlots;
-          if (!sessionExists) sessionId = null;
-          if (!slots.any((s) => s['id'] == slotId && s['tersedia'] == true)) {
-            slotId = null;
-          }
-        });
-      }
-    } catch (_) {
-      rethrow;
-    }
+    await overviewCubit.refresh(
+      paths: [1, 2, 3, 4].contains(tab) && !reservationCreating
+          ? patientVisitPaths
+          : patientOverviewPaths,
+    );
+    if (reservationCreating) await booking.refreshSelection();
+    if (!mounted || !repository.active) return;
+    setState(() => error = overviewCubit.state.error);
   }
 
   Future<void> loadSchedules() async {
-    if (serviceId == null || doctorId == null) return;
-    final current = ++catalogRevision;
-    setState(() {
-      loading = true;
-      bookingStage = true;
-      schedules = [];
-      slots = [];
-      sessionId = null;
-      slotId = null;
-      error = null;
-    });
-    try {
-      final result = rows(
-        await widget.api.request(
-          'GET',
-          '/jadwal-praktik',
-          query: {
-            'layananId': serviceId!,
-            'dokterId': doctorId!,
-            'tanggal': date.text.trim(),
-          },
-        ),
-      );
-      if (mounted && current == catalogRevision) {
-        setState(() => schedules = result);
-      }
-    } catch (e) {
-      if (mounted && current == catalogRevision) setState(() => error = '$e');
-    } finally {
-      if (mounted && current == catalogRevision) {
-        setState(() => loading = false);
-      }
-    }
+    booking.change({'date': date.text.trim()});
+    setState(() => bookingStage = true);
+    await booking.loadSchedules();
   }
 
-  Future<void> loadSlots(String id) async {
-    final current = ++catalogRevision;
-    setState(() {
-      loading = true;
-      sessionId = id;
-      slots = [];
-      slotId = null;
-      error = null;
-    });
-    try {
-      final result = rows(
-        await widget.api.request(
-          'GET',
-          '/slot-praktik',
-          query: {'jadwalPraktikId': id},
-        ),
-      );
-      if (mounted && current == catalogRevision) setState(() => slots = result);
-    } catch (e) {
-      if (mounted && current == catalogRevision) setState(() => error = '$e');
-    } finally {
-      if (mounted && current == catalogRevision) {
-        setState(() => loading = false);
-      }
-    }
-  }
+  Future<void> loadSlots(String id) => booking.loadSlots(id);
 
   Future<void> book() async {
     if (busy || reviewing) return;
-    if (serviceId == null || (appointment && slotId == null)) {
-      setState(
-        () => error = 'Pilih poli dan slot yang tersedia terlebih dahulu.',
-      );
-      return;
-    }
-    final parsed = DateTime.tryParse(date.text.trim());
-    if (parsed == null || calendarDate(parsed) != date.text.trim()) {
-      setState(() => error = 'Tanggal pelayanan harus YYYY-MM-DD yang valid.');
-      return;
-    }
-    final chosenSlot = slotId,
-        chosenService = serviceId,
-        chosenDate = date.text.trim();
-    final isAppointment = appointment;
-    final session = schedules.where((s) => s['id'] == sessionId).firstOrNull;
-    final slot = slots
-        .where(
-          (s) =>
-              s['id'] == chosenSlot &&
-              s['aktif'] != false &&
-              s['tersedia'] == true,
-        )
-        .firstOrNull;
-    if (isAppointment && (session == null || slot == null)) {
-      setState(() => error = 'Slot berubah. Pilih kembali slot yang tersedia.');
+    PatientBookingRequest request;
+    try {
+      request = booking.prepare(date.text.trim());
+    } catch (e) {
+      setState(() => error = '$e');
       return;
     }
     reviewing = true;
-    final accepted = isAppointment
+    final accepted = request.appointment
         ? await showDialog<bool>(
                 context: context,
                 builder: (_) => AppointmentReview(
-                  doctor:
-                      doctors.where((d) => d['id'] == doctorId).firstOrNull ??
-                      {},
-                  clinic: selectedService!,
-                  session: session!,
-                  slot: slot!,
+                  doctor: request.doctor,
+                  clinic: request.clinic,
+                  session: request.session,
+                  slot: request.slot,
                   config: widget.api.config,
                 ),
               ) ==
               true
         : await confirm(
             context,
-            'Daftarkan walk-in pada ${label(selectedService!)} tanggal $chosenDate?',
+            'Daftarkan walk-in pada ${label(request.clinic)} tanggal ${request.date}?',
           );
     reviewing = false;
     if (!mounted || !accepted) return;
-    if (serviceId != chosenService ||
-        date.text.trim() != chosenDate ||
-        appointment != isAppointment ||
-        (isAppointment &&
-            (slotId != chosenSlot ||
-                !slots.any(
-                  (s) =>
-                      s['id'] == chosenSlot &&
-                      s['tersedia'] == true &&
-                      s['aktif'] != false,
-                )))) {
-      setState(
-        () => error = 'Pilihan berubah selama konfirmasi. Periksa jadwal dan pilih slot kembali.',
-      );
-      return;
-    }
     setState(() {
-      busy = true;
       error = null;
       message = null;
     });
     try {
-      final result = object(
-        await widget.api.request(
-          'POST',
-          appointment ? '/janji-temu' : '/reservasi',
-          body: appointment
-              ? {'slotPraktikId': slotId}
-              : {'layananId': serviceId, 'tanggalAntrean': date.text.trim()},
-        ),
-      );
-      if (mounted) {
-        setState(() {
-          final issued = appointment ? object(result['tiket']) : result;
-          message =
-              'Pendaftaran berhasil.${issued['nomorAntrean'] == null ? '' : ' Tiket ${issued['nomorAntrean']}.'} Tiket tersedia di Tiket Saya.';
-          tab = 1;
-          slotId = null;
-        });
-      }
-      await load();
+      final issued = await booking.submit(request);
+      if (!mounted || !repository.active) return;
+      setState(() {
+        message =
+            'Pendaftaran berhasil.${issued['nomorAntrean'] == null ? '' : ' Tiket ${issued['nomorAntrean']}.'} Tiket tersedia di Tiket Saya.';
+        tab = 1;
+      });
     } catch (e) {
-      // Never retry POST after an uncertain response. Reconcile owned tickets and
-      // invalidate the selected slot, including when another patient fills it.
-      if (mounted) setState(() => slotId = null);
-      await readOverview();
-      if (mounted) setState(() => error = '$e');
-    } finally {
-      if (mounted) setState(() => busy = false);
+      if (mounted && repository.active) {
+        setState(() => error = booking.state.error == null ? '$e' : null);
+      }
     }
   }
 
@@ -574,25 +320,18 @@ class _PatientPageState extends State<PatientPage> {
     cancelReviewing = false;
     if (!mounted || accepted != true || busy) return;
     setState(() {
-      busy = true;
       error = null;
       message = null;
     });
     try {
-      await widget.api.request(
-        'POST',
-        '/janji-temu/${appt['id']}/batalkan',
-        body: {},
-      );
-      await overview.refresh();
-      if (mounted) setState(() => message = 'Reservasi dibatalkan.');
+      await reservations.cancel('${appt['id']}');
+      if (mounted && repository.active) {
+        setState(() => message = 'Reservasi dibatalkan.');
+      }
     } catch (e) {
-      // A concurrent check-in can reject cancellation. Re-read authoritative
-      // ticket state before reporting the conflict; never mutate it locally.
-      await overview.refresh();
-      if (mounted) setState(() => error = '$e');
-    } finally {
-      if (mounted) setState(() => busy = false);
+      if (mounted && repository.active) {
+        setState(() => error = reservations.state.error == null ? '$e' : null);
+      }
     }
   }
 
@@ -605,7 +344,7 @@ class _PatientPageState extends State<PatientPage> {
         barrierDismissible: false,
         builder: (context) => _TicketDialog(
           api: widget.api,
-          updates: updates,
+          repository: repository,
           ticket: ticket,
           issueQrOnOpen: issueQrOnOpen,
           appointment: appointments
@@ -621,9 +360,11 @@ class _PatientPageState extends State<PatientPage> {
 
   @override
   void dispose() {
-    updates.removeListener(autoRefresh);
-    updates.dispose();
-    overview.dispose();
+    reservations.close();
+    booking.close();
+    overviewCubit.close();
+    repository.removeListener(_scopeChanged);
+    if (widget.repository == null) repository.dispose();
     date.dispose();
     homeSearch.dispose();
     super.dispose();
@@ -631,10 +372,10 @@ class _PatientPageState extends State<PatientPage> {
 
   Future<void> selectService(String? value) {
     setState(() {
-      catalogRevision++;
+      booking.invalidate();
       serviceId = value;
       reservationCreating = true;
-      clinicAvailability.clear();
+      booking.clearAvailability();
       search = '';
       tab = 2;
       doctorDetail = false;
@@ -656,16 +397,16 @@ class _PatientPageState extends State<PatientPage> {
     setState(() {
       reservationCreating = true;
       reservationMode = 'legacy';
-      nearestRevision++;
+      booking.invalidateNearest();
       reservationFlowVersion++;
       tab = 2;
       channel = isAppointment ? 'Janji temu' : 'Walk-in';
-      clinicAvailability.clear();
+      booking.clearAvailability();
       appointment = isAppointment;
       bookingStage = false;
       doctorDetail = false;
       serviceId = doctorId = sessionId = slotId = null;
-      catalogRevision++;
+      booking.invalidate();
       schedules = [];
       slots = [];
       search = '';
@@ -678,10 +419,9 @@ class _PatientPageState extends State<PatientPage> {
     setState(() {
       tab = 2;
       reservationCreating = false;
-      catalogRevision++;
-      nearestRevision++;
+      booking.invalidate();
+      booking.invalidateNearest();
       reservationFlowVersion++;
-      loading = false;
     });
   }
 
@@ -703,95 +443,14 @@ class _PatientPageState extends State<PatientPage> {
       search = '';
       error = message = null;
       clinicSchedules = schedules = slots = [];
-      catalogRevision++;
-      nearestRevision++;
+      booking.invalidate();
+      booking.invalidateNearest();
       reservationFlowVersion++;
     });
     if (method == 'nearest') await loadNearest();
   }
 
-  List<Json> get reservableSessions =>
-      homeSchedules.where((s) {
-        final link = object(s['dokterLayanan']);
-        final clinicId = link['layananId'] ?? object(link['layanan'])['id'];
-        final doctor = link['dokterId'] ?? object(link['dokter'])['id'];
-        return s['aktif'] != false &&
-            link['aktif'] != false &&
-            object(s['loket'])['aktif'] != false &&
-            dateOnly(s['tanggal']).compareTo(widget.api.config.today) >= 0 &&
-            (DateTime.tryParse('${s['selesaiPada']}')
-                    ?.isAfter(DateTime.now()) ??
-                false) &&
-            services.any(
-              (c) =>
-                  c['id'] == clinicId && c['modeReservasi'] != 'ANTREAN_HARIAN',
-            ) &&
-            doctors.any((d) => d['id'] == doctor);
-      }).toList()..sort(
-        (a, b) => '${a['mulaiPada']}'.compareTo('${b['mulaiPada']}'),
-      );
-
-  Future<void> loadNearest() async {
-    final revision = ++nearestRevision;
-    setState(() {
-      nearestLoading = true;
-      nearestError = null;
-      nearestChoices = [];
-    });
-    final sessions = reservableSessions;
-    final found = <Json>[];
-    bool failed = false;
-    // A bounded batch avoids one simultaneous request per doctor/session.
-    for (var i = 0; i < sessions.length; i += 4) {
-      if (!mounted || revision != nearestRevision) return;
-      await Future.wait(
-        sessions.skip(i).take(4).map((session) async {
-          try {
-            final options = rows(
-              await widget.api.request(
-                'GET',
-                '/slot-praktik',
-                query: {'jadwalPraktikId': '${session['id']}'},
-              ),
-            );
-            final link = object(session['dokterLayanan']);
-            final clinicId = link['layananId'] ?? object(link['layanan'])['id'];
-            final doctorId = link['dokterId'] ?? object(link['dokter'])['id'];
-            for (final slot in options.where(
-              (s) =>
-                  s['aktif'] != false &&
-                  s['tersedia'] == true &&
-                  (DateTime.tryParse('${s['mulaiPada']}')
-                          ?.isAfter(DateTime.now()) ??
-                      false),
-            )) {
-              found.add({
-                'doctor': doctors.firstWhere((d) => d['id'] == doctorId),
-                'clinic': services.firstWhere((c) => c['id'] == clinicId),
-                'session': session,
-                'slot': slot,
-              });
-            }
-          } catch (_) {
-            failed = true;
-          }
-        }),
-      );
-    }
-    if (!mounted || revision != nearestRevision) return;
-    found.sort(
-      (a, b) =>
-          DateTime.parse('${object(a['slot'])['mulaiPada']}')
-              .compareTo(DateTime.parse('${object(b['slot'])['mulaiPada']}')),
-    );
-    setState(() {
-      nearestChoices = found;
-      nearestLoading = false;
-      nearestError = failed
-          ? 'Sebagian slot belum dapat dimuat. Muat ulang untuk mencoba lagi.'
-          : homeScheduleError;
-    });
-  }
+  Future<void> loadNearest() => booking.loadNearest();
 
   Future<void> chooseReservationDoctor(
     Json doctor,
@@ -801,7 +460,7 @@ class _PatientPageState extends State<PatientPage> {
   }) async {
     if (busy || loading) return;
     final version = ++reservationFlowVersion;
-    nearestRevision++;
+    booking.invalidateNearest();
     await selectService('${clinic['id']}');
     if (!mounted || version != reservationFlowVersion || tab != 2) return;
     if (session != null) date.text = dateOnly(session['tanggal']);
@@ -838,7 +497,7 @@ class _PatientPageState extends State<PatientPage> {
               )
               .firstOrNull;
           if (clinic == null) continue;
-          final sessions = reservableSessions.where((s) {
+          final sessions = booking.reservableSessions.where((s) {
             final pair = object(s['dokterLayanan']);
             return (pair['dokterId'] ?? object(pair['dokter'])['id']) ==
                     doctor['id'] &&
@@ -1261,126 +920,152 @@ class _PatientPageState extends State<PatientPage> {
   }
 
   @override
-  Widget build(BuildContext context) => Theme(
-    data: PatientMobileV5.theme,
-    child: PatientScrollShell(
-      pageKey:
-          '$tab:$reservationCreating:$serviceId:$bookingStage:$doctorDetail',
-      // Home owns its compact identity; no duplicate app bar or notification.
-      header: null,
-      acceptNestedScrolls: tab == 0,
-      floatingActionButton: tab == 2 && !reservationCreating
-          ? FloatingActionButton.extended(
-              heroTag: 'create-reservation',
-              onPressed: busy || loading ? null : createReservation,
-              backgroundColor: PatientDesign.darkTeal,
-              foregroundColor: Colors.white,
-              elevation: 2,
-              icon: const Icon(Icons.add),
-              label: const Text(
-                'Buat Reservasi',
-                style: TextStyle(fontSize: 13),
-              ),
-            )
-          : null,
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      bottomNavigationBar: PatientBottomNavigation(
-        selectedIndex: tab == 4 ? 0 : [0, 2, 1, 3, 5].indexOf(tab),
-        onSelected: busy
-            ? null
-            : (i) => setState(() {
-                tab = [0, 2, 1, 3, 5][i];
-                if (tab == 5) profileVisited = true;
-                reservationFlowVersion++;
-                nearestRevision++;
-                if (tab == 2) reservationCreating = false;
-              }),
-      ),
-      body: ColoredBox(
-        color: tab == 0
-            ? PatientHomeStyle.background
-            : PatientDesign.background,
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 760),
-            child: IndexedStack(
-              index: tab == 5
-                  ? 2
-                  : tab == 2 && !reservationCreating
-                  ? 0
-                  : 1,
-              children: [
-                ReservationList(
-                  items: patientReservations(
-                    tickets,
-                    appointments,
-                    doctors,
-                    widget.api.config.today,
-                  ),
-                  config: widget.api.config,
-                  loading: loading,
-                  busy: busy,
-                  error: error,
-                  message: message,
-                  onRefresh: load,
-                  onCreate: createReservation,
-                  onTicket: (r) =>
-                      openTicket(r.ticket, issueQrOnOpen: !r.terminal),
-                  onCancel: (r) => cancel(r.appointment!),
+  Widget build(BuildContext context) => MultiBlocProvider(
+    providers: [
+      BlocProvider.value(value: overviewCubit),
+      BlocProvider.value(value: booking),
+      BlocProvider.value(value: reservations),
+    ],
+    child: BlocBuilder<PatientOverviewCubit, PatientOverviewState>(
+      builder: (context, _) =>
+          BlocConsumer<PatientBookingCubit, PatientBookingState>(
+            listener: (context, state) {
+              if (bookingStage && (serviceId == null || doctorId == null)) {
+                setState(() {
+                  bookingStage = doctorDetail = false;
+                });
+              }
+            },
+            builder: (context, _) =>
+                BlocBuilder<PatientReservationsCubit, PatientReservationsState>(
+                  builder: (context, _) => content(context),
                 ),
-                tab == 0
-                    ? _home(context)
-                    : tab == 1
-                    ? _tickets(context)
-                    : tab == 3
-                    ? PatientAgenda(
-                        appointments: appointments,
+          ),
+    ),
+  );
+
+  Widget content(BuildContext context) => !repository.active
+      ? const SizedBox.shrink()
+      : Theme(
+          data: PatientMobileV5.theme,
+          child: PatientScrollShell(
+            pageKey:
+                '$tab:$reservationCreating:$serviceId:$bookingStage:$doctorDetail',
+            // Home owns its compact identity; no duplicate app bar or notification.
+            header: null,
+            acceptNestedScrolls: tab == 0,
+            floatingActionButton: tab == 2 && !reservationCreating
+                ? FloatingActionButton.extended(
+                    heroTag: 'create-reservation',
+                    onPressed: busy || loading ? null : createReservation,
+                    backgroundColor: PatientDesign.darkTeal,
+                    foregroundColor: Colors.white,
+                    elevation: 2,
+                    icon: const Icon(Icons.add),
+                    label: const Text(
+                      'Buat Reservasi',
+                      style: TextStyle(fontSize: 13),
+                    ),
+                  )
+                : null,
+            floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+            bottomNavigationBar: PatientBottomNavigation(
+              selectedIndex: tab == 4 ? 0 : [0, 2, 1, 3, 5].indexOf(tab),
+              onSelected: busy
+                  ? null
+                  : (i) => setState(() {
+                      tab = [0, 2, 1, 3, 5][i];
+                      if (tab == 5) profileVisited = true;
+                      reservationFlowVersion++;
+                      booking.invalidateNearest();
+                      if (tab == 2) reservationCreating = false;
+                    }),
+            ),
+            body: ColoredBox(
+              color: tab == 0
+                  ? PatientHomeStyle.background
+                  : PatientDesign.background,
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 760),
+                  child: IndexedStack(
+                    index: tab == 5
+                        ? 2
+                        : tab == 2 && !reservationCreating
+                        ? 0
+                        : 1,
+                    children: [
+                      ReservationList(
+                        items: patientReservations(
+                          tickets,
+                          appointments,
+                          doctors,
+                          widget.api.config.today,
+                        ),
                         config: widget.api.config,
                         loading: loading,
                         busy: busy,
                         error: error,
                         message: message,
                         onRefresh: load,
-                        onTicket: (ticket) => openTicket(ticket),
-                      )
-                    : ListView(
-                        key: PageStorageKey(
-                          '$tab:$serviceId:$bookingStage:$doctorDetail',
-                        ),
-                        padding: const EdgeInsets.all(16),
-                        children: [
-                          if (error != null) ...[
-                            MobileNotice(error!, error: true),
-                            TextButton.icon(
-                              onPressed: busy || loading ? null : load,
-                              icon: const Icon(Icons.refresh),
-                              label: const Text('Coba lagi'),
-                            ),
-                          ],
-                          if (message != null) MobileNotice(message!),
-                          if (loading)
-                            const LinearProgressIndicator(
-                              semanticsLabel: 'Memuat data pelayanan',
-                            ),
-                          if (tab == 2) _registration(context),
-                          if (tab == 4) _history(context),
-                        ],
+                        onCreate: createReservation,
+                        onTicket: (r) =>
+                            openTicket(r.ticket, issueQrOnOpen: !r.terminal),
+                        onCancel: (r) => cancel(r.appointment!),
                       ),
-                if (profileVisited)
-                  UserProfilePage(
-                    api: widget.api,
-                    onReturnToPatient: () => setState(() => tab = 0),
-                  )
-                else
-                  const SizedBox(),
-              ],
+                      tab == 0
+                          ? _home(context)
+                          : tab == 1
+                          ? _tickets(context)
+                          : tab == 3
+                          ? PatientAgenda(
+                              appointments: appointments,
+                              config: widget.api.config,
+                              loading: loading,
+                              busy: busy,
+                              error: error,
+                              message: message,
+                              onRefresh: load,
+                              onTicket: (ticket) => openTicket(ticket),
+                            )
+                          : ListView(
+                              key: PageStorageKey(
+                                '$tab:$serviceId:$bookingStage:$doctorDetail',
+                              ),
+                              padding: const EdgeInsets.all(16),
+                              children: [
+                                if (error != null) ...[
+                                  MobileNotice(error!, error: true),
+                                  TextButton.icon(
+                                    onPressed: busy || loading ? null : load,
+                                    icon: const Icon(Icons.refresh),
+                                    label: const Text('Coba lagi'),
+                                  ),
+                                ],
+                                if (message != null) MobileNotice(message!),
+                                if (loading)
+                                  const LinearProgressIndicator(
+                                    semanticsLabel: 'Memuat data pelayanan',
+                                  ),
+                                if (tab == 2) _registration(context),
+                                if (tab == 4) _history(context),
+                              ],
+                            ),
+                      if (profileVisited)
+                        UserProfilePage(
+                          api: widget.api,
+                          onReturnToPatient: () => setState(() => tab = 0),
+                        )
+                      else
+                        const SizedBox(),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
-        ),
-      ),
-    ),
-  );
+        );
 
   Widget _registration(BuildContext context) {
     if (serviceId == null && ['doctors', 'nearest'].contains(reservationMode)) {
@@ -1416,7 +1101,7 @@ class _PatientPageState extends State<PatientPage> {
               : busy || loading
               ? null
               : () => setState(() {
-                  catalogRevision++;
+                  booking.invalidate();
                   if (bookingStage && !doctorDetail) {
                     doctorDetail = true;
                     slotId = null;
@@ -1445,7 +1130,7 @@ class _PatientPageState extends State<PatientPage> {
                   ? null
                   : (v) {
                       setState(() {
-                        catalogRevision++;
+                        booking.invalidate();
                         appointment = v.first;
                         doctorId = sessionId = slotId = null;
                         schedules = [];
@@ -1835,13 +1520,13 @@ class _TicketDialog extends StatefulWidget {
   const _TicketDialog({
     required this.api,
     required this.ticket,
-    required this.updates,
+    required this.repository,
     this.appointment,
     this.issueQrOnOpen = false,
   });
   final QueueApi api;
   final Json ticket;
-  final PatientUpdates updates;
+  final PatientRepository repository;
   final Json? appointment;
   final bool issueQrOnOpen;
   @override
@@ -1849,106 +1534,133 @@ class _TicketDialog extends StatefulWidget {
 }
 
 class _TicketDialogState extends State<_TicketDialog> {
-  late final RefreshGate reader;
-  late Json data = widget.ticket;
-  Json? qr;
-  String? error;
-  bool busy = false;
-  bool loading = true;
+  late final PatientTicketCubit controller;
+  Json get data => controller.ticket ?? patientObject(widget.ticket);
+  PatientQr? qr;
+  String? get error => controller.state.error;
+  bool get busy => controller.state.mutation == PatientMutation.submitting;
+  bool get loading => [
+    PatientLoad.initial,
+    PatientLoad.loading,
+  ].contains(controller.state.load);
   Timer? countdown;
+  Timer? qrExpiry;
   int remaining = 0;
-  bool get canIssue =>
-      data['status'] == 'DIPESAN' &&
-      dateOnly(data['tanggalPelayanan'] ?? data['tanggalAntrean']) ==
-          widget.api.config.today;
+  bool get canIssue => controller.canIssue;
   @override
   void initState() {
     super.initState();
-    reader = RefreshGate(readTicket);
-    widget.updates.addListener(refresh);
+    controller = PatientTicketCubit(
+      widget.repository,
+      '${widget.ticket['id']}',
+    );
     countdown = Timer.periodic(const Duration(seconds: 1), (_) {
-      final expiry = DateTime.tryParse('${qr?['berlakuHingga']}');
-      if (mounted) {
-        setState(() {
-          remaining = expiry == null
-              ? 0
-              : expiry.difference(DateTime.now()).inSeconds.clamp(0, 600);
-          if (remaining == 0 || !canIssue) qr = null;
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        remaining =
+            qr?.expiresAt
+                .difference(widget.api.config.now)
+                .inSeconds
+                .clamp(0, 600) ??
+            0;
+        if (remaining == 0 || !canIssue) {
+          qr?.clear();
+          qr = null;
+        }
+      });
     });
     initialize();
   }
 
   Future<void> initialize() async {
     await refresh();
-    if (!mounted) return;
-    setState(() => loading = false);
-    // One request per explicit QR opening, never on expiry or reconnect.
-    if (widget.issueQrOnOpen && error == null && canIssue) await issue();
-  }
-
-  Future<void> refresh() => reader.refresh();
-  Future<void> readTicket() async {
-    try {
-      final next = object(
-        await widget.api.request('GET', '/tiket/${data['id']}'),
-      );
-      if (mounted) {
-        setState(() {
-          data = next;
-          error = null;
-          if (!canIssue) qr = null;
-        });
-      }
-    } catch (e) {
-      if (mounted) setState(() => error = '$e');
+    if (mounted && widget.issueQrOnOpen && error == null && canIssue) {
+      await issue();
     }
   }
 
+  Future<void> refresh() => controller.refresh();
   Future<void> issue() async {
     if (busy || loading || !canIssue) return;
     setState(() {
-      busy = true;
-      error = null;
+      qrExpiry?.cancel();
+      qr?.clear();
       qr = null;
     });
-    try {
-      final result = object(
-        await widget.api.request('POST', '/tiket/${data['id']}/qr', body: {}),
-      );
-      if (mounted && canIssue) {
-        setState(() {
-          qr = result;
-          remaining = DateTime.parse('${result['berlakuHingga']}')
-              .difference(DateTime.now())
+    final result = await controller.issue();
+    if (!mounted || !canIssue) {
+      result?.clear();
+      return;
+    }
+    setState(() {
+      qr = result;
+      remaining =
+          result?.expiresAt
+              .difference(widget.api.config.now)
               .inSeconds
-              .clamp(0, 600);
-          if (remaining == 0) {
-            qr = null;
-            error =
-                'QR sudah kedaluwarsa. Terbitkan QR baru untuk melanjutkan.';
-          }
-        });
+              .clamp(0, 600) ??
+          0;
+      if (remaining == 0) {
+        qr?.clear();
+        qr = null;
+      } else if (result != null) {
+        final lifetime = result.expiresAt.difference(widget.api.config.now);
+        qrExpiry = Timer(
+          lifetime > const Duration(minutes: 10)
+              ? const Duration(minutes: 10)
+              : lifetime,
+          () {
+            if (mounted) {
+              setState(() {
+                qr?.clear();
+                qr = null;
+                remaining = 0;
+              });
+            }
+          },
+        );
       }
-    } catch (e) {
-      await refresh();
-      if (mounted) setState(() => error = '$e');
-    } finally {
-      if (mounted) setState(() => busy = false);
+    });
+  }
+
+  void changed(PatientTicketState state) {
+    if (!canIssue) {
+      qrExpiry?.cancel();
+      setState(() {
+        qr?.clear();
+        qr = null;
+        remaining = 0;
+      });
+    }
+    if (state.load == PatientLoad.sessionEnded) {
+      final route = ModalRoute.of(context);
+      if (route?.isCurrent == true) {
+        Navigator.of(context).pop();
+      } else if (route != null && route.isActive) {
+        route.navigator?.removeRoute(route);
+      }
     }
   }
 
   @override
   void dispose() {
-    widget.updates.removeListener(refresh);
-    reader.dispose();
+    qr?.clear();
+    qrExpiry?.cancel();
     countdown?.cancel();
+    controller.close();
     super.dispose();
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => BlocProvider.value(
+    value: controller,
+    child: BlocConsumer<PatientTicketCubit, PatientTicketState>(
+      bloc: controller,
+      listener: (context, state) => changed(state),
+      builder: (context, _) => content(context),
+    ),
+  );
+  Widget content(BuildContext context) {
     final slot = object(widget.appointment?['slotPraktik']);
     final session = object(slot['jadwalPraktik']);
     final doctor = object(object(session['dokterLayanan'])['dokter']);
@@ -2017,7 +1729,7 @@ class _TicketDialogState extends State<_TicketDialog> {
                 if (qr != null && remaining > 0) ...[
                   LayoutBuilder(
                     builder: (context, box) => QrImageView(
-                      data: '${qr!['qrPayload']}',
+                      data: qr!.payload ?? '',
                       size: box.maxWidth.clamp(0, 240),
                       backgroundColor: Colors.white,
                       semanticsLabel:
@@ -2033,7 +1745,7 @@ class _TicketDialogState extends State<_TicketDialog> {
                     children: [
                       SelectableText('ID tiket: ${data['id']}'),
                       SelectableText(
-                        '${qr!['qrPayload']}',
+                        qr!.payload ?? '',
                         style: const TextStyle(
                           fontSize: 11,
                           color: PatientDesign.muted,
