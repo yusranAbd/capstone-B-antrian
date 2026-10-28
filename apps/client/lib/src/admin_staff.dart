@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import 'features/admin/application/staff_management_cubit.dart';
+import 'features/admin/application/admin_catalog_state.dart';
+import 'features/admin/models/admin_staff_models.dart';
 
 import 'admin_ui.dart';
 import 'api.dart';
@@ -12,8 +17,10 @@ class AdminStaffAccounts extends StatefulWidget {
     required this.accounts,
     required this.busy,
     required this.onChanged,
+    this.cubit,
   });
   final QueueApi api;
+  final StaffAccountCubit? cubit;
   final List<Json> accounts;
   final bool busy;
   final Future<void> Function() onChanged;
@@ -25,20 +32,33 @@ class _AdminStaffAccountsState extends State<AdminStaffAccounts> {
   String search = '', status = '';
   bool saving = false;
   String? error, message;
+  List<Json> get accounts => widget.cubit?.rows ?? widget.accounts;
 
   Future<void> create() async {
     final result = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => _StaffAccountEditor(api: widget.api),
+      builder: (_) => _StaffAccountEditor(
+        api: widget.api,
+        onCreate: widget.cubit == null
+            ? null
+            : (body) => widget.cubit!.createAccount(
+                name: body['nama'] as String,
+                email: body['email'] as String,
+                password: body['kataSandi'] as String,
+              ),
+      ),
     );
     if (!mounted || result != true) return;
     setState(() {
-      message =
-          'Akun PETUGAS dibuat. Akun langsung tersedia di Penugasan Loket.';
+      message = widget.cubit?.state.needsReconciliation == true
+          ? 'Akun PETUGAS disimpan. Muat ulang daftar sebelum membuat penugasan.'
+          : widget.cubit?.state.recoveredMutation == true
+          ? 'Akun PETUGAS terverifikasi di daftar. Akun tersedia di Penugasan Loket.'
+          : 'Akun PETUGAS dibuat. Akun langsung tersedia di Penugasan Loket.';
       error = null;
     });
-    await widget.onChanged();
+    if (widget.cubit == null) await widget.onChanged();
   }
 
   Future<void> changeStatus(Json account) async {
@@ -53,16 +73,20 @@ class _AdminStaffAccountsState extends State<AdminStaffAccounts> {
     }
     if (!mounted) return;
     setState(() {
-      saving = true;
+      saving = widget.cubit == null;
       error = null;
       message = null;
     });
     try {
-      await widget.api.request(
-        'PATCH',
-        '/akun-petugas/${account['id']}',
-        body: {'aktif': !active},
-      );
+      if (widget.cubit != null) {
+        await widget.cubit!.setStatus('${account['id']}', !active);
+      } else {
+        await widget.api.request(
+          'PATCH',
+          '/akun-petugas/${account['id']}',
+          body: {'aktif': !active},
+        );
+      }
       if (mounted) {
         setState(
           () => message = active
@@ -70,18 +94,28 @@ class _AdminStaffAccountsState extends State<AdminStaffAccounts> {
               : 'Akun diaktifkan. Silakan login ulang.',
         );
       }
-      await widget.onChanged();
+      if (widget.cubit == null) await widget.onChanged();
     } catch (e) {
-      if (mounted) setState(() => error = '$e');
+      if (mounted && widget.cubit == null) setState(() => error = '$e');
     } finally {
       if (mounted) setState(() => saving = false);
     }
   }
 
   @override
-  Widget build(BuildContext context) {
-    final busy = saving || widget.busy;
-    final filtered = widget.accounts
+  Widget build(BuildContext context) => widget.cubit == null
+      ? content(context)
+      : BlocProvider.value(
+          value: widget.cubit!,
+          child: BlocBuilder<StaffAccountCubit, AdminCatalogState>(
+            bloc: widget.cubit,
+            builder: (context, _) => content(context),
+          ),
+        );
+  Widget content(BuildContext context) {
+    final busy = saving || widget.busy || widget.cubit?.state.busy == true;
+    final operationError = widget.cubit?.state.error?.toString() ?? error;
+    final filtered = accounts
         .where(
           (a) =>
               '${a['nama']} ${a['email']}'.toLowerCase().contains(search) &&
@@ -136,16 +170,18 @@ class _AdminStaffAccountsState extends State<AdminStaffAccounts> {
             ),
           ],
         ),
-        if (error != null) Notice(error!, error: true),
+        if (operationError != null) Notice(operationError, error: true),
         if (message != null) Notice(message!),
         if (saving) const LinearProgressIndicator(),
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Text(
-            '${filtered.length} dari ${widget.accounts.length} akun PETUGAS',
+            '${filtered.length} dari ${accounts.length} akun PETUGAS',
           ),
         ),
-        if (!busy && filtered.isEmpty)
+        if (!busy &&
+            filtered.isEmpty &&
+            widget.cubit?.state.load != CatalogLoadStatus.failure)
           const Notice(
             'Belum ada akun yang sesuai. Tambahkan akun PETUGAS untuk memulai penugasan.',
           ),
@@ -187,8 +223,9 @@ class _AdminStaffAccountsState extends State<AdminStaffAccounts> {
 }
 
 class _StaffAccountEditor extends StatefulWidget {
-  const _StaffAccountEditor({required this.api});
+  const _StaffAccountEditor({required this.api, this.onCreate});
   final QueueApi api;
+  final Future<Json> Function(Json)? onCreate;
   @override
   State<_StaffAccountEditor> createState() => _StaffAccountEditorState();
 }
@@ -204,6 +241,7 @@ class _StaffAccountEditorState extends State<_StaffAccountEditor> {
   void dispose() {
     name.dispose();
     email.dispose();
+    password.clear();
     password.dispose();
     super.dispose();
   }
@@ -215,23 +253,26 @@ class _StaffAccountEditorState extends State<_StaffAccountEditor> {
       error = null;
     });
     try {
-      await widget.api.request(
-        'POST',
-        '/akun-petugas',
-        body: {
-          'nama': name.text.trim(),
-          'email': email.text.trim(),
-          'kataSandi': password.text,
-        },
-      );
+      final body = <String, dynamic>{
+        'nama': name.text.trim(),
+        'email': email.text.trim(),
+        'kataSandi': password.text,
+      };
+      if (widget.onCreate != null) {
+        await widget.onCreate!(body);
+      } else {
+        await widget.api.request('POST', '/akun-petugas', body: body);
+      }
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
         setState(() {
           busy = false;
-          error = '$e';
+          error = '${safeAccountCreateError(e)}';
         });
       }
+    } finally {
+      if (mounted) password.clear();
     }
   }
 

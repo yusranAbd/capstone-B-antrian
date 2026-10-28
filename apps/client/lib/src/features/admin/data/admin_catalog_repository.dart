@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../../../api.dart';
 import '../../../config.dart';
 import '../models/admin_catalog_models.dart';
+import '../models/admin_staff_models.dart';
 
 const adminMasterPaths = {'/layanan', '/dokter', '/loket'};
 
@@ -59,7 +60,12 @@ class AdminCatalogRepository extends ChangeNotifier {
       final paths = _dirty.toList(), epoch = _epoch;
       _dirty.clear();
       final values = await Future.wait(
-        paths.map((path) async => rows(await api.request('GET', path))),
+        paths.map((path) async {
+          final result = await api.request('GET', path);
+          return adminStaffPaths.contains(path)
+              ? staffCollection(path, result)
+              : rows(result);
+        }),
       );
       if (!active || epoch != _epoch) return;
       _snapshot = AdminCatalogSnapshot({

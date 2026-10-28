@@ -24,6 +24,8 @@ import 'features/admin/data/admin_schedule_repository.dart';
 import 'features/admin/application/practice_schedule_cubit.dart';
 import 'features/admin/application/slot_session_cubit.dart';
 import 'features/admin/data/admin_slot_repository.dart';
+import 'features/admin/data/admin_staff_repository.dart';
+import 'features/admin/application/staff_management_cubit.dart';
 
 class AdminPage extends StatefulWidget {
   const AdminPage({
@@ -47,6 +49,8 @@ class _AdminPageState extends State<AdminPage> {
   late final List<AdminCatalogCubit> catalogCubits;
   late final AdminScheduleRepository scheduleRepository;
   late final AdminSlotRepository slotRepository;
+  late final StaffAccountCubit staffAccounts;
+  late final AssignmentCubit assignments;
   final slotSessions = <String, SlotSessionCubit>{};
   SlotSessionCubit slotsFor(Json session) => slotSessions.putIfAbsent(
     '${session['id']}',
@@ -66,13 +70,20 @@ class _AdminPageState extends State<AdminPage> {
   }
 
   Map<String, List<Json>> get catalog => catalogRepository.snapshot.collections;
-  AdminCatalogCubit? get masterCubit =>
-      selected >= 0 && selected < 5 ? catalogCubits[selected] : null;
+  AdminCatalogCubit? get masterCubit => selected >= 0 && selected < 5
+      ? catalogCubits[selected]
+      : selected == 6
+      ? staffTab == 0
+            ? staffAccounts
+            : assignments
+      : null;
   List<Json> _data = [];
   List<Json> get data => masterCubit?.rows ?? _data;
   set data(List<Json> value) => _data = value;
   String? session, _error, message;
-  String? get error => masterCubit?.state.error?.toString() ?? _error;
+  String? get error => selected == 6 && staffTab == 0
+      ? _error
+      : masterCubit?.state.error?.toString() ?? _error;
   set error(String? value) => _error = value;
   String scheduleSearch = '';
   bool _loading = true;
@@ -88,12 +99,17 @@ class _AdminPageState extends State<AdminPage> {
     catalogRepository = AdminCatalogRepository(widget.api);
     scheduleRepository = AdminScheduleRepository(catalogRepository);
     slotRepository = AdminSlotRepository(catalogRepository);
+    final staffRepository = AdminStaffRepository(catalogRepository);
+    staffAccounts = StaffAccountCubit(staffRepository);
+    assignments = AssignmentCubit(staffRepository);
     catalogCubits = [
       PolyclinicCubit(catalogRepository),
       DoctorCatalogCubit(catalogRepository),
       RoomCubit(catalogRepository),
       ServiceScheduleCubit(scheduleRepository),
       PracticeScheduleCubit(scheduleRepository),
+      staffAccounts,
+      assignments,
     ];
     catalogRepository.addListener(_catalogChanged);
     selected = widget.initialSection;
@@ -224,7 +240,9 @@ class _AdminPageState extends State<AdminPage> {
               row: row,
               catalog: catalog,
               initialSession: session,
-              catalogSource: resource.path == '/jadwal-layanan'
+              catalogSource:
+                  resource.path == '/jadwal-layanan' ||
+                      resource.path == '/penugasan-petugas'
                   ? catalogRepository
                   : null,
               onSave: cubit == null
@@ -422,6 +440,8 @@ class _AdminPageState extends State<AdminPage> {
       BlocProvider<PracticeScheduleCubit>.value(
         value: catalogCubits[4] as PracticeScheduleCubit,
       ),
+      BlocProvider<StaffAccountCubit>.value(value: staffAccounts),
+      BlocProvider<AssignmentCubit>.value(value: assignments),
     ],
     child: masterCubit == null
         ? _buildContent(context)
@@ -522,6 +542,7 @@ class _AdminPageState extends State<AdminPage> {
               ),
               if (selected == 6 && staffTab == 0)
                 AdminStaffAccounts(
+                  cubit: staffAccounts,
                   api: widget.api,
                   accounts: catalog['/akun-petugas'] ?? [],
                   busy: loading,
@@ -851,7 +872,11 @@ class _AdminEditorState extends State<_AdminEditor> {
   Widget staffField(AdminField f) {
     final accounts = catalog['/akun-petugas'] ?? <Json>[];
     final eligible = accounts
-        .where((a) => a['aktif'] == true || a['id'] == widget.row?['petugasId'])
+        .where(
+          (a) =>
+              a['peran'] == 'PETUGAS' &&
+              (a['aktif'] == true || a['id'] == widget.row?['petugasId']),
+        )
         .toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -9,7 +9,7 @@ enum CatalogLoadStatus {
   sessionEnded,
 }
 
-enum CatalogMutationStatus { idle, submitting, success, failure }
+enum CatalogMutationStatus { idle, submitting, success, failure, unknown }
 
 class AdminCatalogState {
   const AdminCatalogState({
@@ -20,6 +20,7 @@ class AdminCatalogState {
     this.mutationError,
     this.recordId,
     this.needsReconciliation = false,
+    this.recoveredMutation = false,
   });
   final AdminCatalogSnapshot snapshot;
   final CatalogLoadStatus load;
@@ -27,6 +28,7 @@ class AdminCatalogState {
   final Object? loadError, mutationError;
   final String? recordId;
   final bool needsReconciliation;
+  final bool recoveredMutation;
   bool get busy =>
       load == CatalogLoadStatus.loading ||
       load == CatalogLoadStatus.refreshing ||

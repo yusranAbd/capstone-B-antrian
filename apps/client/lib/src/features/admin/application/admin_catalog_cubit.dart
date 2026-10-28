@@ -33,12 +33,17 @@ abstract class AdminCatalogCubit extends Cubit<AdminCatalogState> {
     emit(
       AdminCatalogState(
         snapshot: repository.snapshot,
-        load: state.load,
+        load:
+            state.load == CatalogLoadStatus.initial &&
+                repository.snapshot.collections.containsKey(path)
+            ? CatalogLoadStatus.loaded
+            : state.load,
         mutation: state.mutation,
         loadError: state.loadError,
         mutationError: state.mutationError,
         recordId: state.recordId,
         needsReconciliation: state.needsReconciliation,
+        recoveredMutation: state.recoveredMutation,
       ),
     );
   }
@@ -46,7 +51,7 @@ abstract class AdminCatalogCubit extends Cubit<AdminCatalogState> {
   Future<void> refresh({Iterable<String>? paths}) {
     if (!_current) return Future.value();
     // Forward every invalidation to the repository even when this Cubit waits.
-    final read = repository.refresh(paths ?? {...adminMasterPaths, path});
+    final read = refreshRecords(paths ?? {...adminMasterPaths, path});
     if (_refresh != null) return _refresh!;
     emit(
       AdminCatalogState(
@@ -109,6 +114,11 @@ abstract class AdminCatalogCubit extends Cubit<AdminCatalogState> {
   }) =>
       repository.write(path, method, id: id, body: body, permanent: permanent);
   Future<void> reconcileAfterMutation() => repository.reconcile();
+  Future<void> refreshRecords(Iterable<String> paths) =>
+      repository.refresh(paths);
+  Json? recoverMutation(String method, {String? id, Json? body}) => null;
+  CatalogMutationStatus failureStatus(Object error) =>
+      CatalogMutationStatus.failure;
 
   Future<Json> _write(
     String method, {
@@ -151,10 +161,19 @@ abstract class AdminCatalogCubit extends Cubit<AdminCatalogState> {
       final uncertain =
           failure is ApiException &&
           (failure.status == 0 || failure.status >= 500);
+      bool recovered = false;
       // Re-read after success or an uncertain outcome. Never retry a mutation.
       if (failure == null || uncertain) {
         try {
           if (repository.active) await reconcileAfterMutation();
+          if (_current && uncertain) {
+            final verified = recoverMutation(method, id: id, body: body);
+            if (verified != null) {
+              result = verified;
+              failure = null;
+              recovered = true;
+            }
+          }
         } catch (error) {
           refreshError = error;
         }
@@ -171,10 +190,11 @@ abstract class AdminCatalogCubit extends Cubit<AdminCatalogState> {
             loadError: refreshError,
             mutation: failure == null
                 ? CatalogMutationStatus.success
-                : CatalogMutationStatus.failure,
+                : failureStatus(failure),
             mutationError: failure,
             recordId: id,
             needsReconciliation: refreshError != null,
+            recoveredMutation: recovered,
           ),
         );
       }
