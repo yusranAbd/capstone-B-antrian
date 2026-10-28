@@ -1,44 +1,23 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_tts/flutter_tts.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'api.dart';
 import 'config.dart';
 import 'display_board.dart';
 import 'display_fullscreen.dart';
 import 'display_selection.dart';
+import 'features/display/application/display_device_cubit.dart';
+import 'features/display/application/display_monitor_bloc.dart';
+import 'features/display/data/display_device_repository.dart';
+import 'features/display/data/display_monitor_repository.dart';
+import 'features/display/models/display_models.dart';
+import 'features/display/services/display_audio_controller.dart';
 import 'mobile_ui.dart';
-import 'realtime.dart';
 import 'widgets.dart';
 
-class AnnouncementGate {
-  bool _initialized = false;
-  final _seen = <String>{};
-
-  /// Reconnect/resume/manual refresh establish a silent baseline, even if an
-  /// offline CALL is different from the last announcement seen before the gap.
-  void rebase() => _initialized = false;
-
-  String? observe(Json? announcement, {required bool callSignal}) {
-    final id = announcement?['peristiwaId'] as String?;
-    final seen = id != null && _seen.contains(id);
-    if (id != null) {
-      _seen.add(id);
-      if (_seen.length > 256) _seen.remove(_seen.first);
-    }
-    if (!_initialized) {
-      _initialized = true;
-      return null;
-    }
-    if (id == null || seen || !callSignal) return null;
-    if (announcement?['aksi'] != null &&
-        !['CALL', 'RECALL'].contains(announcement?['aksi'])) {
-      return null;
-    }
-    return announcement?['teks'] as String?;
-  }
-}
+export 'features/display/services/announcement_gate.dart' show AnnouncementGate;
 
 class DisplayPage extends StatefulWidget {
   const DisplayPage({
@@ -46,425 +25,142 @@ class DisplayPage extends StatefulWidget {
     required this.api,
     required this.onExit,
     this.selection,
+    this.deviceRepository,
+    this.audioController,
+    this.feedFactory,
   });
   final QueueApi api;
   final DisplaySelection? selection;
+  final DisplayDeviceRepository? deviceRepository;
+  final DisplayAudioController? audioController;
+  final DisplayFeedFactory? feedFactory;
   final VoidCallback onExit;
   @override
   State<DisplayPage> createState() => _DisplayPageState();
 }
 
 class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
-  final service = TextEditingController(), token = TextEditingController();
-  final activation = TextEditingController();
-  late final DisplaySelection selection;
-  String? deviceId;
-  bool legacy = false,
-      activating = false,
-      restoringDevice = true,
-      pairedSession = false;
+  final service = TextEditingController(),
+      token = TextEditingController(),
+      activation = TextEditingController();
   final form = GlobalKey<FormState>();
-  final tts = FlutterTts();
   final fullscreen = DisplayFullscreen();
-  AnnouncementGate gate = AnnouncementGate();
-  SnapshotLoader? loader;
-  RealtimeFeed? feed;
-  Timer? poll, clock;
-  late final ValueNotifier<DateTime> displayClock;
-  Json? snapshot;
-  String? error, audioError;
-  String status = 'Menghubungkan…';
-  bool connected = false, audio = false, audioBusy = false, rejected = false;
-  int connectionEpoch = 0, fetchedEpoch = 0;
-  int speechEpoch = 0;
-  int callSignals = 0, fetchedSignals = 0, consumedSignals = 0;
+  late final selection =
+      widget.selection ?? createDisplaySelection(widget.api.config.apiBase);
+  late final devices =
+      widget.deviceRepository ?? DisplayDeviceRepository(widget.api, selection);
+  late final device = DisplayDeviceCubit(devices);
+  late final audioController =
+      widget.audioController ?? DisplayAudioController();
+  late final monitor = DisplayMonitorBloc(
+    DisplayMonitorRepository(devices, feedFactory: widget.feedFactory),
+    audioController,
+  );
+  late final displayClock = ValueNotifier<DateTime>(widget.api.config.now);
+  Timer? clock;
+  bool legacy = false;
+  bool get connected => device.state.connected;
+  bool get activating => device.state.phase == DisplayDevicePhase.pairing;
+  bool get pairingBlocked =>
+      activating ||
+      restoringDevice ||
+      device.state.phase == DisplayDevicePhase.uncertain;
+  bool get restoringDevice =>
+      device.state.phase == DisplayDevicePhase.restoring;
+  bool get rejected =>
+      device.state.phase == DisplayDevicePhase.rejected ||
+      monitor.state.rejected;
+  bool get audio => audioController.enabled;
+  bool get audioBusy => audioController.busy;
+  String? get audioError => audioController.error;
+  String? get error => device.state.error ?? monitor.state.error;
+  String get status => monitor.state.status;
+  Json? get snapshot => identical(device.state.scope, monitor.state.scope)
+      ? monitor.state.snapshot
+      : null;
   @override
   void initState() {
     super.initState();
-    displayClock = ValueNotifier(widget.api.config.now);
     WidgetsBinding.instance.addObserver(this);
     fullscreen.addListener(fullscreenChanged);
-    selection =
-        widget.selection ?? createDisplaySelection(widget.api.config.apiBase);
-    restoreDevice();
+    monitor; // Establish listeners before device restoration activates a scope.
+    unawaited(device.restore());
     clock = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted && connected) displayClock.value = widget.api.config.now;
     });
-    tts.setErrorHandler((message) {
-      // Cancelling the preceding announcement is expected during RECALL/mute.
-      if (!['canceled', 'interrupted'].contains('$message')) speechFailed();
-    });
   }
 
-  Future<void> restoreDevice() async {
-    try {
-      deviceId = await selection.read();
-      if (selection.isolated && deviceId == null) return;
-      final device = object(
-        await widget.api.request(
-          'GET',
-          '/display/sesi',
-          authenticated: false,
-          displayDeviceId: deviceId,
-        ),
-      );
-      if (!mounted) return;
-      if (device['id'] is String && device['layananId'] is String) {
-        pairedSession = true;
-        service.text = device['layananId'];
-        connectDevice(service.text, null);
-      }
-    } catch (e) {
-      if (mounted &&
-          (selection.isolated || !(e is ApiException && e.status == 401))) {
-        setState(
-          () => error = e is ApiException && e.status != 0 ? e.message : 'Sesi perangkat belum dapat diperiksa. Periksa koneksi atau penyimpanan tab lalu coba lagi.',
-        );
-      }
-    } finally {
-      if (mounted) setState(() => restoringDevice = false);
-    }
-  }
-
+  Future<void> restoreDevice() => device.restore();
   Future<void> pairDevice() async {
-    if (activating || restoringDevice || !form.currentState!.validate()) return;
-    setState(() {
-      activating = true;
-      error = null;
-    });
-    try {
-      final device = object(
-        await widget.api.request(
-          'POST',
-          '/display/pairing',
-          authenticated: false,
-          body: {
-            'kode': activation.text.trim(),
-            if (selection.isolated) 'isolasiSesi': true,
-          },
-        ),
-      );
-      if (!mounted) return;
-      activation.clear();
-      if (selection.isolated) {
-        final id = device['id'] as String;
-        await selection.write(id);
-        deviceId = id;
-      }
-      try {
-        final stored = object(
-          await widget.api.request(
-            'GET',
-            '/display/sesi',
-            authenticated: false,
-            displayDeviceId: deviceId,
-          ),
-        );
-        if (stored['id'] != device['id']) {
-          throw const ApiException(401, 'Sesi perangkat tidak cocok.');
-        }
-      } on ApiException catch (e) {
-        if (e.status != 401) rethrow;
-        throw const ApiException(
-          401,
-          'Sesi TV tidak tersimpan. Gunakan host/situs yang sama untuk Web dan API, HTTPS di production, lalu minta kode baru dari ADMIN.',
-        );
-      }
-      if (!mounted) return;
-      pairedSession = true;
-      service.text = device['layananId'];
-      connectDevice(service.text, null);
-    } catch (e) {
-      if (mounted) setState(() => error = '$e');
-    } finally {
-      if (mounted) setState(() => activating = false);
-    }
+    if (pairingBlocked || !form.currentState!.validate()) return;
+    final pending = device.pair(activation.text.trim());
+    activation.clear();
+    await pending;
+  }
+
+  void connect() {
+    if (!form.currentState!.validate()) return;
+    device.legacy(service.text.trim(), token.text.trim());
+    token.clear();
+  }
+
+  Future<void> disconnect() async {
+    audioController.context(false);
+    await device.disconnect();
+    if (!mounted) return;
+    if (devices.scope != null) audioController.context(true);
+    activation.clear();
+    token.clear();
   }
 
   void fullscreenChanged() {
     if (mounted) setState(() {});
   }
 
-  Future<void> stopSpeech() async {
-    try {
-      await tts.stop();
-    } catch (_) {
-      // An optional/absent speech engine must not break visual display cleanup.
-    }
-  }
-
-  void rebase() {
-    connectionEpoch++;
-    gate.rebase();
-    callSignals = fetchedSignals = consumedSignals = 0;
-    speechEpoch++;
-    unawaited(stopSpeech());
-  }
-
-  Future<void> explainRejection(int epoch) async {
-    try {
-      await widget.api.request(
-        'GET',
-        '/display/sesi',
-        authenticated: false,
-        displayDeviceId: deviceId,
-      );
-    } on ApiException catch (e) {
-      if (mounted && rejected && epoch == connectionEpoch && e.status != 0) {
-        setState(() => error = e.message);
-      }
-    } catch (_) {
-      // The existing rejection stays visible when offline.
-    }
-  }
-
-  void rejectDevice([String? message]) {
-    rebase();
-    feed?.dispose();
-    loader?.dispose();
-    poll?.cancel();
-    if (mounted) {
-      setState(() {
-        rejected = true;
-        audio = false;
-        snapshot = null;
-        error = message ?? 'Sesi perangkat berakhir, dinonaktifkan atau akses dicabut. Minta kode baru dari ADMIN.';
-      });
-    }
-    if (pairedSession) unawaited(explainRejection(connectionEpoch));
-  }
-
-  void connect() {
-    if (!form.currentState!.validate()) return;
-    final id = service.text.trim(), credential = token.text.trim();
-    pairedSession = false;
-    deviceId = null;
-    connectDevice(id, credential);
-  }
-
-  void connectDevice(String id, String? credential) {
-    setState(() {
-      connected = true;
-      snapshot = null;
-      error = null;
-      audio = false;
-      audioError = null;
-      rejected = false;
-      status = widget.api.config.realtime
-          ? 'Menghubungkan…'
-          : 'Sinkronisasi berkala';
-      connectionEpoch++;
-      speechEpoch++;
-      callSignals = fetchedSignals = consumedSignals = 0;
-      gate = AnnouncementGate();
-    });
-    loader = SnapshotLoader(
-      fetch: () async {
-        fetchedEpoch = connectionEpoch;
-        fetchedSignals = callSignals;
-        return object(
-          await widget.api.request(
-            'GET',
-            '/display/$id/snapshot',
-            authenticated: false,
-            displayToken: credential,
-            displayDeviceId: pairedSession ? deviceId : null,
-          ),
-        );
-      },
-      onData: (data) {
-        if (fetchedEpoch != connectionEpoch || !connected || rejected) return;
-        if (data['versiSkema'] != 1) {
-          setState(() => error = 'Versi snapshot tidak didukung.');
-          return;
-        }
-        final announcement = data['pengumumanTerakhir'] == null
-            ? null
-            : object(data['pengumumanTerakhir']);
-        // An event during this fetch belongs to the next dirty refresh.
-        final speech = fetchedSignals == callSignals
-            ? gate.observe(
-                announcement,
-                callSignal: fetchedSignals > consumedSignals,
-              )
-            : null;
-        consumedSignals = fetchedSignals;
-        if (mounted && connected) {
-          setState(() {
-            snapshot = data;
-            error = null;
-          });
-        }
-        if (audio && speech != null) speak(speech);
-      },
-      onError: (e) {
-        if (!mounted || !connected || fetchedEpoch != connectionEpoch) return;
-        if (e is ApiException && [401, 403].contains(e.status)) {
-          rejectDevice(e.message);
-        } else {
-          rebase();
-          setState(
-            () => error =
-                'Snapshot belum dapat dimuat. Periksa koneksi perangkat.',
-          );
-        }
-      },
-    );
-    feed = RealtimeFeed(
-      api: widget.api,
-      layananId: id,
-      displayToken: credential,
-      displaySession: pairedSession,
-      displayDeviceId: deviceId,
-      onRefresh: () => loader?.refresh(),
-      onStatus: (s) {
-        if (!connected || rejected) return;
-        rebase();
-        if (mounted) setState(() => status = s);
-        if (s.startsWith('Token perangkat ditolak')) rejectDevice();
-      },
-      onEvent: (e) {
-        if (e['perluPeriksaPengumuman'] == true) callSignals++;
-      },
-    );
-    // Live bootstrap waits for display:ready. REST polling remains available
-    // during a network outage, without announcing offline history.
-    if (!widget.api.config.realtime) loader!.refresh();
-    poll = Timer.periodic(
-      const Duration(seconds: 15),
-      (_) => loader?.refresh(),
-    );
-    token.clear();
-  }
-
-  void speechFailed() {
-    speechEpoch++;
-    if (mounted) {
-      setState(() {
-        audio = false;
-        audioError = 'Suara tidak tersedia. Gunakan pengumuman visual.';
-      });
-    }
-  }
-
-  Future<bool> speak(String text) async {
-    final epoch = ++speechEpoch;
-    bool current() => mounted && connected && !rejected && epoch == speechEpoch;
-    try {
-      await stopSpeech();
-      if (!current()) return false;
-      final available = await tts.isLanguageAvailable('id-ID');
-      if (!current()) return false;
-      if (available != true && available != 1) {
-        throw StateError('Indonesian voice is unavailable');
-      }
-      final language = await tts.setLanguage('id-ID');
-      if (!current()) return false;
-      if (language == 0 || language == false) {
-        throw StateError('Speech language rejected');
-      }
-      final result = await tts.speak(text);
-      if (result == 0 || result == false) throw StateError('Speech rejected');
-      return mounted && epoch == speechEpoch;
-    } catch (_) {
-      if (current()) speechFailed();
-      return false;
-    }
-  }
-
-  Future<void> toggleAudio() async {
-    if (audioBusy) return;
-    setState(() => audioBusy = true);
-    try {
-      if (audio) {
-        speechEpoch++;
-        await stopSpeech();
-        if (mounted) setState(() => audio = false);
-      } else if (await speak('Suara pengumuman QueueB aktif.')) {
-        if (mounted) {
-          setState(() {
-            audio = true;
-            audioError = null;
-          });
-        }
-      }
-    } catch (_) {
-      speechFailed();
-    } finally {
-      if (mounted) setState(() => audioBusy = false);
-    }
-  }
-
-  Future<void> disconnect() async {
-    if (pairedSession) {
-      try {
-        await widget.api.request(
-          'POST',
-          '/display/putuskan',
-          authenticated: false,
-          displayDeviceId: deviceId,
-        );
-      } catch (e) {
-        if (mounted) {
-          setState(
-            () => error = 'Belum dapat mencabut sesi perangkat. Periksa koneksi lalu coba Ganti perangkat lagi.',
-          );
-        }
-        return;
-      }
-    }
-    if (!mounted) return;
-    await selection.clear();
-    if (!mounted) return;
-    deviceId = null;
-    pairedSession = false;
-    speechEpoch++;
-    feed?.dispose();
-    loader?.dispose();
-    poll?.cancel();
-    unawaited(stopSpeech());
-    setState(() {
-      connected = false;
-      snapshot = null;
-      callSignals = fetchedSignals = consumedSignals = 0;
-      audio = false;
-      rejected = false;
-    });
-  }
-
+  Future<void> toggleAudio() => audioController.toggle();
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && connected && !rejected) {
-      rebase();
-      loader?.refresh();
-    } else if (state != AppLifecycleState.resumed && connected) {
-      rebase();
+    if (state == AppLifecycleState.resumed) {
+      unawaited(monitor.resume());
+    } else {
+      monitor.pause();
     }
   }
 
   @override
   void dispose() {
-    speechEpoch++;
     WidgetsBinding.instance.removeObserver(this);
-    feed?.dispose();
-    loader?.dispose();
-    poll?.cancel();
+    unawaited(monitor.close());
+    unawaited(device.close());
+    if (widget.deviceRepository == null) devices.dispose();
+    if (widget.audioController == null) audioController.dispose();
     clock?.cancel();
     displayClock.dispose();
     fullscreen.removeListener(fullscreenChanged);
     fullscreen.dispose();
-    // FlutterTts retains its latest instance in the platform channel handler.
-    // Release the callback that closes over this page after leaving the display.
-    tts.errorHandler = null;
-    unawaited(stopSpeech());
-    activation.dispose();
     service.dispose();
     token.dispose();
+    activation.dispose();
     super.dispose();
   }
 
   @override
-  Widget build(BuildContext context) => Theme(
+  Widget build(BuildContext context) => MultiBlocProvider(
+    providers: [
+      BlocProvider.value(value: device),
+      BlocProvider.value(value: monitor),
+    ],
+    child: BlocBuilder<DisplayDeviceCubit, DisplayDeviceState>(
+      builder: (context, _) =>
+          BlocBuilder<DisplayMonitorBloc, DisplayMonitorState>(
+            builder: (context, _) => ListenableBuilder(
+              listenable: audioController,
+              builder: (context, _) => buildDisplay(context),
+            ),
+          ),
+    ),
+  );
+  Widget buildDisplay(BuildContext context) => Theme(
     data: QueueBStyle.theme,
     child: connected
         ? Scaffold(
@@ -485,8 +181,7 @@ class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
               fullscreen: fullscreen.active,
               fullscreenSupported: fullscreen.supported,
               onRefresh: () {
-                rebase();
-                loader?.refresh();
+                monitor.refresh(silent: true);
               },
               onAudio: toggleAudio,
               onConfigure: disconnect,
@@ -570,9 +265,7 @@ class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
                           ),
                           const SizedBox(height: 24),
                           FilledButton.icon(
-                            onPressed: activating || restoringDevice
-                                ? null
-                                : pairDevice,
+                            onPressed: pairingBlocked ? null : pairDevice,
                             icon: const Icon(Icons.tv),
                             label: const Text('Hubungkan Perangkat'),
                           ),
@@ -585,7 +278,6 @@ class _DisplayPageState extends State<DisplayPage> with WidgetsBindingObserver {
                         TextButton(
                           onPressed: () => setState(() {
                             legacy = !legacy;
-                            error = null;
                           }),
                           child: Text(
                             legacy

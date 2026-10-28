@@ -166,7 +166,12 @@ void main() {
     await tester.ensureVisible(find.text('Hubungkan Perangkat'));
     await tester.tap(find.text('Hubungkan Perangkat'));
     await tester.pumpAndSettle();
-    expect(find.text('Kode aktivasi sudah digunakan'), findsOneWidget);
+    expect(
+      find.text(
+        'Kode aktivasi sudah digunakan atau kedaluwarsa. Minta kode baru dari ADMIN.',
+      ),
+      findsOneWidget,
+    );
     expect(posts, 1);
     await cleanup(tester, api);
   });
