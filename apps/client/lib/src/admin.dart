@@ -2,6 +2,7 @@ import 'admin_delete.dart';
 import 'admin_doctor_profile.dart';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'admin_schema.dart';
 import 'admin_display.dart';
@@ -16,6 +17,9 @@ import 'admin_staff.dart';
 import 'api.dart';
 import 'config.dart';
 import 'widgets.dart';
+import 'features/admin/application/admin_catalog_cubit.dart';
+import 'features/admin/application/admin_catalog_state.dart';
+import 'features/admin/data/admin_catalog_repository.dart';
 
 class AdminPage extends StatefulWidget {
   const AdminPage({
@@ -35,23 +39,63 @@ class _AdminPageState extends State<AdminPage> {
   int selected = -1;
   int staffTab = 0;
   bool collapsed = false;
-  Map<String, List<Json>> catalog = {};
-  List<Json> data = [];
-  String? session, error, message;
+  late final AdminCatalogRepository catalogRepository;
+  late final List<AdminCatalogCubit> catalogCubits;
+  Map<String, List<Json>> get catalog => catalogRepository.snapshot.collections;
+  AdminCatalogCubit? get masterCubit =>
+      selected >= 0 && selected < 3 ? catalogCubits[selected] : null;
+  List<Json> _data = [];
+  List<Json> get data => masterCubit?.rows ?? _data;
+  set data(List<Json> value) => _data = value;
+  String? session, _error, message;
+  String? get error => masterCubit?.state.error?.toString() ?? _error;
+  set error(String? value) => _error = value;
   String scheduleSearch = '';
-  bool loading = true;
+  bool _loading = true;
+  bool get loading => masterCubit?.state.busy ?? _loading;
+  set loading(bool value) => _loading = value;
   int revision = 0;
+  int _requestRevision = 0;
   AdminResource get resource =>
       resources[selected >= 0 && selected < resources.length ? selected : 0];
   @override
   void initState() {
     super.initState();
+    catalogRepository = AdminCatalogRepository(widget.api);
+    catalogCubits = [
+      PolyclinicCubit(catalogRepository),
+      DoctorCatalogCubit(catalogRepository),
+      RoomCubit(catalogRepository),
+    ];
+    catalogRepository.addListener(_catalogChanged);
     selected = widget.initialSection;
     load();
   }
 
+  void _catalogChanged() {
+    if (mounted) {
+      setState(() {
+        revision++;
+        if (!catalogRepository.active) {
+          _requestRevision++;
+          _data = [];
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    catalogRepository.removeListener(_catalogChanged);
+    for (final cubit in catalogCubits) {
+      cubit.close();
+    }
+    catalogRepository.dispose();
+    super.dispose();
+  }
+
   Future<void> load({bool reloadCatalog = false}) async {
-    final current = ++revision;
+    final current = ++_requestRevision;
     final selectedResource = resource;
     setState(() {
       loading = true;
@@ -67,13 +111,12 @@ class _AdminPageState extends State<AdminPage> {
           ? ['/jadwal-praktik', '/dokter', '/layanan', '/loket']
           : [selectedResource.path];
       if (selected == 6) paths.add('/akun-petugas');
-      final values = await Future.wait(
-        paths.map((path) async => rows(await widget.api.request('GET', path))),
-      );
-      final next = {
-        ...catalog,
-        for (int i = 0; i < paths.length; i++) paths[i]: values[i],
-      };
+      if (masterCubit case final cubit?) {
+        await cubit.refresh(paths: paths);
+        return;
+      }
+      await catalogRepository.refresh(paths);
+      final next = catalog;
       List<Json> items;
       if (selectedResource.path == '/slot-praktik') {
         if (!next['/jadwal-praktik']!.any((v) => v['id'] == session)) {
@@ -84,20 +127,22 @@ class _AdminPageState extends State<AdminPage> {
       } else {
         items = next[selectedResource.path]!;
       }
-      if (mounted && current == revision) {
+      if (mounted && current == _requestRevision) {
         setState(() {
-          catalog = next;
           data = items;
         });
       }
     } catch (e) {
-      if (mounted && current == revision) setState(() => error = '$e');
+      if (mounted && current == _requestRevision) setState(() => error = '$e');
     } finally {
-      if (mounted && current == revision) setState(() => loading = false);
+      if (mounted && current == _requestRevision) {
+        setState(() => loading = false);
+      }
     }
   }
 
   Future<void> edit([Json? row]) async {
+    final cubit = masterCubit;
     final bulk = resource.path == '/jadwal-layanan' && row == null;
     final changed = await showDialog<bool>(
       context: context,
@@ -110,16 +155,26 @@ class _AdminPageState extends State<AdminPage> {
           : resource.path == '/jadwal-praktik'
           ? PracticeScheduleEditor(api: widget.api, catalog: catalog, row: row)
           : resource.path == '/dokter'
-          ? AdminDoctorEditor(api: widget.api, row: row)
+          ? AdminDoctorEditor(
+              api: widget.api,
+              row: row,
+              saveProfile: cubit == null
+                  ? null
+                  : (id, body) => cubit.save(body, id: id),
+            )
           : _AdminEditor(
               api: widget.api,
               resource: resource,
               row: row,
               catalog: catalog,
               initialSession: session,
+              onSave: cubit == null
+                  ? null
+                  : (body) => cubit.save(body, id: row?['id'] as String?),
             ),
     );
     if (mounted && (changed == true || bulk || resource.path == '/dokter')) {
+      if (cubit != null && changed == true) _error = null;
       setState(
         () => message = changed != true
             ? null
@@ -129,16 +184,26 @@ class _AdminPageState extends State<AdminPage> {
             ? 'Profil dokter disimpan. Lanjutkan Hubungkan poliklinik, lalu Buat akun login pada baris dokter.'
             : 'Data disimpan.',
       );
-      await load(reloadCatalog: true);
+      // Professional photos/accounts remain separate flows and need a final
+      // reconciliation. Ordinary master mutations already reconciled in Cubit.
+      if (cubit == null || resource.path == '/dokter') {
+        await load(reloadCatalog: true);
+      }
     }
   }
 
   Future<void> deleteRow(Json row) async {
+    final cubit = masterCubit;
     final result = await showAdminDelete(
       context,
       widget.api,
       resource.path,
       row,
+      onDelete: cubit == null
+          ? null
+          : () async {
+              await cubit.delete('${row['id']}');
+            },
       name: resource.path == '/jadwal-layanan'
           ? '${label(object(row['layanan']))} · ${dayLabel('${row['hari']}')}'
           : resource.path == '/penugasan-petugas'
@@ -151,8 +216,9 @@ class _AdminPageState extends State<AdminPage> {
       return;
     }
     if (result == AdminDeleteResult.deleted) {
+      _error = null;
       setState(() => message = 'Data berhasil dihapus permanen.');
-      await load(reloadCatalog: true);
+      if (cubit == null) await load(reloadCatalog: true);
     }
   }
 
@@ -161,6 +227,19 @@ class _AdminPageState extends State<AdminPage> {
       context,
       'Nonaktifkan ${resource.path == '/jadwal-layanan' ? '${label(object(row['layanan']))} · ${dayLabel('${row['hari']}')}' : label(row)}? Riwayat tetap disimpan.',
     )) {
+      return;
+    }
+    if (masterCubit case final cubit?) {
+      setState(() {
+        _error = null;
+        message = null;
+      });
+      try {
+        await cubit.deactivate('${row['id']}');
+        if (mounted) setState(() => message = 'Data dinonaktifkan.');
+      } catch (e) {
+        if (mounted) setState(() => error = '$e');
+      }
       return;
     }
     setState(() => loading = true);
@@ -245,7 +324,25 @@ class _AdminPageState extends State<AdminPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => MultiBlocProvider(
+    providers: [
+      BlocProvider<PolyclinicCubit>.value(
+        value: catalogCubits[0] as PolyclinicCubit,
+      ),
+      BlocProvider<DoctorCatalogCubit>.value(
+        value: catalogCubits[1] as DoctorCatalogCubit,
+      ),
+      BlocProvider<RoomCubit>.value(value: catalogCubits[2] as RoomCubit),
+    ],
+    child: masterCubit == null
+        ? _buildContent(context)
+        : BlocBuilder<AdminCatalogCubit, AdminCatalogState>(
+            bloc: masterCubit,
+            builder: (context, _) => _buildContent(context),
+          ),
+  );
+
+  Widget _buildContent(BuildContext context) {
     final toolbarActions = <Widget>[
       FilledButton.icon(
         onPressed: loading ? null : () => edit(),
@@ -466,8 +563,10 @@ class _AdminEditor extends StatefulWidget {
     required this.catalog,
     this.row,
     this.initialSession,
+    this.onSave,
   });
   final QueueApi api;
+  final Future<Json> Function(Json)? onSave;
   final AdminResource resource;
   final Map<String, List<Json>> catalog;
   final Json? row;
@@ -739,11 +838,21 @@ class _AdminEditorState extends State<_AdminEditor> {
       error = null;
     });
     try {
-      await widget.api.request(
-        editing ? 'PATCH' : 'POST',
-        '${widget.resource.path}${editing ? '/${widget.row!['id']}' : ''}',
-        body: adminPayload(widget.resource, values, editing, widget.api.config),
+      final payload = adminPayload(
+        widget.resource,
+        values,
+        editing,
+        widget.api.config,
       );
+      if (widget.onSave != null) {
+        await widget.onSave!(payload);
+      } else {
+        await widget.api.request(
+          editing ? 'PATCH' : 'POST',
+          '${widget.resource.path}${editing ? '/${widget.row!['id']}' : ''}',
+          body: payload,
+        );
+      }
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {

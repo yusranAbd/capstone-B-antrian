@@ -31,10 +31,12 @@ class AdminDoctorEditor extends StatefulWidget {
     required this.api,
     this.row,
     this.pickPhoto = pickDoctorPhoto,
+    this.saveProfile,
   });
   final QueueApi api;
   final Json? row;
   final DoctorPhotoPicker pickPhoto;
+  final Future<Json> Function(String? id, Json body)? saveProfile;
   @override
   State<AdminDoctorEditor> createState() => _AdminDoctorEditorState();
 }
@@ -95,21 +97,24 @@ class _AdminDoctorEditorState extends State<AdminDoctorEditor> {
       error = null;
     });
     try {
-      final result = object(
-        await widget.api.request(
-          savedId == null ? 'POST' : 'PATCH',
-          savedId == null ? '/dokter' : '/dokter/$savedId',
-          body: {
-            'nama': name.text.trim(),
-            'kode': code.text.trim(),
-            'spesialisasi': specialty.text.trim().isEmpty
-                ? null
-                : specialty.text.trim(),
-            'tentangDokter': bio.text.trim().isEmpty ? null : bio.text.trim(),
-            if (savedId != null) 'aktif': active,
-          },
-        ),
-      );
+      final body = <String, dynamic>{
+        'nama': name.text.trim(),
+        'kode': code.text.trim(),
+        'spesialisasi': specialty.text.trim().isEmpty
+            ? null
+            : specialty.text.trim(),
+        'tentangDokter': bio.text.trim().isEmpty ? null : bio.text.trim(),
+        if (savedId != null) 'aktif': active,
+      };
+      final result = widget.saveProfile != null
+          ? await widget.saveProfile!(savedId, body)
+          : object(
+              await widget.api.request(
+                savedId == null ? 'POST' : 'PATCH',
+                savedId == null ? '/dokter' : '/dokter/$savedId',
+                body: body,
+              ),
+            );
       savedId ??= result['id'] as String;
       saved = true;
       if (selected != null) {

@@ -12,6 +12,7 @@ Future<AdminDeleteResult?> showAdminDelete(
   String path,
   Json row, {
   String? name,
+  Future<void> Function()? onDelete,
 }) => showDialog<AdminDeleteResult>(
   context: context,
   barrierDismissible: false,
@@ -20,6 +21,7 @@ Future<AdminDeleteResult?> showAdminDelete(
     path: path,
     row: row,
     name: name ?? label(row),
+    onDelete: onDelete,
   ),
 );
 
@@ -42,10 +44,12 @@ class _AdminDeleteDialog extends StatefulWidget {
     required this.path,
     required this.row,
     required this.name,
+    this.onDelete,
   });
   final QueueApi api;
   final String path, name;
   final Json row;
+  final Future<void> Function()? onDelete;
   @override
   State<_AdminDeleteDialog> createState() => _AdminDeleteDialogState();
 }
@@ -77,10 +81,14 @@ class _AdminDeleteDialogState extends State<_AdminDeleteDialog> {
       conflict = false;
     });
     try {
-      await widget.api.request(
-        'DELETE',
-        '${widget.path}/${widget.row['id']}/permanen',
-      );
+      if (widget.onDelete != null) {
+        await widget.onDelete!();
+      } else {
+        await widget.api.request(
+          'DELETE',
+          '${widget.path}/${widget.row['id']}/permanen',
+        );
+      }
       if (mounted) {
         Navigator.pop(context, AdminDeleteResult.deleted);
       }
