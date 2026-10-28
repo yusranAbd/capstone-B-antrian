@@ -13,6 +13,7 @@ class PatientScrollShell extends StatefulWidget {
     this.header,
     this.floatingActionButton,
     this.floatingActionButtonLocation,
+    this.acceptNestedScrolls = false,
   });
 
   final Object pageKey;
@@ -20,6 +21,7 @@ class PatientScrollShell extends StatefulWidget {
   final PreferredSizeWidget? header;
   final Widget? floatingActionButton;
   final FloatingActionButtonLocation? floatingActionButtonLocation;
+  final bool acceptNestedScrolls;
 
   @override
   State<PatientScrollShell> createState() => _PatientScrollShellState();
@@ -77,11 +79,12 @@ class _PatientScrollShellState extends State<PatientScrollShell>
   }
 
   bool _onScroll(ScrollNotification notification) {
-    // Ignore nested filter strips, programmatic ensureVisible/jumpTo, dialogs
-    // and dialogs. Web semantics maps native DOM scrolling to jumpTo, so
+    // Ignore horizontal strips, programmatic ensureVisible/jumpTo and dialogs.
+    // Home opts into vertical notifications from its nested tab lists only.
+    // Web semantics maps native DOM scrolling to jumpTo, so
     // Web updates also count as scrolling without disabling semantics.
     if (notification.metrics.axis != Axis.vertical ||
-        notification.depth != 0 ||
+        (notification.depth != 0 && !widget.acceptNestedScrolls) ||
         _keepControlsVisible ||
         ModalRoute.of(context)?.isCurrent == false) {
       return false;
@@ -140,7 +143,7 @@ class _PatientScrollShellState extends State<PatientScrollShell>
           // Collapsing bars can make a short page fit or clamp its offset to
           // zero. Restore controls even when no reverse scroll is possible.
           if (identical(notification.context, _scrollContext) &&
-              notification.depth == 0 &&
+              (notification.depth == 0 || widget.acceptNestedScrolls) &&
               metrics.axis == Axis.vertical &&
               (metrics.maxScrollExtent <= 0 || metrics.pixels <= 0) &&
               _controller.value < 1 &&

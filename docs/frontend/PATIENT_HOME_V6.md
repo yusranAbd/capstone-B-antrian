@@ -8,7 +8,9 @@ Revisi 28 Oktober 2026, mengikuti referensi dua mode pengguna dan pedoman QueueB
 - Greeting 20 logical px, pencarian compact. Sesuai revisi pengguna, kartu Kunjungan Terdekat dipulihkan persis ke komposisi sebelum V6 (de56b16) dan Beranda memakai lagi palet biru periwinkle bersama; tidak ada aksen teal baru. Foto dokter hanya bila profil terkait tersedia, tanpa dokter/slot fiktif untuk walk-in.
 - Ambil Antrean sebagai default hanya memuat layanan pendukung Pendaftaran/Apotek/Administrasi dari API. Penjelajahan Janji Temu memuat semua poli klinis dan dokter berelasi aktif, termasuk poli yang mode servernya masih ANTREAN_HARIAN. Data tak dikenal tidak diterjemahkan menjadi kanal booking baru.
 - Pencarian mengikuti mode, termasuk nama/spesialisasi dokter terkait pada walk-in. Semua filter poli berasal dari katalog API; dokter multi-poli dicari melalui relasi yang cocok.
-- Daftar lazy melalui SliverList.builder, tidak dibatasi tiga dokter. Kontrol, search dan mode bertahan saat berganti tab. Lima navigasi dan perilaku focus-scroll tetap.
+- Dua pilihan layanan menjadi TabBar/TabBarView native dengan swipe sentuh kiri–kanan dan drag mouse Web. NestedScrollView menjaga header bersama dan tab tetap terlihat setelah header digulir. Overlap absorber/injector mencegah tab menutupi filter atau kartu pertama. Posisi scroll tiap daftar memakai PageStorage; daftar tetap lazy melalui SliverList.builder, tidak dibatasi tiga dokter.
+- Kartu dokter kembali memakai komponen PatientHomeDoctor sebelum V6: foto 48 logical px, nama/spesialisasi/poli, jadwal aktual dan Detail Dokter. Tidak membuat data jadwal baru; kondisi jadwal kosong/gagal tetap eksplisit.
+- Pencarian/filter dan pilihan tab bertahan saat berganti bottom navigation. Chip poli mempunyai scroll horizontal sendiri, tidak memicu perpindahan tab. Auto-hide navigasi menerima scroll vertikal bersarang hanya pada Beranda; halaman lain mempertahankan aturan existing. TabController dimiliki/dispose widget Beranda, tanpa listener API baru.
 - Kartu layanan membuka selectService existing dengan kanal walk-in eksplisit (termasuk HIBRIDA). Kartu dokter membuka chooseDoctor/detail existing. Konfirmasi, validasi tanggal/kuota/slot dan POST tetap dimiliki PatientPage; tidak ada workflow booking kedua.
 - Satu PatientUpdates dan RefreshGate existing. Invalidation Socket.IO memicu REST milik pasien; snapshot tiket terbaru mengungguli salinan appointment. Koneksi putus ditandai sambil mempertahankan data terakhir, tanpa mengklaim tetap realtime.
 - Detail tiket read-only; tombol QR mengambil status aktual lalu meminta penerbitan dinamis existing jika sah. Tidak ada QR statis/token tersimpan dalam Beranda.
@@ -35,11 +37,13 @@ Tool `browser-reservation-v4.cjs` dengan opsi `homeV6` memakai HTTP/Socket.IO si
 |---|---|
 | Format file terkait | 0 perubahan pada pemeriksaan akhir |
 | Flutter analyze | 0 issue |
-| Seluruh Flutter test lokal | 509 PASS, 1 SKIP |
+| Seluruh Flutter test lokal | 516 PASS, 1 SKIP |
+| Regresi swipe terarah | 7 PASS: lima viewport, scroll/disposal controller dan overlap tab/filter |
 | Web release | PASS; hash build yang diuji tercantum di laporan browser |
 | APK release ARM64 split | PASS, 30.5 MiB; arsip native hanya arm64-v8a |
 | Responsive widget | 320×568, 360×800, 375×812, 390×844, 412×915; skala teks 1.5 dan kontrol V6 skala 2 |
 | Chrome release | Dua mode, search, filter, detail dokter, masuk layanan tanpa POST otomatis, detail tiket dan QR dinamis |
+| Gestur browser | Sentuh kiri–kanan melalui CDP; drag mouse pada area kosong daftar (tombol aksi tetap memakai perilaku klik standar) |
 | Mutasi dan realtime browser terisolasi | Appointment/walk-in, pembatalan, CHECK_IN, MENUNGGU, DIPANGGIL, DILEWATI, REQUEUE ke MENUNGGU, DILAYANI, SELESAI, reconnect dan login ulang |
 
 Satu skip adalah live integration existing tanpa fixture live (`live_integration_test.dart`), bukan hasil PASS. Total lokal mencakup satu test revisi compact Dokter milik pengguna yang tetap tidak dimasukkan ke commit ini. QA browser menggunakan kontrak HTTP dan Socket.IO sintetis, bukan klaim end-to-end terhadap database NestJS nyata.
@@ -56,6 +60,8 @@ Render Flutter release di Chrome, bukan mockup. Nama, poli, slot dan tiket pada 
 - [Ambil Antrean 320×568](images/patient-home-v6/home-walk-in-320.png)
 - [Janji Temu 320×568](images/patient-home-v6/home-appointment-320.png)
 - [QR diterbitkan melalui workflow tiket](images/patient-home-v6/home-live-qr-390.png)
+- [Swipe ke Janji Temu, kartu dokter lama](images/patient-home-v6/home-touch-swipe-appointment-390.png)
+- [Swipe kembali ke Ambil Antrean](images/patient-home-v6/home-touch-swipe-walk-in-390.png)
 - [Laporan browser dan hash build](images/patient-home-v6/qa.json)
 
 Dibanding referensi, notifikasi dan QR dekoratif di kartu tidak ditampilkan: notifikasi belum didukung, sedangkan QR harus diperoleh secara sah saat diminta. Revisi terbaru menambahkan data antrean Pendaftaran/Apotek pada development melalui layanan generik existing, tanpa modul klinis/farmasi baru. Ruang kosong setelah daftar pendek dibiarkan sebagai kanvas, tidak diisi data atau kartu buatan. Pada 320×568, konten panjang tetap scroll wajar dan navigasi dapat kembali melalui scroll ke atas.
@@ -70,4 +76,4 @@ Build APK awal bersamaan dengan tes gagal karena generated Android plugin regist
 
 Dari `apps/client`: `flutter analyze`, `flutter test`, `flutter build web --release`, kemudian `flutter build apk --release --split-per-abi --target-platform android-arm64 --dart-define=API_BASE_URL=https://api.queueb.invalid/api/v1` (QA saja), secara berurutan.
 
-Untuk QA Chrome panggil modul `apps/client/tool/browser-reservation-v4.cjs` dengan `{ build: 'apps/client/build/web', output: 'tmp/patient-v6-browser', patientV5: true, homeV6: true, engineRoot, fontFile }`. `engineRoot` menunjuk cache `flutter_web_sdk/canvaskit` SDK dan `fontFile` menunjuk Roboto lokal SDK. Modul mengembalikan Promise laporan. Resolusi Node membutuhkan tooling Playwright existing dan Socket.IO dari dependency API; tidak menambah dependency runtime Flutter. Server memilih port loopback sementara, mengisolasi URL API hanya pada respons file build di memori, lalu menutup browser/server setelah selesai. Source dan build di disk tidak diubah oleh QA.
+Untuk QA Chrome panggil modul `apps/client/tool/browser-reservation-v4.cjs` dengan `{ build: 'apps/client/build/web', output: 'tmp/patient-v6-browser', patientV5: true, homeV6: true, homeSwipe: true, engineRoot, fontFile }`. `engineRoot` menunjuk cache `flutter_web_sdk/canvaskit` SDK dan `fontFile` menunjuk Roboto lokal SDK. Modul mengembalikan Promise laporan. `homeSwipe` memakai CDP touchStart/move/end untuk swipe nyata dan pointer mouse untuk drag; bukan mengganti state aplikasi melalui JavaScript. Resolusi Node membutuhkan tooling Playwright existing dan Socket.IO dari dependency API; tidak menambah dependency runtime Flutter. Server memilih port loopback sementara, mengisolasi URL API hanya pada respons file build di memori, lalu menutup browser/server setelah selesai. Source dan build di disk tidak diubah oleh QA.

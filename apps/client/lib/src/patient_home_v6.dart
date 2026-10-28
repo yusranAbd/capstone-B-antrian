@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 
 import 'config.dart';
-import 'doctor_professional.dart';
 import 'patient_design.dart';
 import 'patient_home.dart';
 import 'patient_ui.dart';
@@ -126,74 +126,225 @@ class PatientHomeModes extends StatelessWidget {
     super.key,
     required this.value,
     required this.onChanged,
+    this.controller,
   });
   final PatientHomeMode value;
   final ValueChanged<PatientHomeMode>? onChanged;
+  final TabController? controller;
+
+  static double height(BuildContext context) =>
+      (MediaQuery.textScalerOf(context).scale(13) * 2 + 16).clamp(
+        48,
+        double.infinity,
+      );
+
   @override
-  Widget build(BuildContext context) => Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      for (final mode in PatientHomeMode.values) ...[
-        if (mode == PatientHomeMode.appointment) const SizedBox(width: 8),
-        Expanded(
-          child: Semantics(
-            selected: value == mode,
-            child: OutlinedButton(
-              key: ValueKey('home-mode-${mode.name}'),
-              onPressed: onChanged == null ? null : () => onChanged!(mode),
-              style: OutlinedButton.styleFrom(
-                backgroundColor: value != mode
-                    ? PatientDesign.paper
-                    : mode == PatientHomeMode.walkIn
-                    ? PatientHomeV6Style.walkIn
-                    : PatientDesign.primary,
-                foregroundColor: value == mode
-                    ? Colors.white
-                    : PatientDesign.ink,
-                side: BorderSide(
-                  color: value == mode
-                      ? Colors.transparent
-                      : PatientDesign.border,
-                ),
-                minimumSize: const Size(0, 48),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 12,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    mode == PatientHomeMode.walkIn
-                        ? Icons.groups_outlined
-                        : Icons.calendar_month_outlined,
-                    size: 18,
-                  ),
-                  const SizedBox(width: 6),
-                  Flexible(
-                    child: Text(
+  Widget build(BuildContext context) {
+    final tabs = AbsorbPointer(
+      absorbing: onChanged == null,
+      child: ExcludeFocus(
+        excluding: onChanged == null,
+        child: TabBar(
+          controller: controller,
+          labelColor: PatientDesign.primary,
+          unselectedLabelColor: PatientDesign.muted,
+          dividerColor: PatientDesign.border,
+          indicatorColor: PatientDesign.primary,
+          indicatorWeight: 3,
+          indicatorSize: TabBarIndicatorSize.tab,
+          labelPadding: const EdgeInsets.symmetric(horizontal: 4),
+          onTap: controller != null
+              ? null
+              : (index) => onChanged?.call(PatientHomeMode.values[index]),
+          tabs: [
+            for (final mode in PatientHomeMode.values)
+              Tab(
+                key: ValueKey('home-mode-${mode.name}'),
+                height: height(context),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
                       mode == PatientHomeMode.walkIn
-                          ? 'Ambil Antrean'
-                          : 'Janji Temu',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
+                          ? Icons.groups_outlined
+                          : Icons.calendar_month_outlined,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        mode == PatientHomeMode.walkIn
+                            ? 'Ambil Antrean'
+                            : 'Janji Temu',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+          ],
+        ),
+      ),
+    );
+    return controller != null
+        ? tabs
+        : DefaultTabController(
+            length: 2,
+            initialIndex: value.index,
+            child: tabs,
+          );
+  }
+}
+
+/// Coordinated vertical scroll keeps the common header outside both pages.
+/// Each page remains lazy and stores its own vertical position. Only this widget
+/// owns the tab animation; it has no network listener or data controller.
+class PatientHomeTabs extends StatefulWidget {
+  const PatientHomeTabs({
+    super.key,
+    required this.value,
+    required this.onChanged,
+    required this.headerSlivers,
+    required this.walkInSlivers,
+    required this.appointmentSlivers,
+  });
+  final PatientHomeMode value;
+  final ValueChanged<PatientHomeMode>? onChanged;
+  final List<Widget> headerSlivers, walkInSlivers, appointmentSlivers;
+  @override
+  State<PatientHomeTabs> createState() => _PatientHomeTabsState();
+}
+
+class _PatientHomeTabsState extends State<PatientHomeTabs>
+    with SingleTickerProviderStateMixin {
+  late final _tabs = TabController(
+    length: 2,
+    initialIndex: widget.value.index,
+    animationDuration: MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : const Duration(milliseconds: 220),
+    vsync: this,
+  )..addListener(_selectionChanged);
+
+  void _selectionChanged() {
+    if (_tabs.index != widget.value.index && !_tabs.indexIsChanging) {
+      widget.onChanged?.call(PatientHomeMode.values[_tabs.index]);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant PatientHomeTabs oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_tabs.index != widget.value.index && widget.value != oldWidget.value) {
+      _tabs.animateTo(
+        widget.value.index,
+        duration: MediaQuery.disableAnimationsOf(context)
+            ? Duration.zero
+            : const Duration(milliseconds: 220),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => NestedScrollView(
+    key: const PageStorageKey('patient-home-v6'),
+    headerSliverBuilder: (context, innerScrolled) => [
+      ...widget.headerSlivers,
+      SliverOverlapAbsorber(
+        handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
+        sliver: SliverPersistentHeader(
+          pinned: true,
+          delegate: _HomeTabHeader(
+            height: PatientHomeModes.height(context) + 3,
+            child: PatientHomeModes(
+              value: widget.value,
+              controller: _tabs,
+              onChanged: widget.onChanged,
             ),
           ),
         ),
-      ],
+      ),
     ],
+    body: ScrollConfiguration(
+      behavior: ScrollConfiguration.of(context).copyWith(
+        dragDevices: {
+          ...ScrollConfiguration.of(context).dragDevices,
+          PointerDeviceKind.mouse,
+        },
+      ),
+      child: TabBarView(
+        key: const ValueKey('patient-home-tab-pages'),
+        controller: _tabs,
+        physics: widget.onChanged == null
+            ? const NeverScrollableScrollPhysics()
+            : null,
+        children: [
+          Builder(
+            builder: (context) => CustomScrollView(
+              key: const PageStorageKey('home-walk-in-list'),
+              slivers: [
+                SliverOverlapInjector(
+                  handle: NestedScrollView.sliverOverlapAbsorberHandleFor(
+                    context,
+                  ),
+                ),
+                ...widget.walkInSlivers,
+              ],
+            ),
+          ),
+          Builder(
+            builder: (context) => CustomScrollView(
+              key: const PageStorageKey('home-appointment-list'),
+              slivers: [
+                SliverOverlapInjector(
+                  handle: NestedScrollView.sliverOverlapAbsorberHandleFor(
+                    context,
+                  ),
+                ),
+                ...widget.appointmentSlivers,
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
   );
+
+  @override
+  void dispose() {
+    _tabs.removeListener(_selectionChanged);
+    _tabs.dispose();
+    super.dispose();
+  }
+}
+
+class _HomeTabHeader extends SliverPersistentHeaderDelegate {
+  const _HomeTabHeader({required this.height, required this.child});
+  final double height;
+  final Widget child;
+  @override
+  double get minExtent => height;
+  @override
+  double get maxExtent => height;
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) => Material(
+    color: PatientDesign.background,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: child,
+    ),
+  );
+  @override
+  bool shouldRebuild(covariant _HomeTabHeader oldDelegate) =>
+      height != oldDelegate.height || child != oldDelegate.child;
 }
 
 class PatientHomeService extends StatelessWidget {
@@ -235,27 +386,11 @@ class PatientHomeDoctorV6 extends StatelessWidget {
   final VoidCallback? onTap;
   final bool scheduleUnavailable;
   @override
-  Widget build(BuildContext context) => _HomeListTile(
+  Widget build(BuildContext context) => PatientHomeDoctor(
+    preview: preview,
+    config: config,
     onTap: onTap,
-    leading: ProfessionalDoctorAvatar(
-      config: config,
-      photo: preview.doctor['fotoProfil'],
-      radius: 22,
-    ),
-    title: label(preview.doctor),
-    subtitle: [
-      if (preview.doctor['spesialisasi'] != null)
-        '${preview.doctor['spesialisasi']}',
-      label(preview.clinic),
-    ].join(' · '),
-    note: preview.clinic['modeReservasi'] == 'ANTREAN_HARIAN'
-        ? 'Layanan poli ini menggunakan antrean harian.'
-        : scheduleUnavailable
-        ? 'Jadwal belum dapat dimuat.'
-        : preview.session == null
-        ? 'Jadwal belum tersedia.'
-        : null,
-    accent: PatientDesign.primary,
+    scheduleUnavailable: scheduleUnavailable,
   );
 }
 
@@ -265,12 +400,10 @@ class _HomeListTile extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.accent,
-    this.note,
     this.onTap,
   });
   final Widget leading;
   final String title, subtitle;
-  final String? note;
   final Color accent;
   final VoidCallback? onTap;
   @override
@@ -312,16 +445,6 @@ class _HomeListTile extends StatelessWidget {
                       color: PatientDesign.muted,
                     ),
                   ),
-                  if (note != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      note!,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: PatientDesign.muted,
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),

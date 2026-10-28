@@ -1,8 +1,11 @@
 {
-  "buildSha256": "39cdde0b62287f896dceb5703881df9da091fc1212bea4268f9f7b77059d5d17",
-  "testedAt": "2026-10-28T02:39:16.323Z",
+  "buildSha256": "f6175c6bca334de83294bebd90bb45839af08b88cba6b7ba9ff9e8590c1414de",
+  "testedAt": "2026-10-28T03:49:33.530Z",
   "mode": "Real Chrome release Flutter; synthetic HTTP/Socket.IO, no database or real credentials",
   "states": {
+    "nativeTouchSwipeBothDirections": true,
+    "mouseDragHomeTab": true,
+    "previousDoctorCardWithActualSchedule": true,
     "homeDetailAndFreshQr": true,
     "homeModesSearchFilterAndSafeServiceEntry": true,
     "homeRealtimeStatusReconciliation": true,
@@ -90,15 +93,15 @@
   "chrome": "156.0.8078.48",
   "performance": {
     "initial": {
-      "jsHeapMiB": 43.94,
-      "taskSeconds": 5.432645,
-      "nodes": 184,
+      "jsHeapMiB": 38.85,
+      "taskSeconds": 4.128076,
+      "nodes": 187,
       "activeSockets": 1
     },
     "afterFlows": {
-      "jsHeapMiB": 54.41,
-      "taskSeconds": 3.95266,
-      "nodes": 310,
+      "jsHeapMiB": 70.81,
+      "taskSeconds": 2.516524,
+      "nodes": 435,
       "activeSockets": 1
     },
     "navigationCycles": []

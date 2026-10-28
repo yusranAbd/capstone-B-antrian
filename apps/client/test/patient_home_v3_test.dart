@@ -263,6 +263,8 @@ void main() {
       final b = HomeBackend()..manyClinics = true;
       await launch(tester, b);
       await press(tester, find.byKey(const ValueKey('home-mode-appointment')));
+      await tester.drag(find.byType(NestedScrollView), const Offset(0, 1000));
+      await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField).first, 'dr. Sindi QA');
       await tester.pumpAndSettle();
       expect(find.byType(ChoiceChip), findsNWidgets(12));

@@ -56,7 +56,7 @@ Lima navigasi pasien dan focus-scroll existing dipertahankan. Pada Beranda V6, b
 
 ### Beranda pasien V6 — dua mode
 
-Beranda memakai pilihan konten **Ambil Antrean** (default) dan **Janji Temu**. Pilihan ini tidak mengganti lima tujuan bottom navigation. Header, pencarian dan kunjungan terdekat tidak berganti saat mode berubah; pencarian/filter dan pilihan mode dipertahankan saat berpindah tab. Daftar memakai sliver builder agar item di luar viewport tidak dibuat sekaligus.
+Beranda memakai tab **Ambil Antrean** (default) dan **Janji Temu** melalui TabBar/TabBarView native, mendukung ketukan, swipe sentuh kiri–kanan dan drag mouse pada Web. Tab tetap terlihat setelah header digulir. Header, pencarian dan kunjungan terdekat tetap bersama; pilihan tab/filter dan posisi scroll per daftar dipertahankan melalui state/PageStorage existing. Chip poli memiliki gestur horizontal sendiri agar menggulir chip tidak memindahkan tab. Daftar tetap memakai sliver builder, tanpa fixed height untuk seluruh kartu. Kartu dokter menggunakan kembali PatientHomeDoctor sebelum V6: foto, spesialisasi/poli, jadwal aktual dan Detail Dokter. Lima tujuan bottom navigation tidak diganti.
 
 Aksen Beranda kembali memakai palet periwinkle bersama: primary #4C60CC, hero #4169D5, soft #EEF1FF, background #F2F5FF dan putih. Kartu kunjungan dipulihkan ke komposisi sebelum V6 (baseline de56b16), dengan identitas dokter, badge status, nomor antrean dan fakta kunjungan. Nama/status/tanggal/ruang/nomor berasal dari proyeksi REST existing; kartu hilang seluruhnya bila tidak ada kunjungan relevan. QR berupa aksi untuk workflow penerbitan existing, bukan gambar QR dekoratif pada kartu.
 

@@ -16,6 +16,7 @@ module.exports = async ({
   patientFocus = false,
   finalExperience = false,
   homeV6 = false,
+  homeSwipe = false,
 }) => {
   fs.mkdirSync(output, { recursive: true });
   const report = {
@@ -328,6 +329,7 @@ module.exports = async ({
     report.chrome = browser.version();
     const context = await browser.newContext({
       viewport: { width: 390, height: 844 },
+      hasTouch: homeSwipe,
       serviceWorkers: "block",
     });
     await context.route("**/*", (route) => {
@@ -377,8 +379,11 @@ module.exports = async ({
       page.getByText(value).or(page.getByLabel(value)).last();
     // Flutter's generated semantics can temporarily omit an accessible name
     // after engine reload. Match the exact rendered button text as fallback.
-    const button = (name) =>
-      page
+    const button = (name) => {
+      if (homeSwipe && ["Ambil Antrean", "Janji Temu"].includes(name)) {
+        return page.getByRole("tab", { name: new RegExp(name) }).first();
+      }
+      return page
         .getByRole("button", { name, exact: true, includeHidden: true })
         .or(
           page.locator('[role="button"]').filter({
@@ -388,8 +393,14 @@ module.exports = async ({
           }),
         )
         .last();
+    };
     const press = (name) => button(name).click();
     async function type(name, value) {
+      if (homeSwipe && name.startsWith("Cari dokter, poliklinik")) {
+        await page.mouse.move(page.viewportSize().width / 2, 300);
+        await page.mouse.wheel(0, -6000);
+        await page.waitForTimeout(350);
+      }
       const field = page
         .getByRole("textbox", { name: new RegExp(name), includeHidden: true })
         .first();
@@ -424,8 +435,15 @@ module.exports = async ({
     await expect
       .poll(
         async () => {
+          if (await button("Masuk").count()) return 1;
           const p = page.locator("flt-semantics-placeholder");
-          if (await p.count()) await p.evaluate((el) => el.click());
+          if (await p.count()) {
+            // Flutter may remove this setup node between count and click once
+            // semantics becomes active. The real login assertion stays below.
+            await p
+              .evaluate((el) => el.click(), null, { timeout: 1000 })
+              .catch(() => {});
+          }
           return button("Masuk").count();
         },
         { timeout: 90000 },
@@ -468,6 +486,20 @@ module.exports = async ({
         }
         await nav.click();
         await page.mouse.wheel(0, -6000);
+        if (homeSwipe) {
+          // At 320x568 the shared visit card can put the tab bar below the
+          // fold. Reveal it using normal scrolling, just as a patient does.
+          await expect
+            .poll(async () => {
+              if (await button("Ambil Antrean").isVisible()) return true;
+              const viewport = page.viewportSize();
+              await page.mouse.move(viewport.width / 2, viewport.height / 2);
+              await page.mouse.wheel(0, 180);
+              await page.waitForTimeout(150);
+              return false;
+            })
+            .toBe(true);
+        }
         await expect(button("Ambil Antrean")).toBeVisible();
       };
       const capture = async (name) => {
@@ -502,6 +534,58 @@ module.exports = async ({
       await page.setViewportSize({ width: 390, height: 844 });
       await home();
       await press("Ambil Antrean");
+      if (homeSwipe) {
+        const touch = await context.newCDPSession(page);
+        async function swipe(left) {
+          const bounds = await button("Ambil Antrean").boundingBox();
+          assert.ok(bounds);
+          const width = page.viewportSize().width;
+          const y = Math.min(
+            page.viewportSize().height - 110,
+            bounds.y + bounds.height + 100,
+          );
+          const start = width * (left ? 0.85 : 0.15),
+            end = width * (left ? 0.15 : 0.85);
+          await touch.send("Input.dispatchTouchEvent", {
+            type: "touchStart",
+            touchPoints: [{ x: start, y }],
+          });
+          for (let n = 1; n <= 12; n++) {
+            await touch.send("Input.dispatchTouchEvent", {
+              type: "touchMove",
+              touchPoints: [{ x: start + ((end - start) * n) / 12, y }],
+            });
+            await page.waitForTimeout(16);
+          }
+          await touch.send("Input.dispatchTouchEvent", {
+            type: "touchEnd",
+            touchPoints: [],
+          });
+        }
+        await swipe(true);
+        await expect(text("Detail Dokter")).toBeVisible();
+        await capture("home-touch-swipe-appointment-390");
+        await swipe(false);
+        await expect(text("Apotek")).toBeVisible();
+        await capture("home-touch-swipe-walk-in-390");
+        // Desktop mouse dragging uses the same PageView, scoped to home only.
+        // The blank list surface is distinct from DOM-accessible action
+        // buttons, whose standard mouse click behavior must remain intact.
+        const mouseY = page.viewportSize().height - 110;
+        await page.mouse.move(330, mouseY);
+        await page.mouse.down();
+        for (let n = 1; n <= 12; n++) {
+          await page.mouse.move(330 - (270 * n) / 12, mouseY);
+          await page.waitForTimeout(16);
+        }
+        await page.mouse.up();
+        await expect(text("Detail Dokter")).toBeVisible();
+        await press("Ambil Antrean");
+        await expect(text("Apotek")).toBeVisible();
+        report.states.nativeTouchSwipeBothDirections = true;
+        report.states.mouseDragHomeTab = true;
+        report.states.previousDoctorCardWithActualSchedule = true;
+      }
       const savedStatuses = tickets.map((t) => t.status);
       tickets.forEach((t) => (t.status = "SELESAI"));
       invalidate();
@@ -832,8 +916,15 @@ module.exports = async ({
     await expect
       .poll(
         async () => {
+          if (await button("Masuk").count()) return 1;
           const p = page.locator("flt-semantics-placeholder");
-          if (await p.count()) await p.evaluate((el) => el.click());
+          if (await p.count()) {
+            // Flutter may remove this setup node between count and click once
+            // semantics becomes active. The real login assertion stays below.
+            await p
+              .evaluate((el) => el.click(), null, { timeout: 1000 })
+              .catch(() => {});
+          }
           return button("Masuk").count();
         },
         { timeout: 90000 },

@@ -1064,11 +1064,10 @@ class _PatientPageState extends State<PatientPage> {
           : null,
     );
     final walkIns = homeWalkInClinics(services, doctors, homeQuery);
-    final isWalkIn = homeMode == PatientHomeMode.walkIn;
-    final count = isWalkIn ? walkIns.length : previews.length;
-    return CustomScrollView(
-      key: const PageStorageKey('patient-home-v6'),
-      slivers: [
+    return PatientHomeTabs(
+      value: homeMode,
+      onChanged: busy ? null : (mode) => setState(() => homeMode = mode),
+      headerSlivers: [
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
           sliver: SliverToBoxAdapter(
@@ -1135,61 +1134,90 @@ class _PatientPageState extends State<PatientPage> {
                   ),
                 ],
                 const SizedBox(height: 16),
-                PatientHomeModes(
-                  value: homeMode,
-                  onChanged: busy
-                      ? null
-                      : (mode) => setState(() => homeMode = mode),
-                ),
-                const SizedBox(height: 10),
-                if (!isWalkIn) ...[
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        for (final clinic in <Json>[
-                          {'nama': 'Semua'},
-                          ...appointmentClinics,
-                        ])
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: ChoiceChip(
-                              label: Text(label(clinic)),
-                              selected: clinic['id'] == homeClinicId,
-                              showCheckmark: false,
-                              selectedColor: PatientDesign.primary,
-                              labelStyle: TextStyle(
-                                fontSize: 12,
-                                color: clinic['id'] == homeClinicId
-                                    ? Colors.white
-                                    : PatientDesign.ink,
-                              ),
-                              onSelected: busy
-                                  ? null
-                                  : (_) => setState(
-                                      () => homeClinicId =
-                                          clinic['id'] as String?,
-                                    ),
-                            ),
-                          ),
-                      ],
+              ],
+            ),
+          ),
+        ),
+      ],
+      walkInSlivers: [
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+          sliver: loading
+              ? const SliverToBoxAdapter(child: PatientHomeLoading())
+              : walkIns.isEmpty
+              ? const SliverToBoxAdapter(
+                  child: PatientHomeEmpty(
+                    text: 'Tidak ada layanan antrean harian yang sesuai pencarian.',
+                  ),
+                )
+              : SliverList.builder(
+                  itemCount: walkIns.length,
+                  itemBuilder: (context, index) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: PatientHomeService(
+                      clinic: walkIns[index],
+                      onTap: busy
+                          ? null
+                          : () {
+                              startRegistration(false);
+                              selectService('${walkIns[index]['id']}');
+                            },
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  if (homeScheduleError != null)
-                    PatientHomeEmpty(
-                      text: homeScheduleError!,
-                      action: 'Muat ulang jadwal',
-                      onPressed: busy || loading ? null : load,
-                    ),
-                ],
+                ),
+        ),
+      ],
+      appointmentSlivers: [
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+          sliver: SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      for (final clinic in <Json>[
+                        {'nama': 'Semua'},
+                        ...appointmentClinics,
+                      ])
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: ChoiceChip(
+                            label: Text(label(clinic)),
+                            selected: clinic['id'] == homeClinicId,
+                            showCheckmark: false,
+                            selectedColor: PatientDesign.primary,
+                            labelStyle: TextStyle(
+                              fontSize: 12,
+                              color: clinic['id'] == homeClinicId
+                                  ? Colors.white
+                                  : PatientDesign.ink,
+                            ),
+                            onSelected: busy
+                                ? null
+                                : (_) => setState(
+                                    () =>
+                                        homeClinicId = clinic['id'] as String?,
+                                  ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                if (homeScheduleError != null)
+                  PatientHomeEmpty(
+                    text: homeScheduleError!,
+                    action: 'Muat ulang jadwal',
+                    onPressed: busy || loading ? null : load,
+                  ),
                 if (loading)
                   const PatientHomeLoading()
-                else if (count == 0)
-                  PatientHomeEmpty(
-                    text: isWalkIn
-                        ? 'Tidak ada layanan antrean harian yang sesuai pencarian.'
-                        : 'Belum ada dokter yang sesuai pencarian.',
+                else if (previews.isEmpty)
+                  const PatientHomeEmpty(
+                    text: 'Belum ada dokter yang sesuai pencarian.',
                   ),
               ],
             ),
@@ -1199,41 +1227,30 @@ class _PatientPageState extends State<PatientPage> {
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
             sliver: SliverList.builder(
-              itemCount: count,
+              itemCount: previews.length,
               itemBuilder: (context, index) => Padding(
                 padding: const EdgeInsets.only(bottom: 8),
-                child: isWalkIn
-                    ? PatientHomeService(
-                        clinic: walkIns[index],
-                        onTap: busy
-                            ? null
-                            : () {
-                                // Explicit channel prevents a hybrid clinic defaulting to appointment.
-                                startRegistration(false);
-                                selectService('${walkIns[index]['id']}');
-                              },
-                      )
-                    : PatientHomeDoctorV6(
-                        preview: previews[index],
-                        config: widget.api.config,
-                        scheduleUnavailable: homeScheduleError != null,
-                        onTap: busy
-                            ? null
-                            : () async {
-                                startRegistration(true);
-                                final pending = selectService(
-                                  '${previews[index].clinic['id']}',
-                                );
-                                final revision = catalogRevision;
-                                await pending;
-                                if (mounted &&
-                                    revision == catalogRevision &&
-                                    error == null &&
-                                    tab == 2) {
-                                  await chooseDoctor(previews[index].doctor);
-                                }
-                              },
-                      ),
+                child: PatientHomeDoctorV6(
+                  preview: previews[index],
+                  config: widget.api.config,
+                  scheduleUnavailable: homeScheduleError != null,
+                  onTap: busy
+                      ? null
+                      : () async {
+                          startRegistration(true);
+                          final pending = selectService(
+                            '${previews[index].clinic['id']}',
+                          );
+                          final revision = catalogRevision;
+                          await pending;
+                          if (mounted &&
+                              revision == catalogRevision &&
+                              error == null &&
+                              tab == 2) {
+                            await chooseDoctor(previews[index].doctor);
+                          }
+                        },
+                ),
               ),
             ),
           ),
@@ -1249,6 +1266,7 @@ class _PatientPageState extends State<PatientPage> {
           '$tab:$reservationCreating:$serviceId:$bookingStage:$doctorDetail',
       // Home owns its compact identity; no duplicate app bar or notification.
       header: null,
+      acceptNestedScrolls: tab == 0,
       floatingActionButton: tab == 2 && !reservationCreating
           ? FloatingActionButton.extended(
               heroTag: 'create-reservation',
