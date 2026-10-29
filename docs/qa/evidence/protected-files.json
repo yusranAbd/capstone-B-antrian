@@ -1,0 +1,18 @@
+[
+  {
+    "file": "apps/client/lib/src/doctor_visual.dart",
+    "identical": true
+  },
+  {
+    "file": "apps/client/lib/src/doctor_dashboard.dart",
+    "identical": true
+  },
+  {
+    "file": "apps/client/test/doctor_visual_refresh_test.dart",
+    "identical": true
+  },
+  {
+    "file": "README.md",
+    "identical": true
+  }
+]

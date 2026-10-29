@@ -1,0 +1,27 @@
+{
+  "exit": 1,
+  "seconds": 655.023,
+  "suites": {
+    "passed": 27,
+    "failed": 4,
+    "total": 31
+  },
+  "tests": {
+    "passed": 380,
+    "failed": 6,
+    "total": 386
+  },
+  "failures": [
+    "● Doctor daily queue visibility regression (isolated e2e) › notifies own-clinic doctors about daily ENQUEUE; foreign clinic receives nothing",
+    "● Doctor daily queue visibility regression (isolated e2e) › refreshes both clinic doctors on CALL but exposes active service only in its room",
+    "● Doctor daily queue visibility regression (isolated e2e) › keeps a REQUEUE ticket with null room visible and notifies both clinic doctors",
+    "● Profil akun P2 (database test terisolasi) › dua perubahan password paralel hanya menghasilkan satu pemenang",
+    "● Public Display Snapshot (e2e) › SKIP tampil DILEWATI dan REQUEUE berpindah status tanpa duplikasi",
+    "● Public Display Socket.IO (e2e) › seluruh perubahan operasional memicu snapshot baru; reconnect mengirim ready"
+  ],
+  "fingerprint": {
+    "recordExisting": 13,
+    "dataExistingDanCleanupSesuai": true
+  },
+  "context": "Concurrent Flutter regression caused severe RAM pressure; display mask assertions inherited operator environment. Rerun serial with explicit QA privacy config required."
+}

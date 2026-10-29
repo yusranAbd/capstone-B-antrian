@@ -300,18 +300,50 @@ describe('Profil akun P2 (database test terisolasi)', () => {
       .expect(200);
   });
   it('dua perubahan password paralel hanya menghasilkan satu pemenang', async () => {
-    const responses = await Promise.all(
-      ['P2-Paralel-Satu!', 'P2-Paralel-Dua!'].map((next) =>
-        request(http())
-          .post('/api/v1/auth/me/password')
-          .set('Authorization', auth('PETUGAS'))
-          .send({ kataSandiLama: password, kataSandiBaru: next }),
-      ),
-    );
-    expect(responses.filter((r) => r.status === 200)).toHaveLength(1);
-    expect(responses.filter((r) => [400, 409].includes(r.status))).toHaveLength(
-      1,
-    );
+    const passwords = app.get(PasswordService),
+      verify = passwords.verify.bind(passwords);
+    let entered = 0,
+      release!: () => void;
+    let watchdog!: ReturnType<typeof setTimeout>;
+    const gate = new Promise<void>((resolve, reject) => {
+      release = resolve;
+      watchdog = setTimeout(
+        () => reject(Error('Password race barrier not reached')),
+        5000,
+      );
+    });
+    void gate.catch(() => {});
+    const spy = jest
+      .spyOn(passwords, 'verify')
+      .mockImplementation(async (p, h) => {
+        const valid = await verify(p, h);
+        if (p === password) {
+          // Both requests must pass JWT validation and observe the old hash.
+          // Otherwise the winner may revoke the second JWT before it reaches CAS.
+          if (++entered === 2) release();
+          await gate;
+        }
+        return valid;
+      });
+    try {
+      const responses = await Promise.all(
+        ['P2-Paralel-Satu!', 'P2-Paralel-Dua!'].map((next) =>
+          request(http())
+            .post('/api/v1/auth/me/password')
+            .set('Authorization', auth('PETUGAS'))
+            .send({ kataSandiLama: password, kataSandiBaru: next }),
+        ),
+      );
+      expect(entered).toBe(2);
+      expect(responses.filter((r) => r.status === 200)).toHaveLength(1);
+      expect(
+        responses.filter((r) => [400, 409].includes(r.status)),
+      ).toHaveLength(1);
+    } finally {
+      release();
+      clearTimeout(watchdog);
+      spy.mockRestore();
+    }
   });
   it('login lama yang sedang verifikasi tidak hidup kembali setelah password diubah', async () => {
     const passwords = app.get(PasswordService),

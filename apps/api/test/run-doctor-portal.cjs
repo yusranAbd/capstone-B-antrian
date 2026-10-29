@@ -30,6 +30,7 @@ async function run(args, env) {
   url.hostname = '127.0.0.1';
   url.port = '5433';
   url.pathname = '/capstone_antrean_test';
+  url.search = '';
   const db = new Client({ connectionString: url.toString() });
   await db.connect();
   const env = {
@@ -109,7 +110,16 @@ async function run(args, env) {
       '--runInBand',
       '--no-cache',
     ];
-    if (!process.argv.includes('--all')) args.push('doctor-portal.e2e-spec');
+    const suite = process.argv.find((v) => v.startsWith('--suite='))?.slice(8);
+    if (suite) {
+      if (
+        !/^[a-z0-9-]+$/.test(suite) ||
+        !fs.existsSync(path.join(api, 'test', suite + '.e2e-spec.ts'))
+      )
+        throw Error('Suite QA tidak dikenal');
+      args.push('--runTestsByPath', 'test/' + suite + '.e2e-spec.ts');
+    } else if (!process.argv.includes('--all'))
+      args.push('doctor-portal.e2e-spec');
     const code = await run(args, env);
     const same = JSON.stringify(before) === JSON.stringify(await fingerprint());
     console.log(

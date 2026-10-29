@@ -1,0 +1,13 @@
+{
+  "command": "flutter test --no-pub --concurrency=1 --reporter expanded <all test/*_test.dart except live_integration_test.dart>",
+  "startedAt": "2026-10-29T01:25:04.6193125Z",
+  "summary": [
+    "06:15 +1040: D:/WorkSpace/Flutter/capstone-B-antrian/apps/client/test/account_profile_cubit_test.dart: failed password attempt clears controllers while keeping safe operation state",
+    "06:17 +1041: D:/WorkSpace/Flutter/capstone-B-antrian/apps/client/test/account_profile_cubit_test.dart: (tearDownAll)",
+    "06:17 +1041: All tests passed!"
+  ],
+  "testFiles": 67,
+  "exit": 0,
+  "seconds": 384.7,
+  "finishedAt": "2026-10-29T01:31:29.3504149Z"
+}

@@ -1,0 +1,15 @@
+{
+  "environment": "Unit; dummy localhost port1",
+  "seconds": 3.0,
+  "command": "node --test --test-reporter=tap tool/development-data.test.cjs",
+  "summary": [
+    "# tests 7",
+    "# pass 7",
+    "# fail 0",
+    "# cancelled 0",
+    "# skipped 0",
+    "# todo 0",
+    "# duration_ms 2785.1845"
+  ],
+  "exit": 0
+}

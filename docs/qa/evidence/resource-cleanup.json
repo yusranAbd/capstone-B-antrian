@@ -1,0 +1,14 @@
+{
+  "checkedAt": "2026-10-29T02:22:14.8050895Z",
+  "adbReverseMappingsObservedBeforeShutdown": "empty",
+  "qaEmulatorPresent": false,
+  "databaseCleanupEvidence": "android-execution.json: existing13/missing0/changed0/new0",
+  "remainingListeners": [],
+  "avdMode": "read-only; no-snapshot-load; no-snapshot-save",
+  "testPorts": [
+    3001,
+    3002,
+    8080,
+    5580
+  ]
+}

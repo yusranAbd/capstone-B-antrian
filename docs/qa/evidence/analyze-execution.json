@@ -1,0 +1,9 @@
+{
+  "command": "flutter analyze --no-pub (final Android test source)",
+  "summary": [
+    "Analyzing client...                                             ",
+    "No issues found! (ran in 18.0s)"
+  ],
+  "exit": 0,
+  "seconds": 23.3
+}

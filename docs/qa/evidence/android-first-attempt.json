@@ -1,0 +1,25 @@
+{
+  "environment": "Android emulator / real local NestJS + PostgreSQL test",
+  "startedAt": "2026-10-29T01:49:13.39Z",
+  "android": "11",
+  "sdk": "30",
+  "model": "sdk_gphone_x86",
+  "physicalCameraVerified": false,
+  "physicalDeviceVerified": false,
+  "uiLogoutVerified": false,
+  "exit": 1,
+  "seconds": 6.6,
+  "summary": [],
+  "compilerDiagnostics": [],
+  "finishedAt": "2026-10-29T01:49:22.507Z",
+  "status": "BLOCKED",
+  "reason": "Flutter devices --machine: emulator-5580 Android11/API30 x86, isSupported=false, targetPlatform=unsupported; no Dart test started.",
+  "wrapperExit": 1,
+  "wrapperSeconds": 23.5,
+  "cleanup": {
+    "missing": 0,
+    "existing": 13,
+    "remaining": 0,
+    "changed": 0
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "mode": "unit",
+  "startedAt": "2026-10-29T00:40:47.926Z",
+  "target": "dummy localhost port 1 (no database)",
+  "results": [
+    {
+      "command": "node --test tool/development-data.test.cjs",
+      "exit": 0,
+      "seconds": 2.9,
+      "summary": [],
+      "suites": [],
+      "fingerprints": []
+    },
+    {
+      "command": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand",
+      "exit": 0,
+      "seconds": 113.9,
+      "summary": [
+        "Test Suites: 46 passed, 46 total",
+        "Tests:       679 passed, 679 total",
+        "Time:        110.323 s"
+      ],
+      "suites": [],
+      "fingerprints": []
+    }
+  ],
+  "finishedAt": "2026-10-29T00:42:44.762Z"
+}

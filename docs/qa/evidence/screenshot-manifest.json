@@ -1,0 +1,101 @@
+{
+  "count": 19,
+  "note": "Synthetic fixtures; no scanner video/QR/pairing/login-field screenshots. Visual review covers representative admin/patient/staff/doctor/display images.",
+  "screenshots": [
+    {
+      "sha256": "839A5C27BEBB0E9534253391C4FB826338EC76A48DB8F8081B6A8CBE9A946A31",
+      "file": "admin-1366.png",
+      "bytes": 77306
+    },
+    {
+      "sha256": "5F86C9151D3D203F6E873989C50C7B055FEED7CDF2BA51618F3E32F9C5CD7AC3",
+      "file": "admin-768.png",
+      "bytes": 65250
+    },
+    {
+      "sha256": "81DC002F7BD284496A47D6164814569886067AAC72C03AAE2210F5E1AC3AA8B4",
+      "file": "display-1280.png",
+      "bytes": 77328
+    },
+    {
+      "sha256": "94725F3D7BA59EF4BF979DCC22EC57F8A4C56937AF034CB23223969A5F79DC7E",
+      "file": "display-1366.png",
+      "bytes": 77688
+    },
+    {
+      "sha256": "BF907F830B32F9607C4158284A1004359E383846EE0712B7EBE7782D78FE9F92",
+      "file": "display-1920.png",
+      "bytes": 94677
+    },
+    {
+      "sha256": "0EE7E64F318E41A31F5883D405C0469C918FF8FEA42C448F3C5979DC9711CD92",
+      "file": "display-final.png",
+      "bytes": 75704
+    },
+    {
+      "sha256": "1CEB8E2E3C239B9F37A552B33A94493CC9C9C6BD23EDF57700D3770CD7C25328",
+      "file": "doctor-1366.png",
+      "bytes": 224529
+    },
+    {
+      "sha256": "9D54E133B0F25541AA6D9DD0FEE665CC7362F3188BD6431D7D0EDE45EC3F742B",
+      "file": "doctor-390.png",
+      "bytes": 57489
+    },
+    {
+      "sha256": "7CE4E8A605031351E1517B7588DA9B6AB8471539EF0027F4E37AA6D386B834D4",
+      "file": "doctor-final.png",
+      "bytes": 210104
+    },
+    {
+      "sha256": "9F0374F303A561886BF1F17E25A440BFAF3C087C09A4D6F3ACAC92C728F32FD6",
+      "file": "doctor-initial.png",
+      "bytes": 200364
+    },
+    {
+      "sha256": "B997E47F8A0E975D8F8F082DCDA818BFF692EB94BB81F262813BAAFF652291AD",
+      "file": "patient-1280.png",
+      "bytes": 37017
+    },
+    {
+      "sha256": "93F045F3706E1ECDE80B92FB755E9FA71464FE1A9B33D66EA2C23E5CF7BCCDCE",
+      "file": "patient-360.png",
+      "bytes": 31740
+    },
+    {
+      "sha256": "511C4957D3660CCF53BDBB818C1C94E8918AEC682FA52976C8760B00472C3672",
+      "file": "patient-390.png",
+      "bytes": 32161
+    },
+    {
+      "sha256": "1F704602B17E6E68692ADFB4C9F4902693D5DD9EBBAB7093EF5D64E38573ED20",
+      "file": "patient-412.png",
+      "bytes": 32743
+    },
+    {
+      "sha256": "D8196958971CFF73207DBD6A485E30C2FE448725D9AEF23622BEF7359B9CAF25",
+      "file": "patient-appointment-complete.png",
+      "bytes": 31138
+    },
+    {
+      "sha256": "38AF1DF186AE055D8C4A9A45BE9223D751E0E2769388B8240CE0419D2DF971F8",
+      "file": "staff-1366.png",
+      "bytes": 73130
+    },
+    {
+      "sha256": "9EB1913CC1C938FBF3F3C1AC1CC4F4699A8BE41532214D78836CF069402E0F6A",
+      "file": "staff-390.png",
+      "bytes": 49159
+    },
+    {
+      "sha256": "928FC620F35F3EEF8DE247E8A1BF17542F983D0B4E4029CA4FEDC761A86E4601",
+      "file": "staff-768.png",
+      "bytes": 62247
+    },
+    {
+      "sha256": "BA07790FAE3BA55D5F5E93CEB5C2A79D2781448B820267F043BB87D78CCEBEE7",
+      "file": "staff-final.png",
+      "bytes": 75688
+    }
+  ]
+}

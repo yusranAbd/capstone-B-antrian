@@ -1,0 +1,15 @@
+{
+  "environment": "Chrome156 headless native Web Speech",
+  "checkedAt": "2026-10-29T01:34:29.198Z",
+  "waitForVoicesMs": 5000,
+  "languages": [
+    "en-US",
+    "id-ID"
+  ],
+  "voicesExposed": 4,
+  "idVoiceAvailable": true,
+  "nativeSpeechExecuted": false,
+  "speakerVerified": false,
+  "status": "PASS",
+  "scope": "Voice inventory only; actual FlutterTts native activation/mute/unmute callbacks are recorded separately in browser-final.json.nativeAudio"
+}

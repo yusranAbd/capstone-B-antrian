@@ -1,0 +1,27 @@
+{
+  "environment": "Android emulator / real local NestJS + PostgreSQL test",
+  "startedAt": "2026-10-29T01:57:11.584Z",
+  "android": "13",
+  "sdk": "33",
+  "abi": "x86_64",
+  "model": "sdk_gphone64_x86_64",
+  "physicalCameraVerified": false,
+  "physicalDeviceVerified": false,
+  "uiLogoutVerified": false,
+  "exit": 0,
+  "seconds": 599.4,
+  "summary": [
+    "Final Android QA phase: patient1",
+    "Final Android QA PASS: patient-five-navigation",
+    "Final Android QA PASS: secure-store-restore",
+    "Final Android QA phase: patient2",
+    "Final Android QA PASS: patient-account-isolation",
+    "Final Android QA phase: petugas",
+    "Final Android QA phase: doctor",
+    "Final Android QA phase: admin",
+    "Final Android QA PASS: operational-role-login-logout",
+    "02:04 +1: All tests passed!"
+  ],
+  "compilerDiagnostics": [],
+  "finishedAt": "2026-10-29T02:07:12.175Z"
+}
