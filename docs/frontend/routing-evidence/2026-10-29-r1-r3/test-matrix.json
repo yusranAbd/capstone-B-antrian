@@ -586,11 +586,14 @@
       "apps/client/test/routing_foundation_test.dart"
     ],
     "status": "PASS",
-    "actual": "Solver18.1.1 + dua transitives resolve; SDK3.47.5/3.13.4; analyze/full Flutter/Web/main APK lulus. Exact-head CI dicatat setelah push.",
+    "actual": "Solver18.1.1 + dua transitives resolve; SDK3.47.5/3.13.4; analyze/full Flutter/Web/main APK lulus. CI exact implementation SHA 2dbc63a PASS (Flutter Checks, NestJS Checks, Detect Projects).",
     "evidence": [
-      "flutter-regression.json"
+      "flutter-regression.json",
+      "git-ci.json"
     ],
-    "ciStatus": "PENDING EXACT-HEAD CI"
+    "ciStatus": "PASS EXACT IMPLEMENTATION COMMIT",
+    "ciHeadSha": "2dbc63ac654002e99a1a6fabf265e6336f9c0481",
+    "ciRunUrl": "https://github.com/yusranAbd/capstone-b-antrian/actions/runs/40938080912"
   },
   {
     "id": "T32",

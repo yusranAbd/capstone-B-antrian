@@ -1,6 +1,6 @@
 # QueueB Hospital — Migrasi go_router R1–R3
 
-Tanggal eksekusi: 29–30 Oktober 2026 (Asia/Jayapura). Seluruh gate otomatis lokal selesai; status CI exact-head dicatat setelah push. Acuan: blueprint R0 lokal, panduan UI QueueB, dan kontrak API integration existing.
+Tanggal eksekusi: 29–30 Oktober 2026 (Asia/Jayapura). Seluruh gate otomatis lokal selesai; CI commit implementasi terverifikasi PASS. Acuan: blueprint R0 lokal, panduan UI QueueB, dan kontrak API integration existing.
 
 ## A. Executive Summary
 
@@ -107,7 +107,7 @@ Semua status PASS di bawah mengacu pada level otomatis yang disebutkan. Subkasus
 | T28 · Unit/widget + backend/browser | Akun/role/device/room berbeda → Tidak ada private state/selector/snapshot lintas scope | **PASS** — Same-role account private-state eviction, cross-role browser forbidden, device A/B/C dan backend room/RBAC isolation lulus; Android patient1→patient2 identity berbeda. [flutter-regression.json](routing-evidence/2026-10-29-r1-r3/flutter-regression.json), [browser-final.json](routing-evidence/2026-10-29-r1-r3/browser-final.json), [backend-summary.json](routing-evidence/2026-10-29-r1-r3/backend-summary.json) Test: `apps/client/test/routing_portals_test.dart`, `apps/client/test/display_isolation_bloc_test.dart`, `apps/client/tool/browser-routing-qa.cjs`, `apps/client/tool/browser-final-e2e.cjs` |
 | T29 · Browser + Android store | Hash URI dengan sesi relevan → Direct/copy/reload/Back/Forward mengikuti URL dan safe return | **PASS** — Browser ADMIN direct/reload/history, patient branch/new/doctor/ticket serta staff/doctor profile dan display hash diuji. Android secure-store restore berbeda dari memory-only Web. [flutter-regression.json](routing-evidence/2026-10-29-r1-r3/flutter-regression.json), [browser-final.json](routing-evidence/2026-10-29-r1-r3/browser-final.json), [android-final.json](routing-evidence/2026-10-29-r1-r3/android-final.json) Test: `apps/client/test/routing_portals_test.dart`, `apps/client/test/session_test.dart`, `apps/client/integration_test/final_qa_smoke_test.dart`, `apps/client/tool/android-final-qa.cjs`, `apps/client/test_driver/final_qa_driver.dart`, `apps/client/tool/browser-routing-qa.cjs`, `apps/client/tool/browser-final-e2e.cjs` |
 | T30 · Server/browser | Static server tanpa rewrite → Hash bekerja; nested path tanpa hash tetap 404; tidak klaim PathUrlStrategy | **PASS** — Server QA GET nested path tanpa hash mengembalikan404, hash destinations tetap berhasil. Tidak ada PathUrlStrategy/hosting rewrite atau Android app-link intent filter baru. [flutter-regression.json](routing-evidence/2026-10-29-r1-r3/flutter-regression.json), [browser-final.json](routing-evidence/2026-10-29-r1-r3/browser-final.json) Test: `apps/client/test/routing_policy_test.dart`, `apps/client/tool/browser-routing-qa.cjs`, `apps/client/tool/browser-final-e2e.cjs` |
-| T31 · Solver/analyze/test/Web/APK/CI | SDK/dependency existing → Pin 18.1.1 resolve dan compatibility semua gate | **PASS** — Solver18.1.1 + dua transitives resolve; SDK3.47.5/3.13.4; analyze/full Flutter/Web/main APK lulus. Exact-head CI dicatat setelah push. [flutter-regression.json](routing-evidence/2026-10-29-r1-r3/flutter-regression.json) Test: `apps/client/test/routing_foundation_test.dart` |
+| T31 · Solver/analyze/test/Web/APK/CI | SDK/dependency existing → Pin 18.1.1 resolve dan compatibility semua gate | **PASS** — Solver18.1.1 + dua transitives resolve; SDK3.47.5/3.13.4; analyze/full Flutter/Web/main APK lulus. CI exact implementation SHA 2dbc63a PASS (Flutter Checks, NestJS Checks, Detect Projects). [flutter-regression.json](routing-evidence/2026-10-29-r1-r3/flutter-regression.json) Test: `apps/client/test/routing_foundation_test.dart` [git-ci.json](routing-evidence/2026-10-29-r1-r3/git-ci.json) |
 | T32 · Widget counters + browser | Observer/request/feed/audio instrumentation → Create/close/identity dan request sesuai scope; tidak ada klaim FPS/RAM | **PASS** — Tujuh instrumented metric records: ADMIN8; patient3→3/profil+1; ticket1/1; staff/doctor parent1+profile1; Display2→2. Existing feed/audio/camera cleanup tests dan browser live socket/speech scope lulus. [flutter-regression.json](routing-evidence/2026-10-29-r1-r3/flutter-regression.json), [browser-final.json](routing-evidence/2026-10-29-r1-r3/browser-final.json), [routing-counters.json](routing-evidence/2026-10-29-r1-r3/routing-counters.json) Test: `apps/client/test/routing_portals_test.dart`, `apps/client/tool/browser-routing-qa.cjs`, `apps/client/tool/browser-final-e2e.cjs` |
 
 ## J. Build & Regression
@@ -165,6 +165,12 @@ Bukti tersanitasi ada di `routing-evidence/2026-10-29-r1-r3/`. Raw ledger/probe/
 
 Validasi lokal menyertakan file dokter historis yang dilindungi dan tidak di-commit. CI memvalidasi versi committed pada SHA yang dipush; jumlah tes dapat berbeda karena tes lokal dokter tersebut. Tidak menyatakan local working tree identik dengan tree CI.
 
+### Git & CI
+
+Commit implementasi `2dbc63ac654002e99a1a6fabf265e6336f9c0481` telah dipush fast-forward ke `origin/main`; remote diverifikasi sama. [CI exact SHA](https://github.com/yusranAbd/capstone-b-antrian/actions/runs/40938080912) **PASS**: Detect Projects, Flutter Checks dan NestJS Checks; formatting/analyze, Flutter regression, API lint/unit/build selesai sukses. Backend CI: 679 unit PASS. SDK CI: Flutter 3.47.8 / Dart 3.13.7.
+
+Working tree tetap memiliki empat perubahan historis yang dilindungi serta untracked lama; semuanya di luar commit migrasi. Enam fingerprint tetap sama setelah commit/push. Tidak ada branch/worktree/PR, force push atau deployment. Finalisasi ini hanya mengubah laporan, metadata T31 dan bukti CI; SHA/CI head dokumentasi diperiksa lagi dan dilaporkan pada pesan akhir.
+
 ## K. Changes & Metrics
 
 Source produksi Dart: 106→110 file; 25.854→26.861 baris; UTF-8 dengan LF 857.699→891.307 byte. Baseline menggunakan HEAD 17e8653 ditambah dua file dokter lokal yang dilindungi pada kedua sisi agar delta migrasi dapat dibandingkan. Raw byte CRLF tidak dibandingkan dengan Git LF. Empat file routing ditambahkan, satu main entry tetap, satu MaterialApp.router, 28 lokasi dan enam navigator feature ditambah root.
@@ -179,4 +185,4 @@ Kamera/speaker/monitor fisik dan Android fisik memerlukan pemeriksaan manual. Br
 
 ## M. Final Recommendation
 
-Gate otomatis lokal PASS; siap commit/push main sesuai otorisasi aktif. CI exact-head belum dinyatakan lulus sebelum diperiksa. Verifikasi kamera/speaker/monitor/Android fisik, predictive gesture/root-Home exit, serta Chrome menu Duplicate tab tetap manual. Risiko host 8 GiB dan riwayat P2028 tetap tercatat; tidak mengklaim timeout backend terselesaikan secara umum.
+**MIGRATION VERIFIED AND PUSHED** — implementasi `2dbc63a`, seluruh gate otomatis lokal dan CI implementasi lulus. Head dokumentasi final diverifikasi kembali pada laporan penutup. Kamera/speaker/monitor/Android fisik, predictive gesture/root-Home exit dan Chrome menu Duplicate tab tetap pending manual verification. Risiko host RAM8GiB dan riwayat P2028 tetap tercatat; hasil strict final0 tidak dianggap menjamin semua latency host telah selesai.

@@ -1,0 +1,168 @@
+{
+  "branch": "main",
+  "baseline": "17e8653b82ea25dc2f14ec5e6c1a8da08ec0fc77",
+  "implementationCommit": "2dbc63ac654002e99a1a6fabf265e6336f9c0481",
+  "implementationCi": {
+    "runId": 40938080912,
+    "url": "https://github.com/yusranAbd/capstone-b-antrian/actions/runs/40938080912",
+    "headSha": "2dbc63ac654002e99a1a6fabf265e6336f9c0481",
+    "status": "completed",
+    "conclusion": "success",
+    "startedAt": "2026-10-29T19:13:14Z",
+    "updatedAt": "2026-10-29T19:16:48Z",
+    "jobs": [
+      {
+        "name": "Detect Projects",
+        "conclusion": "success",
+        "startedAt": "2026-10-29T19:13:17Z",
+        "completedAt": "2026-10-29T19:13:22Z",
+        "url": "https://github.com/yusranAbd/capstone-b-antrian/actions/runs/40938080912/job/123673847903",
+        "steps": [
+          {
+            "name": "Set up job",
+            "conclusion": "success"
+          },
+          {
+            "name": "Checkout repository",
+            "conclusion": "success"
+          },
+          {
+            "name": "Detect applications",
+            "conclusion": "success"
+          },
+          {
+            "name": "Repository structure check",
+            "conclusion": "success"
+          },
+          {
+            "name": "Post Checkout repository",
+            "conclusion": "success"
+          },
+          {
+            "name": "Complete job",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "name": "Flutter Checks",
+        "conclusion": "success",
+        "startedAt": "2026-10-29T19:13:24Z",
+        "completedAt": "2026-10-29T19:16:47Z",
+        "url": "https://github.com/yusranAbd/capstone-b-antrian/actions/runs/40938080912/job/123673916602",
+        "steps": [
+          {
+            "name": "Set up job",
+            "conclusion": "success"
+          },
+          {
+            "name": "Checkout repository",
+            "conclusion": "success"
+          },
+          {
+            "name": "Setup Flutter",
+            "conclusion": "success"
+          },
+          {
+            "name": "Flutter version",
+            "conclusion": "success"
+          },
+          {
+            "name": "Install dependencies",
+            "conclusion": "success"
+          },
+          {
+            "name": "Check formatting",
+            "conclusion": "success"
+          },
+          {
+            "name": "Analyze",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run tests",
+            "conclusion": "success"
+          },
+          {
+            "name": "Post Setup Flutter",
+            "conclusion": "success"
+          },
+          {
+            "name": "Post Checkout repository",
+            "conclusion": "success"
+          },
+          {
+            "name": "Complete job",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "name": "NestJS Checks",
+        "conclusion": "success",
+        "startedAt": "2026-10-29T19:13:25Z",
+        "completedAt": "2026-10-29T19:14:04Z",
+        "url": "https://github.com/yusranAbd/capstone-b-antrian/actions/runs/40938080912/job/123673916719",
+        "steps": [
+          {
+            "name": "Set up job",
+            "conclusion": "success"
+          },
+          {
+            "name": "Checkout repository",
+            "conclusion": "success"
+          },
+          {
+            "name": "Setup Node.js",
+            "conclusion": "success"
+          },
+          {
+            "name": "Node.js version",
+            "conclusion": "success"
+          },
+          {
+            "name": "Install dependencies",
+            "conclusion": "success"
+          },
+          {
+            "name": "Generate Prisma Client",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run lint",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run tests",
+            "conclusion": "success"
+          },
+          {
+            "name": "Build API",
+            "conclusion": "success"
+          },
+          {
+            "name": "Post Setup Node.js",
+            "conclusion": "success"
+          },
+          {
+            "name": "Post Checkout repository",
+            "conclusion": "success"
+          },
+          {
+            "name": "Complete job",
+            "conclusion": "success"
+          }
+        ]
+      }
+    ],
+    "flutterVersion": "3.47.8",
+    "dartVersion": "3.13.7",
+    "flutterPassed": null,
+    "flutterSkipped": null,
+    "backendUnitPassed": 679
+  },
+  "localFlutterPassed": 1091,
+  "localProtectedDoctorChangesExcludedFromCommit": true,
+  "documentationFollowup": "A documentation-only follow-up records this already verified implementation CI. Its final HEAD and CI are verified separately in the final chat report.",
+  "deploymentPerformed": false
+}
