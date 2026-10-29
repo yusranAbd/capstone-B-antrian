@@ -1,0 +1,1316 @@
+{
+  "attempts": [
+    {
+      "attempt": "browser",
+      "exit": 1,
+      "baselineGroups": 13,
+      "routingStatus": "FAIL",
+      "checksPassed": 5,
+      "startedAt": "2026-10-29T12:14:37.639Z",
+      "finishedAt": "2026-10-29T12:18:38.546Z",
+      "cleanup": [
+        {
+          "dataExisting": {
+            "jumlah": 13,
+            "hilang": 0,
+            "berubah": 0
+          },
+          "recordBaruTersisa": 0
+        }
+      ],
+      "strict": {
+        "http5xx": 0,
+        "p2028Transactions": 0,
+        "pendingAtFinish": 0,
+        "minFreeHostMiB": 255,
+        "eventLoopMaxMs": 325.844991,
+        "failures": []
+      }
+    },
+    {
+      "attempt": "browser-complete",
+      "exit": 1,
+      "baselineGroups": 5,
+      "routingStatus": "diagnostic run",
+      "checksPassed": 0,
+      "startedAt": "2026-10-29T13:27:54.251Z",
+      "finishedAt": "2026-10-29T13:31:39.267Z",
+      "cleanup": [
+        {
+          "dataExisting": {
+            "jumlah": 13,
+            "hilang": 0,
+            "berubah": 0
+          },
+          "recordBaruTersisa": 0
+        }
+      ],
+      "strict": {
+        "http5xx": 5,
+        "p2028Transactions": 5,
+        "pendingAtFinish": 0,
+        "minFreeHostMiB": 271,
+        "eventLoopMaxMs": 4374.659071,
+        "failures": [
+          {
+            "phase": "browser",
+            "site": [
+              "    at QueueService.snapshotAntrean (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\queue\\queue.service.js:447:44)",
+              "    at QueueController.snapshotAntrean (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\queue\\queue.controller.js:51:34)"
+            ],
+            "options": {
+              "isolationLevel": "RepeatableRead",
+              "maxWait": 3000,
+              "timeout": 10000
+            },
+            "durationMs": 15972,
+            "error": {
+              "name": "PrismaClientKnownRequestError",
+              "code": "P2028",
+              "model": "TiketAntrean",
+              "timeout": "10000"
+            },
+            "queries": [
+              {
+                "operation": "pengguna.findUnique",
+                "durationMs": 78
+              },
+              {
+                "operation": "penugasanPetugas.findFirst",
+                "durationMs": 623
+              },
+              {
+                "operation": "loket.findMany",
+                "durationMs": 1067
+              },
+              {
+                "operation": "tiketAntrean.findMany",
+                "durationMs": 1067
+              },
+              {
+                "operation": "tiketAntrean.count",
+                "durationMs": 1066
+              },
+              {
+                "operation": "tiketAntrean.findMany",
+                "durationMs": 1066
+              },
+              {
+                "operation": "jadwalPraktik.findFirst",
+                "durationMs": 504
+              },
+              {
+                "operation": "tiketAntrean.findMany",
+                "durationMs": 12904
+              },
+              {
+                "operation": "tiketAntrean.findMany",
+                "durationMs": 12905,
+                "errorCode": "P2028"
+              },
+              {
+                "operation": "tiketAntrean.count",
+                "durationMs": 13093
+              }
+            ]
+          },
+          {
+            "phase": "browser",
+            "site": [
+              "    at DisplayService.snapshot (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display.service.js:36:40)",
+              "    at DisplayController.snapshot (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display.controller.js:26:36)"
+            ],
+            "options": {
+              "isolationLevel": "RepeatableRead",
+              "maxWait": 3000,
+              "timeout": 15000
+            },
+            "durationMs": 26040,
+            "error": {
+              "name": "PrismaClientKnownRequestError",
+              "code": "P2028",
+              "model": "JadwalPraktik",
+              "timeout": "15000"
+            },
+            "queries": [
+              {
+                "operation": "perangkatTampilan.findUnique",
+                "durationMs": 220
+              },
+              {
+                "operation": "layanan.findUniqueOrThrow",
+                "durationMs": 133
+              },
+              {
+                "operation": "loket.findMany",
+                "durationMs": 25477
+              },
+              {
+                "operation": "tiketAntrean.findMany",
+                "durationMs": 25477
+              },
+              {
+                "operation": "tiketAntrean.count",
+                "durationMs": 25477
+              },
+              {
+                "operation": "peristiwaAntrean.findFirst",
+                "durationMs": 25477
+              },
+              {
+                "operation": "tiketAntrean.findMany",
+                "durationMs": 25477
+              },
+              {
+                "operation": "jadwalPraktik.findMany",
+                "durationMs": 25477,
+                "errorCode": "P2028"
+              },
+              {
+                "operation": "tiketAntrean.findMany",
+                "durationMs": 25477
+              },
+              {
+                "operation": "tiketAntrean.count",
+                "durationMs": 25477
+              }
+            ]
+          },
+          {
+            "phase": "browser",
+            "site": [
+              "    at DisplayService.snapshot (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display.service.js:36:40)",
+              "    at DisplayController.snapshot (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display.controller.js:26:36)"
+            ],
+            "options": {
+              "isolationLevel": "RepeatableRead",
+              "maxWait": 3000,
+              "timeout": 15000
+            },
+            "durationMs": 3359,
+            "error": {
+              "name": "PrismaClientKnownRequestError",
+              "code": "P2028"
+            },
+            "queries": []
+          },
+          {
+            "phase": "browser",
+            "site": [
+              "    at QueueService.snapshotAntrean (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\queue\\queue.service.js:447:44)",
+              "    at QueueController.snapshotAntrean (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\queue\\queue.controller.js:51:34)"
+            ],
+            "options": {
+              "isolationLevel": "RepeatableRead",
+              "maxWait": 3000,
+              "timeout": 10000
+            },
+            "durationMs": 14419,
+            "error": {
+              "name": "PrismaClientKnownRequestError",
+              "code": "P2028",
+              "model": "TiketAntrean",
+              "timeout": "10000"
+            },
+            "queries": [
+              {
+                "operation": "pengguna.findUnique",
+                "durationMs": 1955
+              },
+              {
+                "operation": "penugasanPetugas.findFirst",
+                "durationMs": 1365
+              },
+              {
+                "operation": "loket.findMany",
+                "durationMs": 9252
+              },
+              {
+                "operation": "tiketAntrean.findMany",
+                "durationMs": 9251
+              },
+              {
+                "operation": "tiketAntrean.count",
+                "durationMs": 9251,
+                "errorCode": "P2028"
+              },
+              {
+                "operation": "tiketAntrean.findMany",
+                "durationMs": 9315
+              }
+            ]
+          },
+          {
+            "phase": "browser",
+            "site": [
+              "    at PortalDokterService.snapshot (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\portal-dokter\\portal-dokter.service.js:137:28)"
+            ],
+            "options": {
+              "isolationLevel": "RepeatableRead"
+            },
+            "durationMs": 7346,
+            "error": {
+              "name": "PrismaClientKnownRequestError",
+              "code": "P2028",
+              "timeout": "5000"
+            },
+            "queries": [
+              {
+                "operation": "jadwalPraktik.findFirst",
+                "durationMs": 1561
+              },
+              {
+                "operation": "tiketAntrean.findMany",
+                "durationMs": 4748
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "attempt": "browser-final",
+      "exit": 1,
+      "baselineGroups": 13,
+      "routingStatus": "FAIL",
+      "lastAction": "patient1 cold /patient/reservations/doctors/<id>",
+      "checksPassed": 5,
+      "startedAt": "2026-10-29T12:32:10.708Z",
+      "finishedAt": "2026-10-29T12:36:35.585Z",
+      "cleanup": [
+        {
+          "dataExisting": {
+            "jumlah": 13,
+            "hilang": 0,
+            "berubah": 0
+          },
+          "recordBaruTersisa": 0
+        }
+      ],
+      "strict": {
+        "http5xx": 0,
+        "p2028Transactions": 0,
+        "pendingAtFinish": 0,
+        "minFreeHostMiB": 455,
+        "eventLoopMaxMs": 238.944255,
+        "failures": []
+      }
+    },
+    {
+      "attempt": "browser-final-pass",
+      "exit": 0,
+      "baselineGroups": 13,
+      "routingStatus": "PASS",
+      "lastAction": "doctor cold /doctor/profile",
+      "checksPassed": 16,
+      "startedAt": "2026-10-29T13:43:18.911Z",
+      "finishedAt": "2026-10-29T13:48:07.938Z",
+      "cleanup": [
+        {
+          "dataExisting": {
+            "jumlah": 13,
+            "hilang": 0,
+            "berubah": 0
+          },
+          "recordBaruTersisa": 0
+        }
+      ],
+      "strict": {
+        "http5xx": 0,
+        "p2028Transactions": 0,
+        "pendingAtFinish": 0,
+        "minFreeHostMiB": 432,
+        "eventLoopMaxMs": 677.380095,
+        "failures": []
+      }
+    },
+    {
+      "attempt": "browser-final-verified",
+      "exit": 1,
+      "baselineGroups": 13,
+      "routingStatus": "FAIL",
+      "lastAction": "missing ticket selectable error",
+      "checksPassed": 7,
+      "startedAt": "2026-10-29T13:12:30.118Z",
+      "finishedAt": "2026-10-29T13:16:50.428Z",
+      "cleanup": [
+        {
+          "dataExisting": {
+            "jumlah": 13,
+            "hilang": 0,
+            "berubah": 0
+          },
+          "recordBaruTersisa": 0
+        }
+      ],
+      "strict": {
+        "http5xx": 0,
+        "p2028Transactions": 0,
+        "pendingAtFinish": 0,
+        "minFreeHostMiB": 380,
+        "eventLoopMaxMs": 392.953855,
+        "failures": []
+      }
+    },
+    {
+      "attempt": "browser-probe",
+      "exit": 1,
+      "baselineGroups": 13,
+      "routingStatus": "FAIL",
+      "lastAction": "patient1 cold /patient/reservations/doctors/<id>",
+      "checksPassed": 5,
+      "startedAt": "2026-10-29T12:26:50.500Z",
+      "finishedAt": "2026-10-29T12:30:38.724Z",
+      "cleanup": [
+        {
+          "dataExisting": {
+            "jumlah": 13,
+            "hilang": 0,
+            "berubah": 0
+          },
+          "recordBaruTersisa": 0
+        }
+      ],
+      "strict": {
+        "http5xx": 0,
+        "p2028Transactions": 0,
+        "pendingAtFinish": 0,
+        "minFreeHostMiB": 207,
+        "eventLoopMaxMs": 253.231103,
+        "failures": []
+      }
+    },
+    {
+      "attempt": "browser-recovered",
+      "exit": 1,
+      "baselineGroups": 13,
+      "routingStatus": "FAIL",
+      "lastAction": "missing ticket selectable error",
+      "checksPassed": 7,
+      "startedAt": "2026-10-29T13:34:25.224Z",
+      "finishedAt": "2026-10-29T13:40:33.983Z",
+      "cleanup": [
+        {
+          "dataExisting": {
+            "jumlah": 13,
+            "hilang": 0,
+            "berubah": 0
+          },
+          "recordBaruTersisa": 0
+        }
+      ],
+      "strict": {
+        "http5xx": 0,
+        "p2028Transactions": 0,
+        "pendingAtFinish": 0,
+        "minFreeHostMiB": 238,
+        "eventLoopMaxMs": 640.155647,
+        "failures": []
+      }
+    },
+    {
+      "attempt": "browser-verified",
+      "exit": 1,
+      "baselineGroups": 13,
+      "routingStatus": "FAIL",
+      "lastAction": "patient1 cold /patient/tickets/<id>",
+      "checksPassed": 7,
+      "startedAt": "2026-10-29T12:45:55.843Z",
+      "finishedAt": "2026-10-29T12:49:39.649Z",
+      "cleanup": [
+        {
+          "dataExisting": {
+            "jumlah": 13,
+            "hilang": 0,
+            "berubah": 0
+          },
+          "recordBaruTersisa": 0
+        }
+      ],
+      "strict": {
+        "http5xx": 0,
+        "p2028Transactions": 0,
+        "pendingAtFinish": 0,
+        "minFreeHostMiB": 481,
+        "eventLoopMaxMs": 232.783871,
+        "failures": []
+      }
+    },
+    {
+      "attempt": "doctor-probe",
+      "exit": 1,
+      "baselineGroups": 0,
+      "routingStatus": "diagnostic run",
+      "checksPassed": 0,
+      "startedAt": "2026-10-29T12:39:57.036Z",
+      "finishedAt": "2026-10-29T12:40:32.606Z",
+      "cleanup": [
+        {
+          "dataExisting": {
+            "jumlah": 13,
+            "hilang": 0,
+            "berubah": 0
+          },
+          "recordBaruTersisa": 0
+        }
+      ],
+      "strict": {
+        "http5xx": 0,
+        "p2028Transactions": 0,
+        "pendingAtFinish": 0,
+        "minFreeHostMiB": 1267,
+        "eventLoopMaxMs": 234.618879,
+        "failures": []
+      }
+    },
+    {
+      "attempt": "doctor-probe-detail",
+      "exit": 1,
+      "baselineGroups": 0,
+      "routingStatus": "diagnostic run",
+      "checksPassed": 0,
+      "startedAt": "2026-10-29T12:43:35.057Z",
+      "finishedAt": "2026-10-29T12:44:11.334Z",
+      "cleanup": [
+        {
+          "dataExisting": {
+            "jumlah": 13,
+            "hilang": 0,
+            "berubah": 0
+          },
+          "recordBaruTersisa": 0
+        }
+      ],
+      "strict": {
+        "http5xx": 0,
+        "p2028Transactions": 0,
+        "pendingAtFinish": 0,
+        "minFreeHostMiB": 1354,
+        "eventLoopMaxMs": 227.016703,
+        "failures": []
+      }
+    },
+    {
+      "attempt": "ticket-accessible-probe",
+      "exit": 1,
+      "baselineGroups": 1,
+      "routingStatus": "diagnostic run",
+      "checksPassed": 0,
+      "startedAt": "2026-10-29T13:42:20.108Z",
+      "finishedAt": "2026-10-29T13:42:36.415Z",
+      "cleanup": [
+        {
+          "dataExisting": {
+            "jumlah": 13,
+            "hilang": 0,
+            "berubah": 0
+          },
+          "recordBaruTersisa": 0
+        }
+      ],
+      "strict": {
+        "http5xx": 0,
+        "p2028Transactions": 0,
+        "pendingAtFinish": 0,
+        "minFreeHostMiB": 410,
+        "eventLoopMaxMs": 227.409919,
+        "failures": []
+      }
+    },
+    {
+      "attempt": "ticket-probe",
+      "exit": 1,
+      "baselineGroups": 1,
+      "routingStatus": "diagnostic run",
+      "checksPassed": 0,
+      "startedAt": "2026-10-29T13:18:18.064Z",
+      "finishedAt": "2026-10-29T13:18:23.035Z",
+      "cleanup": [
+        {
+          "dataExisting": {
+            "jumlah": 13,
+            "hilang": 0,
+            "berubah": 0
+          },
+          "recordBaruTersisa": 0
+        }
+      ],
+      "strict": {
+        "http5xx": 0,
+        "p2028Transactions": 0,
+        "pendingAtFinish": 0,
+        "minFreeHostMiB": 1219,
+        "eventLoopMaxMs": 228.196351,
+        "failures": []
+      }
+    },
+    {
+      "attempt": "ticket-probe-detail",
+      "exit": 1,
+      "baselineGroups": 1,
+      "routingStatus": "diagnostic run",
+      "checksPassed": 0,
+      "startedAt": "2026-10-29T13:19:14.047Z",
+      "finishedAt": "2026-10-29T13:19:34.072Z",
+      "cleanup": [
+        {
+          "dataExisting": {
+            "jumlah": 13,
+            "hilang": 0,
+            "berubah": 0
+          },
+          "recordBaruTersisa": 0
+        }
+      ],
+      "strict": {
+        "http5xx": 0,
+        "p2028Transactions": 0,
+        "pendingAtFinish": 0,
+        "minFreeHostMiB": 1125,
+        "eventLoopMaxMs": 223.477759,
+        "failures": []
+      }
+    },
+    {
+      "attempt": "ticket-probe-dom",
+      "exit": 1,
+      "baselineGroups": 1,
+      "routingStatus": "diagnostic run",
+      "checksPassed": 0,
+      "startedAt": "2026-10-29T13:20:28.128Z",
+      "finishedAt": "2026-10-29T13:20:49.195Z",
+      "cleanup": [
+        {
+          "dataExisting": {
+            "jumlah": 13,
+            "hilang": 0,
+            "berubah": 0
+          },
+          "recordBaruTersisa": 0
+        }
+      ],
+      "strict": {
+        "http5xx": 0,
+        "p2028Transactions": 0,
+        "pendingAtFinish": 0,
+        "minFreeHostMiB": 1297,
+        "eventLoopMaxMs": 216.268799,
+        "failures": []
+      }
+    },
+    {
+      "attempt": "ticket-probe-focus",
+      "exit": 1,
+      "baselineGroups": 1,
+      "routingStatus": "diagnostic run",
+      "checksPassed": 0,
+      "startedAt": "2026-10-29T13:22:22.207Z",
+      "finishedAt": "2026-10-29T13:23:13.496Z",
+      "cleanup": [
+        {
+          "dataExisting": {
+            "jumlah": 13,
+            "hilang": 0,
+            "berubah": 0
+          },
+          "recordBaruTersisa": 0
+        }
+      ],
+      "strict": {
+        "http5xx": 0,
+        "p2028Transactions": 0,
+        "pendingAtFinish": 0,
+        "minFreeHostMiB": 1301,
+        "eventLoopMaxMs": 222.298111,
+        "failures": []
+      }
+    },
+    {
+      "attempt": "ticket-probe-value",
+      "exit": 1,
+      "baselineGroups": 1,
+      "routingStatus": "diagnostic run",
+      "checksPassed": 0,
+      "startedAt": "2026-10-29T13:21:41.097Z",
+      "finishedAt": "2026-10-29T13:22:00.938Z",
+      "cleanup": [
+        {
+          "dataExisting": {
+            "jumlah": 13,
+            "hilang": 0,
+            "berubah": 0
+          },
+          "recordBaruTersisa": 0
+        }
+      ],
+      "strict": {
+        "http5xx": 0,
+        "p2028Transactions": 0,
+        "pendingAtFinish": 0,
+        "minFreeHostMiB": 1376,
+        "eventLoopMaxMs": 272.891903,
+        "failures": []
+      }
+    }
+  ],
+  "androidAttempts": [
+    {
+      "attempt": "android-bootstrap-anr-failed",
+      "phase": "Owned emulator bootstrap before instrumentation",
+      "results": [
+        {
+          "exit": 1,
+          "seconds": 483.8,
+          "fingerprints": [
+            {
+              "dataExisting": {
+                "jumlah": 13,
+                "hilang": 0,
+                "berubah": 0
+              },
+              "recordBaruTersisa": 0
+            }
+          ],
+          "diagnosticCodes": []
+        }
+      ],
+      "bootstrap": {
+        "focusedWindow": "Application Not Responding: com.android.systemui",
+        "avd": "QueueBRoutingR3",
+        "ramMiB": 1536,
+        "appInstrumentationStarted": false,
+        "observedAt": "2026-10-29T18:22:29.0824309Z",
+        "reason": "SYSTEM_UI_ANR",
+        "status": "FAIL",
+        "phase": "emulator bootstrap",
+        "gpu": "swiftshader"
+      },
+      "native": null
+    },
+    {
+      "attempt": "android-bootstrap-pipe-failed",
+      "phase": "Owned emulator bootstrap before instrumentation",
+      "results": [
+        {
+          "exit": 1,
+          "seconds": 518.4,
+          "fingerprints": [
+            {
+              "dataExisting": {
+                "jumlah": 13,
+                "hilang": 0,
+                "berubah": 0
+              },
+              "recordBaruTersisa": 0
+            }
+          ],
+          "diagnosticCodes": []
+        }
+      ],
+      "bootstrap": {
+        "bootstrapPowerShellExited": true,
+        "bootCompleted": true,
+        "systemUiAnr": false,
+        "launcherFocused": true,
+        "reason": "bootstrap callback not returned after PowerShell exit",
+        "avd": "QueueBRoutingR3",
+        "ramMiB": 2048,
+        "gpu": "host",
+        "status": "FAIL",
+        "nativeInstrumentationStarted": false,
+        "phase": "bootstrap process wait",
+        "observedAt": "2026-10-29T18:32:10.2607101Z"
+      },
+      "native": null
+    },
+    {
+      "attempt": "android-callback-build-failed",
+      "phase": "Android13 x86_64 instrumentation",
+      "results": [
+        {
+          "exit": 1,
+          "seconds": 1015.4,
+          "fingerprints": [
+            {
+              "dataExisting": {
+                "jumlah": 13,
+                "hilang": 0,
+                "berubah": 0
+              },
+              "recordBaruTersisa": 0
+            }
+          ],
+          "diagnosticCodes": []
+        }
+      ],
+      "bootstrap": null,
+      "native": {
+        "android": "13",
+        "sdk": "33",
+        "abi": "x86_64",
+        "exit": 1,
+        "summary": [],
+        "failureSignatures": []
+      }
+    },
+    {
+      "attempt": "android-complete",
+      "phase": "Android13 x86_64 instrumentation",
+      "results": [
+        {
+          "exit": 0,
+          "seconds": 940.8,
+          "fingerprints": [
+            {
+              "dataExisting": {
+                "jumlah": 13,
+                "hilang": 0,
+                "berubah": 0
+              },
+              "recordBaruTersisa": 0
+            }
+          ],
+          "diagnosticCodes": []
+        }
+      ],
+      "bootstrap": null,
+      "native": {
+        "android": "13",
+        "sdk": "33",
+        "abi": "x86_64",
+        "exit": 0,
+        "systemBackInputs": 4,
+        "systemBackDiagnostics": [
+          {
+            "sequence": 1,
+            "markerStream": "stdout",
+            "receivedAt": "2026-10-29T19:01:09.389Z",
+            "imeShown": false,
+            "imeMetadataAvailable": true,
+            "appResumed": true,
+            "appWindowFocused": true,
+            "focusMetadataAvailable": true,
+            "initiallyFocused": true,
+            "focusPolls": 0,
+            "focusTarget": "id.queueb.queueb_client/id.queueb.queueb_client.MainActivity",
+            "systemOverlay": null,
+            "injectedAt": "2026-10-29T19:01:10.874Z"
+          },
+          {
+            "sequence": 2,
+            "markerStream": "stdout",
+            "receivedAt": "2026-10-29T19:01:12.741Z",
+            "imeShown": false,
+            "imeMetadataAvailable": true,
+            "appResumed": true,
+            "appWindowFocused": true,
+            "focusMetadataAvailable": true,
+            "initiallyFocused": true,
+            "focusPolls": 0,
+            "focusTarget": "id.queueb.queueb_client/id.queueb.queueb_client.MainActivity",
+            "systemOverlay": null,
+            "injectedAt": "2026-10-29T19:01:13.350Z"
+          },
+          {
+            "sequence": 3,
+            "markerStream": "stdout",
+            "receivedAt": "2026-10-29T19:01:13.684Z",
+            "imeShown": false,
+            "imeMetadataAvailable": true,
+            "appResumed": true,
+            "appWindowFocused": true,
+            "focusMetadataAvailable": true,
+            "initiallyFocused": true,
+            "focusPolls": 0,
+            "focusTarget": "id.queueb.queueb_client/id.queueb.queueb_client.MainActivity",
+            "systemOverlay": null,
+            "injectedAt": "2026-10-29T19:01:14.399Z"
+          },
+          {
+            "sequence": 4,
+            "markerStream": "stdout",
+            "receivedAt": "2026-10-29T19:01:36.008Z",
+            "imeShown": false,
+            "imeMetadataAvailable": true,
+            "appResumed": true,
+            "appWindowFocused": true,
+            "focusMetadataAvailable": true,
+            "initiallyFocused": true,
+            "focusPolls": 0,
+            "focusTarget": "id.queueb.queueb_client/id.queueb.queueb_client.MainActivity",
+            "systemOverlay": null,
+            "injectedAt": "2026-10-29T19:01:43.083Z"
+          }
+        ],
+        "summary": [
+          "I/flutter ( 4387): Final Android QA phase: patient1",
+          "I/flutter ( 4387): Final Android QA PASS: patient-five-navigation",
+          "I/flutter ( 4387): Final Android QA diagnostic: before-0-framework=true-pop=0-keys=0-scopes=false,true,true",
+          "I/flutter ( 4387): Final Android QA before-back: /patient/profile focus=true",
+          "I/flutter ( 4387): Final Android QA request: system-back 1",
+          "I/flutter ( 4387): Final Android QA diagnostic: after-1-framework=false-pop=1-keys=0",
+          "I/flutter ( 4387): Final Android QA after-back: /patient",
+          "I/flutter ( 4387): Final Android QA diagnostic: before-1-framework=true-pop=1-keys=0-scopes=true,false,true",
+          "I/flutter ( 4387): Final Android QA before-back: /patient/reservations/new focus=true",
+          "I/flutter ( 4387): Final Android QA request: system-back 2",
+          "I/flutter ( 4387): Final Android QA diagnostic: after-2-framework=true-pop=2-keys=0",
+          "I/flutter ( 4387): Final Android QA after-back: /patient/reservations",
+          "I/flutter ( 4387): Final Android QA diagnostic: before-2-framework=true-pop=2-keys=0-scopes=false,true,true",
+          "I/flutter ( 4387): Final Android QA before-back: /patient/reservations focus=true",
+          "I/flutter ( 4387): Final Android QA request: system-back 3",
+          "I/flutter ( 4387): Final Android QA diagnostic: after-3-framework=false-pop=3-keys=0",
+          "I/flutter ( 4387): Final Android QA after-back: /patient",
+          "I/flutter ( 4387): Final Android QA PASS: router-native-back",
+          "I/flutter ( 4387): Final Android QA PASS: secure-store-restore",
+          "I/flutter ( 4387): Final Android QA phase: patient2",
+          "I/flutter ( 4387): Final Android QA PASS: patient-account-isolation",
+          "I/flutter ( 4387): Final Android QA phase: petugas",
+          "I/flutter ( 4387): Final Android QA phase: staff-snapshot-ready",
+          "I/flutter ( 4387): Final Android QA phase: camera-startup",
+          "I/flutter ( 4387): Final Android QA camera-state: running-before-pause",
+          "I/flutter ( 4387): Final Android QA request: background-resume",
+          "I/flutter ( 4387): Final Android QA camera-state: running-after-resume",
+          "I/flutter ( 4387): Final Android QA PASS: scanner-background-resume",
+          "I/flutter ( 4387): Final Android QA diagnostic: before-3-framework=true-pop=3-keys=0-scopes=true",
+          "I/flutter ( 4387): Final Android QA before-back: /staff focus=true",
+          "I/flutter ( 4387): Final Android QA request: system-back 4",
+          "I/flutter ( 4387): Final Android QA diagnostic: after-4-framework=false-pop=4-keys=0",
+          "I/flutter ( 4387): Final Android QA after-back: /staff",
+          "I/flutter ( 4387): Final Android QA PASS: nested-profile-ui-logout",
+          "I/flutter ( 4387): Final Android QA PASS: scanner-back-nested-logout",
+          "I/flutter ( 4387): Final Android QA phase: doctor",
+          "I/flutter ( 4387): Final Android QA phase: admin",
+          "I/flutter ( 4387): Final Android QA PASS: operational-role-login-logout",
+          "I/flutter ( 4387): 01:06 +2: All tests passed!"
+        ],
+        "failureSignatures": []
+      }
+    },
+    {
+      "attempt": "android-fixture-window-failed",
+      "phase": "Guarded fixture setup before instrumentation",
+      "results": [
+        {
+          "exit": 1,
+          "seconds": 35.5,
+          "fingerprints": [
+            {
+              "dataExisting": {
+                "jumlah": 13,
+                "hilang": 0,
+                "berubah": 0
+              },
+              "recordBaruTersisa": 0
+            }
+          ],
+          "diagnosticCodes": []
+        }
+      ],
+      "bootstrap": null,
+      "native": null
+    },
+    {
+      "attempt": "android-focus-harness-failed",
+      "phase": "Android13 x86_64 instrumentation",
+      "results": [
+        {
+          "exit": 1,
+          "seconds": 416.1,
+          "fingerprints": [
+            {
+              "dataExisting": {
+                "jumlah": 13,
+                "hilang": 0,
+                "berubah": 0
+              },
+              "recordBaruTersisa": 0
+            }
+          ],
+          "diagnosticCodes": []
+        }
+      ],
+      "bootstrap": null,
+      "native": {
+        "android": "13",
+        "sdk": "33",
+        "abi": "x86_64",
+        "exit": 1,
+        "systemBackDiagnostics": [
+          {
+            "sequence": 1,
+            "imeShown": false,
+            "appResumed": true,
+            "appWindowFocused": false,
+            "systemOverlay": null
+          }
+        ],
+        "summary": [
+          "I/flutter ( 4261): Final Android QA phase: patient1",
+          "I/flutter ( 4261): Final Android QA PASS: patient-five-navigation",
+          "I/flutter ( 4261): Final Android QA diagnostic: before-0-framework=true-pop=0-keys=0-scopes=false,true,true",
+          "I/flutter ( 4261): Final Android QA before-back: /patient/profile focus=true",
+          "I/flutter ( 4261): Final Android QA request: system-back 1"
+        ],
+        "failureSignatures": []
+      }
+    },
+    {
+      "attempt": "android-focus-readiness-failed",
+      "phase": "Android13 x86_64 instrumentation",
+      "results": [
+        {
+          "exit": 1,
+          "seconds": 309.2,
+          "fingerprints": [
+            {
+              "dataExisting": {
+                "jumlah": 13,
+                "hilang": 0,
+                "berubah": 0
+              },
+              "recordBaruTersisa": 0
+            }
+          ],
+          "diagnosticCodes": []
+        }
+      ],
+      "bootstrap": null,
+      "native": {
+        "android": "13",
+        "sdk": "33",
+        "abi": "x86_64",
+        "exit": 1,
+        "systemBackDiagnostics": [
+          {
+            "sequence": 1,
+            "markerStream": "stdout",
+            "receivedAt": "2026-10-29T17:05:41.656Z",
+            "imeShown": false,
+            "appResumed": true,
+            "appWindowFocused": false,
+            "focusMetadataAvailable": true,
+            "systemOverlay": null
+          }
+        ],
+        "summary": [
+          "I/flutter ( 4902): Final Android QA phase: patient1",
+          "I/flutter ( 4902): Final Android QA PASS: patient-five-navigation",
+          "I/flutter ( 4902): Final Android QA diagnostic: before-0-framework=true-pop=0-keys=0-scopes=false,true,true",
+          "I/flutter ( 4902): Final Android QA before-back: /patient/profile focus=true",
+          "I/flutter ( 4902): Final Android QA request: system-back 1"
+        ],
+        "failureSignatures": []
+      }
+    },
+    {
+      "attempt": "android-ime-closed-failed",
+      "phase": "Android13 x86_64 instrumentation",
+      "results": [
+        {
+          "exit": 1,
+          "seconds": 858.9,
+          "fingerprints": [
+            {
+              "dataExisting": {
+                "jumlah": 13,
+                "hilang": 0,
+                "berubah": 0
+              },
+              "recordBaruTersisa": 0
+            }
+          ],
+          "diagnosticCodes": []
+        }
+      ],
+      "bootstrap": null,
+      "native": {
+        "android": "13",
+        "sdk": "33",
+        "abi": "x86_64",
+        "exit": 1,
+        "systemBackInputs": 1,
+        "systemBackDiagnostics": [
+          {
+            "sequence": 1,
+            "imeShown": false,
+            "appResumed": true
+          }
+        ],
+        "summary": [
+          "Final Android QA phase: patient1",
+          "Final Android QA PASS: patient-five-navigation",
+          "Final Android QA before-back: /patient/profile focus=true",
+          "Final Android QA request: system-back 1",
+          "Final Android QA after-back: /patient/profile"
+        ],
+        "failureSignatures": [
+          "Android QA condition not reached",
+          "TestFailure"
+        ]
+      }
+    },
+    {
+      "attempt": "android-native-back-failed",
+      "phase": "Android13 x86_64 instrumentation",
+      "results": [
+        {
+          "exit": 1,
+          "seconds": 1072.9,
+          "fingerprints": [
+            {
+              "dataExisting": {
+                "jumlah": 13,
+                "hilang": 0,
+                "berubah": 0
+              },
+              "recordBaruTersisa": 0
+            }
+          ],
+          "diagnosticCodes": []
+        }
+      ],
+      "bootstrap": null,
+      "native": {
+        "android": "13",
+        "sdk": "33",
+        "abi": "x86_64",
+        "exit": 1,
+        "systemBackInputs": 1,
+        "summary": [
+          "Final Android QA phase: patient1",
+          "Final Android QA PASS: patient-five-navigation",
+          "Final Android QA request: system-back 1"
+        ]
+      }
+    },
+    {
+      "attempt": "android-native-signal-failed",
+      "phase": "Android13 x86_64 instrumentation",
+      "results": [
+        {
+          "exit": 1,
+          "seconds": 871.5,
+          "fingerprints": [
+            {
+              "dataExisting": {
+                "jumlah": 13,
+                "hilang": 0,
+                "berubah": 0
+              },
+              "recordBaruTersisa": 0
+            }
+          ],
+          "diagnosticCodes": []
+        }
+      ],
+      "bootstrap": null,
+      "native": {
+        "android": "13",
+        "sdk": "33",
+        "abi": "x86_64",
+        "exit": 1,
+        "systemBackInputs": 1,
+        "systemBackDiagnostics": [
+          {
+            "sequence": 1,
+            "imeShown": false,
+            "appResumed": true
+          }
+        ],
+        "summary": [
+          "Final Android QA phase: patient1",
+          "Final Android QA PASS: patient-five-navigation",
+          "Final Android QA diagnostic: before-0-framework=true-pop=0-keys=0-scopes=false,true,true",
+          "Final Android QA before-back: /patient/profile focus=true",
+          "Final Android QA request: system-back 1",
+          "Final Android QA diagnostic: after-1-framework=true-pop=0-keys=0",
+          "Final Android QA after-back: /patient/profile"
+        ],
+        "failureSignatures": [
+          "Android QA condition not reached",
+          "TestFailure"
+        ]
+      }
+    },
+    {
+      "attempt": "android-scanner-readiness-failed",
+      "phase": "Android13 x86_64 instrumentation",
+      "results": [
+        {
+          "exit": 1,
+          "seconds": 397.3,
+          "fingerprints": [
+            {
+              "dataExisting": {
+                "jumlah": 13,
+                "hilang": 0,
+                "berubah": 0
+              },
+              "recordBaruTersisa": 0
+            }
+          ],
+          "diagnosticCodes": []
+        }
+      ],
+      "bootstrap": null,
+      "native": {
+        "android": "13",
+        "sdk": "33",
+        "abi": "x86_64",
+        "exit": 1,
+        "systemBackInputs": 3,
+        "systemBackDiagnostics": [
+          {
+            "sequence": 1,
+            "markerStream": "stdout",
+            "receivedAt": "2026-10-29T18:37:47.575Z",
+            "imeShown": true,
+            "appResumed": true,
+            "appWindowFocused": true,
+            "focusMetadataAvailable": true,
+            "initiallyFocused": true,
+            "focusPolls": 0,
+            "focusTarget": "id.queueb.queueb_client/id.queueb.queueb_client.MainActivity",
+            "systemOverlay": null,
+            "injectedAt": "2026-10-29T18:37:56.179Z"
+          },
+          {
+            "sequence": 2,
+            "markerStream": "stdout",
+            "receivedAt": "2026-10-29T18:37:59.929Z",
+            "imeShown": true,
+            "appResumed": true,
+            "appWindowFocused": true,
+            "focusMetadataAvailable": true,
+            "initiallyFocused": true,
+            "focusPolls": 0,
+            "focusTarget": "id.queueb.queueb_client/id.queueb.queueb_client.MainActivity",
+            "systemOverlay": null,
+            "injectedAt": "2026-10-29T18:38:04.914Z"
+          },
+          {
+            "sequence": 3,
+            "markerStream": "stdout",
+            "receivedAt": "2026-10-29T18:38:06.621Z",
+            "imeShown": true,
+            "appResumed": true,
+            "appWindowFocused": true,
+            "focusMetadataAvailable": true,
+            "initiallyFocused": true,
+            "focusPolls": 0,
+            "focusTarget": "id.queueb.queueb_client/id.queueb.queueb_client.MainActivity",
+            "systemOverlay": null,
+            "injectedAt": "2026-10-29T18:38:11.561Z"
+          }
+        ],
+        "summary": [
+          "I/flutter ( 4443): Final Android QA phase: patient1",
+          "I/flutter ( 4443): Final Android QA PASS: patient-five-navigation",
+          "I/flutter ( 4443): Final Android QA diagnostic: before-0-framework=true-pop=0-keys=0-scopes=false,true,true",
+          "I/flutter ( 4443): Final Android QA before-back: /patient/profile focus=true",
+          "I/flutter ( 4443): Final Android QA request: system-back 1",
+          "I/flutter ( 4443): Final Android QA diagnostic: after-1-framework=false-pop=1-keys=0",
+          "I/flutter ( 4443): Final Android QA after-back: /patient",
+          "I/flutter ( 4443): Final Android QA diagnostic: before-1-framework=true-pop=1-keys=0-scopes=true,false,true",
+          "I/flutter ( 4443): Final Android QA before-back: /patient/reservations/new focus=true",
+          "I/flutter ( 4443): Final Android QA request: system-back 2",
+          "I/flutter ( 4443): Final Android QA diagnostic: after-2-framework=true-pop=2-keys=0",
+          "I/flutter ( 4443): Final Android QA after-back: /patient/reservations",
+          "I/flutter ( 4443): Final Android QA diagnostic: before-2-framework=true-pop=2-keys=0-scopes=false,true,true",
+          "I/flutter ( 4443): Final Android QA before-back: /patient/reservations focus=true",
+          "I/flutter ( 4443): Final Android QA request: system-back 3",
+          "I/flutter ( 4443): Final Android QA diagnostic: after-3-framework=false-pop=3-keys=0",
+          "I/flutter ( 4443): Final Android QA after-back: /patient",
+          "I/flutter ( 4443): Final Android QA PASS: router-native-back",
+          "I/flutter ( 4443): Final Android QA PASS: secure-store-restore",
+          "I/flutter ( 4443): Final Android QA phase: patient2",
+          "I/flutter ( 4443): Final Android QA PASS: patient-account-isolation",
+          "I/flutter ( 4443): Final Android QA phase: petugas"
+        ],
+        "failureSignatures": [
+          "Android QA condition not reached",
+          "TestFailure"
+        ]
+      }
+    },
+    {
+      "attempt": "android-setup-resource-failed",
+      "phase": "Guarded fixture setup before instrumentation",
+      "results": [
+        {
+          "exit": 1,
+          "seconds": 40.9,
+          "fingerprints": [
+            {
+              "dataExisting": {
+                "jumlah": 13,
+                "hilang": 0,
+                "berubah": 0
+              },
+              "recordBaruTersisa": 0
+            }
+          ],
+          "diagnosticCodes": [
+            "P2028"
+          ]
+        }
+      ],
+      "bootstrap": null,
+      "native": null
+    },
+    {
+      "attempt": "android-system-crash-failed",
+      "phase": "Android13 x86_64 instrumentation",
+      "results": [
+        {
+          "exit": 1,
+          "seconds": 1974.8,
+          "fingerprints": [
+            {
+              "dataExisting": {
+                "jumlah": 13,
+                "hilang": 0,
+                "berubah": 0
+              },
+              "recordBaruTersisa": 0
+            }
+          ],
+          "diagnosticCodes": []
+        }
+      ],
+      "bootstrap": null,
+      "native": {
+        "android": "13",
+        "sdk": "33",
+        "abi": "x86_64",
+        "exit": 4294967295,
+        "summary": [],
+        "failureSignatures": []
+      }
+    },
+    {
+      "attempt": "android-unsupported",
+      "phase": "SDK guard: Android11 x86 unsupported",
+      "results": [
+        {
+          "exit": 1,
+          "seconds": 39.5,
+          "fingerprints": [
+            {
+              "dataExisting": {
+                "jumlah": 13,
+                "hilang": 0,
+                "berubah": 0
+              },
+              "recordBaruTersisa": 0
+            }
+          ],
+          "diagnosticCodes": []
+        }
+      ],
+      "bootstrap": null,
+      "native": null
+    }
+  ],
+  "note": "Diagnostic probes deliberately fail and cannot qualify as final acceptance. Raw reports and ledgers retained locally under apps/client/build/routing-evidence-raw."
+}

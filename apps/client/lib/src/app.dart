@@ -1,26 +1,46 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:go_router/go_router.dart';
 
-import 'admin.dart';
+import 'routing/app_router.dart';
+
 import 'admin_ui.dart';
 import 'api.dart';
-import 'display.dart';
-import 'doctor.dart';
 import 'user_profile.dart';
 import 'doctor_visual.dart';
-import 'patient.dart';
-import 'queue.dart';
 import 'mobile_ui.dart';
 import 'login_ui.dart';
 import 'patient_design.dart';
 import 'staff_v4.dart';
 import 'queueb_palette.dart';
 
-class QueueBApp extends StatelessWidget {
+class QueueBApp extends StatefulWidget {
   const QueueBApp({super.key, required this.api});
   final QueueApi api;
   @override
-  Widget build(BuildContext context) => MaterialApp(
+  State<QueueBApp> createState() => _QueueBAppState();
+}
+
+class _QueueBAppState extends State<QueueBApp> {
+  late AppRouting routing = AppRouting(widget.api);
+  @override
+  void didUpdateWidget(covariant QueueBApp oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.api != widget.api) {
+      routing.dispose();
+      routing = AppRouting(widget.api);
+    }
+  }
+
+  @override
+  void dispose() {
+    routing.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => MaterialApp.router(
+    routerConfig: routing.router,
     title: 'QueueB Hospital',
     debugShowCheckedModeBanner: false,
     locale: const Locale('id'),
@@ -39,182 +59,118 @@ class QueueBApp extends StatelessWidget {
       ),
       cardTheme: const CardThemeData(elevation: 0, color: Colors.white),
     ),
-    routes: {
-      '/display': (context) => DisplayPage(
-        api: api,
-        onExit: () => Navigator.of(context).popUntil((r) => r.isFirst),
-      ),
-    },
-    home: _Root(api: api),
   );
 }
 
-class _Root extends StatefulWidget {
-  const _Root({required this.api});
-  final QueueApi api;
-  @override
-  State<_Root> createState() => _RootState();
+PreferredSizeWidget portalHeader(
+  BuildContext context,
+  QueueApi api,
+  VoidCallback openProfile, {
+  VoidCallback? onActivity,
+  Widget? staffContext,
+}) {
+  final role = api.user?['peran'];
+  if (role == 'PETUGAS') {
+    return StaffToolbar(
+      selection: staffContext ?? const SizedBox(),
+      avatar: AccountAvatar(api: api, radius: 18),
+      name: (api.user?['nama'] ?? 'Petugas').toString(),
+      onProfile: openProfile,
+    );
+  }
+  return AppBar(
+    automaticallyImplyLeading: role != 'USER',
+    toolbarHeight: role == 'USER'
+        ? 48
+        : role == 'ADMIN'
+        ? 52
+        : role == 'DOKTER'
+        ? 64
+        : role == 'PETUGAS'
+        ? 60
+        : null,
+    title: role == 'USER'
+        ? null
+        : staffContext != null && MediaQuery.sizeOf(context).width >= 700
+        ? Row(
+            children: [
+              const Flexible(child: QueueBBrand(compact: true)),
+              Expanded(flex: 3, child: staffContext),
+            ],
+          )
+        : const QueueBBrand(compact: true),
+    actions: [
+      if (role == 'USER')
+        IconButton(
+          tooltip: 'Aktivitas tiket',
+          onPressed: onActivity,
+          icon: const Icon(Icons.notifications_none_rounded),
+        ),
+
+      if (['DOKTER', 'PETUGAS'].contains(role) &&
+          MediaQuery.sizeOf(context).width >= 700)
+        ProfileHeaderIdentity(api: api),
+      if (role != 'USER' && role != 'ADMIN')
+        IconButton(
+          tooltip: 'Profil akun',
+          icon: ExcludeSemantics(child: AccountAvatar(api: api, radius: 16)),
+          onPressed: openProfile,
+        ),
+      if (role != 'USER')
+        IconButton(
+          tooltip: 'Keluar akun',
+          icon: const Icon(Icons.logout),
+          onPressed: () async {
+            try {
+              await api.logout();
+            } catch (_) {
+              /* Session gate reports cleanup failures and server confirmation. */
+            }
+          },
+        ),
+    ],
+  );
 }
 
-class _RootState extends State<_Root> {
+class PortalFrame extends StatelessWidget {
+  const PortalFrame({
+    super.key,
+    required this.api,
+    required this.role,
+    required this.child,
+  });
+  final QueueApi api;
+  final String role;
+  final Widget child;
   @override
-  void initState() {
-    super.initState();
-    widget.api.addListener(_sessionChanged);
-  }
-
-  void _sessionChanged() {
-    if (widget.api.user != null &&
-        widget.api.sessionPhase == SessionPhase.ready) {
-      return;
-    }
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted &&
-          (widget.api.user == null ||
-              widget.api.sessionPhase != SessionPhase.ready)) {
-        Navigator.of(context).popUntil((route) => route.isFirst);
-      }
-    });
-  }
-
-  @override
-  void didUpdateWidget(covariant _Root oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.api != widget.api) {
-      oldWidget.api.removeListener(_sessionChanged);
-      widget.api.addListener(_sessionChanged);
-    }
-  }
-
-  @override
-  void dispose() {
-    widget.api.removeListener(_sessionChanged);
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => ListenableBuilder(
-    listenable: widget.api,
-    builder: (context, _) {
-      final api = widget.api;
-      if (api.sessionPhase != SessionPhase.ready) return _SessionGate(api: api);
-      if (api.user == null) {
-        return LoginPage(
-          api: api,
-          notice: api.sessionMessage,
-          onDisplay: () => Navigator.of(context).pushNamed('/display'),
-        );
-      }
-      final role = api.user!['peran'];
-      void openProfile() => Navigator.of(context).push<void>(
-        MaterialPageRoute(builder: (_) => UserProfilePage(api: api)),
-      );
-      PreferredSizeWidget header({
-        VoidCallback? onActivity,
-        Widget? staffContext,
-      }) {
-        if (role == 'PETUGAS') {
-          return StaffToolbar(
-            selection: staffContext ?? const SizedBox(),
-            avatar: AccountAvatar(api: api, radius: 18),
-            name: (api.user?['nama'] ?? 'Petugas').toString(),
-            onProfile: openProfile,
-          );
-        }
-        return AppBar(
-          automaticallyImplyLeading: role != 'USER',
-          toolbarHeight: role == 'USER'
-              ? 48
-              : role == 'ADMIN'
-              ? 52
-              : role == 'DOKTER'
-              ? 64
-              : role == 'PETUGAS'
-              ? 60
-              : null,
-          title: role == 'USER'
-              ? null
-              : staffContext != null && MediaQuery.sizeOf(context).width >= 700
-              ? Row(
-                  children: [
-                    const Flexible(child: QueueBBrand(compact: true)),
-                    Expanded(flex: 3, child: staffContext),
-                  ],
-                )
-              : const QueueBBrand(compact: true),
-          actions: [
-            if (role == 'USER')
-              IconButton(
-                tooltip: 'Aktivitas tiket',
-                onPressed: onActivity,
-                icon: const Icon(Icons.notifications_none_rounded),
-              ),
-
-            if (['DOKTER', 'PETUGAS'].contains(role) &&
-                MediaQuery.sizeOf(context).width >= 700)
-              ProfileHeaderIdentity(api: api),
-            if (role != 'USER' && role != 'ADMIN')
-              IconButton(
-                tooltip: 'Profil akun',
-                icon: ExcludeSemantics(
-                  child: AccountAvatar(api: api, radius: 16),
+  Widget build(BuildContext context) => Theme(
+    data: role == 'ADMIN'
+        ? AdminStyle.theme
+        : role == 'DOKTER'
+        ? DoctorStyle.theme
+        : role == 'USER'
+        ? PatientDesign.theme
+        : QueueBStyle.theme,
+    child: Builder(
+      builder: (context) => Scaffold(
+        appBar: role == 'USER' || role == 'PETUGAS'
+            ? null
+            : portalHeader(
+                context,
+                api,
+                () => context.go(
+                  '${role == 'ADMIN' ? '/admin' : '/doctor'}/profile',
                 ),
-                onPressed: openProfile,
               ),
-            if (role != 'USER')
-              IconButton(
-                tooltip: 'Keluar akun',
-                icon: const Icon(Icons.logout),
-                onPressed: () async {
-                  try {
-                    await api.logout();
-                  } catch (_) {
-                    /* Session gate reports cleanup failures and server confirmation. */
-                  }
-                },
-              ),
-          ],
-        );
-      }
-
-      return Theme(
-        data: role == 'ADMIN'
-            ? AdminStyle.theme
-            : role == 'DOKTER'
-            ? DoctorStyle.theme
-            : role == 'USER'
-            ? PatientDesign.theme
-            : QueueBStyle.theme,
-        child: Scaffold(
-          appBar: role == 'USER' || role == 'PETUGAS' ? null : header(),
-          body: SafeArea(
-            top: false,
-            child: KeyedSubtree(
-              key: ValueKey(api.user!['id']),
-              child: switch (role) {
-                'ADMIN' => AdminPage(api: api, onProfile: openProfile),
-                'PETUGAS' => QueuePage(
-                  api: api,
-                  headerBuilder: (status) => header(staffContext: status),
-                ),
-                'DOKTER' => DoctorPage(api: api),
-                _ => PatientPage(
-                  api: api,
-                  headerBuilder: (_, activity) => header(onActivity: activity),
-                  onDisplay: () => Navigator.of(context).pushNamed('/display'),
-                ),
-              },
-            ),
-          ),
-        ),
-      );
-    },
+        body: SafeArea(top: false, child: child),
+      ),
+    ),
   );
 }
 
 /// Authentication boundary only; dashboards keep their existing UI.
-class _SessionGate extends StatelessWidget {
-  const _SessionGate({required this.api});
+class SessionGate extends StatelessWidget {
+  const SessionGate({super.key, required this.api});
   final QueueApi api;
   @override
   Widget build(BuildContext context) {
@@ -287,10 +243,14 @@ class LoginPage extends StatefulWidget {
     required this.api,
     required this.onDisplay,
     this.notice,
+    this.registration,
+    this.onRegistrationChanged,
   });
   final QueueApi api;
   final VoidCallback onDisplay;
   final String? notice;
+  final bool? registration;
+  final ValueChanged<bool>? onRegistrationChanged;
   @override
   State<LoginPage> createState() => _LoginPageState();
 }
@@ -300,7 +260,16 @@ class _LoginPageState extends State<LoginPage> {
   final email = TextEditingController();
   final password = TextEditingController();
   final name = TextEditingController();
-  bool register = false, busy = false, obscure = true;
+  bool _register = false, busy = false, obscure = true;
+  bool get register => widget.registration ?? _register;
+  void changeRegistration(bool value) {
+    if (widget.onRegistrationChanged case final callback?) {
+      callback(value);
+    } else {
+      _register = value;
+    }
+  }
+
   String? error, message;
   Future<void> submit() async {
     if (busy || !form.currentState!.validate()) return;
@@ -314,7 +283,7 @@ class _LoginPageState extends State<LoginPage> {
         await widget.api.register(name.text, email.text, password.text);
         if (mounted) {
           setState(() {
-            register = false;
+            changeRegistration(false);
             message = 'Akun pasien dibuat. Silakan masuk.';
           });
         }
@@ -561,7 +530,7 @@ class _LoginPageState extends State<LoginPage> {
                         onPressed: busy
                             ? null
                             : () => setState(() {
-                                register = !register;
+                                changeRegistration(!register);
                                 error = null;
                                 message = null;
                               }),

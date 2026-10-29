@@ -1,6 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:go_router/go_router.dart';
+
+import 'routing/route_policy.dart';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'features/patient/data/patient_repository.dart';
@@ -37,8 +42,12 @@ class PatientPage extends StatefulWidget {
     this.onDisplay,
     this.headerBuilder,
     this.repository,
+    this.navigationShell,
+    this.location,
   });
   final QueueApi api;
+  final StatefulNavigationShell? navigationShell;
+  final Uri? location;
 
   /// Optional externally-owned scope, useful for dependency injection.
   final PatientRepository? repository;
@@ -55,7 +64,29 @@ class _PatientPageState extends State<PatientPage> {
   PatientUpdates get updates => repository.updates;
   late final PatientBookingCubit booking;
   late final PatientReservationsCubit reservations;
-  int tab = 0;
+  int _tab = 0;
+  int get tab => widget.navigationShell == null
+      ? _tab
+      : [0, 2, 1, 3, 5][widget.navigationShell!.currentIndex];
+  set tab(int value) {
+    if (widget.navigationShell == null) {
+      _tab = value;
+    } else if (value != 2) {
+      widget.navigationShell!.goBranch([0, 2, 1, 3, 5].indexOf(value));
+    }
+  }
+
+  void _go(String path) {
+    if (widget.navigationShell != null) context.go(path);
+  }
+
+  bool get _routedBooking =>
+      widget.location?.path == '/patient/reservations/new' ||
+      widget.location?.path.startsWith('/patient/reservations/doctors/') ==
+          true;
+  String? _hydratingUri, _routeError;
+  bool _routeLoading = false;
+
   int get catalogRevision => booking.revision;
   bool profileVisited = false;
   bool get busy => reservations.busy || booking.busy;
@@ -67,7 +98,10 @@ class _PatientPageState extends State<PatientPage> {
       ].contains(overviewCubit.state.load) ||
       booking.state.loading;
   bool ticketDialogOpen = false, cancelReviewing = false;
-  bool reservationCreating = false;
+  bool _reservationCreating = false;
+  bool get reservationCreating =>
+      widget.navigationShell == null ? _reservationCreating : _routedBooking;
+  set reservationCreating(bool value) => _reservationCreating = value;
   bool get nearestLoading => booking.state.values['nearestLoading'] == true;
   set nearestLoading(bool value) => booking.change({'nearestLoading': value});
   String reservationMode = 'legacy', reservationQuery = '';
@@ -182,6 +216,12 @@ class _PatientPageState extends State<PatientPage> {
         date.text = dates.first;
       }
     });
+    _go(
+      Uri(
+        path: '/patient/reservations/doctors/${doctor['id']}',
+        queryParameters: serviceId == null ? null : {'clinic': serviceId!},
+      ).toString(),
+    );
     await loadSchedules();
   }
 
@@ -199,7 +239,104 @@ class _PatientPageState extends State<PatientPage> {
     booking = PatientBookingCubit(PatientBookingRepository(repository));
     reservations = PatientReservationsCubit(repository);
     repository.addListener(_scopeChanged);
-    load();
+    unawaited(load().then((_) => _hydrateRoute()));
+  }
+
+  @override
+  void didUpdateWidget(covariant PatientPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.location != widget.location) {
+      _routeLoading = false;
+      _routeError = null;
+      _hydratingUri = null;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(_hydrateRoute());
+      });
+    }
+  }
+
+  Future<void> _hydrateRoute() async {
+    final uri = widget.location;
+    if (uri == null ||
+        !_routedBooking ||
+        !repository.active ||
+        _hydratingUri == uri.toString()) {
+      return;
+    }
+    _hydratingUri = uri.toString();
+    final isDoctor = uri.path.startsWith('/patient/reservations/doctors/');
+    final id = isDoctor ? uri.pathSegments.last : null;
+    // An explicit UI selection is already validated by the feature.
+    if (id != null &&
+        doctorId == id &&
+        serviceId == uri.queryParameters['clinic']) {
+      return;
+    }
+    if (!isDoctor &&
+        serviceId != null &&
+        uri.queryParameters['clinic'] == serviceId) {
+      return;
+    }
+    setState(() {
+      _routeLoading = true;
+      _routeError = null;
+    });
+    final expected = uri.toString();
+    bool current() =>
+        mounted && repository.active && widget.location?.toString() == expected;
+    try {
+      if (services.isEmpty || (isDoctor && doctors.isEmpty)) {
+        await readOverview();
+      }
+      if (!current()) return;
+      final clinic = uri.queryParameters['clinic'];
+      if (isDoctor) {
+        final doctor = doctors.where((d) => d['id'] == id).firstOrNull;
+        final links = doctor == null
+            ? <Json>[]
+            : rows(doctor['dokterLayanan'])
+                  .where(
+                    (l) =>
+                        l['aktif'] == true &&
+                        services.any((s) => s['id'] == l['layananId']) &&
+                        (clinic == null || l['layananId'] == clinic),
+                  )
+                  .toList();
+        if (doctor == null || links.length != 1) {
+          throw const ApiException(
+            404,
+            'Dokter atau poliklinik tidak tersedia. Pilih kembali dari daftar.',
+          );
+        }
+        await _selectService('${links.single['layananId']}');
+        if (!current()) return;
+        setState(() {
+          doctorId = id;
+          doctorDetail = true;
+        });
+        await loadSchedules();
+      } else {
+        if (clinic != null) {
+          if (!services.any((s) => s['id'] == clinic)) {
+            throw const ApiException(404, 'Poliklinik tidak tersedia.');
+          }
+          await _selectService(clinic);
+        } else {
+          setState(() {
+            _reservationCreating = true;
+            reservationMode = uri.queryParameters['mode'] ?? 'clinics';
+          });
+        }
+      }
+    } catch (_) {
+      if (current()) {
+        setState(
+          () => _routeError = 'Pilihan tidak tersedia. Kembali ke daftar reservasi dan pilih kembali.',
+        );
+      }
+    } finally {
+      if (current()) setState(() => _routeLoading = false);
+    }
   }
 
   void _scopeChanged() {
@@ -364,6 +501,17 @@ class _PatientPageState extends State<PatientPage> {
   }
 
   Future<void> selectService(String? value) {
+    final pending = _selectService(value);
+    _go(
+      Uri(
+        path: '/patient/reservations/new',
+        queryParameters: value == null ? null : {'clinic': value},
+      ).toString(),
+    );
+    return pending;
+  }
+
+  Future<void> _selectService(String? value) {
     setState(() {
       booking.invalidate();
       serviceId = value;
@@ -416,6 +564,7 @@ class _PatientPageState extends State<PatientPage> {
       booking.invalidateNearest();
       reservationFlowVersion++;
     });
+    widget.navigationShell?.goBranch(1, initialLocation: true);
   }
 
   Future<void> createReservation() async {
@@ -440,6 +589,12 @@ class _PatientPageState extends State<PatientPage> {
       booking.invalidateNearest();
       reservationFlowVersion++;
     });
+    _go(
+      Uri(
+        path: '/patient/reservations/new',
+        queryParameters: {'mode': method},
+      ).toString(),
+    );
     if (method == 'nearest') await loadNearest();
   }
 
@@ -900,7 +1055,16 @@ class _PatientPageState extends State<PatientPage> {
                           if (mounted &&
                               revision == catalogRevision &&
                               error == null &&
-                              tab == 2) {
+                              (widget.navigationShell == null
+                                  ? tab == 2
+                                  : GoRouter.of(this.context)
+                                        .routeInformationProvider
+                                        .value
+                                        .uri
+                                        .path
+                                        .startsWith(
+                                          '/patient/reservations/',
+                                        ))) {
                             await chooseDoctor(previews[index].doctor);
                           }
                         },
@@ -941,124 +1105,235 @@ class _PatientPageState extends State<PatientPage> {
       ? const SizedBox.shrink()
       : Theme(
           data: PatientMobileV5.theme,
-          child: PatientScrollShell(
-            pageKey:
-                '$tab:$reservationCreating:$serviceId:$bookingStage:$doctorDetail',
-            // Home owns its compact identity; no duplicate app bar or notification.
-            header: null,
-            acceptNestedScrolls: tab == 0,
-            floatingActionButton: tab == 2 && !reservationCreating
-                ? FloatingActionButton.extended(
-                    heroTag: 'create-reservation',
-                    onPressed: busy || loading ? null : createReservation,
-                    backgroundColor: PatientDesign.darkTeal,
-                    foregroundColor: Colors.white,
-                    elevation: 2,
-                    icon: const Icon(Icons.add),
-                    label: const Text(
-                      'Buat Reservasi',
-                      style: TextStyle(fontSize: 13),
-                    ),
-                  )
-                : null,
-            floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-            bottomNavigationBar: PatientBottomNavigation(
-              selectedIndex: tab == 4 ? 0 : [0, 2, 1, 3, 5].indexOf(tab),
-              onSelected: busy
-                  ? null
-                  : (i) => setState(() {
-                      tab = [0, 2, 1, 3, 5][i];
-                      if (tab == 5) profileVisited = true;
-                      reservationFlowVersion++;
-                      booking.invalidateNearest();
-                      if (tab == 2) reservationCreating = false;
-                    }),
-            ),
-            body: ColoredBox(
-              color: tab == 0
-                  ? PatientHomeStyle.background
-                  : PatientDesign.background,
-              child: Align(
-                alignment: Alignment.topCenter,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 760),
-                  child: IndexedStack(
-                    index: tab == 5
-                        ? 2
-                        : tab == 2 && !reservationCreating
-                        ? 0
-                        : 1,
-                    children: [
-                      ReservationList(
-                        items: patientReservations(
-                          tickets,
-                          appointments,
-                          doctors,
-                          widget.api.config.today,
+          child: _PatientViewScope(
+            owner: this,
+            child: PopScope(
+              canPop:
+                  kIsWeb ||
+                  widget.navigationShell == null ||
+                  (!busy &&
+                      (tab == 0 ||
+                          !RoutePolicy.patientPaths.contains(
+                            widget.location?.path,
+                          ))),
+              onPopInvokedWithResult: (didPop, _) {
+                if (!didPop &&
+                    !kIsWeb &&
+                    !busy &&
+                    widget.navigationShell != null) {
+                  widget.navigationShell!.goBranch(0);
+                }
+              },
+              child: PatientScrollShell(
+                pageKey:
+                    '$tab:$reservationCreating:$serviceId:$bookingStage:$doctorDetail',
+                // Home owns its compact identity; no duplicate app bar or notification.
+                header: null,
+                acceptNestedScrolls: tab == 0,
+                floatingActionButton: tab == 2 && !reservationCreating
+                    ? FloatingActionButton.extended(
+                        heroTag: 'create-reservation',
+                        onPressed: busy || loading ? null : createReservation,
+                        backgroundColor: PatientDesign.darkTeal,
+                        foregroundColor: Colors.white,
+                        elevation: 2,
+                        icon: const Icon(Icons.add),
+                        label: const Text(
+                          'Buat Reservasi',
+                          style: TextStyle(fontSize: 13),
                         ),
-                        config: widget.api.config,
-                        loading: loading,
-                        busy: busy,
-                        error: error,
-                        message: message,
-                        onRefresh: load,
-                        onCreate: createReservation,
-                        onTicket: (r) =>
-                            openTicket(r.ticket, issueQrOnOpen: !r.terminal),
-                        onCancel: (r) => cancel(r.appointment!),
-                      ),
-                      tab == 0
-                          ? _home(context)
-                          : tab == 1
-                          ? _tickets(context)
-                          : tab == 3
-                          ? PatientAgenda(
-                              appointments: appointments,
-                              config: widget.api.config,
-                              loading: loading,
-                              busy: busy,
-                              error: error,
-                              message: message,
-                              onRefresh: load,
-                              onTicket: (ticket) => openTicket(ticket),
-                            )
-                          : ListView(
-                              key: PageStorageKey(
-                                '$tab:$serviceId:$bookingStage:$doctorDetail',
+                      )
+                    : null,
+                floatingActionButtonLocation:
+                    FloatingActionButtonLocation.endFloat,
+                bottomNavigationBar: PatientBottomNavigation(
+                  selectedIndex: tab == 4 ? 0 : [0, 2, 1, 3, 5].indexOf(tab),
+                  onSelected: busy
+                      ? null
+                      : (i) {
+                          if (widget.navigationShell case final shell?) {
+                            reservationFlowVersion++;
+                            booking.invalidateNearest();
+                            if (i == 1) {
+                              showReservations();
+                            } else {
+                              shell.goBranch(i);
+                            }
+                          } else {
+                            setState(() {
+                              tab = [0, 2, 1, 3, 5][i];
+                              if (tab == 5) profileVisited = true;
+                              reservationFlowVersion++;
+                              booking.invalidateNearest();
+                              if (tab == 2) reservationCreating = false;
+                            });
+                          }
+                        },
+                ),
+                body: ColoredBox(
+                  color: tab == 0
+                      ? PatientHomeStyle.background
+                      : PatientDesign.background,
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 760),
+                      child:
+                          widget.navigationShell ??
+                          IndexedStack(
+                            index: tab == 5
+                                ? 2
+                                : tab == 2 && !reservationCreating
+                                ? 0
+                                : 1,
+                            children: [
+                              ReservationList(
+                                items: patientReservations(
+                                  tickets,
+                                  appointments,
+                                  doctors,
+                                  widget.api.config.today,
+                                ),
+                                config: widget.api.config,
+                                loading: loading,
+                                busy: busy,
+                                error: error,
+                                message: message,
+                                onRefresh: load,
+                                onCreate: createReservation,
+                                onTicket: (r) => openTicket(
+                                  r.ticket,
+                                  issueQrOnOpen: !r.terminal,
+                                ),
+                                onCancel: (r) => cancel(r.appointment!),
                               ),
-                              padding: const EdgeInsets.all(16),
-                              children: [
-                                if (error != null) ...[
-                                  MobileNotice(error!, error: true),
-                                  TextButton.icon(
-                                    onPressed: busy || loading ? null : load,
-                                    icon: const Icon(Icons.refresh),
-                                    label: const Text('Coba lagi'),
-                                  ),
-                                ],
-                                if (message != null) MobileNotice(message!),
-                                if (loading)
-                                  const LinearProgressIndicator(
-                                    semanticsLabel: 'Memuat data pelayanan',
-                                  ),
-                                if (tab == 2) _registration(context),
-                                if (tab == 4) _history(context),
-                              ],
-                            ),
-                      if (profileVisited)
-                        UserProfilePage(
-                          api: widget.api,
-                          onReturnToPatient: () => setState(() => tab = 0),
-                        )
-                      else
-                        const SizedBox(),
-                    ],
+                              tab == 0
+                                  ? _home(context)
+                                  : tab == 1
+                                  ? _tickets(context)
+                                  : tab == 3
+                                  ? PatientAgenda(
+                                      appointments: appointments,
+                                      config: widget.api.config,
+                                      loading: loading,
+                                      busy: busy,
+                                      error: error,
+                                      message: message,
+                                      onRefresh: load,
+                                      onTicket: (ticket) => openTicket(ticket),
+                                    )
+                                  : ListView(
+                                      key: PageStorageKey(
+                                        '$tab:$serviceId:$bookingStage:$doctorDetail',
+                                      ),
+                                      padding: const EdgeInsets.all(16),
+                                      children: [
+                                        if (error != null) ...[
+                                          MobileNotice(error!, error: true),
+                                          TextButton.icon(
+                                            onPressed: busy || loading
+                                                ? null
+                                                : load,
+                                            icon: const Icon(Icons.refresh),
+                                            label: const Text('Coba lagi'),
+                                          ),
+                                        ],
+                                        if (message != null)
+                                          MobileNotice(message!),
+                                        if (loading)
+                                          const LinearProgressIndicator(
+                                            semanticsLabel:
+                                                'Memuat data pelayanan',
+                                          ),
+                                        if (tab == 2) _registration(context),
+                                        if (tab == 4) _history(context),
+                                      ],
+                                    ),
+                              if (profileVisited)
+                                UserProfilePage(
+                                  api: widget.api,
+                                  onReturnToPatient: () =>
+                                      setState(() => tab = 0),
+                                )
+                              else
+                                const SizedBox(),
+                            ],
+                          ),
+                    ),
                   ),
                 ),
               ),
             ),
           ),
         );
+
+  Widget branch(BuildContext context, int index, {bool bookingView = false}) {
+    if (!repository.active) return const SizedBox.shrink();
+    return switch (index) {
+      0 => _home(context),
+      1 =>
+        bookingView
+            ? ListView(
+                key: const PageStorageKey('booking-route'),
+                padding: const EdgeInsets.all(16),
+                children: [
+                  if (_routeLoading) const LinearProgressIndicator(),
+                  if (error != null) ...[
+                    MobileNotice(error!, error: true),
+                    TextButton.icon(
+                      onPressed: busy || loading ? null : load,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Coba lagi'),
+                    ),
+                  ],
+                  if (loading) const LinearProgressIndicator(),
+                  if (message != null) MobileNotice(message!),
+                  if (_routeError != null) ...[
+                    MobileNotice(_routeError!, error: true),
+                    TextButton(
+                      onPressed: showReservations,
+                      child: const Text('Kembali ke reservasi'),
+                    ),
+                  ] else if (!_routeLoading)
+                    _registration(context),
+                ],
+              )
+            : ReservationList(
+                items: patientReservations(
+                  tickets,
+                  appointments,
+                  doctors,
+                  widget.api.config.today,
+                ),
+                config: widget.api.config,
+                loading: loading,
+                busy: busy,
+                error: error,
+                message: message,
+                onRefresh: load,
+                onCreate: createReservation,
+                onTicket: (r) =>
+                    openTicket(r.ticket, issueQrOnOpen: !r.terminal),
+                onCancel: (r) => cancel(r.appointment!),
+              ),
+      2 => _tickets(context),
+      3 => PatientAgenda(
+        appointments: appointments,
+        config: widget.api.config,
+        loading: loading,
+        busy: busy,
+        error: error,
+        message: message,
+        onRefresh: load,
+        onTicket: (ticket) => openTicket(ticket),
+      ),
+      4 => UserProfilePage(
+        api: widget.api,
+        onReturnToPatient: () => widget.navigationShell!.goBranch(0),
+      ),
+      _ => const SizedBox.shrink(),
+    };
+  }
 
   Widget _registration(BuildContext context) {
     if (serviceId == null && ['doctors', 'nearest'].contains(reservationMode)) {
@@ -1093,20 +1368,41 @@ class _PatientPageState extends State<PatientPage> {
               ? showReservations
               : busy || loading
               ? null
-              : () => setState(() {
-                  booking.invalidate();
-                  if (bookingStage && !doctorDetail) {
-                    doctorDetail = true;
-                    slotId = null;
-                  } else if (bookingStage) {
-                    bookingStage = false;
-                    doctorDetail = false;
-                    doctorId = sessionId = slotId = null;
-                  } else {
-                    serviceId = null;
-                    search = '';
+              : () {
+                  if (widget.location?.path.startsWith(
+                        '/patient/reservations/doctors/',
+                      ) ==
+                      true) {
+                    setState(() {
+                      booking.invalidate();
+                      bookingStage = doctorDetail = false;
+                      doctorId = sessionId = slotId = null;
+                    });
+                    _go(
+                      Uri(
+                        path: '/patient/reservations/new',
+                        queryParameters: serviceId == null
+                            ? null
+                            : {'clinic': serviceId!},
+                      ).toString(),
+                    );
+                    return;
                   }
-                }),
+                  setState(() {
+                    booking.invalidate();
+                    if (bookingStage && !doctorDetail) {
+                      doctorDetail = true;
+                      slotId = null;
+                    } else if (bookingStage) {
+                      bookingStage = false;
+                      doctorDetail = false;
+                      doctorId = sessionId = slotId = null;
+                    } else {
+                      serviceId = null;
+                      search = '';
+                    }
+                  });
+                },
         ),
         if (!bookingStage) ...[
           if (serviceId == null) ..._catalog(context),
@@ -1509,6 +1805,116 @@ class _PatientPageState extends State<PatientPage> {
   }
 }
 
+class PatientBranchView extends StatelessWidget {
+  const PatientBranchView({
+    super.key,
+    required this.index,
+    this.bookingView = false,
+  });
+  final int index;
+  final bool bookingView;
+  @override
+  Widget build(BuildContext context) {
+    final owner = context
+        .dependOnInheritedWidgetOfExactType<_PatientViewScope>()!
+        .owner;
+    return PopScope(
+      canPop: kIsWeb || !bookingView || !owner.busy,
+      child: owner.branch(context, index, bookingView: bookingView),
+    );
+  }
+}
+
+class _PatientViewScope extends InheritedWidget {
+  const _PatientViewScope({required this.owner, required super.child});
+  final _PatientPageState owner;
+  @override
+  bool updateShouldNotify(_PatientViewScope oldWidget) => true;
+}
+
+/// Read-only destination. QR issuance remains an explicit, transient dialog action.
+class PatientTicketRoute extends StatefulWidget {
+  const PatientTicketRoute({super.key, required this.ticketId});
+  final String ticketId;
+  @override
+  State<PatientTicketRoute> createState() => _PatientTicketRouteState();
+}
+
+class _PatientTicketRouteState extends State<PatientTicketRoute> {
+  static const unavailable = 'Tiket tidak tersedia atau tidak dapat diakses.';
+  PatientTicketCubit? controller;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final owner = context
+        .dependOnInheritedWidgetOfExactType<_PatientViewScope>()!
+        .owner;
+    controller ??= PatientTicketCubit(owner.repository, widget.ticketId)
+      ..refresh();
+  }
+
+  @override
+  void dispose() {
+    controller?.close();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      BlocBuilder<PatientTicketCubit, PatientTicketState>(
+        bloc: controller!,
+        builder: (context, state) {
+          final ticket = controller!.ticket;
+          final owner = context
+              .dependOnInheritedWidgetOfExactType<_PatientViewScope>()!
+              .owner;
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text('Detail Tiket'),
+              leading: BackButton(
+                onPressed: () => context.go('/patient/tickets'),
+              ),
+            ),
+            body: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                if (state.load == PatientLoad.loading ||
+                    state.load == PatientLoad.initial)
+                  const LinearProgressIndicator()
+                else if (state.error != null || ticket == null)
+                  Semantics(
+                    label: unavailable,
+                    excludeSemantics: true,
+                    child: const MobileNotice(unavailable, error: true),
+                  )
+                else ...[
+                  Text(
+                    'Tiket ${ticket['nomorAntrean']}',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  Text(label(object(ticket['layanan']))),
+                  ReservationStatus('${ticket['status']}'),
+                  FilledButton(
+                    onPressed: () => showDialog<void>(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (_) => _TicketDialog(
+                        api: owner.widget.api,
+                        repository: owner.repository,
+                        ticket: ticket,
+                        controller: controller,
+                      ),
+                    ),
+                    child: const Text('Lihat tiket & QR'),
+                  ),
+                ],
+              ],
+            ),
+          );
+        },
+      );
+}
+
 class _TicketDialog extends StatefulWidget {
   const _TicketDialog({
     required this.api,
@@ -1516,12 +1922,14 @@ class _TicketDialog extends StatefulWidget {
     required this.repository,
     this.appointment,
     this.issueQrOnOpen = false,
+    this.controller,
   });
   final QueueApi api;
   final Json ticket;
   final PatientRepository repository;
   final Json? appointment;
   final bool issueQrOnOpen;
+  final PatientTicketCubit? controller;
   @override
   State<_TicketDialog> createState() => _TicketDialogState();
 }
@@ -1543,10 +1951,9 @@ class _TicketDialogState extends State<_TicketDialog> {
   @override
   void initState() {
     super.initState();
-    controller = PatientTicketCubit(
-      widget.repository,
-      '${widget.ticket['id']}',
-    );
+    controller =
+        widget.controller ??
+        PatientTicketCubit(widget.repository, '${widget.ticket['id']}');
     countdown = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
       setState(() {
@@ -1562,7 +1969,7 @@ class _TicketDialogState extends State<_TicketDialog> {
         }
       });
     });
-    initialize();
+    if (widget.controller == null) initialize();
   }
 
   Future<void> initialize() async {
@@ -1640,7 +2047,7 @@ class _TicketDialogState extends State<_TicketDialog> {
     qr?.clear();
     qrExpiry?.cancel();
     countdown?.cancel();
-    controller.close();
+    if (widget.controller == null) controller.close();
     super.dispose();
   }
 

@@ -1,0 +1,171 @@
+{
+  "environment": "Android emulator / real local NestJS + PostgreSQL test",
+  "startedAt": "2026-10-29T18:48:37.574Z",
+  "android": "13",
+  "sdk": "33",
+  "abi": "x86_64",
+  "model": "sdk_gphone64_x86_64",
+  "physicalCameraVerified": false,
+  "physicalDeviceVerified": false,
+  "uiLogoutVerified": true,
+  "fixturesPreparedBeforeEmulator": true,
+  "runner": "flutter drive / prebuilt integration APK",
+  "prebuilt": {
+    "sha256": "020d2d108cb7ab6feb72ad40e986cd82142b6a08b79875ba65c50dd01f2c4812",
+    "bytes": 185567871
+  },
+  "systemBackDiagnostics": [
+    {
+      "sequence": 1,
+      "markerStream": "stdout",
+      "receivedAt": "2026-10-29T19:01:09.389Z",
+      "imeShown": false,
+      "imeMetadataAvailable": true,
+      "appResumed": true,
+      "appWindowFocused": true,
+      "focusMetadataAvailable": true,
+      "initiallyFocused": true,
+      "focusPolls": 0,
+      "focusTarget": "id.queueb.queueb_client/id.queueb.queueb_client.MainActivity",
+      "systemOverlay": null,
+      "injectedAt": "2026-10-29T19:01:10.874Z"
+    },
+    {
+      "sequence": 2,
+      "markerStream": "stdout",
+      "receivedAt": "2026-10-29T19:01:12.741Z",
+      "imeShown": false,
+      "imeMetadataAvailable": true,
+      "appResumed": true,
+      "appWindowFocused": true,
+      "focusMetadataAvailable": true,
+      "initiallyFocused": true,
+      "focusPolls": 0,
+      "focusTarget": "id.queueb.queueb_client/id.queueb.queueb_client.MainActivity",
+      "systemOverlay": null,
+      "injectedAt": "2026-10-29T19:01:13.350Z"
+    },
+    {
+      "sequence": 3,
+      "markerStream": "stdout",
+      "receivedAt": "2026-10-29T19:01:13.684Z",
+      "imeShown": false,
+      "imeMetadataAvailable": true,
+      "appResumed": true,
+      "appWindowFocused": true,
+      "focusMetadataAvailable": true,
+      "initiallyFocused": true,
+      "focusPolls": 0,
+      "focusTarget": "id.queueb.queueb_client/id.queueb.queueb_client.MainActivity",
+      "systemOverlay": null,
+      "injectedAt": "2026-10-29T19:01:14.399Z"
+    },
+    {
+      "sequence": 4,
+      "markerStream": "stdout",
+      "receivedAt": "2026-10-29T19:01:36.008Z",
+      "imeShown": false,
+      "imeMetadataAvailable": true,
+      "appResumed": true,
+      "appWindowFocused": true,
+      "focusMetadataAvailable": true,
+      "initiallyFocused": true,
+      "focusPolls": 0,
+      "focusTarget": "id.queueb.queueb_client/id.queueb.queueb_client.MainActivity",
+      "systemOverlay": null,
+      "injectedAt": "2026-10-29T19:01:43.083Z"
+    }
+  ],
+  "systemBackInputs": 4,
+  "cameraPermissionGrantedInQaEmulator": true,
+  "backgroundResumeInputs": 1,
+  "cameraControllerRunningVerified": true,
+  "exit": 0,
+  "seconds": 796.6,
+  "summary": [
+    "I/flutter ( 4387): Final Android QA phase: patient1",
+    "I/flutter ( 4387): Final Android QA PASS: patient-five-navigation",
+    "I/flutter ( 4387): Final Android QA diagnostic: before-0-framework=true-pop=0-keys=0-scopes=false,true,true",
+    "I/flutter ( 4387): Final Android QA before-back: /patient/profile focus=true",
+    "I/flutter ( 4387): Final Android QA request: system-back 1",
+    "I/flutter ( 4387): Final Android QA diagnostic: after-1-framework=false-pop=1-keys=0",
+    "I/flutter ( 4387): Final Android QA after-back: /patient",
+    "I/flutter ( 4387): Final Android QA diagnostic: before-1-framework=true-pop=1-keys=0-scopes=true,false,true",
+    "I/flutter ( 4387): Final Android QA before-back: /patient/reservations/new focus=true",
+    "I/flutter ( 4387): Final Android QA request: system-back 2",
+    "I/flutter ( 4387): Final Android QA diagnostic: after-2-framework=true-pop=2-keys=0",
+    "I/flutter ( 4387): Final Android QA after-back: /patient/reservations",
+    "I/flutter ( 4387): Final Android QA diagnostic: before-2-framework=true-pop=2-keys=0-scopes=false,true,true",
+    "I/flutter ( 4387): Final Android QA before-back: /patient/reservations focus=true",
+    "I/flutter ( 4387): Final Android QA request: system-back 3",
+    "I/flutter ( 4387): Final Android QA diagnostic: after-3-framework=false-pop=3-keys=0",
+    "I/flutter ( 4387): Final Android QA after-back: /patient",
+    "I/flutter ( 4387): Final Android QA PASS: router-native-back",
+    "I/flutter ( 4387): Final Android QA PASS: secure-store-restore",
+    "I/flutter ( 4387): Final Android QA phase: patient2",
+    "I/flutter ( 4387): Final Android QA PASS: patient-account-isolation",
+    "I/flutter ( 4387): Final Android QA phase: petugas",
+    "I/flutter ( 4387): Final Android QA phase: staff-snapshot-ready",
+    "I/flutter ( 4387): Final Android QA phase: camera-startup",
+    "I/flutter ( 4387): Final Android QA camera-state: running-before-pause",
+    "I/flutter ( 4387): Final Android QA request: background-resume",
+    "I/flutter ( 4387): Final Android QA camera-state: running-after-resume",
+    "I/flutter ( 4387): Final Android QA PASS: scanner-background-resume",
+    "I/flutter ( 4387): Final Android QA diagnostic: before-3-framework=true-pop=3-keys=0-scopes=true",
+    "I/flutter ( 4387): Final Android QA before-back: /staff focus=true",
+    "I/flutter ( 4387): Final Android QA request: system-back 4",
+    "I/flutter ( 4387): Final Android QA diagnostic: after-4-framework=false-pop=4-keys=0",
+    "I/flutter ( 4387): Final Android QA after-back: /staff",
+    "I/flutter ( 4387): Final Android QA PASS: nested-profile-ui-logout",
+    "I/flutter ( 4387): Final Android QA PASS: scanner-back-nested-logout",
+    "I/flutter ( 4387): Final Android QA phase: doctor",
+    "I/flutter ( 4387): Final Android QA phase: admin",
+    "I/flutter ( 4387): Final Android QA PASS: operational-role-login-logout",
+    "I/flutter ( 4387): 01:06 +2: All tests passed!"
+  ],
+  "compilerDiagnostics": [],
+  "failureSignatures": [],
+  "finishedAt": "2026-10-29T19:02:00.228Z",
+  "qaOverlay": {
+    "avd": "QueueBRoutingR3",
+    "readOnly": true,
+    "ramMiB": 2048,
+    "resolution": "600x1000",
+    "graphics": "host",
+    "coldBoot": true,
+    "fixturesPreparedBeforeEmulator": true,
+    "device": "emulator-5556",
+    "startedAt": "2026-10-29T18:46:40.0051481Z",
+    "osPreconditions": {
+      "readOnly": true,
+      "autofillWasConfigured": true,
+      "syntheticAutofillDisabled": true
+    },
+    "prebuilt": {
+      "target": "integration_test/final_qa_smoke_test.dart",
+      "targetPlatform": "android-x64",
+      "sourceFingerprint": "ae67539b3c168c0b24a8227c018e3df8ba485e67c57de1500661ab06c31cb261",
+      "sha256": "020d2d108cb7ab6feb72ad40e986cd82142b6a08b79875ba65c50dd01f2c4812",
+      "bytes": 185567871,
+      "builtAt": "2026-10-29T18:44:53.257Z"
+    }
+  },
+  "strict": {
+    "http5xx": 0,
+    "p2028": 0,
+    "minFreeHostMiB": 37,
+    "eventLoopMaxMs": 12935.233535
+  },
+  "fixtureSafety": [
+    [
+      {
+        "dataExisting": {
+          "jumlah": 13,
+          "hilang": 0,
+          "berubah": 0
+        },
+        "recordBaruTersisa": 0
+      }
+    ]
+  ]
+}

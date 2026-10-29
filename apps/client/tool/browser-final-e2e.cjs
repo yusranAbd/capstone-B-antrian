@@ -244,6 +244,12 @@ module.exports = async function finalQa({ fixture: f, root }) {
       [390, 844],
       [1366, 900],
     ]);
+    // Keep every live role/monitor, but release oversized layout-test surfaces
+    // before camera decoding on the 8 GiB QA host. Assertions above still run.
+    await doctor.setViewportSize({ width: 390, height: 844 });
+    await expect(
+      doctor.getByRole("button", { name: /Tanggal:/ }),
+    ).toBeEnabled();
     pass(
       "role-login",
       "ADMIN, PASIEN, DOKTER authenticated in distinct browser contexts",
@@ -551,6 +557,10 @@ module.exports = async function finalQa({ fixture: f, root }) {
       [1366, 768],
       [1920, 1080],
     ]);
+    await a.p.setViewportSize({ width: 1280, height: 720 });
+    await expect(
+      a.p.getByText("Realtime terhubung", { exact: true }),
+    ).toBeVisible();
     phase = "one-scan";
     const camera = await chromium.launch({
       channel: "chrome",
@@ -886,6 +896,24 @@ module.exports = async function finalQa({ fixture: f, root }) {
     await shot(doctor, "doctor-final");
     assert.equal(errors.length, 0);
     pass("runtime", "No uncaught browser pageerror across tested portals");
+    await responseObservers.drain();
+    responseObservers.closing();
+    for (const context of contexts) {
+      if (context !== c.p.context()) await context.close();
+    }
+    phase = "routing-regression";
+    try {
+      report.routing = await require("./browser-routing-qa.cjs")({
+        browser: b,
+        fixture: f,
+        displayPage: c.p,
+        displayId: c.id,
+      });
+      assert.equal(errors.length, 0);
+    } catch (error) {
+      report.routing = error.routingReport;
+      throw error;
+    }
   } catch (error) {
     if (
       phase === "native-audio" &&

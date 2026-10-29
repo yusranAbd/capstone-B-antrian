@@ -1,0 +1,383 @@
+{
+  "baselineRef": "17e8653b82ea25dc2f14ec5e6c1a8da08ec0fc77",
+  "baselineIncludesProtectedLocalDoctorFiles": true,
+  "normalization": "UTF-8 bytes with LF; LOC excludes terminal empty line",
+  "baseline": {
+    "files": 106,
+    "normalizedUtf8LfBytes": 857699,
+    "lines": 25854
+  },
+  "current": {
+    "files": 110,
+    "normalizedUtf8LfBytes": 891307,
+    "lines": 26861
+  },
+  "baselineNavigatorActions": 50,
+  "currentNavigatorActions": 46,
+  "actionCounts": {
+    "pop": 40,
+    "push": 2,
+    "removeRoute": 4,
+    "pushNamed": 0,
+    "popUntil": 0
+  },
+  "actions": [
+    {
+      "file": "apps/client/lib/src/admin.dart",
+      "baselineLine": 418,
+      "action": "pop",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 439
+    },
+    {
+      "file": "apps/client/lib/src/admin.dart",
+      "baselineLine": 424,
+      "action": "pop",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 445
+    },
+    {
+      "file": "apps/client/lib/src/admin.dart",
+      "baselineLine": 527,
+      "action": "pop",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 553
+    },
+    {
+      "file": "apps/client/lib/src/admin.dart",
+      "baselineLine": 988,
+      "action": "pop",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 1033
+    },
+    {
+      "file": "apps/client/lib/src/admin.dart",
+      "baselineLine": 1057,
+      "action": "pop",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 1102
+    },
+    {
+      "file": "apps/client/lib/src/admin.dart",
+      "baselineLine": 1158,
+      "action": "pop",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 1203
+    },
+    {
+      "file": "apps/client/lib/src/admin_delete.dart",
+      "baselineLine": 80,
+      "action": "pop",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 80
+    },
+    {
+      "file": "apps/client/lib/src/admin_delete.dart",
+      "baselineLine": 144,
+      "action": "pop",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 144
+    },
+    {
+      "file": "apps/client/lib/src/admin_delete.dart",
+      "baselineLine": 150,
+      "action": "pop",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 150
+    },
+    {
+      "file": "apps/client/lib/src/admin_display.dart",
+      "baselineLine": 116,
+      "action": "pop",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 116
+    },
+    {
+      "file": "apps/client/lib/src/admin_display.dart",
+      "baselineLine": 376,
+      "action": "pop",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 376
+    },
+    {
+      "file": "apps/client/lib/src/admin_display.dart",
+      "baselineLine": 449,
+      "action": "pop",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 449
+    },
+    {
+      "file": "apps/client/lib/src/admin_display.dart",
+      "baselineLine": 510,
+      "action": "pop",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 510
+    },
+    {
+      "file": "apps/client/lib/src/admin_display.dart",
+      "baselineLine": 512,
+      "action": "removeRoute",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 512
+    },
+    {
+      "file": "apps/client/lib/src/admin_doctor_profile.dart",
+      "baselineLine": 135,
+      "action": "pop",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 135
+    },
+    {
+      "file": "apps/client/lib/src/admin_doctor_profile.dart",
+      "baselineLine": 301,
+      "action": "pop",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 301
+    },
+    {
+      "file": "apps/client/lib/src/admin_practice_form.dart",
+      "baselineLine": 249,
+      "action": "pop",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 249
+    },
+    {
+      "file": "apps/client/lib/src/admin_practice_form.dart",
+      "baselineLine": 664,
+      "action": "pop",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 664
+    },
+    {
+      "file": "apps/client/lib/src/admin_practice_form.dart",
+      "baselineLine": 730,
+      "action": "pop",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 730
+    },
+    {
+      "file": "apps/client/lib/src/admin_schedules.dart",
+      "baselineLine": 526,
+      "action": "pop",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 526
+    },
+    {
+      "file": "apps/client/lib/src/admin_staff.dart",
+      "baselineLine": 266,
+      "action": "pop",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 266
+    },
+    {
+      "file": "apps/client/lib/src/admin_staff.dart",
+      "baselineLine": 341,
+      "action": "pop",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 341
+    },
+    {
+      "file": "apps/client/lib/src/app.dart",
+      "baselineLine": 45,
+      "action": "popUntil",
+      "treatment": "registered go destination",
+      "currentLine": null
+    },
+    {
+      "file": "apps/client/lib/src/app.dart",
+      "baselineLine": 75,
+      "action": "popUntil",
+      "treatment": "GoRouter redirect",
+      "currentLine": null
+    },
+    {
+      "file": "apps/client/lib/src/app.dart",
+      "baselineLine": 105,
+      "action": "pushNamed",
+      "treatment": "registered go destination",
+      "currentLine": null
+    },
+    {
+      "file": "apps/client/lib/src/app.dart",
+      "baselineLine": 109,
+      "action": "push",
+      "treatment": "registered go destination",
+      "currentLine": null
+    },
+    {
+      "file": "apps/client/lib/src/app.dart",
+      "baselineLine": 204,
+      "action": "pushNamed",
+      "treatment": "registered go destination",
+      "currentLine": null
+    },
+    {
+      "file": "apps/client/lib/src/doctor_account.dart",
+      "baselineLine": 50,
+      "action": "pop",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 50
+    },
+    {
+      "file": "apps/client/lib/src/doctor_account.dart",
+      "baselineLine": 183,
+      "action": "pop",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 183
+    },
+    {
+      "file": "apps/client/lib/src/doctor_dashboard.dart",
+      "baselineLine": 606,
+      "action": "pop",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 606
+    },
+    {
+      "file": "apps/client/lib/src/doctor_professional.dart",
+      "baselineLine": 243,
+      "action": "pop",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 243
+    },
+    {
+      "file": "apps/client/lib/src/patient.dart",
+      "baselineLine": 303,
+      "action": "pop",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 440
+    },
+    {
+      "file": "apps/client/lib/src/patient.dart",
+      "baselineLine": 307,
+      "action": "pop",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 444
+    },
+    {
+      "file": "apps/client/lib/src/patient.dart",
+      "baselineLine": 1631,
+      "action": "pop",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 2038
+    },
+    {
+      "file": "apps/client/lib/src/patient.dart",
+      "baselineLine": 1633,
+      "action": "removeRoute",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 2040
+    },
+    {
+      "file": "apps/client/lib/src/patient.dart",
+      "baselineLine": 1772,
+      "action": "pop",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 2179
+    },
+    {
+      "file": "apps/client/lib/src/patient_reservations.dart",
+      "baselineLine": 523,
+      "action": "pop",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 523
+    },
+    {
+      "file": "apps/client/lib/src/patient_reservations.dart",
+      "baselineLine": 585,
+      "action": "pop",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 585
+    },
+    {
+      "file": "apps/client/lib/src/patient_ui.dart",
+      "baselineLine": 379,
+      "action": "pop",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 379
+    },
+    {
+      "file": "apps/client/lib/src/patient_ui.dart",
+      "baselineLine": 383,
+      "action": "pop",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 383
+    },
+    {
+      "file": "apps/client/lib/src/queue.dart",
+      "baselineLine": 96,
+      "action": "push",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 96
+    },
+    {
+      "file": "apps/client/lib/src/queue.dart",
+      "baselineLine": 109,
+      "action": "removeRoute",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 109
+    },
+    {
+      "file": "apps/client/lib/src/queue.dart",
+      "baselineLine": 185,
+      "action": "pop",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 185
+    },
+    {
+      "file": "apps/client/lib/src/queue.dart",
+      "baselineLine": 194,
+      "action": "push",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 194
+    },
+    {
+      "file": "apps/client/lib/src/staff_qr_scanner.dart",
+      "baselineLine": 208,
+      "action": "pop",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 208
+    },
+    {
+      "file": "apps/client/lib/src/user_profile.dart",
+      "baselineLine": 403,
+      "action": "pop",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 403
+    },
+    {
+      "file": "apps/client/lib/src/user_profile.dart",
+      "baselineLine": 407,
+      "action": "pop",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 407
+    },
+    {
+      "file": "apps/client/lib/src/user_profile.dart",
+      "baselineLine": 515,
+      "action": "pop",
+      "treatment": "standalone USER return fallback; routed patient supplies callback",
+      "currentLine": 515
+    },
+    {
+      "file": "apps/client/lib/src/widgets.dart",
+      "baselineLine": 121,
+      "action": "pop",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 121
+    },
+    {
+      "file": "apps/client/lib/src/widgets.dart",
+      "baselineLine": 125,
+      "action": "pop",
+      "treatment": "retain owned modal/picker action",
+      "currentLine": 125
+    }
+  ],
+  "newActions": [
+    {
+      "file": "apps/client/lib/src/routing/account_overlay_observer.dart",
+      "line": 45,
+      "action": "removeRoute"
+    }
+  ]
+}

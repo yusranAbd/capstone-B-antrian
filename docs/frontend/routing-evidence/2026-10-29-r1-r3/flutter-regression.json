@@ -1,0 +1,34 @@
+{
+  "flutter": "3.47.5",
+  "dart": "3.13.4",
+  "goRouter": "18.1.1",
+  "testsPassed": 1091,
+  "skipped": 1,
+  "failed": 0,
+  "analyze": "PASS",
+  "webRelease": "PASS",
+  "mainApkDebug": "PASS",
+  "format": "PASS (13 related Dart files)",
+  "testDuration": "06:48",
+  "skipReason": "Live fixture-dependent test is skipped by standard host flutter test; guarded runners exercise live REST/socket/QR separately.",
+  "localProtectedDoctorChangesIncluded": true,
+  "baselineTestsPreserved": true,
+  "apkEntrypoint": {
+    "apk": "build/app/outputs/flutter-apk/app-debug.apk",
+    "checkedAt": "2026-10-29T19:06:59.5984612Z",
+    "bytes": 259043720,
+    "sha256": "FE22BEEB7EEDFF69864C75A6C089ED53FEDCA663225596FA0E36D5A12517A894",
+    "mainEntryPresent": true,
+    "integrationEntryPresent": false,
+    "routingPresent": true
+  },
+  "localLogs": [
+    "build/routing-flutter-full-final.log",
+    "build/routing-r3-analyze-final.log",
+    "build/routing-web-build.log",
+    "build/routing-apk-build.log"
+  ],
+  "nativeValidatedSourceFingerprint": "ae67539b3c168c0b24a8227c018e3df8ba485e67c57de1500661ab06c31cb261",
+  "analyzeDurationSeconds": 83.5,
+  "finalMainApkRestored": true
+}

@@ -1,0 +1,99 @@
+{
+  "readOnlyFingerprint": true,
+  "writeTarget": "127.0.0.1:5433/capstone_antrean_test",
+  "developmentUnchanged": true,
+  "testUnchanged": true,
+  "databases": [
+    {
+      "database": "capstone_antrean",
+      "tables": 17,
+      "beforeDigest": "686cf3ac44775b237522157c5e2e48e57345a1c52f22a581349b8b80cfff49f6",
+      "afterDigest": "686cf3ac44775b237522157c5e2e48e57345a1c52f22a581349b8b80cfff49f6",
+      "counts": {
+        "pengguna": 62,
+        "layanan": 7,
+        "loket": 9,
+        "jadwal_layanan": 42,
+        "penugasan_petugas": 8,
+        "tiket_antrean": 48,
+        "urutan_antrean_harian": 36,
+        "peristiwa_antrean": 116,
+        "perangkat_tampilan": 6,
+        "sesi_pengguna": 125,
+        "notifikasi": 0,
+        "dokter": 11,
+        "dokter_layanan": 11,
+        "jadwal_praktik": 156,
+        "slot_praktik": 1425,
+        "janji_temu": 33,
+        "_prisma_migrations": 8
+      }
+    },
+    {
+      "database": "capstone_antrean_test",
+      "tables": 17,
+      "beforeDigest": "ed72c0f9d24086c60cce7b4f89addf076b70ec24030da494e9e149f609bdffbb",
+      "afterDigest": "ed72c0f9d24086c60cce7b4f89addf076b70ec24030da494e9e149f609bdffbb",
+      "counts": {
+        "pengguna": 4,
+        "layanan": 2,
+        "loket": 4,
+        "jadwal_layanan": 0,
+        "penugasan_petugas": 0,
+        "tiket_antrean": 0,
+        "urutan_antrean_harian": 0,
+        "peristiwa_antrean": 0,
+        "perangkat_tampilan": 0,
+        "sesi_pengguna": 3,
+        "notifikasi": 0,
+        "dokter": 0,
+        "dokter_layanan": 0,
+        "jadwal_praktik": 0,
+        "slot_praktik": 0,
+        "janji_temu": 0,
+        "_prisma_migrations": 8
+      }
+    }
+  ],
+  "protectedFiles": [
+    {
+      "file": "README.md",
+      "before": "2E510E2F30FB0FB1F9E211C74399B9A1371A57E8567D68AAA013B45C2EBD43E2",
+      "after": "2E510E2F30FB0FB1F9E211C74399B9A1371A57E8567D68AAA013B45C2EBD43E2",
+      "unchanged": true
+    },
+    {
+      "file": "apps/client/lib/src/doctor_dashboard.dart",
+      "before": "3CEF388BDAA3C41025D7FEF9AA985C8D3DEB8FFCE37A649B6342FB6E15FD32E0",
+      "after": "3CEF388BDAA3C41025D7FEF9AA985C8D3DEB8FFCE37A649B6342FB6E15FD32E0",
+      "unchanged": true
+    },
+    {
+      "file": "apps/client/lib/src/doctor_visual.dart",
+      "before": "00171978FBC3EE592013D1574737A1E220120D16C4209AAB7DC6DA65B5DB02E1",
+      "after": "00171978FBC3EE592013D1574737A1E220120D16C4209AAB7DC6DA65B5DB02E1",
+      "unchanged": true
+    },
+    {
+      "file": "apps/client/test/doctor_visual_refresh_test.dart",
+      "before": "095374A43F4E81783F047381151F63D7E2A8A129106F0ACE41C1E34C234A012B",
+      "after": "095374A43F4E81783F047381151F63D7E2A8A129106F0ACE41C1E34C234A012B",
+      "unchanged": true
+    },
+    {
+      "file": "docs/setup/LOCAL_INSTALLATION_GUIDE.md",
+      "before": "8018FBF9A1ABF7B8C78152072E19CA9EEF5338C4BF4080F935B3FCDC997DB66E",
+      "after": "8018FBF9A1ABF7B8C78152072E19CA9EEF5338C4BF4080F935B3FCDC997DB66E",
+      "unchanged": true
+    },
+    {
+      "file": "docs/frontend/GO_ROUTER_MIGRATION_AUDIT_R0.md",
+      "before": "59A9419ABD898473EF2CAE673652FC691068F43253A8644684BC720F9688ADCD",
+      "after": "59A9419ABD898473EF2CAE673652FC691068F43253A8644684BC720F9688ADCD",
+      "unchanged": true
+    }
+  ],
+  "untrackedAndBackupsPreserved": true,
+  "backendProductionChanges": 0,
+  "historicalNote": "Earlier accepted session anomaly predates this audit window. Current development sessions baseline 125 and all 17 table digests remain unchanged."
+}

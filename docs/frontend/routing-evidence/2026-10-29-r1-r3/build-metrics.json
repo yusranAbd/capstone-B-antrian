@@ -1,0 +1,13 @@
+{
+  "web": {
+    "bytes": 51394040,
+    "mainJs": {
+      "bytes": 5505084,
+      "sha256": "a2d360f21ef606f7a6bd14639b74f774287e131b00d16dc0f7c05dbdcd10c098"
+    }
+  },
+  "apk": {
+    "bytes": 259043720,
+    "sha256": "fe22beeb7eedff69864c75a6c089ed53fedca663225596fa0e36d5a12517a894"
+  }
+}

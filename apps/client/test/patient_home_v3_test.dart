@@ -63,7 +63,7 @@ class HomeBackend extends PatientV2Backend {
         ...items,
         {
           ...service,
-          'id': 'aux-registration',
+          'id': '22222222-2222-4222-8222-222222222222',
           'kode': 'PENDAFTARAN',
           'nama': 'Pendaftaran',
           'modeReservasi': 'HIBRIDA',

@@ -1,0 +1,51 @@
+{
+  "testFile": "apps/client/test/routing_portals_test.dart",
+  "testsPassed": 16,
+  "countBasis": "13 testWidgets registrations, cold-URL loop expands 1 to 3, role loop expands 1 to 2",
+  "sourceLog": "build/routing-flutter-full-final.log",
+  "fullRegressionPassed": 1091,
+  "metrics": [
+    {
+      "portal": "admin",
+      "modules": 9,
+      "created": 8,
+      "closed": 0
+    },
+    {
+      "portal": "patient",
+      "createdBeforeProfile": 3,
+      "createdAfterNavigation": 3,
+      "closedAfterNavigation": 0,
+      "navigationLoops": 12,
+      "readsBefore": 5,
+      "readsAfter": 5
+    },
+    {
+      "portal": "patient-profile",
+      "createdAfterProfile": 4,
+      "retainedProfileWidgets": 1
+    },
+    {
+      "portal": "ticket",
+      "created": 1,
+      "closed": 1,
+      "nonGetRequests": 0
+    },
+    {
+      "portal": "PETUGAS",
+      "parentOwnersBefore": 1,
+      "totalOwnersWithProfile": 2
+    },
+    {
+      "portal": "DOKTER",
+      "parentOwnersBefore": 1,
+      "totalOwnersWithProfile": 2
+    },
+    {
+      "portal": "display",
+      "createdBefore": 2,
+      "createdAfterRefresh": 2,
+      "phases": 5
+    }
+  ]
+}

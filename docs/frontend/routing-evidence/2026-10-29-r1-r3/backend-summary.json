@@ -1,0 +1,892 @@
+{
+  "unitPassed": 679,
+  "toolingPassed": 7,
+  "integrationPassed": 387,
+  "integrationSuites": 31,
+  "typecheck": "PASS",
+  "typeAwareLint": "PASS",
+  "build": "PASS",
+  "note": "P2039/check-constraint HTTP 500 intentionally asserted in negative rollback suites; final browser strict gate is separate.",
+  "suites": [
+    {
+      "mode": "backend",
+      "startedAt": "2026-10-29T12:04:26.100Z",
+      "finishedAt": "2026-10-29T12:04:39.131Z",
+      "results": [
+        {
+          "command": "node test/run-doctor-portal.cjs --suite=admin-delete",
+          "exit": 0,
+          "seconds": 13,
+          "summary": [
+            "Target tervalidasi: 127.0.0.1:5433/capstone_antrean_test",
+            "Test Suites: 1 passed, 1 total",
+            "Tests:       22 passed, 22 total",
+            "Time:        11.908 s"
+          ],
+          "suites": [],
+          "fingerprints": [
+            {
+              "recordExisting": 13,
+              "dataExistingDanCleanupSesuai": true
+            }
+          ],
+          "diagnosticCodes": [],
+          "diagnosticErrorTypes": []
+        }
+      ]
+    },
+    {
+      "mode": "backend",
+      "startedAt": "2026-10-29T12:04:39.302Z",
+      "finishedAt": "2026-10-29T12:04:51.836Z",
+      "results": [
+        {
+          "command": "node test/run-doctor-portal.cjs --suite=admin-management-p0",
+          "exit": 0,
+          "seconds": 12.5,
+          "summary": [
+            "Target tervalidasi: 127.0.0.1:5433/capstone_antrean_test",
+            "Test Suites: 1 passed, 1 total",
+            "Tests:       8 passed, 8 total",
+            "Time:        11.71 s"
+          ],
+          "suites": [],
+          "fingerprints": [
+            {
+              "recordExisting": 13,
+              "dataExistingDanCleanupSesuai": true
+            }
+          ],
+          "diagnosticCodes": [],
+          "diagnosticErrorTypes": []
+        }
+      ]
+    },
+    {
+      "mode": "backend",
+      "startedAt": "2026-10-29T12:04:52.015Z",
+      "finishedAt": "2026-10-29T12:04:58.435Z",
+      "results": [
+        {
+          "command": "node test/run-doctor-portal.cjs --suite=app",
+          "exit": 0,
+          "seconds": 6.4,
+          "summary": [
+            "Target tervalidasi: 127.0.0.1:5433/capstone_antrean_test",
+            "Test Suites: 1 passed, 1 total",
+            "Tests:       1 passed, 1 total",
+            "Time:        5.618 s"
+          ],
+          "suites": [],
+          "fingerprints": [
+            {
+              "recordExisting": 13,
+              "dataExistingDanCleanupSesuai": true
+            }
+          ],
+          "diagnosticCodes": [],
+          "diagnosticErrorTypes": []
+        }
+      ]
+    },
+    {
+      "mode": "backend",
+      "startedAt": "2026-10-29T12:04:58.611Z",
+      "finishedAt": "2026-10-29T12:05:06.475Z",
+      "results": [
+        {
+          "command": "node test/run-doctor-portal.cjs --suite=auth",
+          "exit": 0,
+          "seconds": 7.9,
+          "summary": [
+            "Target tervalidasi: 127.0.0.1:5433/capstone_antrean_test",
+            "Test Suites: 1 passed, 1 total",
+            "Tests:       6 passed, 6 total",
+            "Time:        7.075 s"
+          ],
+          "suites": [],
+          "fingerprints": [
+            {
+              "recordExisting": 13,
+              "dataExistingDanCleanupSesuai": true
+            }
+          ],
+          "diagnosticCodes": [],
+          "diagnosticErrorTypes": []
+        }
+      ]
+    },
+    {
+      "mode": "backend",
+      "startedAt": "2026-10-29T12:05:06.649Z",
+      "finishedAt": "2026-10-29T12:05:16.085Z",
+      "results": [
+        {
+          "command": "node test/run-doctor-portal.cjs --suite=auto-check-in",
+          "exit": 0,
+          "seconds": 9.4,
+          "summary": [
+            "Target tervalidasi: 127.0.0.1:5433/capstone_antrean_test",
+            "Test Suites: 1 passed, 1 total",
+            "Tests:       16 passed, 16 total",
+            "Time:        8.654 s"
+          ],
+          "suites": [],
+          "fingerprints": [
+            {
+              "recordExisting": 13,
+              "dataExistingDanCleanupSesuai": true
+            }
+          ],
+          "diagnosticCodes": [],
+          "diagnosticErrorTypes": []
+        }
+      ]
+    },
+    {
+      "mode": "backend",
+      "startedAt": "2026-10-29T12:05:33.651Z",
+      "finishedAt": "2026-10-29T12:05:41.439Z",
+      "results": [
+        {
+          "command": "node test/run-doctor-portal.cjs --suite=display",
+          "exit": 0,
+          "seconds": 7.8,
+          "summary": [
+            "Target tervalidasi: 127.0.0.1:5433/capstone_antrean_test",
+            "Test Suites: 1 passed, 1 total",
+            "Tests:       9 passed, 9 total",
+            "Time:        6.962 s"
+          ],
+          "suites": [],
+          "fingerprints": [
+            {
+              "recordExisting": 13,
+              "dataExistingDanCleanupSesuai": true
+            }
+          ],
+          "diagnosticCodes": [],
+          "diagnosticErrorTypes": []
+        }
+      ]
+    },
+    {
+      "mode": "backend",
+      "startedAt": "2026-10-29T12:05:16.268Z",
+      "finishedAt": "2026-10-29T12:05:25.661Z",
+      "results": [
+        {
+          "command": "node test/run-doctor-portal.cjs --suite=display-pairing",
+          "exit": 0,
+          "seconds": 9.4,
+          "summary": [
+            "Target tervalidasi: 127.0.0.1:5433/capstone_antrean_test",
+            "Test Suites: 1 passed, 1 total",
+            "Tests:       11 passed, 11 total",
+            "Time:        8.547 s"
+          ],
+          "suites": [],
+          "fingerprints": [
+            {
+              "recordExisting": 13,
+              "dataExistingDanCleanupSesuai": true
+            }
+          ],
+          "diagnosticCodes": [],
+          "diagnosticErrorTypes": []
+        }
+      ]
+    },
+    {
+      "mode": "backend",
+      "startedAt": "2026-10-29T12:05:25.830Z",
+      "finishedAt": "2026-10-29T12:05:33.481Z",
+      "results": [
+        {
+          "command": "node test/run-doctor-portal.cjs --suite=display-realtime",
+          "exit": 0,
+          "seconds": 7.7,
+          "summary": [
+            "Target tervalidasi: 127.0.0.1:5433/capstone_antrean_test",
+            "Test Suites: 1 passed, 1 total",
+            "Tests:       6 passed, 6 total",
+            "Time:        6.865 s"
+          ],
+          "suites": [],
+          "fingerprints": [
+            {
+              "recordExisting": 13,
+              "dataExistingDanCleanupSesuai": true
+            }
+          ],
+          "diagnosticCodes": [],
+          "diagnosticErrorTypes": []
+        }
+      ]
+    },
+    {
+      "mode": "backend",
+      "startedAt": "2026-10-29T12:05:41.612Z",
+      "finishedAt": "2026-10-29T12:05:52.529Z",
+      "results": [
+        {
+          "command": "node test/run-doctor-portal.cjs --suite=doctor-daily-queue",
+          "exit": 0,
+          "seconds": 10.9,
+          "summary": [
+            "Target tervalidasi: 127.0.0.1:5433/capstone_antrean_test",
+            "Test Suites: 1 passed, 1 total",
+            "Tests:       5 passed, 5 total",
+            "Time:        10.116 s"
+          ],
+          "suites": [],
+          "fingerprints": [
+            {
+              "recordExisting": 13,
+              "dataExistingDanCleanupSesuai": true
+            }
+          ],
+          "diagnosticCodes": [],
+          "diagnosticErrorTypes": []
+        }
+      ]
+    },
+    {
+      "mode": "backend",
+      "startedAt": "2026-10-29T12:05:52.717Z",
+      "finishedAt": "2026-10-29T12:06:10.355Z",
+      "results": [
+        {
+          "command": "node test/run-doctor-portal.cjs --suite=doctor-portal",
+          "exit": 0,
+          "seconds": 17.6,
+          "summary": [
+            "Target tervalidasi: 127.0.0.1:5433/capstone_antrean_test",
+            "Test Suites: 1 passed, 1 total",
+            "Tests:       19 passed, 19 total",
+            "Time:        16.833 s"
+          ],
+          "suites": [],
+          "fingerprints": [
+            {
+              "recordExisting": 13,
+              "dataExistingDanCleanupSesuai": true
+            }
+          ],
+          "diagnosticCodes": [],
+          "diagnosticErrorTypes": []
+        }
+      ]
+    },
+    {
+      "mode": "backend",
+      "startedAt": "2026-10-29T12:06:10.556Z",
+      "finishedAt": "2026-10-29T12:06:25.079Z",
+      "results": [
+        {
+          "command": "node test/run-doctor-portal.cjs --suite=doctor-profile",
+          "exit": 0,
+          "seconds": 14.5,
+          "summary": [
+            "Target tervalidasi: 127.0.0.1:5433/capstone_antrean_test",
+            "Test Suites: 1 passed, 1 total",
+            "Tests:       12 passed, 12 total",
+            "Time:        13.437 s"
+          ],
+          "suites": [],
+          "fingerprints": [
+            {
+              "recordExisting": 13,
+              "dataExistingDanCleanupSesuai": true
+            }
+          ],
+          "diagnosticCodes": [],
+          "diagnosticErrorTypes": []
+        }
+      ]
+    },
+    {
+      "mode": "backend",
+      "startedAt": "2026-10-29T12:06:25.252Z",
+      "finishedAt": "2026-10-29T12:06:38.265Z",
+      "results": [
+        {
+          "command": "node test/run-doctor-portal.cjs --suite=dokter",
+          "exit": 0,
+          "seconds": 13,
+          "summary": [
+            "Target tervalidasi: 127.0.0.1:5433/capstone_antrean_test",
+            "Test Suites: 1 passed, 1 total",
+            "Tests:       12 passed, 12 total",
+            "Time:        12.003 s"
+          ],
+          "suites": [],
+          "fingerprints": [
+            {
+              "recordExisting": 13,
+              "dataExistingDanCleanupSesuai": true
+            }
+          ],
+          "diagnosticCodes": [],
+          "diagnosticErrorTypes": []
+        }
+      ]
+    },
+    {
+      "mode": "backend",
+      "startedAt": "2026-10-29T12:06:38.458Z",
+      "finishedAt": "2026-10-29T12:06:49.138Z",
+      "results": [
+        {
+          "command": "node test/run-doctor-portal.cjs --suite=hospital-hibrida",
+          "exit": 0,
+          "seconds": 10.7,
+          "summary": [
+            "Target tervalidasi: 127.0.0.1:5433/capstone_antrean_test",
+            "Test Suites: 1 passed, 1 total",
+            "Tests:       4 passed, 4 total",
+            "Time:        9.886 s"
+          ],
+          "suites": [],
+          "fingerprints": [
+            {
+              "recordExisting": 13,
+              "dataExistingDanCleanupSesuai": true
+            }
+          ],
+          "diagnosticCodes": [],
+          "diagnosticErrorTypes": []
+        }
+      ]
+    },
+    {
+      "mode": "backend",
+      "startedAt": "2026-10-29T12:06:49.330Z",
+      "finishedAt": "2026-10-29T12:08:00.154Z",
+      "results": [
+        {
+          "command": "node test/run-doctor-portal.cjs --suite=hospital-integrasi",
+          "exit": 0,
+          "seconds": 70.8,
+          "summary": [
+            "Target tervalidasi: 127.0.0.1:5433/capstone_antrean_test",
+            "Test Suites: 1 passed, 1 total",
+            "Tests:       21 passed, 21 total",
+            "Time:        69.984 s"
+          ],
+          "suites": [],
+          "fingerprints": [
+            {
+              "recordExisting": 13,
+              "dataExistingDanCleanupSesuai": true
+            }
+          ],
+          "diagnosticCodes": [],
+          "diagnosticErrorTypes": []
+        }
+      ]
+    },
+    {
+      "mode": "backend",
+      "startedAt": "2026-10-29T12:08:00.381Z",
+      "finishedAt": "2026-10-29T12:08:13.604Z",
+      "results": [
+        {
+          "command": "node test/run-doctor-portal.cjs --suite=hospital-selector",
+          "exit": 0,
+          "seconds": 13.2,
+          "summary": [
+            "Target tervalidasi: 127.0.0.1:5433/capstone_antrean_test",
+            "Test Suites: 1 passed, 1 total",
+            "Tests:       17 passed, 17 total",
+            "Time:        12.383 s"
+          ],
+          "suites": [],
+          "fingerprints": [
+            {
+              "recordExisting": 13,
+              "dataExistingDanCleanupSesuai": true
+            }
+          ],
+          "diagnosticCodes": [],
+          "diagnosticErrorTypes": []
+        }
+      ]
+    },
+    {
+      "mode": "backend",
+      "startedAt": "2026-10-29T12:08:13.770Z",
+      "finishedAt": "2026-10-29T12:08:25.880Z",
+      "results": [
+        {
+          "command": "node test/run-doctor-portal.cjs --suite=jadwal-layanan",
+          "exit": 0,
+          "seconds": 12.1,
+          "summary": [
+            "Target tervalidasi: 127.0.0.1:5433/capstone_antrean_test",
+            "Test Suites: 1 passed, 1 total",
+            "Tests:       10 passed, 10 total",
+            "Time:        11.304 s"
+          ],
+          "suites": [],
+          "fingerprints": [
+            {
+              "recordExisting": 13,
+              "dataExistingDanCleanupSesuai": true
+            }
+          ],
+          "diagnosticCodes": [],
+          "diagnosticErrorTypes": []
+        }
+      ]
+    },
+    {
+      "mode": "backend",
+      "startedAt": "2026-10-29T12:08:26.150Z",
+      "finishedAt": "2026-10-29T12:08:35.658Z",
+      "results": [
+        {
+          "command": "node test/run-doctor-portal.cjs --suite=jadwal-praktik",
+          "exit": 0,
+          "seconds": 9.5,
+          "summary": [
+            "Target tervalidasi: 127.0.0.1:5433/capstone_antrean_test",
+            "Test Suites: 1 passed, 1 total",
+            "Tests:       11 passed, 11 total",
+            "Time:        8.522 s"
+          ],
+          "suites": [],
+          "fingerprints": [
+            {
+              "recordExisting": 13,
+              "dataExistingDanCleanupSesuai": true
+            }
+          ],
+          "diagnosticCodes": [],
+          "diagnosticErrorTypes": []
+        }
+      ]
+    },
+    {
+      "mode": "backend",
+      "startedAt": "2026-10-29T12:08:35.822Z",
+      "finishedAt": "2026-10-29T12:08:48.333Z",
+      "results": [
+        {
+          "command": "node test/run-doctor-portal.cjs --suite=janji-temu",
+          "exit": 0,
+          "seconds": 12.5,
+          "summary": [
+            "Target tervalidasi: 127.0.0.1:5433/capstone_antrean_test",
+            "Test Suites: 1 passed, 1 total",
+            "Tests:       11 passed, 11 total",
+            "Time:        11.744 s"
+          ],
+          "suites": [],
+          "fingerprints": [
+            {
+              "recordExisting": 13,
+              "dataExistingDanCleanupSesuai": true
+            }
+          ],
+          "diagnosticCodes": [],
+          "diagnosticErrorTypes": []
+        }
+      ]
+    },
+    {
+      "mode": "backend",
+      "startedAt": "2026-10-29T12:08:48.719Z",
+      "finishedAt": "2026-10-29T12:09:01.339Z",
+      "results": [
+        {
+          "command": "node test/run-doctor-portal.cjs --suite=layanan",
+          "exit": 0,
+          "seconds": 12.6,
+          "summary": [
+            "Target tervalidasi: 127.0.0.1:5433/capstone_antrean_test",
+            "Test Suites: 1 passed, 1 total",
+            "Tests:       11 passed, 11 total",
+            "Time:        11.766 s"
+          ],
+          "suites": [],
+          "fingerprints": [
+            {
+              "recordExisting": 13,
+              "dataExistingDanCleanupSesuai": true
+            }
+          ],
+          "diagnosticCodes": [],
+          "diagnosticErrorTypes": []
+        }
+      ]
+    },
+    {
+      "mode": "backend",
+      "startedAt": "2026-10-29T12:09:01.515Z",
+      "finishedAt": "2026-10-29T12:09:14.125Z",
+      "results": [
+        {
+          "command": "node test/run-doctor-portal.cjs --suite=loket",
+          "exit": 0,
+          "seconds": 12.6,
+          "summary": [
+            "Target tervalidasi: 127.0.0.1:5433/capstone_antrean_test",
+            "Test Suites: 1 passed, 1 total",
+            "Tests:       9 passed, 9 total",
+            "Time:        11.829 s"
+          ],
+          "suites": [],
+          "fingerprints": [
+            {
+              "recordExisting": 13,
+              "dataExistingDanCleanupSesuai": true
+            }
+          ],
+          "diagnosticCodes": [],
+          "diagnosticErrorTypes": []
+        }
+      ]
+    },
+    {
+      "mode": "backend",
+      "startedAt": "2026-10-29T12:09:14.341Z",
+      "finishedAt": "2026-10-29T12:09:19.074Z",
+      "results": [
+        {
+          "command": "node test/run-doctor-portal.cjs --suite=patient-realtime",
+          "exit": 0,
+          "seconds": 4.7,
+          "summary": [
+            "Target tervalidasi: 127.0.0.1:5433/capstone_antrean_test",
+            "Test Suites: 1 passed, 1 total",
+            "Tests:       5 passed, 5 total",
+            "Time:        3.9 s"
+          ],
+          "suites": [],
+          "fingerprints": [
+            {
+              "recordExisting": 13,
+              "dataExistingDanCleanupSesuai": true
+            }
+          ],
+          "diagnosticCodes": [],
+          "diagnosticErrorTypes": []
+        }
+      ]
+    },
+    {
+      "mode": "backend",
+      "startedAt": "2026-10-29T12:09:19.243Z",
+      "finishedAt": "2026-10-29T12:09:32.692Z",
+      "results": [
+        {
+          "command": "node test/run-doctor-portal.cjs --suite=penugasan-petugas",
+          "exit": 0,
+          "seconds": 13.4,
+          "summary": [
+            "Target tervalidasi: 127.0.0.1:5433/capstone_antrean_test",
+            "Test Suites: 1 passed, 1 total",
+            "Tests:       12 passed, 12 total",
+            "Time:        12.642 s"
+          ],
+          "suites": [],
+          "fingerprints": [
+            {
+              "recordExisting": 13,
+              "dataExistingDanCleanupSesuai": true
+            }
+          ],
+          "diagnosticCodes": [],
+          "diagnosticErrorTypes": []
+        }
+      ]
+    },
+    {
+      "mode": "backend",
+      "startedAt": "2026-10-29T12:09:33.008Z",
+      "finishedAt": "2026-10-29T12:10:09.510Z",
+      "results": [
+        {
+          "command": "node test/run-doctor-portal.cjs --suite=qr-check-in",
+          "exit": 0,
+          "seconds": 36.5,
+          "summary": [
+            "Target tervalidasi: 127.0.0.1:5433/capstone_antrean_test",
+            "Test Suites: 1 passed, 1 total",
+            "Tests:       72 passed, 72 total",
+            "Time:        35.612 s"
+          ],
+          "suites": [],
+          "fingerprints": [
+            {
+              "recordExisting": 13,
+              "dataExistingDanCleanupSesuai": true
+            }
+          ],
+          "diagnosticCodes": [
+            "P2039"
+          ],
+          "diagnosticErrorTypes": [
+            "PrismaClientKnownRequestError"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "backend",
+      "startedAt": "2026-10-29T12:10:09.727Z",
+      "finishedAt": "2026-10-29T12:10:25.204Z",
+      "results": [
+        {
+          "command": "node test/run-doctor-portal.cjs --suite=queue-broadcast",
+          "exit": 0,
+          "seconds": 15.5,
+          "summary": [
+            "Target tervalidasi: 127.0.0.1:5433/capstone_antrean_test",
+            "Test Suites: 1 passed, 1 total",
+            "Tests:       6 passed, 6 total",
+            "Time:        14.554 s"
+          ],
+          "suites": [],
+          "fingerprints": [
+            {
+              "recordExisting": 13,
+              "dataExistingDanCleanupSesuai": true
+            }
+          ],
+          "diagnosticCodes": [
+            "P2039"
+          ],
+          "diagnosticErrorTypes": [
+            "PrismaClientKnownRequestError"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "backend",
+      "startedAt": "2026-10-29T12:10:25.371Z",
+      "finishedAt": "2026-10-29T12:10:37.538Z",
+      "results": [
+        {
+          "command": "node test/run-doctor-portal.cjs --suite=queue-snapshot",
+          "exit": 0,
+          "seconds": 12.2,
+          "summary": [
+            "Target tervalidasi: 127.0.0.1:5433/capstone_antrean_test",
+            "Test Suites: 1 passed, 1 total",
+            "Tests:       8 passed, 8 total",
+            "Time:        11.319 s"
+          ],
+          "suites": [],
+          "fingerprints": [
+            {
+              "recordExisting": 13,
+              "dataExistingDanCleanupSesuai": true
+            }
+          ],
+          "diagnosticCodes": [],
+          "diagnosticErrorTypes": []
+        }
+      ]
+    },
+    {
+      "mode": "backend",
+      "startedAt": "2026-10-29T12:10:37.743Z",
+      "finishedAt": "2026-10-29T12:10:41.967Z",
+      "results": [
+        {
+          "command": "node test/run-doctor-portal.cjs --suite=realtime-room",
+          "exit": 0,
+          "seconds": 4.2,
+          "summary": [
+            "Target tervalidasi: 127.0.0.1:5433/capstone_antrean_test",
+            "Test Suites: 1 passed, 1 total",
+            "Tests:       4 passed, 4 total",
+            "Time:        3.455 s"
+          ],
+          "suites": [],
+          "fingerprints": [
+            {
+              "recordExisting": 13,
+              "dataExistingDanCleanupSesuai": true
+            }
+          ],
+          "diagnosticCodes": [],
+          "diagnosticErrorTypes": []
+        }
+      ]
+    },
+    {
+      "mode": "backend",
+      "startedAt": "2026-10-29T12:10:42.156Z",
+      "finishedAt": "2026-10-29T12:10:54.791Z",
+      "results": [
+        {
+          "command": "node test/run-doctor-portal.cjs --suite=reservasi",
+          "exit": 0,
+          "seconds": 12.6,
+          "summary": [
+            "Target tervalidasi: 127.0.0.1:5433/capstone_antrean_test",
+            "Test Suites: 1 passed, 1 total",
+            "Tests:       12 passed, 12 total",
+            "Time:        11.809 s"
+          ],
+          "suites": [],
+          "fingerprints": [
+            {
+              "recordExisting": 13,
+              "dataExistingDanCleanupSesuai": true
+            }
+          ],
+          "diagnosticCodes": [],
+          "diagnosticErrorTypes": []
+        }
+      ]
+    },
+    {
+      "mode": "backend",
+      "startedAt": "2026-10-29T12:10:54.973Z",
+      "finishedAt": "2026-10-29T12:11:06.557Z",
+      "results": [
+        {
+          "command": "node test/run-doctor-portal.cjs --suite=slot-praktik",
+          "exit": 0,
+          "seconds": 11.6,
+          "summary": [
+            "Target tervalidasi: 127.0.0.1:5433/capstone_antrean_test",
+            "Test Suites: 1 passed, 1 total",
+            "Tests:       10 passed, 10 total",
+            "Time:        10.536 s"
+          ],
+          "suites": [],
+          "fingerprints": [
+            {
+              "recordExisting": 13,
+              "dataExistingDanCleanupSesuai": true
+            }
+          ],
+          "diagnosticCodes": [],
+          "diagnosticErrorTypes": []
+        }
+      ]
+    },
+    {
+      "mode": "backend",
+      "startedAt": "2026-10-29T12:11:06.735Z",
+      "finishedAt": "2026-10-29T12:11:13.870Z",
+      "results": [
+        {
+          "command": "node test/run-doctor-portal.cjs --suite=socket-origin",
+          "exit": 0,
+          "seconds": 7.1,
+          "summary": [
+            "Target tervalidasi: 127.0.0.1:5433/capstone_antrean_test",
+            "Test Suites: 1 passed, 1 total",
+            "Tests:       4 passed, 4 total",
+            "Time:        6.319 s"
+          ],
+          "suites": [],
+          "fingerprints": [
+            {
+              "recordExisting": 13,
+              "dataExistingDanCleanupSesuai": true
+            }
+          ],
+          "diagnosticCodes": [],
+          "diagnosticErrorTypes": []
+        }
+      ]
+    },
+    {
+      "mode": "backend",
+      "startedAt": "2026-10-29T12:11:14.042Z",
+      "finishedAt": "2026-10-29T12:11:27.166Z",
+      "results": [
+        {
+          "command": "node test/run-doctor-portal.cjs --suite=tiket",
+          "exit": 0,
+          "seconds": 13.1,
+          "summary": [
+            "Target tervalidasi: 127.0.0.1:5433/capstone_antrean_test",
+            "Test Suites: 1 passed, 1 total",
+            "Tests:       12 passed, 12 total",
+            "Time:        12.297 s"
+          ],
+          "suites": [],
+          "fingerprints": [
+            {
+              "recordExisting": 13,
+              "dataExistingDanCleanupSesuai": true
+            }
+          ],
+          "diagnosticCodes": [],
+          "diagnosticErrorTypes": []
+        }
+      ]
+    },
+    {
+      "mode": "backend",
+      "startedAt": "2026-10-29T12:11:27.363Z",
+      "finishedAt": "2026-10-29T12:11:48.432Z",
+      "results": [
+        {
+          "command": "node test/run-doctor-portal.cjs --suite=user-profile",
+          "exit": 0,
+          "seconds": 21.1,
+          "summary": [
+            "Target tervalidasi: 127.0.0.1:5433/capstone_antrean_test",
+            "Test Suites: 1 passed, 1 total",
+            "Tests:       21 passed, 21 total",
+            "Time:        20.285 s"
+          ],
+          "suites": [],
+          "fingerprints": [
+            {
+              "recordExisting": 13,
+              "dataExistingDanCleanupSesuai": true
+            }
+          ],
+          "diagnosticCodes": [],
+          "diagnosticErrorTypes": []
+        }
+      ]
+    },
+    {
+      "mode": "unit",
+      "startedAt": "2026-10-29T12:03:47.704Z",
+      "finishedAt": "2026-10-29T12:04:25.843Z",
+      "results": [
+        {
+          "command": "node --test --test-reporter=tap tool/development-data.test.cjs",
+          "exit": 0,
+          "seconds": 1.3,
+          "summary": [
+            "# tests 7",
+            "# pass 7",
+            "# fail 0"
+          ],
+          "suites": [],
+          "fingerprints": [],
+          "diagnosticCodes": [],
+          "diagnosticErrorTypes": []
+        },
+        {
+          "command": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand",
+          "exit": 0,
+          "seconds": 36.8,
+          "summary": [
+            "Test Suites: 46 passed, 46 total",
+            "Tests:       679 passed, 679 total",
+            "Time:        30.107 s, estimated 44 s"
+          ],
+          "suites": [],
+          "fingerprints": [],
+          "diagnosticCodes": [],
+          "diagnosticErrorTypes": []
+        }
+      ]
+    }
+  ]
+}

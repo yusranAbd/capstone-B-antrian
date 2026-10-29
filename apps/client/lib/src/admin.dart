@@ -36,8 +36,14 @@ class AdminPage extends StatefulWidget {
     required this.api,
     this.initialSection = -1,
     this.onProfile,
+    this.section,
+    this.onSection,
+    this.routeChild,
   }) : assert(initialSection >= -1 && initialSection < 8);
   final QueueApi api;
+  final int? section;
+  final ValueChanged<int>? onSection;
+  final Widget? routeChild;
   final int initialSection;
   final VoidCallback? onProfile;
   @override
@@ -45,7 +51,8 @@ class AdminPage extends StatefulWidget {
 }
 
 class _AdminPageState extends State<AdminPage> {
-  int selected = -1;
+  int _selected = -1;
+  int get selected => widget.section ?? _selected;
   int staffTab = 0;
   bool collapsed = false;
   late final AdminCatalogRepository catalogRepository;
@@ -119,7 +126,7 @@ class _AdminPageState extends State<AdminPage> {
       assignments,
     ];
     catalogRepository.addListener(_catalogChanged);
-    selected = widget.initialSection;
+    _selected = widget.initialSection;
     load();
   }
 
@@ -394,9 +401,23 @@ class _AdminPageState extends State<AdminPage> {
       '${label(object(row['petugas']))} · ${label(object(row['loket']))}\n${dateOnly(row['tanggalMulai'])} → ${row['tanggalSelesai'] == null ? 'Tanpa akhir' : dateOnly(row['tanggalSelesai'])}',
     _ => '${label(object(row['layanan']))} · ${row['lokasi'] ?? ''}',
   };
+  @override
+  void didUpdateWidget(covariant AdminPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.section != oldWidget.section) {
+      message = null;
+      error = null;
+      if (selected != 7) load();
+    }
+  }
+
   void selectResource(int value) {
+    if (widget.onSection case final navigate?) {
+      navigate(value);
+      return;
+    }
     setState(() {
-      selected = value;
+      _selected = value;
       message = null;
       error = null;
     });
@@ -450,19 +471,24 @@ class _AdminPageState extends State<AdminPage> {
       BlocProvider<AssignmentCubit>.value(value: assignments),
       BlocProvider<DisplayManagementCubit>.value(value: displayManagement),
     ],
-    child: selected == 7
-        ? BlocSelector<DisplayManagementCubit, DisplayManagementState, bool>(
-            bloc: displayManagement,
-            selector: (s) => s.busy,
-            builder: (context, _) => _buildContent(context),
-          )
-        : masterCubit == null
-        ? _buildContent(context)
-        : BlocBuilder<AdminCatalogCubit, AdminCatalogState>(
-            bloc: masterCubit,
-            builder: (context, _) => _buildContent(context),
-          ),
+    child: _AdminViewScope(
+      owner: this,
+      child: widget.routeChild ?? _standaloneContent(),
+    ),
   );
+
+  Widget _standaloneContent() => selected == 7
+      ? BlocSelector<DisplayManagementCubit, DisplayManagementState, bool>(
+          bloc: displayManagement,
+          selector: (s) => s.busy,
+          builder: (context, _) => _buildContent(context),
+        )
+      : masterCubit == null
+      ? _buildContent(context)
+      : BlocBuilder<AdminCatalogCubit, AdminCatalogState>(
+          bloc: masterCubit,
+          builder: (context, _) => _buildContent(context),
+        );
 
   Widget _buildContent(BuildContext context) {
     final toolbarActions = <Widget>[
@@ -678,6 +704,25 @@ class _AdminPageState extends State<AdminPage> {
       ),
     );
   }
+}
+
+/// The shell owns repositories/providers; leaf routes only render this projection.
+class AdminRouteView extends StatelessWidget {
+  const AdminRouteView({super.key});
+  @override
+  Widget build(BuildContext context) {
+    final owner = context
+        .dependOnInheritedWidgetOfExactType<_AdminViewScope>()!
+        .owner;
+    return owner._standaloneContent();
+  }
+}
+
+class _AdminViewScope extends InheritedWidget {
+  const _AdminViewScope({required this.owner, required super.child});
+  final _AdminPageState owner;
+  @override
+  bool updateShouldNotify(_AdminViewScope oldWidget) => true;
 }
 
 class _AdminEditor extends StatefulWidget {

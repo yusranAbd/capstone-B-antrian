@@ -1,0 +1,613 @@
+[
+  {
+    "id": "T01",
+    "level": "Unit/widget + browser",
+    "prerequisite": "Anonim, protected URI",
+    "expected": "Login dengan safe from; tidak ada private flash",
+    "testFiles": [
+      "apps/client/test/routing_policy_test.dart",
+      "apps/client/test/routing_portals_test.dart",
+      "apps/client/tool/browser-routing-qa.cjs",
+      "apps/client/tool/browser-final-e2e.cjs"
+    ],
+    "status": "PASS",
+    "actual": "Policy semua registered protected roots/children menahan anonymous; browser 10 ADMIN cold links dan patient/staff/doctor memerlukan login; tanpa private owner prematur.",
+    "evidence": [
+      "flutter-regression.json",
+      "browser-final.json"
+    ]
+  },
+  {
+    "id": "T02",
+    "level": "Unit/widget + browser + Android",
+    "prerequisite": "Empat role fixture",
+    "expected": "Home sesuai role; registrasi existing; login gagal aman",
+    "testFiles": [
+      "apps/client/test/login_ui_test.dart",
+      "apps/client/test/routing_policy_test.dart",
+      "apps/client/integration_test/final_qa_smoke_test.dart",
+      "apps/client/tool/android-final-qa.cjs",
+      "apps/client/test_driver/final_qa_driver.dart",
+      "apps/client/tool/browser-routing-qa.cjs",
+      "apps/client/tool/browser-final-e2e.cjs"
+    ],
+    "status": "PASS",
+    "actual": "Empat home role diuji policy/widget; browser login valid dan negative existing; Android login/logout empat role. Registrasi existing tetap.",
+    "evidence": [
+      "flutter-regression.json",
+      "browser-final.json",
+      "android-final.json"
+    ]
+  },
+  {
+    "id": "T03",
+    "level": "Completer/widget + Android",
+    "prerequisite": "Store kosong/valid/expired/offline/error",
+    "expected": "Recovery dipertahankan; restore single-flight; credential tidak dibuang karena offline",
+    "testFiles": [
+      "apps/client/test/session_test.dart",
+      "apps/client/test/routing_foundation_test.dart",
+      "apps/client/integration_test/final_qa_smoke_test.dart",
+      "apps/client/tool/android-final-qa.cjs",
+      "apps/client/test_driver/final_qa_driver.dart"
+    ],
+    "status": "PASS",
+    "actual": "Lima SessionPhase dan single-flight restore diuji completer/widget; recovery offline/storageError tetap. Android API/root recreation memakai secure store nyata.",
+    "evidence": [
+      "flutter-regression.json",
+      "android-final.json"
+    ]
+  },
+  {
+    "id": "T04",
+    "level": "Widget + browser/Android",
+    "prerequisite": "Scope lama dan nested/modal aktif",
+    "expected": "Evict scope/overlay, termasuk akun sama role; late result ditolak",
+    "testFiles": [
+      "apps/client/test/routing_portals_test.dart",
+      "apps/client/test/doctor_cubit_session_widget_test.dart",
+      "apps/client/integration_test/final_qa_smoke_test.dart",
+      "apps/client/tool/android-final-qa.cjs",
+      "apps/client/test_driver/final_qa_driver.dart",
+      "apps/client/tool/browser-routing-qa.cjs",
+      "apps/client/tool/browser-final-e2e.cjs"
+    ],
+    "status": "PASS",
+    "actual": "Same-role ADMIN modal dan retained patient branches evicted; staff/doctor profile logout; barrier late POST tidak replay. Android nested-profile UI logout.",
+    "evidence": [
+      "flutter-regression.json",
+      "browser-final.json",
+      "android-final.json"
+    ]
+  },
+  {
+    "id": "T05",
+    "level": "Unit + browser",
+    "prerequisite": "Target from adversarial",
+    "expected": "Tolak external/authority/traversal/secret/UTF-8 rusak tanpa exception",
+    "testFiles": [
+      "apps/client/test/routing_policy_test.dart",
+      "apps/client/tool/browser-routing-qa.cjs",
+      "apps/client/tool/browser-final-e2e.cjs"
+    ],
+    "status": "PASS",
+    "actual": "External/authority/traversal/encoded slash/backslash/nested from/unknown/secret/loop ditolak. Tiga UTF-8 malformed unit cases dan satu browser case tidak exception.",
+    "evidence": [
+      "flutter-regression.json",
+      "browser-final.json"
+    ]
+  },
+  {
+    "id": "T06",
+    "level": "Widget + browser",
+    "prerequisite": "Unknown URI/UUID/404",
+    "expected": "Feedback aman, tanpa echo URL/stack/data lama",
+    "testFiles": [
+      "apps/client/test/routing_portals_test.dart",
+      "apps/client/test/routing_policy_test.dart",
+      "apps/client/tool/browser-routing-qa.cjs",
+      "apps/client/tool/browser-final-e2e.cjs"
+    ],
+    "status": "PASS",
+    "actual": "Invalid UUID/unknown/query ditolak; live missing ticket GET 404 menampilkan label error yang dapat diakses, tanpa tombol QR atau raw query echo. Valid→missing widget tidak menyimpan data lama.",
+    "evidence": [
+      "flutter-regression.json",
+      "browser-final.json"
+    ]
+  },
+  {
+    "id": "T07",
+    "level": "Widget + browser",
+    "prerequisite": "ADMIN sah",
+    "expected": "Sembilan modul + profil direct URL; selection cocok; satu owner",
+    "testFiles": [
+      "apps/client/test/routing_portals_test.dart",
+      "apps/client/test/admin_optimization_test.dart",
+      "apps/client/tool/browser-routing-qa.cjs",
+      "apps/client/tool/browser-final-e2e.cjs"
+    ],
+    "status": "PASS",
+    "actual": "Sembilan module + profil cold/reload browser; sembilan module widget memakai host/eight Cubits yang sama; selected proyeksi URI.",
+    "evidence": [
+      "flutter-regression.json",
+      "browser-final.json"
+    ]
+  },
+  {
+    "id": "T08",
+    "level": "Widget + browser",
+    "prerequisite": "Sidebar/menu dan history",
+    "expected": "URI/section sinkron pada Back/Forward/reload dan menu sempit",
+    "testFiles": [
+      "apps/client/test/routing_portals_test.dart",
+      "apps/client/test/session_test.dart",
+      "apps/client/tool/browser-routing-qa.cjs",
+      "apps/client/tool/browser-final-e2e.cjs"
+    ],
+    "status": "PASS",
+    "actual": "Browser Back/Forward ADMIN sinkron; mobile widget 390×844 memilih Dokter dan Dashboard, bottom sheet ditutup, owner tetap dan selected=1 saat dibuka ulang.",
+    "evidence": [
+      "flutter-regression.json",
+      "browser-final.json"
+    ]
+  },
+  {
+    "id": "T09",
+    "level": "Widget + guarded integration",
+    "prerequisite": "ADMIN fixture/editor",
+    "expected": "CRUD/bulk/slot/activation tetap; modal scope dan expiry dibersihkan",
+    "testFiles": [
+      "apps/client/test/admin_integration_stage2e_test.dart",
+      "apps/client/test/admin_optimization_test.dart"
+    ],
+    "status": "PASS",
+    "actual": "Suite ADMIN feature/bulk/slot/activation dan backend integration lulus; routed modal account-switch ditutup; tidak eager slot.",
+    "evidence": [
+      "flutter-regression.json",
+      "backend-summary.json"
+    ]
+  },
+  {
+    "id": "T10",
+    "level": "Widget counters + browser",
+    "prerequisite": "Patient scope tunggal",
+    "expected": "Lima branch lazy; 3 Cubit/1 repo-feed stabil; profil lazy",
+    "testFiles": [
+      "apps/client/test/routing_portals_test.dart",
+      "apps/client/test/patient_mobile_v5_test.dart",
+      "apps/client/tool/browser-routing-qa.cjs",
+      "apps/client/tool/browser-final-e2e.cjs"
+    ],
+    "status": "PASS",
+    "actual": "Lima branch browser dan Android; widget 12 navigasi create3/close0, API reads5→5; profil create lazy satu, satu repository/feed.",
+    "evidence": [
+      "flutter-regression.json",
+      "browser-final.json",
+      "routing-counters.json"
+    ]
+  },
+  {
+    "id": "T11",
+    "level": "Widget + browser",
+    "prerequisite": "Home V6 API fixture",
+    "expected": "Mode/swipe/search/filter/scroll bertahan di tab",
+    "testFiles": [
+      "apps/client/test/patient_home_v6_test.dart",
+      "apps/client/test/patient_home_swipe_test.dart",
+      "apps/client/test/patient_home_v3_test.dart",
+      "apps/client/tool/browser-routing-qa.cjs",
+      "apps/client/tool/browser-final-e2e.cjs"
+    ],
+    "status": "PASS",
+    "actual": "Home V6/swipe/search/filter/scroll regresi widget lulus; mode tetap internal Home. Browser baseline booking UI lulus.",
+    "evidence": [
+      "flutter-regression.json",
+      "browser-final.json"
+    ]
+  },
+  {
+    "id": "T12",
+    "level": "Widget/barrier + browser",
+    "prerequisite": "Booking pilihan valid",
+    "expected": "List/new/dokter/review/Back; tidak POST sebelum konfirmasi; retap reset",
+    "testFiles": [
+      "apps/client/test/patient_v2_test.dart",
+      "apps/client/test/routing_portals_test.dart",
+      "apps/client/tool/browser-routing-qa.cjs",
+      "apps/client/tool/browser-final-e2e.cjs"
+    ],
+    "status": "PASS",
+    "actual": "Booking list/new/doctor/slot/review/back diuji suite feature dan barrier; browser cold new serta retap; 0 non-auth POST di routing helper.",
+    "evidence": [
+      "flutter-regression.json",
+      "browser-final.json"
+    ]
+  },
+  {
+    "id": "T13",
+    "level": "Widget + browser",
+    "prerequisite": "Cold ticket/doctor tanpa extra",
+    "expected": "GET own ticket/relasi dokter, 404 aman, tidak issue QR/booking otomatis",
+    "testFiles": [
+      "apps/client/test/routing_portals_test.dart",
+      "apps/client/tool/browser-routing-qa.cjs",
+      "apps/client/tool/browser-final-e2e.cjs"
+    ],
+    "status": "PASS",
+    "actual": "Browser cold doctor+clinic dan own ticket hydrate GET; missing 404 aman. Tidak butuh extra dan 0 QR/booking POST otomatis. Widget missing/valid→missing diuji.",
+    "evidence": [
+      "flutter-regression.json",
+      "browser-final.json"
+    ]
+  },
+  {
+    "id": "T14",
+    "level": "Widget + live browser",
+    "prerequisite": "QR explicit dan scope/URI berubah",
+    "expected": "Satu TicketCubit; QR expiry/close/leave/logout; payload clear",
+    "testFiles": [
+      "apps/client/test/patient_home_v3_test.dart",
+      "apps/client/test/patient_visits_cubit_test.dart",
+      "apps/client/test/routing_portals_test.dart",
+      "apps/client/tool/browser-routing-qa.cjs",
+      "apps/client/tool/browser-final-e2e.cjs"
+    ],
+    "status": "PASS",
+    "actual": "Suite QR issue/expiry/close/session lulus; transient dialog memakai TicketCubit sama, create/close1/1. Owned QR overlay ditutup saat URI/scope berubah.",
+    "evidence": [
+      "flutter-regression.json",
+      "browser-final.json"
+    ]
+  },
+  {
+    "id": "T15",
+    "level": "Widget + backend + Android",
+    "prerequisite": "Profil/agenda fixture",
+    "expected": "Nama/avatar/password/role dan agenda existing tetap; logout bersih",
+    "testFiles": [
+      "apps/client/test/user_profile_test.dart",
+      "apps/client/test/account_profile_cubit_test.dart",
+      "apps/client/integration_test/final_qa_smoke_test.dart",
+      "apps/client/tool/android-final-qa.cjs",
+      "apps/client/test_driver/final_qa_driver.dart"
+    ],
+    "status": "PASS",
+    "actual": "Suite agenda/profile/avatar/password dan backend account lulus; Android profile secure-store clearing serta UI logout terverifikasi.",
+    "evidence": [
+      "flutter-regression.json",
+      "android-final.json",
+      "backend-summary.json"
+    ]
+  },
+  {
+    "id": "T16",
+    "level": "Widget + Android ADB",
+    "prerequisite": "Emulator QA read-only",
+    "expected": "Overlay/detail -> branch root -> Home; Home mengikuti platform",
+    "testFiles": [
+      "apps/client/test/routing_portals_test.dart",
+      "apps/client/integration_test/final_qa_smoke_test.dart",
+      "apps/client/tool/android-final-qa.cjs",
+      "apps/client/test_driver/final_qa_driver.dart"
+    ],
+    "status": "PASS",
+    "actual": "Widget native branch/busy guards lulus. Android ADB Back1 profile→Home, Back2 booking→reservations, Back3 reservations→Home, Back4 scanner close.",
+    "evidence": [
+      "flutter-regression.json",
+      "android-final.json"
+    ],
+    "manualStatus": "NOT RUN",
+    "manual": "Predictive Back gesture dan root Home platform exit pada perangkat fisik; ADB keyevent bukan gesture predictive."
+  },
+  {
+    "id": "T17",
+    "level": "Widget + backend + browser",
+    "prerequisite": "Assignment/room/date sah",
+    "expected": "Scope ruang dari BLoC/backend; lock dan cleanup tetap",
+    "testFiles": [
+      "apps/client/test/staff_snapshot_bloc_test.dart",
+      "apps/client/test/staff_realtime_bloc_test.dart",
+      "apps/client/tool/browser-routing-qa.cjs",
+      "apps/client/tool/browser-final-e2e.cjs"
+    ],
+    "status": "PASS",
+    "actual": "Staff snapshot/realtime scope dan assignment/date tests + backend isolation lulus; route tidak menentukan izin ruang.",
+    "evidence": [
+      "flutter-regression.json",
+      "browser-final.json",
+      "backend-summary.json"
+    ]
+  },
+  {
+    "id": "T18",
+    "level": "Widget + browser + Android",
+    "prerequisite": "Scanner dan request pending",
+    "expected": "Back/processing/session/background cleanup; tidak retry POST otomatis",
+    "testFiles": [
+      "apps/client/test/one_scan_qr_test.dart",
+      "apps/client/test/staff_qr_bloc_test.dart",
+      "apps/client/integration_test/final_qa_smoke_test.dart",
+      "apps/client/tool/android-final-qa.cjs",
+      "apps/client/test_driver/final_qa_driver.dart",
+      "apps/client/tool/browser-routing-qa.cjs",
+      "apps/client/tool/browser-final-e2e.cjs"
+    ],
+    "status": "PASS",
+    "actual": "Fake-controller pending/session tests serta browser controlled QR video lulus. Android actual scanner controller running sebelum/sesudah ADB HOME/activity, controller identity sama, lalu Back menutup scanner.",
+    "evidence": [
+      "flutter-regression.json",
+      "browser-final.json",
+      "android-final.json"
+    ],
+    "manualStatus": "NOT RUN",
+    "manual": "Kamera/speaker/monitor fisik dan Android fisik tidak tersedia."
+  },
+  {
+    "id": "T19",
+    "level": "Widget + live browser + Android",
+    "prerequisite": "Staff fixture dan tiket valid",
+    "expected": "Enam command dan profil; parent owner tetap satu",
+    "testFiles": [
+      "apps/client/test/staff_command_bloc_test.dart",
+      "apps/client/test/routing_portals_test.dart",
+      "apps/client/integration_test/final_qa_smoke_test.dart",
+      "apps/client/tool/android-final-qa.cjs",
+      "apps/client/test_driver/final_qa_driver.dart",
+      "apps/client/tool/browser-routing-qa.cjs",
+      "apps/client/tool/browser-final-e2e.cjs"
+    ],
+    "status": "PASS",
+    "actual": "Browser live CALL/RECALL/SKIP/REQUEUE/START/COMPLETE lulus. Cold staff profile dan widget parent owner retained; Android nested profile UI logout.",
+    "evidence": [
+      "flutter-regression.json",
+      "browser-final.json",
+      "android-final.json"
+    ]
+  },
+  {
+    "id": "T20",
+    "level": "Widget + browser + Android",
+    "prerequisite": "Doctor fixture aktif",
+    "expected": "Read-only/date/detail/profile; owner retained dan evict saat session ends",
+    "testFiles": [
+      "apps/client/test/doctor_dashboard_test.dart",
+      "apps/client/test/doctor_cubit_session_widget_test.dart",
+      "apps/client/test/routing_portals_test.dart",
+      "apps/client/integration_test/final_qa_smoke_test.dart",
+      "apps/client/tool/android-final-qa.cjs",
+      "apps/client/test_driver/final_qa_driver.dart",
+      "apps/client/tool/browser-routing-qa.cjs",
+      "apps/client/tool/browser-final-e2e.cjs"
+    ],
+    "status": "PASS",
+    "actual": "Doctor read-only/date/detail/session tests lulus; browser role/profil cold dan Android doctor→profile→logout. Parent owner tetap ketika child dibuka.",
+    "evidence": [
+      "flutter-regression.json",
+      "browser-final.json",
+      "android-final.json"
+    ]
+  },
+  {
+    "id": "T21",
+    "level": "Widget + browser",
+    "prerequisite": "Device selector/cookie atau unpaired",
+    "expected": "Cold display restore/pair GET validation; account guard dilewati",
+    "testFiles": [
+      "apps/client/test/display_pairing_test.dart",
+      "apps/client/test/display_device_cubit_test.dart",
+      "apps/client/tool/browser-routing-qa.cjs",
+      "apps/client/tool/browser-final-e2e.cjs"
+    ],
+    "status": "PASS",
+    "actual": "Browser named-device pairing/restore dan unpaired cold /display reload lulus; widget restore single-flight; device GET/backend scope existing.",
+    "evidence": [
+      "flutter-regression.json",
+      "browser-final.json"
+    ]
+  },
+  {
+    "id": "T22",
+    "level": "Widget + browser independence",
+    "prerequisite": "Kiosk aktif, phase akun berubah",
+    "expected": "Device host/owners tetap pada login/logout/offline akun",
+    "testFiles": [
+      "apps/client/test/routing_portals_test.dart",
+      "apps/client/test/display_isolation_bloc_test.dart",
+      "apps/client/tool/browser-routing-qa.cjs",
+      "apps/client/tool/browser-final-e2e.cjs"
+    ],
+    "status": "PASS",
+    "actual": "Widget satu QueueApi mengirim seluruh lima phase + router.refresh, Display owners2→2/host sama. Browser kiosk context independen login akun, tidak menyatakan cross-tab account notifications sebagai satu QueueApi.",
+    "evidence": [
+      "flutter-regression.json",
+      "browser-final.json"
+    ]
+  },
+  {
+    "id": "T23",
+    "level": "Browser live",
+    "prerequisite": "A/C satu context, B context lain",
+    "expected": "Cookie/selector/scope cocok; rotate/revoke target saja",
+    "testFiles": [
+      "apps/client/test/display_multi_monitor_test.dart",
+      "apps/client/tool/browser-routing-qa.cjs",
+      "apps/client/tool/browser-final-e2e.cjs"
+    ],
+    "status": "PASS",
+    "actual": "Browser A/C shared cookie context, B context terpisah; target rotate/revoke serta per-tab selector assertions lulus, tidak menukar monitor.",
+    "evidence": [
+      "flutter-regression.json",
+      "browser-final.json"
+    ]
+  },
+  {
+    "id": "T24",
+    "level": "Browser live",
+    "prerequisite": "Tab independent dan opener",
+    "expected": "Tanpa selector tidak adopsi ambient cookie; opener dapat menyalin selector",
+    "testFiles": [
+      "apps/client/test/display_multi_monitor_test.dart",
+      "apps/client/tool/browser-routing-qa.cjs",
+      "apps/client/tool/browser-final-e2e.cjs"
+    ],
+    "status": "PASS",
+    "actual": "Browser independent tab tanpa selector tetap activation; window.open menyalin selector dan restore via named HttpOnly cookie. Cookie shared origin/path; duplicate-tab limitation didokumentasikan.",
+    "evidence": [
+      "flutter-regression.json",
+      "browser-final.json"
+    ],
+    "manualStatus": "NOT RUN",
+    "manual": "Chrome menu Duplicate tab belum dioperasikan; independent/opener otomatis PASS, semantics copy-selector didokumentasikan."
+  },
+  {
+    "id": "T25",
+    "level": "Unit/widget + browser",
+    "prerequisite": "Rejected/revoked/uncertain device",
+    "expected": "Tidak autopair/retry; snapshot lama tidak terlihat; apiBase URL ditolak",
+    "testFiles": [
+      "apps/client/test/display_device_cubit_test.dart",
+      "apps/client/test/display_isolation_bloc_test.dart",
+      "apps/client/test/routing_policy_test.dart",
+      "apps/client/tool/browser-routing-qa.cjs",
+      "apps/client/tool/browser-final-e2e.cjs"
+    ],
+    "status": "PASS",
+    "actual": "Device uncertain/rejected/revoked dan apiBase scope suites lulus; live revoke A tidak mengusir C/B; route apiBase query ditolak.",
+    "evidence": [
+      "flutter-regression.json",
+      "browser-final.json"
+    ]
+  },
+  {
+    "id": "T26",
+    "level": "BLoC + live browser/audio",
+    "prerequisite": "Realtime event fixture",
+    "expected": "Initial/reconnect/resume/manual senyap; CALL once/RECALL baru/dedup",
+    "testFiles": [
+      "apps/client/test/display_announcement_bloc_test.dart",
+      "apps/client/test/display_snapshot_bloc_test.dart",
+      "apps/client/tool/browser-routing-qa.cjs",
+      "apps/client/tool/browser-final-e2e.cjs"
+    ],
+    "status": "PASS",
+    "actual": "BLoC initial/manual/reconnect/resume silence/dedup tests lulus; live browser CALL/RECALL dan short reconnect controlled speech lulus. Tidak klaim speaker fisik.",
+    "evidence": [
+      "flutter-regression.json",
+      "browser-final.json"
+    ],
+    "manualStatus": "NOT RUN",
+    "manual": "Kamera/speaker/monitor fisik dan Android fisik tidak tersedia."
+  },
+  {
+    "id": "T27",
+    "level": "Widget + browser",
+    "prerequisite": "Display owner aktif",
+    "expected": "Fullscreen/resize/pagination/route refresh tidak remount atau replay",
+    "testFiles": [
+      "apps/client/test/display_v3_test.dart",
+      "apps/client/test/display_multi_monitor_test.dart",
+      "apps/client/test/routing_portals_test.dart",
+      "apps/client/tool/browser-routing-qa.cjs",
+      "apps/client/tool/browser-final-e2e.cjs"
+    ],
+    "status": "PASS",
+    "actual": "Widget pagination/resize dan router refresh identity lulus; browser live fullscreen enter/exit dan layout checks lulus. Pagination continuity diuji widget, bukan diklaim browser pagination.",
+    "evidence": [
+      "flutter-regression.json",
+      "browser-final.json"
+    ],
+    "manualStatus": "NOT RUN",
+    "manual": "Kamera/speaker/monitor fisik dan Android fisik tidak tersedia."
+  },
+  {
+    "id": "T28",
+    "level": "Unit/widget + backend/browser",
+    "prerequisite": "Akun/role/device/room berbeda",
+    "expected": "Tidak ada private state/selector/snapshot lintas scope",
+    "testFiles": [
+      "apps/client/test/routing_portals_test.dart",
+      "apps/client/test/display_isolation_bloc_test.dart",
+      "apps/client/tool/browser-routing-qa.cjs",
+      "apps/client/tool/browser-final-e2e.cjs"
+    ],
+    "status": "PASS",
+    "actual": "Same-role account private-state eviction, cross-role browser forbidden, device A/B/C dan backend room/RBAC isolation lulus; Android patient1→patient2 identity berbeda.",
+    "evidence": [
+      "flutter-regression.json",
+      "browser-final.json",
+      "backend-summary.json"
+    ]
+  },
+  {
+    "id": "T29",
+    "level": "Browser + Android store",
+    "prerequisite": "Hash URI dengan sesi relevan",
+    "expected": "Direct/copy/reload/Back/Forward mengikuti URL dan safe return",
+    "testFiles": [
+      "apps/client/test/routing_portals_test.dart",
+      "apps/client/test/session_test.dart",
+      "apps/client/integration_test/final_qa_smoke_test.dart",
+      "apps/client/tool/android-final-qa.cjs",
+      "apps/client/test_driver/final_qa_driver.dart",
+      "apps/client/tool/browser-routing-qa.cjs",
+      "apps/client/tool/browser-final-e2e.cjs"
+    ],
+    "status": "PASS",
+    "actual": "Browser ADMIN direct/reload/history, patient branch/new/doctor/ticket serta staff/doctor profile dan display hash diuji. Android secure-store restore berbeda dari memory-only Web.",
+    "evidence": [
+      "flutter-regression.json",
+      "browser-final.json",
+      "android-final.json"
+    ]
+  },
+  {
+    "id": "T30",
+    "level": "Server/browser",
+    "prerequisite": "Static server tanpa rewrite",
+    "expected": "Hash bekerja; nested path tanpa hash tetap 404; tidak klaim PathUrlStrategy",
+    "testFiles": [
+      "apps/client/test/routing_policy_test.dart",
+      "apps/client/tool/browser-routing-qa.cjs",
+      "apps/client/tool/browser-final-e2e.cjs"
+    ],
+    "status": "PASS",
+    "actual": "Server QA GET nested path tanpa hash mengembalikan404, hash destinations tetap berhasil. Tidak ada PathUrlStrategy/hosting rewrite atau Android app-link intent filter baru.",
+    "evidence": [
+      "flutter-regression.json",
+      "browser-final.json"
+    ]
+  },
+  {
+    "id": "T31",
+    "level": "Solver/analyze/test/Web/APK/CI",
+    "prerequisite": "SDK/dependency existing",
+    "expected": "Pin 18.1.1 resolve dan compatibility semua gate",
+    "testFiles": [
+      "apps/client/test/routing_foundation_test.dart"
+    ],
+    "status": "PASS",
+    "actual": "Solver18.1.1 + dua transitives resolve; SDK3.47.5/3.13.4; analyze/full Flutter/Web/main APK lulus. Exact-head CI dicatat setelah push.",
+    "evidence": [
+      "flutter-regression.json"
+    ],
+    "ciStatus": "PENDING EXACT-HEAD CI"
+  },
+  {
+    "id": "T32",
+    "level": "Widget counters + browser",
+    "prerequisite": "Observer/request/feed/audio instrumentation",
+    "expected": "Create/close/identity dan request sesuai scope; tidak ada klaim FPS/RAM",
+    "testFiles": [
+      "apps/client/test/routing_portals_test.dart",
+      "apps/client/tool/browser-routing-qa.cjs",
+      "apps/client/tool/browser-final-e2e.cjs"
+    ],
+    "status": "PASS",
+    "actual": "Tujuh instrumented metric records: ADMIN8; patient3→3/profil+1; ticket1/1; staff/doctor parent1+profile1; Display2→2. Existing feed/audio/camera cleanup tests dan browser live socket/speech scope lulus.",
+    "evidence": [
+      "flutter-regression.json",
+      "browser-final.json",
+      "routing-counters.json"
+    ]
+  }
+]
