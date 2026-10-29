@@ -1,0 +1,28 @@
+{
+  "mode": "backend",
+  "startedAt": "2026-10-29T05:30:12.191Z",
+  "target": "127.0.0.1:5433/capstone_antrean_test",
+  "results": [
+    {
+      "command": "node test/run-doctor-portal.cjs --suite=hospital-hibrida",
+      "exit": 0,
+      "seconds": 18,
+      "summary": [
+        "Target tervalidasi: 127.0.0.1:5433/capstone_antrean_test",
+        "Test Suites: 1 passed, 1 total",
+        "Tests:       4 passed, 4 total",
+        "Time:        17.062 s"
+      ],
+      "suites": [],
+      "fingerprints": [
+        {
+          "recordExisting": 13,
+          "dataExistingDanCleanupSesuai": true
+        }
+      ],
+      "diagnosticCodes": [],
+      "diagnosticErrorTypes": []
+    }
+  ],
+  "finishedAt": "2026-10-29T05:30:30.145Z"
+}

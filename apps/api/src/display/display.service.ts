@@ -225,8 +225,8 @@ export class DisplayService {
         };
       },
       // Multi-monitor reads may compete with browser rendering on a demo laptop.
-      // Keep the existing 2s max-wait and bound execution below the client 20s timeout.
-      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead, timeout: 15_000 },
+      // Bound acquisition to 3s and execution to 15s, below the client 20s timeout before overhead.
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead, maxWait: 3000, timeout: 15_000 },
     );
 
     return { ...data, diperolehPada: new Date().toISOString() };

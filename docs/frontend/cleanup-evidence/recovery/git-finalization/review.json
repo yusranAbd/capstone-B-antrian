@@ -1,0 +1,49 @@
+{
+  "measuredAt": "2026-10-29T08:32:12.123Z",
+  "status": "APPROVED FOR COMMIT/PUSH",
+  "approval": "../historical-gate-e-approval.json",
+  "historicalSessionWriterStillUnattributed": true,
+  "developmentSessionPreserved": true,
+  "databasesUnchangedSinceApprovedPatchValidation": true,
+  "protectedHashesUnchanged": true,
+  "protectedPathsExcluded": [
+    "README.md",
+    "apps/client/lib/src/doctor_dashboard.dart",
+    "apps/client/lib/src/doctor_visual.dart",
+    "apps/client/test/doctor_visual_refresh_test.dart"
+  ],
+  "oldUntrackedPreserved": true,
+  "branch": "main",
+  "base": "c6e64417801567188fb1495b75ec9dc9ca4dfc37",
+  "originMainBeforeCommit": "c6e64417801567188fb1495b75ec9dc9ca4dfc37",
+  "initialIndexEmpty": true,
+  "stageManifest": {
+    "fileCount": 185,
+    "sha256": "6216686f369d93b68d7f070f852fada14c9e5fbdbb4a05920f70870df8cff8c3",
+    "method": "Explicit source paths plus individually enumerated JSON/patch evidence files; excludes prior user changes and backups"
+  },
+  "artifactPrivacy": {
+    "checkedFiles": 155,
+    "findings": [],
+    "limitation": "Pattern scan plus targeted diff review, not proof against every possible secret format"
+  },
+  "finalRegression": {
+    "flutter": 1040,
+    "backendUnit": 679,
+    "backendTooling": 7,
+    "backendIntegration": 387,
+    "qaHelpers": 8,
+    "browserGroups": 13,
+    "browser5xx": 0,
+    "browserP2028": 0,
+    "analyze": "PASS",
+    "webBuild": "PASS",
+    "apkBuild": "PASS"
+  },
+  "limitations": [
+    "Historical development session anomaly accepted by explicit exception, not resolved",
+    "Underlying host latency variation remains a risk",
+    "Local Flutter results include protected local changes; CI checks only committed files",
+    "Physical camera, speaker and TV acceptance not repeated"
+  ]
+}

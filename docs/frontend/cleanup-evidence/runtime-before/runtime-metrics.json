@@ -1,0 +1,224 @@
+{
+  "environment": "Chrome headless release / local test DB / Asia/Jakarta",
+  "startedAt": "2026-10-29T03:36:48.721Z",
+  "method": "one context per portal; API method+path counters; two viewport changes; CDP Performance.getMetrics after HeapProfiler.collectGarbage; one sample, no FPS/native heap/causal leak claim",
+  "portals": [
+    {
+      "portal": "admin",
+      "readyMs": 10262,
+      "requests": {
+        "POST /api/v1/auth/login": 1,
+        "GET /api/v1/auth/me": 1,
+        "GET /api/v1/layanan": 1,
+        "GET /api/v1/dokter": 1,
+        "GET /api/v1/loket": 1,
+        "GET /api/v1/jadwal-layanan": 1,
+        "GET /api/v1/jadwal-praktik": 1,
+        "GET /api/v1/penugasan-petugas": 1
+      },
+      "extraRequestsDuringTwoResizes": {},
+      "heapBeforeResize": {
+        "Documents": 1,
+        "Nodes": 188,
+        "LayoutCount": 0,
+        "RecalcStyleCount": 0,
+        "JSHeapUsedSize": 29156332,
+        "JSHeapTotalSize": 30593024
+      },
+      "heapAfterResize": {
+        "Documents": 1,
+        "Nodes": 188,
+        "LayoutCount": 10,
+        "RecalcStyleCount": 6,
+        "JSHeapUsedSize": 29460228,
+        "JSHeapTotalSize": 30330880
+      },
+      "serverSocketsBeforeResize": {
+        "queue": 0,
+        "patient": 0,
+        "doctor": 0,
+        "display": 0
+      },
+      "serverSocketsAfterResize": {
+        "queue": 0,
+        "patient": 0,
+        "doctor": 0,
+        "display": 0
+      },
+      "runtimeErrors": 0
+    },
+    {
+      "portal": "patient",
+      "readyMs": 6033,
+      "requests": {
+        "POST /api/v1/auth/login": 1,
+        "GET /api/v1/auth/me": 1,
+        "GET /api/v1/layanan": 2,
+        "GET /api/v1/dokter": 2,
+        "GET /api/v1/jadwal-praktik": 2,
+        "GET /api/v1/tiket/saya": 2,
+        "GET /api/v1/janji-temu": 2
+      },
+      "extraRequestsDuringTwoResizes": {},
+      "heapBeforeResize": {
+        "Documents": 1,
+        "Nodes": 117,
+        "LayoutCount": 0,
+        "RecalcStyleCount": 0,
+        "JSHeapUsedSize": 27734924,
+        "JSHeapTotalSize": 28758016
+      },
+      "heapAfterResize": {
+        "Documents": 1,
+        "Nodes": 117,
+        "LayoutCount": 8,
+        "RecalcStyleCount": 4,
+        "JSHeapUsedSize": 27855244,
+        "JSHeapTotalSize": 28495872
+      },
+      "serverSocketsBeforeResize": {
+        "queue": 0,
+        "patient": 1,
+        "doctor": 0,
+        "display": 0
+      },
+      "serverSocketsAfterResize": {
+        "queue": 0,
+        "patient": 1,
+        "doctor": 0,
+        "display": 0
+      },
+      "runtimeErrors": 0
+    },
+    {
+      "portal": "staff",
+      "readyMs": 5984,
+      "requests": {
+        "POST /api/v1/auth/login": 1,
+        "GET /api/v1/auth/me": 1,
+        "GET /api/v1/penugasan-petugas": 1,
+        "GET /api/v1/queue/snapshot": 2,
+        "GET /api/v1/jadwal-praktik": 2
+      },
+      "extraRequestsDuringTwoResizes": {},
+      "heapBeforeResize": {
+        "Documents": 1,
+        "Nodes": 159,
+        "LayoutCount": 0,
+        "RecalcStyleCount": 0,
+        "JSHeapUsedSize": 27869360,
+        "JSHeapTotalSize": 29020160
+      },
+      "heapAfterResize": {
+        "Documents": 1,
+        "Nodes": 159,
+        "LayoutCount": 10,
+        "RecalcStyleCount": 6,
+        "JSHeapUsedSize": 28068408,
+        "JSHeapTotalSize": 29282304
+      },
+      "serverSocketsBeforeResize": {
+        "queue": 1,
+        "patient": 0,
+        "doctor": 0,
+        "display": 0
+      },
+      "serverSocketsAfterResize": {
+        "queue": 1,
+        "patient": 0,
+        "doctor": 0,
+        "display": 0
+      },
+      "runtimeErrors": 0
+    },
+    {
+      "portal": "doctor",
+      "readyMs": 6238,
+      "requests": {
+        "POST /api/v1/auth/login": 1,
+        "GET /api/v1/auth/me": 1,
+        "GET /api/v1/portal-dokter/profil": 2,
+        "GET /api/v1/portal-dokter/jadwal": 2,
+        "GET /api/v1/portal-dokter/janji-temu": 2,
+        "GET /api/v1/portal-dokter/antrean/snapshot": 2
+      },
+      "extraRequestsDuringTwoResizes": {},
+      "heapBeforeResize": {
+        "Documents": 1,
+        "Nodes": 120,
+        "LayoutCount": 0,
+        "RecalcStyleCount": 0,
+        "JSHeapUsedSize": 28143556,
+        "JSHeapTotalSize": 29544448
+      },
+      "heapAfterResize": {
+        "Documents": 1,
+        "Nodes": 120,
+        "LayoutCount": 10,
+        "RecalcStyleCount": 6,
+        "JSHeapUsedSize": 28263692,
+        "JSHeapTotalSize": 29544448
+      },
+      "serverSocketsBeforeResize": {
+        "queue": 0,
+        "patient": 0,
+        "doctor": 1,
+        "display": 0
+      },
+      "serverSocketsAfterResize": {
+        "queue": 0,
+        "patient": 0,
+        "doctor": 1,
+        "display": 0
+      },
+      "runtimeErrors": 0
+    },
+    {
+      "portal": "display",
+      "readyMs": 3831,
+      "requests": {
+        "POST /api/v1/display/pairing": 1,
+        "GET /api/v1/display/sesi": 1,
+        "GET /api/v1/display/:id/snapshot": 1
+      },
+      "extraRequestsDuringTwoResizes": {},
+      "heapBeforeResize": {
+        "Documents": 1,
+        "Nodes": 139,
+        "LayoutCount": 0,
+        "RecalcStyleCount": 0,
+        "JSHeapUsedSize": 25834756,
+        "JSHeapTotalSize": 28233728
+      },
+      "heapAfterResize": {
+        "Documents": 1,
+        "Nodes": 139,
+        "LayoutCount": 10,
+        "RecalcStyleCount": 6,
+        "JSHeapUsedSize": 25998020,
+        "JSHeapTotalSize": 27971584
+      },
+      "serverSocketsBeforeResize": {
+        "queue": 0,
+        "patient": 0,
+        "doctor": 0,
+        "display": 1
+      },
+      "serverSocketsAfterResize": {
+        "queue": 0,
+        "patient": 0,
+        "doctor": 0,
+        "display": 1
+      },
+      "runtimeErrors": 0
+    }
+  ],
+  "finalSocketCounts": {
+    "queue": 0,
+    "patient": 0,
+    "doctor": 0,
+    "display": 0
+  },
+  "status": "PASS",
+  "finishedAt": "2026-10-29T03:37:27.712Z"
+}

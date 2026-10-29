@@ -1,0 +1,12 @@
+{
+  "analyze": [
+    "Analyzing client...                                             ",
+    "No issues found! (ran in 23.9s)"
+  ],
+  "testExit": 0,
+  "test": [
+    "00:05 +51: D:/WorkSpace/Flutter/capstone-B-antrian/apps/client/test/display_snapshot_bloc_test.dart: (tearDownAll)",
+    "00:05 +51: All tests passed!"
+  ],
+  "analyzeExit": 0
+}

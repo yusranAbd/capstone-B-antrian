@@ -1,0 +1,259 @@
+{
+  "method": "One real browser sample each; before/after pairs; readyMs includes login/provisioning/settling, not startup. JS heap only. No causal performance claim.",
+  "rows": [
+    {
+      "portal": "admin",
+      "readyMs": [
+        10262,
+        21324
+      ],
+      "httpRequestCount": [
+        8,
+        8
+      ],
+      "requestCountersIdentical": true,
+      "extraRequestsDuringResizes": [
+        {},
+        {}
+      ],
+      "postGcJsHeapBeforeResizes": [
+        29156332,
+        29260788
+      ],
+      "socketsBefore": [
+        {
+          "queue": 0,
+          "patient": 0,
+          "doctor": 0,
+          "display": 0
+        },
+        {
+          "queue": 0,
+          "patient": 0,
+          "doctor": 0,
+          "display": 0
+        }
+      ],
+      "socketsAfter": [
+        {
+          "queue": 0,
+          "patient": 0,
+          "doctor": 0,
+          "display": 0
+        },
+        {
+          "queue": 0,
+          "patient": 0,
+          "doctor": 0,
+          "display": 0
+        }
+      ]
+    },
+    {
+      "portal": "patient",
+      "readyMs": [
+        6033,
+        10707
+      ],
+      "httpRequestCount": [
+        12,
+        12
+      ],
+      "requestCountersIdentical": true,
+      "extraRequestsDuringResizes": [
+        {},
+        {}
+      ],
+      "postGcJsHeapBeforeResizes": [
+        27734924,
+        27725880
+      ],
+      "socketsBefore": [
+        {
+          "queue": 0,
+          "patient": 1,
+          "doctor": 0,
+          "display": 0
+        },
+        {
+          "queue": 0,
+          "patient": 1,
+          "doctor": 0,
+          "display": 0
+        }
+      ],
+      "socketsAfter": [
+        {
+          "queue": 0,
+          "patient": 1,
+          "doctor": 0,
+          "display": 0
+        },
+        {
+          "queue": 0,
+          "patient": 1,
+          "doctor": 0,
+          "display": 0
+        }
+      ]
+    },
+    {
+      "portal": "staff",
+      "readyMs": [
+        5984,
+        9185
+      ],
+      "httpRequestCount": [
+        7,
+        7
+      ],
+      "requestCountersIdentical": true,
+      "extraRequestsDuringResizes": [
+        {},
+        {}
+      ],
+      "postGcJsHeapBeforeResizes": [
+        27869360,
+        27924712
+      ],
+      "socketsBefore": [
+        {
+          "queue": 1,
+          "patient": 0,
+          "doctor": 0,
+          "display": 0
+        },
+        {
+          "queue": 1,
+          "patient": 0,
+          "doctor": 0,
+          "display": 0
+        }
+      ],
+      "socketsAfter": [
+        {
+          "queue": 1,
+          "patient": 0,
+          "doctor": 0,
+          "display": 0
+        },
+        {
+          "queue": 1,
+          "patient": 0,
+          "doctor": 0,
+          "display": 0
+        }
+      ]
+    },
+    {
+      "portal": "doctor",
+      "readyMs": [
+        6238,
+        19662
+      ],
+      "httpRequestCount": [
+        10,
+        10
+      ],
+      "requestCountersIdentical": true,
+      "extraRequestsDuringResizes": [
+        {},
+        {}
+      ],
+      "postGcJsHeapBeforeResizes": [
+        28143556,
+        28479372
+      ],
+      "socketsBefore": [
+        {
+          "queue": 0,
+          "patient": 0,
+          "doctor": 1,
+          "display": 0
+        },
+        {
+          "queue": 0,
+          "patient": 0,
+          "doctor": 1,
+          "display": 0
+        }
+      ],
+      "socketsAfter": [
+        {
+          "queue": 0,
+          "patient": 0,
+          "doctor": 1,
+          "display": 0
+        },
+        {
+          "queue": 0,
+          "patient": 0,
+          "doctor": 1,
+          "display": 0
+        }
+      ]
+    },
+    {
+      "portal": "display",
+      "readyMs": [
+        3831,
+        5539
+      ],
+      "httpRequestCount": [
+        3,
+        3
+      ],
+      "requestCountersIdentical": true,
+      "extraRequestsDuringResizes": [
+        {},
+        {}
+      ],
+      "postGcJsHeapBeforeResizes": [
+        25834756,
+        25606920
+      ],
+      "socketsBefore": [
+        {
+          "queue": 0,
+          "patient": 0,
+          "doctor": 0,
+          "display": 1
+        },
+        {
+          "queue": 0,
+          "patient": 0,
+          "doctor": 0,
+          "display": 1
+        }
+      ],
+      "socketsAfter": [
+        {
+          "queue": 0,
+          "patient": 0,
+          "doctor": 0,
+          "display": 1
+        },
+        {
+          "queue": 0,
+          "patient": 0,
+          "doctor": 0,
+          "display": 1
+        }
+      ]
+    }
+  ],
+  "finalSocketCounts": [
+    {
+      "queue": 0,
+      "patient": 0,
+      "doctor": 0,
+      "display": 0
+    },
+    {
+      "queue": 0,
+      "patient": 0,
+      "doctor": 0,
+      "display": 0
+    }
+  ]
+}

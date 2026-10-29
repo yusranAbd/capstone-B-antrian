@@ -824,7 +824,7 @@ export class QueueService {
           })),
         };
       },
-      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead, maxWait: 3000, timeout: 10000 },
     );
 
     return { ...snapshot, diperolehPada: new Date().toISOString() };

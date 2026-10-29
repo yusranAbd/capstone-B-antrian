@@ -1,0 +1,28 @@
+{
+  "mode": "backend",
+  "startedAt": "2026-10-29T05:32:52.625Z",
+  "target": "127.0.0.1:5433/capstone_antrean_test",
+  "results": [
+    {
+      "command": "node test/run-doctor-portal.cjs --suite=layanan",
+      "exit": 0,
+      "seconds": 13,
+      "summary": [
+        "Target tervalidasi: 127.0.0.1:5433/capstone_antrean_test",
+        "Test Suites: 1 passed, 1 total",
+        "Tests:       11 passed, 11 total",
+        "Time:        12.106 s"
+      ],
+      "suites": [],
+      "fingerprints": [
+        {
+          "recordExisting": 13,
+          "dataExistingDanCleanupSesuai": true
+        }
+      ],
+      "diagnosticCodes": [],
+      "diagnosticErrorTypes": []
+    }
+  ],
+  "finishedAt": "2026-10-29T05:33:05.628Z"
+}

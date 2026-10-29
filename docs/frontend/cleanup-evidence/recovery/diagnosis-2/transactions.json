@@ -1,0 +1,3998 @@
+{
+  "transactions": [
+    {
+      "at": 1793256391407,
+      "id": 1,
+      "phase": "setup",
+      "request": {
+        "at": 1793256390931,
+        "id": 1,
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "phase": "setup",
+        "status": 200,
+        "durationMs": 512
+      },
+      "options": {
+        "timeout": 10000
+      },
+      "site": [
+        "    at AuthService.login (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\auth\\auth.service.js:76:27)"
+      ],
+      "queries": [
+        {
+          "operation": "$executeRaw",
+          "startedMs": 6,
+          "durationMs": 3
+        },
+        {
+          "operation": "$queryRaw",
+          "startedMs": 9,
+          "durationMs": 5
+        },
+        {
+          "operation": "sesiPengguna.create",
+          "startedMs": 14,
+          "durationMs": 11
+        }
+      ],
+      "durationMs": 31
+    },
+    {
+      "at": 1793256391593,
+      "id": 2,
+      "phase": "setup",
+      "request": {
+        "at": 1793256391588,
+        "id": 5,
+        "method": "POST",
+        "path": "/api/v1/penugasan-petugas",
+        "phase": "setup",
+        "status": 201,
+        "durationMs": 54
+      },
+      "options": {
+        "isolationLevel": "ReadCommitted"
+      },
+      "site": [
+        "    at PenugasanPetugasService.create (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\penugasan-petugas\\penugasan-petugas.service.js:55:38)",
+        "    at PenugasanPetugasController.create (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\penugasan-petugas\\penugasan-petugas.controller.js:31:29)"
+      ],
+      "queries": [
+        {
+          "operation": "$queryRaw",
+          "startedMs": 3,
+          "durationMs": 2
+        },
+        {
+          "operation": "pengguna.findUnique",
+          "startedMs": 5,
+          "durationMs": 2
+        },
+        {
+          "operation": "loket.findUnique",
+          "startedMs": 8,
+          "durationMs": 6
+        },
+        {
+          "operation": "penugasanPetugas.findFirst",
+          "startedMs": 14,
+          "durationMs": 10
+        },
+        {
+          "operation": "penugasanPetugas.create",
+          "startedMs": 25,
+          "durationMs": 20
+        }
+      ],
+      "durationMs": 49
+    },
+    {
+      "at": 1793256391707,
+      "id": 3,
+      "phase": "setup",
+      "request": {
+        "at": 1793256391696,
+        "id": 8,
+        "method": "POST",
+        "path": "/api/v1/jadwal-praktik",
+        "phase": "setup",
+        "status": 201,
+        "durationMs": 78
+      },
+      "options": {
+        "timeout": "Prisma default"
+      },
+      "site": [
+        "    at JadwalPraktikService.create (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\jadwal-praktik\\jadwal-praktik.service.js:46:38)",
+        "    at JadwalPraktikController.create (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\jadwal-praktik\\jadwal-praktik.controller.js:32:42)"
+      ],
+      "queries": [
+        {
+          "operation": "dokterLayanan.findUnique",
+          "startedMs": 4,
+          "durationMs": 15
+        },
+        {
+          "operation": "loket.findUnique",
+          "startedMs": 19,
+          "durationMs": 4
+        },
+        {
+          "operation": "$queryRaw",
+          "startedMs": 23,
+          "durationMs": 5
+        },
+        {
+          "operation": "$queryRaw",
+          "startedMs": 28,
+          "durationMs": 2
+        },
+        {
+          "operation": "jadwalLayanan.findUnique",
+          "startedMs": 30,
+          "durationMs": 5
+        },
+        {
+          "operation": "jadwalPraktik.findFirst",
+          "startedMs": 35,
+          "durationMs": 10
+        },
+        {
+          "operation": "jadwalPraktik.create",
+          "startedMs": 46,
+          "durationMs": 17
+        }
+      ],
+      "durationMs": 67
+    },
+    {
+      "at": 1793256391785,
+      "id": 4,
+      "phase": "setup",
+      "request": {
+        "at": 1793256391778,
+        "id": 9,
+        "method": "POST",
+        "path": "/api/v1/slot-praktik",
+        "phase": "setup",
+        "status": 201,
+        "durationMs": 79
+      },
+      "options": {
+        "timeout": "Prisma default"
+      },
+      "site": [
+        "    at SlotPraktikService.create (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\slot-praktik\\slot-praktik.service.js:64:38)",
+        "    at SlotPraktikController.create (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\slot-praktik\\slot-praktik.controller.js:32:29)"
+      ],
+      "queries": [
+        {
+          "operation": "$queryRaw",
+          "startedMs": 3,
+          "durationMs": 3
+        },
+        {
+          "operation": "jadwalPraktik.findUnique",
+          "startedMs": 6,
+          "durationMs": 13
+        },
+        {
+          "operation": "slotPraktik.findFirst",
+          "startedMs": 19,
+          "durationMs": 4
+        },
+        {
+          "operation": "slotPraktik.create",
+          "startedMs": 24,
+          "durationMs": 30
+        },
+        {
+          "operation": "jadwalLayanan.findUnique",
+          "startedMs": 55,
+          "durationMs": 6
+        },
+        {
+          "operation": "tiketAntrean.count",
+          "startedMs": 61,
+          "durationMs": 7
+        }
+      ],
+      "durationMs": 71
+    },
+    {
+      "at": 1793256392261,
+      "id": 5,
+      "phase": "setup",
+      "request": {
+        "at": 1793256391869,
+        "id": 10,
+        "method": "POST",
+        "path": "/api/v1/dokter/<id>/akun",
+        "phase": "setup",
+        "status": 201,
+        "durationMs": 414
+      },
+      "options": {
+        "timeout": "Prisma default"
+      },
+      "site": [
+        "    at DokterService.provisionAkun (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\dokter\\dokter.service.js:41:38)"
+      ],
+      "queries": [
+        {
+          "operation": "dokter.findUnique",
+          "startedMs": 2,
+          "durationMs": 3
+        },
+        {
+          "operation": "pengguna.create",
+          "startedMs": 6,
+          "durationMs": 5
+        },
+        {
+          "operation": "dokter.updateMany",
+          "startedMs": 10,
+          "durationMs": 8
+        }
+      ],
+      "durationMs": 22
+    },
+    {
+      "at": 1793256393133,
+      "id": 6,
+      "phase": "browser",
+      "request": {
+        "at": 1793256392772,
+        "id": 11,
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "phase": "browser",
+        "status": 200,
+        "durationMs": 377
+      },
+      "options": {
+        "timeout": 10000
+      },
+      "site": [
+        "    at AuthService.login (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\auth\\auth.service.js:76:27)"
+      ],
+      "queries": [
+        {
+          "operation": "$executeRaw",
+          "startedMs": 2,
+          "durationMs": 2
+        },
+        {
+          "operation": "$queryRaw",
+          "startedMs": 5,
+          "durationMs": 3
+        },
+        {
+          "operation": "sesiPengguna.create",
+          "startedMs": 7,
+          "durationMs": 3
+        }
+      ],
+      "durationMs": 15
+    },
+    {
+      "at": 1793256393516,
+      "id": 7,
+      "phase": "browser",
+      "request": {
+        "at": 1793256393151,
+        "id": 12,
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "phase": "browser",
+        "status": 200,
+        "durationMs": 378
+      },
+      "options": {
+        "timeout": 10000
+      },
+      "site": [
+        "    at AuthService.login (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\auth\\auth.service.js:76:27)"
+      ],
+      "queries": [
+        {
+          "operation": "$executeRaw",
+          "startedMs": 2,
+          "durationMs": 2
+        },
+        {
+          "operation": "$queryRaw",
+          "startedMs": 4,
+          "durationMs": 2
+        },
+        {
+          "operation": "sesiPengguna.create",
+          "startedMs": 7,
+          "durationMs": 2
+        }
+      ],
+      "durationMs": 12
+    },
+    {
+      "at": 1793256393874,
+      "id": 8,
+      "phase": "browser",
+      "request": {
+        "at": 1793256393530,
+        "id": 13,
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "phase": "browser",
+        "status": 200,
+        "durationMs": 358
+      },
+      "options": {
+        "timeout": 10000
+      },
+      "site": [
+        "    at AuthService.login (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\auth\\auth.service.js:76:27)"
+      ],
+      "queries": [
+        {
+          "operation": "$executeRaw",
+          "startedMs": 2,
+          "durationMs": 2
+        },
+        {
+          "operation": "$queryRaw",
+          "startedMs": 4,
+          "durationMs": 2
+        },
+        {
+          "operation": "sesiPengguna.create",
+          "startedMs": 6,
+          "durationMs": 3
+        }
+      ],
+      "durationMs": 13
+    },
+    {
+      "at": 1793256394267,
+      "id": 9,
+      "phase": "browser",
+      "request": {
+        "at": 1793256393889,
+        "id": 14,
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "phase": "browser",
+        "status": 200,
+        "durationMs": 392
+      },
+      "options": {
+        "timeout": 10000
+      },
+      "site": [
+        "    at AuthService.login (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\auth\\auth.service.js:76:27)"
+      ],
+      "queries": [
+        {
+          "operation": "$executeRaw",
+          "startedMs": 2,
+          "durationMs": 2
+        },
+        {
+          "operation": "$queryRaw",
+          "startedMs": 4,
+          "durationMs": 3
+        },
+        {
+          "operation": "sesiPengguna.create",
+          "startedMs": 8,
+          "durationMs": 3
+        }
+      ],
+      "durationMs": 14
+    },
+    {
+      "at": 1793256394291,
+      "id": 10,
+      "phase": "browser",
+      "request": {
+        "at": 1793256394282,
+        "id": 15,
+        "method": "POST",
+        "path": "/api/v1/janji-temu",
+        "phase": "browser",
+        "status": 201,
+        "durationMs": 106
+      },
+      "options": {
+        "isolationLevel": "Serializable",
+        "maxWait": 10000,
+        "timeout": 15000
+      },
+      "site": [
+        "    at D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\janji-temu\\janji-temu.service.js:65:74",
+        "    at JanjiTemuService.denganPercobaan (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\janji-temu\\janji-temu.service.js:277:30)",
+        "    at JanjiTemuService.create (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\janji-temu\\janji-temu.service.js:65:34)"
+      ],
+      "queries": [
+        {
+          "operation": "$queryRaw",
+          "startedMs": 4,
+          "durationMs": 3
+        },
+        {
+          "operation": "$queryRaw",
+          "startedMs": 7,
+          "durationMs": 2
+        },
+        {
+          "operation": "slotPraktik.findUnique",
+          "startedMs": 10,
+          "durationMs": 18
+        },
+        {
+          "operation": "janjiTemu.count",
+          "startedMs": 28,
+          "durationMs": 4
+        },
+        {
+          "operation": "urutanAntreanHarian.upsert",
+          "startedMs": 32,
+          "durationMs": 7
+        },
+        {
+          "operation": "jadwalLayanan.findUnique",
+          "startedMs": 39,
+          "durationMs": 3
+        },
+        {
+          "operation": "tiketAntrean.count",
+          "startedMs": 42,
+          "durationMs": 2
+        },
+        {
+          "operation": "tiketAntrean.findFirst",
+          "startedMs": 44,
+          "durationMs": 3
+        },
+        {
+          "operation": "tiketAntrean.create",
+          "startedMs": 47,
+          "durationMs": 6
+        },
+        {
+          "operation": "janjiTemu.create",
+          "startedMs": 53,
+          "durationMs": 4
+        },
+        {
+          "operation": "peristiwaAntrean.create",
+          "startedMs": 57,
+          "durationMs": 5
+        }
+      ],
+      "durationMs": 67
+    },
+    {
+      "at": 1793256401843,
+      "id": 11,
+      "phase": "browser",
+      "request": {
+        "at": 1793256401307,
+        "id": 17,
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "phase": "browser",
+        "status": 200,
+        "durationMs": 565
+      },
+      "options": {
+        "timeout": 10000
+      },
+      "site": [
+        "    at AuthService.login (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\auth\\auth.service.js:76:27)"
+      ],
+      "queries": [
+        {
+          "operation": "$executeRaw",
+          "startedMs": 4,
+          "durationMs": 5
+        },
+        {
+          "operation": "$queryRaw",
+          "startedMs": 9,
+          "durationMs": 5
+        },
+        {
+          "operation": "sesiPengguna.create",
+          "startedMs": 14,
+          "durationMs": 8
+        }
+      ],
+      "durationMs": 28
+    },
+    {
+      "at": 1793256407808,
+      "id": 12,
+      "phase": "browser",
+      "request": {
+        "at": 1793256407273,
+        "id": 33,
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "phase": "browser",
+        "status": 200,
+        "durationMs": 557
+      },
+      "options": {
+        "timeout": 10000
+      },
+      "site": [
+        "    at AuthService.login (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\auth\\auth.service.js:76:27)"
+      ],
+      "queries": [
+        {
+          "operation": "$executeRaw",
+          "startedMs": 2,
+          "durationMs": 5
+        },
+        {
+          "operation": "$queryRaw",
+          "startedMs": 7,
+          "durationMs": 4
+        },
+        {
+          "operation": "sesiPengguna.create",
+          "startedMs": 11,
+          "durationMs": 6
+        }
+      ],
+      "durationMs": 20
+    },
+    {
+      "at": 1793256413440,
+      "id": 13,
+      "phase": "browser",
+      "request": {
+        "at": 1793256412755,
+        "id": 52,
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "phase": "browser",
+        "status": 200,
+        "durationMs": 723
+      },
+      "options": {
+        "timeout": 10000
+      },
+      "site": [
+        "    at AuthService.login (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\auth\\auth.service.js:76:27)"
+      ],
+      "queries": [
+        {
+          "operation": "$executeRaw",
+          "startedMs": 12,
+          "durationMs": 3
+        },
+        {
+          "operation": "$queryRaw",
+          "startedMs": 15,
+          "durationMs": 12
+        },
+        {
+          "operation": "sesiPengguna.create",
+          "startedMs": 27,
+          "durationMs": 4
+        }
+      ],
+      "durationMs": 38
+    },
+    {
+      "at": 1793256414525,
+      "id": 14,
+      "phase": "browser",
+      "request": {
+        "at": 1793256414422,
+        "id": 62,
+        "method": "GET",
+        "path": "/api/v1/portal-dokter/antrean/snapshot",
+        "phase": "browser",
+        "status": 200,
+        "durationMs": 751
+      },
+      "options": {
+        "isolationLevel": "RepeatableRead"
+      },
+      "site": [
+        "    at PortalDokterService.snapshot (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\portal-dokter\\portal-dokter.service.js:137:28)"
+      ],
+      "queries": [
+        {
+          "operation": "jadwalPraktik.findFirst",
+          "startedMs": 59,
+          "durationMs": 120
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 180,
+          "durationMs": 455
+        }
+      ],
+      "durationMs": 646
+    },
+    {
+      "at": 1793256415621,
+      "id": 15,
+      "phase": "browser",
+      "request": {
+        "at": 1793256415576,
+        "id": 66,
+        "method": "GET",
+        "path": "/api/v1/portal-dokter/antrean/snapshot",
+        "phase": "browser",
+        "status": 200,
+        "durationMs": 168
+      },
+      "options": {
+        "isolationLevel": "RepeatableRead"
+      },
+      "site": [
+        "    at PortalDokterService.snapshot (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\portal-dokter\\portal-dokter.service.js:137:28)"
+      ],
+      "queries": [
+        {
+          "operation": "jadwalPraktik.findFirst",
+          "startedMs": 13,
+          "durationMs": 52
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 65,
+          "durationMs": 53
+        }
+      ],
+      "durationMs": 121
+    },
+    {
+      "at": 1793256417695,
+      "id": 16,
+      "phase": "browser",
+      "request": {
+        "at": 1793256417667,
+        "id": 70,
+        "method": "GET",
+        "path": "/api/v1/slot-praktik",
+        "phase": "browser",
+        "status": 200,
+        "durationMs": 243
+      },
+      "options": {
+        "isolationLevel": "RepeatableRead"
+      },
+      "site": [
+        "    at SlotPraktikService.findAll (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\slot-praktik\\slot-praktik.service.js:89:28)",
+        "    at SlotPraktikController.findAll (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\slot-praktik\\slot-praktik.controller.js:35:29)"
+      ],
+      "queries": [
+        {
+          "operation": "slotPraktik.findMany",
+          "startedMs": 26,
+          "durationMs": 157
+        },
+        {
+          "operation": "jadwalLayanan.findUnique",
+          "startedMs": 184,
+          "durationMs": 18
+        },
+        {
+          "operation": "tiketAntrean.count",
+          "startedMs": 203,
+          "durationMs": 5
+        }
+      ],
+      "durationMs": 215
+    },
+    {
+      "at": 1793256418455,
+      "id": 17,
+      "phase": "browser",
+      "request": {
+        "at": 1793256418445,
+        "id": 72,
+        "method": "POST",
+        "path": "/api/v1/reservasi",
+        "phase": "browser",
+        "status": 201,
+        "durationMs": 144
+      },
+      "options": {
+        "isolationLevel": "Serializable",
+        "maxWait": 10000,
+        "timeout": 15000
+      },
+      "site": [
+        "    at ReservasiService.create (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\reservasi\\reservasi.service.js:55:42)",
+        "    at ReservasiController.create (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\reservasi\\reservasi.controller.js:30:38)"
+      ],
+      "queries": [
+        {
+          "operation": "layanan.findUnique",
+          "startedMs": 5,
+          "durationMs": 5
+        },
+        {
+          "operation": "jadwalLayanan.findUnique",
+          "startedMs": 10,
+          "durationMs": 14
+        },
+        {
+          "operation": "urutanAntreanHarian.upsert",
+          "startedMs": 24,
+          "durationMs": 35
+        },
+        {
+          "operation": "tiketAntrean.findFirst",
+          "startedMs": 59,
+          "durationMs": 6
+        },
+        {
+          "operation": "tiketAntrean.count",
+          "startedMs": 65,
+          "durationMs": 4
+        },
+        {
+          "operation": "tiketAntrean.create",
+          "startedMs": 69,
+          "durationMs": 31
+        }
+      ],
+      "durationMs": 111
+    },
+    {
+      "at": 1793256419425,
+      "id": 18,
+      "phase": "browser",
+      "request": {
+        "at": 1793256419375,
+        "id": 95,
+        "method": "GET",
+        "path": "/api/v1/slot-praktik",
+        "phase": "browser",
+        "status": 304,
+        "durationMs": 442
+      },
+      "options": {
+        "isolationLevel": "RepeatableRead"
+      },
+      "site": [
+        "    at SlotPraktikService.findAll (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\slot-praktik\\slot-praktik.service.js:89:28)",
+        "    at SlotPraktikController.findAll (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\slot-praktik\\slot-praktik.controller.js:35:29)"
+      ],
+      "queries": [
+        {
+          "operation": "slotPraktik.findMany",
+          "startedMs": 73,
+          "durationMs": 252
+        },
+        {
+          "operation": "jadwalLayanan.findUnique",
+          "startedMs": 327,
+          "durationMs": 28
+        },
+        {
+          "operation": "tiketAntrean.count",
+          "startedMs": 355,
+          "durationMs": 16
+        }
+      ],
+      "durationMs": 392
+    },
+    {
+      "at": 1793256419958,
+      "id": 19,
+      "phase": "browser",
+      "request": {
+        "at": 1793256419930,
+        "id": 99,
+        "method": "GET",
+        "path": "/api/v1/slot-praktik",
+        "phase": "browser",
+        "status": 304,
+        "durationMs": 223
+      },
+      "options": {
+        "isolationLevel": "RepeatableRead"
+      },
+      "site": [
+        "    at SlotPraktikService.findAll (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\slot-praktik\\slot-praktik.service.js:89:28)",
+        "    at SlotPraktikController.findAll (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\slot-praktik\\slot-praktik.controller.js:35:29)"
+      ],
+      "queries": [
+        {
+          "operation": "slotPraktik.findMany",
+          "startedMs": 42,
+          "durationMs": 124
+        },
+        {
+          "operation": "jadwalLayanan.findUnique",
+          "startedMs": 168,
+          "durationMs": 14
+        },
+        {
+          "operation": "tiketAntrean.count",
+          "startedMs": 182,
+          "durationMs": 7
+        }
+      ],
+      "durationMs": 193
+    },
+    {
+      "at": 1793256422844,
+      "id": 20,
+      "phase": "browser",
+      "request": {
+        "at": 1793256422842,
+        "id": 101,
+        "method": "POST",
+        "path": "/api/v1/display/pairing",
+        "phase": "browser",
+        "status": 200,
+        "durationMs": 48
+      },
+      "options": {
+        "timeout": "Prisma default"
+      },
+      "site": [
+        "    at DisplayDeviceService.pair (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display-device.service.js:117:42)",
+        "    at DisplayPairingController.pair (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display-device.controller.js:103:54)"
+      ],
+      "queries": [
+        {
+          "operation": "perangkatTampilan.findUnique",
+          "startedMs": 3,
+          "durationMs": 15
+        },
+        {
+          "operation": "perangkatTampilan.updateMany",
+          "startedMs": 19,
+          "durationMs": 6
+        },
+        {
+          "operation": "perangkatTampilan.findUniqueOrThrow",
+          "startedMs": 25,
+          "durationMs": 14
+        }
+      ],
+      "durationMs": 44
+    },
+    {
+      "at": 1793256423207,
+      "id": 21,
+      "phase": "browser",
+      "request": {
+        "at": 1793256423204,
+        "id": 105,
+        "method": "GET",
+        "path": "/api/v1/display/<id>/snapshot",
+        "phase": "browser",
+        "status": 200,
+        "durationMs": 176
+      },
+      "options": {
+        "isolationLevel": "RepeatableRead",
+        "timeout": 15000
+      },
+      "site": [
+        "    at DisplayService.snapshot (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display.service.js:36:40)",
+        "    at DisplayController.snapshot (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display.controller.js:26:36)"
+      ],
+      "queries": [
+        {
+          "operation": "perangkatTampilan.findUnique",
+          "startedMs": 16,
+          "durationMs": 31
+        },
+        {
+          "operation": "layanan.findUniqueOrThrow",
+          "startedMs": 48,
+          "durationMs": 5
+        },
+        {
+          "operation": "loket.findMany",
+          "startedMs": 52,
+          "durationMs": 118
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 52,
+          "durationMs": 118
+        },
+        {
+          "operation": "tiketAntrean.count",
+          "startedMs": 53,
+          "durationMs": 118
+        },
+        {
+          "operation": "peristiwaAntrean.findFirst",
+          "startedMs": 53,
+          "durationMs": 118
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 53,
+          "durationMs": 118
+        },
+        {
+          "operation": "jadwalPraktik.findMany",
+          "startedMs": 53,
+          "durationMs": 118
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 53,
+          "durationMs": 118
+        },
+        {
+          "operation": "tiketAntrean.count",
+          "startedMs": 53,
+          "durationMs": 118
+        }
+      ],
+      "durationMs": 173
+    },
+    {
+      "at": 1793256435818,
+      "id": 22,
+      "phase": "browser",
+      "request": {
+        "at": 1793256435815,
+        "id": 109,
+        "method": "POST",
+        "path": "/api/v1/display/pairing",
+        "phase": "browser",
+        "status": 200,
+        "durationMs": 5744
+      },
+      "options": {
+        "timeout": "Prisma default"
+      },
+      "site": [
+        "    at DisplayDeviceService.pair (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display-device.service.js:117:42)",
+        "    at DisplayPairingController.pair (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display-device.controller.js:103:54)"
+      ],
+      "queries": [
+        {
+          "operation": "perangkatTampilan.findUnique",
+          "startedMs": 11,
+          "durationMs": 943
+        },
+        {
+          "operation": "perangkatTampilan.updateMany",
+          "startedMs": 958,
+          "durationMs": 1727
+        },
+        {
+          "operation": "perangkatTampilan.findUniqueOrThrow",
+          "startedMs": 2685,
+          "durationMs": 2212
+        }
+      ],
+      "durationMs": 5740
+    },
+    {
+      "at": 1793256444813,
+      "id": 23,
+      "phase": "browser",
+      "request": {
+        "at": 1793256444724,
+        "id": 113,
+        "method": "GET",
+        "path": "/api/v1/display/<id>/snapshot",
+        "phase": "browser",
+        "status": 200,
+        "durationMs": 2045
+      },
+      "options": {
+        "isolationLevel": "RepeatableRead",
+        "timeout": 15000
+      },
+      "site": [
+        "    at DisplayService.snapshot (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display.service.js:36:40)",
+        "    at DisplayController.snapshot (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display.controller.js:26:36)"
+      ],
+      "queries": [
+        {
+          "operation": "perangkatTampilan.findUnique",
+          "startedMs": 283,
+          "durationMs": 136
+        },
+        {
+          "operation": "layanan.findUniqueOrThrow",
+          "startedMs": 419,
+          "durationMs": 66
+        },
+        {
+          "operation": "loket.findMany",
+          "startedMs": 484,
+          "durationMs": 1397
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 485,
+          "durationMs": 1397
+        },
+        {
+          "operation": "tiketAntrean.count",
+          "startedMs": 485,
+          "durationMs": 1397
+        },
+        {
+          "operation": "peristiwaAntrean.findFirst",
+          "startedMs": 485,
+          "durationMs": 1397
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 485,
+          "durationMs": 1397
+        },
+        {
+          "operation": "jadwalPraktik.findMany",
+          "startedMs": 485,
+          "durationMs": 1396
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 485,
+          "durationMs": 1396
+        },
+        {
+          "operation": "tiketAntrean.count",
+          "startedMs": 485,
+          "durationMs": 1396
+        }
+      ],
+      "durationMs": 1955
+    },
+    {
+      "at": 1793256449541,
+      "id": 24,
+      "phase": "browser",
+      "request": {
+        "at": 1793256449509,
+        "id": 114,
+        "method": "GET",
+        "path": "/api/v1/display/<id>/snapshot",
+        "phase": "browser",
+        "status": 200,
+        "durationMs": 3212
+      },
+      "options": {
+        "isolationLevel": "RepeatableRead",
+        "timeout": 15000
+      },
+      "site": [
+        "    at DisplayService.snapshot (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display.service.js:36:40)",
+        "    at DisplayController.snapshot (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display.controller.js:26:36)"
+      ],
+      "queries": [
+        {
+          "operation": "perangkatTampilan.findUnique",
+          "startedMs": 781,
+          "durationMs": 213
+        },
+        {
+          "operation": "layanan.findUniqueOrThrow",
+          "startedMs": 994,
+          "durationMs": 44
+        },
+        {
+          "operation": "loket.findMany",
+          "startedMs": 1039,
+          "durationMs": 2056
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 1039,
+          "durationMs": 2056
+        },
+        {
+          "operation": "tiketAntrean.count",
+          "startedMs": 1039,
+          "durationMs": 2056
+        },
+        {
+          "operation": "peristiwaAntrean.findFirst",
+          "startedMs": 1039,
+          "durationMs": 2056
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 1039,
+          "durationMs": 2056
+        },
+        {
+          "operation": "jadwalPraktik.findMany",
+          "startedMs": 1039,
+          "durationMs": 2056
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 1039,
+          "durationMs": 2056
+        },
+        {
+          "operation": "tiketAntrean.count",
+          "startedMs": 1039,
+          "durationMs": 2056
+        }
+      ],
+      "durationMs": 3179
+    },
+    {
+      "at": 1793256460025,
+      "id": 25,
+      "phase": "browser",
+      "request": {
+        "at": 1793256460022,
+        "id": 118,
+        "method": "POST",
+        "path": "/api/v1/display/pairing",
+        "phase": "browser",
+        "status": 200,
+        "durationMs": 543
+      },
+      "options": {
+        "timeout": "Prisma default"
+      },
+      "site": [
+        "    at DisplayDeviceService.pair (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display-device.service.js:117:42)",
+        "    at DisplayPairingController.pair (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display-device.controller.js:103:54)"
+      ],
+      "queries": [
+        {
+          "operation": "perangkatTampilan.findUnique",
+          "startedMs": 60,
+          "durationMs": 80
+        },
+        {
+          "operation": "perangkatTampilan.updateMany",
+          "startedMs": 140,
+          "durationMs": 33
+        },
+        {
+          "operation": "perangkatTampilan.findUniqueOrThrow",
+          "startedMs": 173,
+          "durationMs": 59
+        }
+      ],
+      "durationMs": 516
+    },
+    {
+      "at": 1793256461555,
+      "id": 26,
+      "phase": "browser",
+      "request": {
+        "at": 1793256461553,
+        "id": 122,
+        "method": "GET",
+        "path": "/api/v1/display/<id>/snapshot",
+        "phase": "browser",
+        "status": 200,
+        "durationMs": 2253
+      },
+      "options": {
+        "isolationLevel": "RepeatableRead",
+        "timeout": 15000
+      },
+      "site": [
+        "    at DisplayService.snapshot (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display.service.js:36:40)",
+        "    at DisplayController.snapshot (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display.controller.js:26:36)"
+      ],
+      "queries": [
+        {
+          "operation": "perangkatTampilan.findUnique",
+          "startedMs": 246,
+          "durationMs": 521
+        },
+        {
+          "operation": "layanan.findUniqueOrThrow",
+          "startedMs": 767,
+          "durationMs": 40
+        },
+        {
+          "operation": "loket.findMany",
+          "startedMs": 806,
+          "durationMs": 1408
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 807,
+          "durationMs": 1408
+        },
+        {
+          "operation": "tiketAntrean.count",
+          "startedMs": 807,
+          "durationMs": 1408
+        },
+        {
+          "operation": "peristiwaAntrean.findFirst",
+          "startedMs": 807,
+          "durationMs": 1408
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 807,
+          "durationMs": 1408
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 807,
+          "durationMs": 1408
+        },
+        {
+          "operation": "tiketAntrean.count",
+          "startedMs": 807,
+          "durationMs": 1408
+        }
+      ],
+      "durationMs": 2250
+    },
+    {
+      "at": 1793256464485,
+      "id": 27,
+      "phase": "browser",
+      "request": {
+        "at": 1793256464483,
+        "id": 125,
+        "method": "GET",
+        "path": "/api/v1/display/<id>/snapshot",
+        "phase": "browser",
+        "status": 200,
+        "durationMs": 684
+      },
+      "options": {
+        "isolationLevel": "RepeatableRead",
+        "timeout": 15000
+      },
+      "site": [
+        "    at DisplayService.snapshot (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display.service.js:36:40)",
+        "    at DisplayController.snapshot (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display.controller.js:26:36)"
+      ],
+      "queries": [
+        {
+          "operation": "perangkatTampilan.findUnique",
+          "startedMs": 79,
+          "durationMs": 64
+        },
+        {
+          "operation": "layanan.findUniqueOrThrow",
+          "startedMs": 143,
+          "durationMs": 31
+        },
+        {
+          "operation": "loket.findMany",
+          "startedMs": 174,
+          "durationMs": 487
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 174,
+          "durationMs": 486
+        },
+        {
+          "operation": "tiketAntrean.count",
+          "startedMs": 174,
+          "durationMs": 486
+        },
+        {
+          "operation": "peristiwaAntrean.findFirst",
+          "startedMs": 174,
+          "durationMs": 486
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 174,
+          "durationMs": 486
+        },
+        {
+          "operation": "jadwalPraktik.findMany",
+          "startedMs": 175,
+          "durationMs": 486
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 175,
+          "durationMs": 486
+        },
+        {
+          "operation": "tiketAntrean.count",
+          "startedMs": 175,
+          "durationMs": 486
+        }
+      ],
+      "durationMs": 682
+    },
+    {
+      "at": 1793256469626,
+      "id": 28,
+      "phase": "browser",
+      "request": {
+        "at": 1793256469624,
+        "id": 128,
+        "method": "POST",
+        "path": "/api/v1/display/pairing",
+        "phase": "browser",
+        "status": 200,
+        "durationMs": 306
+      },
+      "options": {
+        "timeout": "Prisma default"
+      },
+      "site": [
+        "    at DisplayDeviceService.pair (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display-device.service.js:117:42)",
+        "    at DisplayPairingController.pair (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display-device.controller.js:103:54)"
+      ],
+      "queries": [
+        {
+          "operation": "perangkatTampilan.findUnique",
+          "startedMs": 96,
+          "durationMs": 30
+        },
+        {
+          "operation": "perangkatTampilan.updateMany",
+          "startedMs": 126,
+          "durationMs": 44
+        },
+        {
+          "operation": "perangkatTampilan.findUniqueOrThrow",
+          "startedMs": 171,
+          "durationMs": 100
+        }
+      ],
+      "durationMs": 303
+    },
+    {
+      "at": 1793256470407,
+      "id": 29,
+      "phase": "browser",
+      "request": {
+        "at": 1793256470405,
+        "id": 132,
+        "method": "GET",
+        "path": "/api/v1/display/<id>/snapshot",
+        "phase": "browser",
+        "status": 200,
+        "durationMs": 309
+      },
+      "options": {
+        "isolationLevel": "RepeatableRead",
+        "timeout": 15000
+      },
+      "site": [
+        "    at DisplayService.snapshot (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display.service.js:36:40)",
+        "    at DisplayController.snapshot (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display.controller.js:26:36)"
+      ],
+      "queries": [
+        {
+          "operation": "perangkatTampilan.findUnique",
+          "startedMs": 35,
+          "durationMs": 36
+        },
+        {
+          "operation": "layanan.findUniqueOrThrow",
+          "startedMs": 72,
+          "durationMs": 21
+        },
+        {
+          "operation": "loket.findMany",
+          "startedMs": 93,
+          "durationMs": 211
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 93,
+          "durationMs": 211
+        },
+        {
+          "operation": "tiketAntrean.count",
+          "startedMs": 93,
+          "durationMs": 211
+        },
+        {
+          "operation": "peristiwaAntrean.findFirst",
+          "startedMs": 93,
+          "durationMs": 211
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 93,
+          "durationMs": 211
+        },
+        {
+          "operation": "jadwalPraktik.findMany",
+          "startedMs": 94,
+          "durationMs": 211
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 94,
+          "durationMs": 210
+        },
+        {
+          "operation": "tiketAntrean.count",
+          "startedMs": 94,
+          "durationMs": 210
+        }
+      ],
+      "durationMs": 307
+    },
+    {
+      "at": 1793256473310,
+      "id": 30,
+      "phase": "browser",
+      "request": {
+        "at": 1793256473308,
+        "id": 134,
+        "method": "GET",
+        "path": "/api/v1/display/<id>/snapshot",
+        "phase": "browser",
+        "status": 200,
+        "durationMs": 506
+      },
+      "options": {
+        "isolationLevel": "RepeatableRead",
+        "timeout": 15000
+      },
+      "site": [
+        "    at DisplayService.snapshot (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display.service.js:36:40)",
+        "    at DisplayController.snapshot (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display.controller.js:26:36)"
+      ],
+      "queries": [
+        {
+          "operation": "perangkatTampilan.findUnique",
+          "startedMs": 110,
+          "durationMs": 119
+        },
+        {
+          "operation": "layanan.findUniqueOrThrow",
+          "startedMs": 229,
+          "durationMs": 19
+        },
+        {
+          "operation": "loket.findMany",
+          "startedMs": 249,
+          "durationMs": 229
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 249,
+          "durationMs": 228
+        },
+        {
+          "operation": "tiketAntrean.count",
+          "startedMs": 249,
+          "durationMs": 228
+        },
+        {
+          "operation": "peristiwaAntrean.findFirst",
+          "startedMs": 249,
+          "durationMs": 228
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 249,
+          "durationMs": 228
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 249,
+          "durationMs": 228
+        },
+        {
+          "operation": "tiketAntrean.count",
+          "startedMs": 249,
+          "durationMs": 228
+        }
+      ],
+      "durationMs": 504
+    },
+    {
+      "at": 1793256479517,
+      "id": 31,
+      "phase": "browser",
+      "request": {
+        "at": 1793256479488,
+        "id": 136,
+        "method": "GET",
+        "path": "/api/v1/display/<id>/snapshot",
+        "phase": "browser",
+        "status": 200,
+        "durationMs": 1022
+      },
+      "options": {
+        "isolationLevel": "RepeatableRead",
+        "timeout": 15000
+      },
+      "site": [
+        "    at DisplayService.snapshot (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display.service.js:36:40)",
+        "    at DisplayController.snapshot (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display.controller.js:26:36)"
+      ],
+      "queries": [
+        {
+          "operation": "perangkatTampilan.findUnique",
+          "startedMs": 120,
+          "durationMs": 77
+        },
+        {
+          "operation": "layanan.findUniqueOrThrow",
+          "startedMs": 197,
+          "durationMs": 26
+        },
+        {
+          "operation": "loket.findMany",
+          "startedMs": 223,
+          "durationMs": 672
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 223,
+          "durationMs": 672
+        },
+        {
+          "operation": "tiketAntrean.count",
+          "startedMs": 223,
+          "durationMs": 672
+        },
+        {
+          "operation": "peristiwaAntrean.findFirst",
+          "startedMs": 223,
+          "durationMs": 672
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 223,
+          "durationMs": 672
+        },
+        {
+          "operation": "jadwalPraktik.findMany",
+          "startedMs": 224,
+          "durationMs": 672
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 224,
+          "durationMs": 672
+        },
+        {
+          "operation": "tiketAntrean.count",
+          "startedMs": 224,
+          "durationMs": 672
+        }
+      ],
+      "durationMs": 992
+    },
+    {
+      "at": 1793256489974,
+      "id": 32,
+      "phase": "browser",
+      "request": {
+        "at": 1793256489928,
+        "id": 140,
+        "method": "GET",
+        "path": "/api/v1/display/<id>/snapshot",
+        "phase": "browser",
+        "status": 503,
+        "durationMs": 2399
+      },
+      "options": {
+        "isolationLevel": "RepeatableRead",
+        "timeout": 15000
+      },
+      "site": [
+        "    at DisplayService.snapshot (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display.service.js:36:40)",
+        "    at DisplayController.snapshot (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display.controller.js:26:36)"
+      ],
+      "queries": [],
+      "error": {
+        "name": "PrismaClientKnownRequestError",
+        "code": "P2028",
+        "message": "Transaction API error: Unable to start a transaction in the given time.",
+        "meta": {},
+        "stack": [
+          "    at async prisma.$transaction (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\client\\tool\\recovery-observer.cjs:136:14)",
+          "    at async DisplayService.snapshot (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display.service.js:36:22)"
+        ]
+      },
+      "durationMs": 2304
+    },
+    {
+      "at": 1793256493913,
+      "id": 33,
+      "phase": "browser",
+      "request": {
+        "at": 1793256481643,
+        "id": 138,
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "phase": "browser",
+        "status": 200,
+        "durationMs": 13700
+      },
+      "options": {
+        "timeout": 10000
+      },
+      "site": [
+        "    at AuthService.login (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\auth\\auth.service.js:76:27)"
+      ],
+      "queries": [
+        {
+          "operation": "$executeRaw",
+          "startedMs": 216,
+          "durationMs": 200
+        },
+        {
+          "operation": "$queryRaw",
+          "startedMs": 415,
+          "durationMs": 161
+        },
+        {
+          "operation": "sesiPengguna.create",
+          "startedMs": 621,
+          "durationMs": 487
+        }
+      ],
+      "durationMs": 1427
+    },
+    {
+      "at": 1793256494700,
+      "id": 34,
+      "phase": "browser",
+      "request": {
+        "at": 1793256494695,
+        "id": 142,
+        "method": "GET",
+        "path": "/api/v1/display/<id>/snapshot",
+        "phase": "browser",
+        "status": 503,
+        "durationMs": 2049
+      },
+      "options": {
+        "isolationLevel": "RepeatableRead",
+        "timeout": 15000
+      },
+      "site": [
+        "    at DisplayService.snapshot (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display.service.js:36:40)",
+        "    at DisplayController.snapshot (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display.controller.js:26:36)"
+      ],
+      "queries": [],
+      "error": {
+        "name": "PrismaClientKnownRequestError",
+        "code": "P2028",
+        "message": "Transaction API error: Unable to start a transaction in the given time.",
+        "meta": {},
+        "stack": [
+          "    at async prisma.$transaction (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\client\\tool\\recovery-observer.cjs:136:14)",
+          "    at async DisplayService.snapshot (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display.service.js:36:22)"
+        ]
+      },
+      "durationMs": 2043
+    },
+    {
+      "at": 1793256499668,
+      "id": 35,
+      "phase": "browser",
+      "request": {
+        "at": 1793256499340,
+        "id": 148,
+        "method": "GET",
+        "path": "/api/v1/queue/snapshot",
+        "phase": "browser",
+        "status": 500,
+        "durationMs": 6261
+      },
+      "options": {
+        "isolationLevel": "RepeatableRead"
+      },
+      "site": [
+        "    at QueueService.snapshotAntrean (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\queue\\queue.service.js:447:44)",
+        "    at QueueController.snapshotAntrean (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\queue\\queue.controller.js:51:34)"
+      ],
+      "queries": [
+        {
+          "operation": "pengguna.findUnique",
+          "startedMs": 116,
+          "durationMs": 136
+        },
+        {
+          "operation": "penugasanPetugas.findFirst",
+          "startedMs": 253,
+          "durationMs": 1000
+        },
+        {
+          "operation": "loket.findMany",
+          "startedMs": 1253,
+          "durationMs": 1445
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 1253,
+          "durationMs": 1445
+        },
+        {
+          "operation": "tiketAntrean.count",
+          "startedMs": 1253,
+          "durationMs": 1445
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 1253,
+          "durationMs": 1445
+        },
+        {
+          "operation": "jadwalPraktik.findFirst",
+          "startedMs": 2699,
+          "durationMs": 334
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 3166,
+          "durationMs": 2507
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 3166,
+          "durationMs": 2507
+        },
+        {
+          "operation": "tiketAntrean.count",
+          "startedMs": 3167,
+          "durationMs": 2507,
+          "error": {
+            "name": "PrismaClientKnownRequestError",
+            "code": "P2028",
+            "message": "Transaction API error: A batch query cannot be executed on an expired transaction. The timeout for this transaction was 5000 ms, however 5235 ms passed since the start of the transaction. Consider increasing the interactive transaction timeout or doing less work in the transaction.",
+            "meta": {
+              "modelName": "TiketAntrean",
+              "timeout": "5000"
+            },
+            "stack": [
+              "    at async bacaPasienOperasional (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\queue\\queue-operational-snapshot.js:33:39)",
+              "    at async snapshot.prisma.$transaction.isolationLevel (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\queue\\queue.service.js:607:33)",
+              "    at async prisma.$transaction (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\client\\tool\\recovery-observer.cjs:136:14)"
+            ]
+          }
+        }
+      ],
+      "error": {
+        "name": "PrismaClientKnownRequestError",
+        "code": "P2028",
+        "message": "Transaction API error: A batch query cannot be executed on an expired transaction. The timeout for this transaction was 5000 ms, however 5235 ms passed since the start of the transaction. Consider increasing the interactive transaction timeout or doing less work in the transaction.",
+        "meta": {
+          "modelName": "TiketAntrean",
+          "timeout": "5000"
+        },
+        "stack": [
+          "    at async bacaPasienOperasional (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\queue\\queue-operational-snapshot.js:33:39)",
+          "    at async snapshot.prisma.$transaction.isolationLevel (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\queue\\queue.service.js:607:33)",
+          "    at async prisma.$transaction (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\client\\tool\\recovery-observer.cjs:136:14)"
+        ]
+      },
+      "durationMs": 5714
+    },
+    {
+      "at": 1793256503927,
+      "id": 36,
+      "phase": "browser",
+      "request": {
+        "at": 1793256503926,
+        "id": 150,
+        "method": "GET",
+        "path": "/api/v1/display/<id>/snapshot",
+        "phase": "browser",
+        "status": 200,
+        "durationMs": 3478
+      },
+      "options": {
+        "isolationLevel": "RepeatableRead",
+        "timeout": 15000
+      },
+      "site": [
+        "    at DisplayService.snapshot (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display.service.js:36:40)",
+        "    at DisplayController.snapshot (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display.controller.js:26:36)"
+      ],
+      "queries": [
+        {
+          "operation": "perangkatTampilan.findUnique",
+          "startedMs": 236,
+          "durationMs": 1522
+        },
+        {
+          "operation": "layanan.findUniqueOrThrow",
+          "startedMs": 1762,
+          "durationMs": 192
+        },
+        {
+          "operation": "loket.findMany",
+          "startedMs": 1955,
+          "durationMs": 1494
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 1955,
+          "durationMs": 1494
+        },
+        {
+          "operation": "tiketAntrean.count",
+          "startedMs": 1955,
+          "durationMs": 1494
+        },
+        {
+          "operation": "peristiwaAntrean.findFirst",
+          "startedMs": 1955,
+          "durationMs": 1494
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 1955,
+          "durationMs": 1494
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 1955,
+          "durationMs": 1493
+        },
+        {
+          "operation": "tiketAntrean.count",
+          "startedMs": 1955,
+          "durationMs": 1493
+        }
+      ],
+      "durationMs": 3476
+    },
+    {
+      "at": 1793256506091,
+      "id": 37,
+      "phase": "browser",
+      "request": {
+        "at": 1793256505928,
+        "id": 152,
+        "method": "GET",
+        "path": "/api/v1/queue/snapshot",
+        "phase": "browser",
+        "status": 200,
+        "durationMs": 1646
+      },
+      "options": {
+        "isolationLevel": "RepeatableRead"
+      },
+      "site": [
+        "    at QueueService.snapshotAntrean (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\queue\\queue.service.js:447:44)",
+        "    at QueueController.snapshotAntrean (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\queue\\queue.controller.js:51:34)"
+      ],
+      "queries": [
+        {
+          "operation": "pengguna.findUnique",
+          "startedMs": 113,
+          "durationMs": 46
+        },
+        {
+          "operation": "penugasanPetugas.findFirst",
+          "startedMs": 159,
+          "durationMs": 130
+        },
+        {
+          "operation": "loket.findMany",
+          "startedMs": 290,
+          "durationMs": 867
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 290,
+          "durationMs": 867
+        },
+        {
+          "operation": "tiketAntrean.count",
+          "startedMs": 290,
+          "durationMs": 867
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 290,
+          "durationMs": 867
+        },
+        {
+          "operation": "jadwalPraktik.findFirst",
+          "startedMs": 1157,
+          "durationMs": 43
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 1201,
+          "durationMs": 253
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 1201,
+          "durationMs": 253
+        },
+        {
+          "operation": "tiketAntrean.count",
+          "startedMs": 1201,
+          "durationMs": 253
+        }
+      ],
+      "durationMs": 1482
+    },
+    {
+      "at": 1793256509762,
+      "id": 38,
+      "phase": "browser",
+      "request": {
+        "at": 1793256509722,
+        "id": 156,
+        "method": "GET",
+        "path": "/api/v1/display/<id>/snapshot",
+        "phase": "browser",
+        "status": 200,
+        "durationMs": 1397
+      },
+      "options": {
+        "isolationLevel": "RepeatableRead",
+        "timeout": 15000
+      },
+      "site": [
+        "    at DisplayService.snapshot (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display.service.js:36:40)",
+        "    at DisplayController.snapshot (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display.controller.js:26:36)"
+      ],
+      "queries": [
+        {
+          "operation": "perangkatTampilan.findUnique",
+          "startedMs": 262,
+          "durationMs": 157
+        },
+        {
+          "operation": "layanan.findUniqueOrThrow",
+          "startedMs": 420,
+          "durationMs": 46
+        },
+        {
+          "operation": "loket.findMany",
+          "startedMs": 466,
+          "durationMs": 876
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 466,
+          "durationMs": 876
+        },
+        {
+          "operation": "tiketAntrean.count",
+          "startedMs": 467,
+          "durationMs": 876
+        },
+        {
+          "operation": "peristiwaAntrean.findFirst",
+          "startedMs": 467,
+          "durationMs": 876
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 467,
+          "durationMs": 876
+        },
+        {
+          "operation": "jadwalPraktik.findMany",
+          "startedMs": 467,
+          "durationMs": 876
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 467,
+          "durationMs": 876
+        },
+        {
+          "operation": "tiketAntrean.count",
+          "startedMs": 467,
+          "durationMs": 876
+        }
+      ],
+      "durationMs": 1356
+    },
+    {
+      "at": 1793256512387,
+      "id": 39,
+      "phase": "browser",
+      "request": {
+        "at": 1793256512367,
+        "id": 158,
+        "method": "GET",
+        "path": "/api/v1/queue/snapshot",
+        "phase": "browser",
+        "status": 200,
+        "durationMs": 304
+      },
+      "options": {
+        "isolationLevel": "RepeatableRead"
+      },
+      "site": [
+        "    at QueueService.snapshotAntrean (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\queue\\queue.service.js:447:44)",
+        "    at QueueController.snapshotAntrean (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\queue\\queue.controller.js:51:34)"
+      ],
+      "queries": [
+        {
+          "operation": "pengguna.findUnique",
+          "startedMs": 37,
+          "durationMs": 10
+        },
+        {
+          "operation": "penugasanPetugas.findFirst",
+          "startedMs": 47,
+          "durationMs": 84
+        },
+        {
+          "operation": "loket.findMany",
+          "startedMs": 131,
+          "durationMs": 105
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 131,
+          "durationMs": 105
+        },
+        {
+          "operation": "tiketAntrean.count",
+          "startedMs": 131,
+          "durationMs": 105
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 131,
+          "durationMs": 105
+        },
+        {
+          "operation": "jadwalPraktik.findFirst",
+          "startedMs": 236,
+          "durationMs": 9
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 246,
+          "durationMs": 33
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 246,
+          "durationMs": 33
+        },
+        {
+          "operation": "tiketAntrean.count",
+          "startedMs": 246,
+          "durationMs": 33
+        }
+      ],
+      "durationMs": 283
+    },
+    {
+      "at": 1793256518266,
+      "id": 40,
+      "phase": "browser",
+      "request": {
+        "at": 1793256518242,
+        "id": 162,
+        "method": "GET",
+        "path": "/api/v1/display/<id>/snapshot",
+        "phase": "browser",
+        "status": 200,
+        "durationMs": 255
+      },
+      "options": {
+        "isolationLevel": "RepeatableRead",
+        "timeout": 15000
+      },
+      "site": [
+        "    at DisplayService.snapshot (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display.service.js:36:40)",
+        "    at DisplayController.snapshot (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display.controller.js:26:36)"
+      ],
+      "queries": [
+        {
+          "operation": "perangkatTampilan.findUnique",
+          "startedMs": 18,
+          "durationMs": 16
+        },
+        {
+          "operation": "layanan.findUniqueOrThrow",
+          "startedMs": 34,
+          "durationMs": 7
+        },
+        {
+          "operation": "loket.findMany",
+          "startedMs": 42,
+          "durationMs": 184
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 42,
+          "durationMs": 184
+        },
+        {
+          "operation": "tiketAntrean.count",
+          "startedMs": 42,
+          "durationMs": 184
+        },
+        {
+          "operation": "peristiwaAntrean.findFirst",
+          "startedMs": 42,
+          "durationMs": 184
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 42,
+          "durationMs": 184
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 42,
+          "durationMs": 184
+        },
+        {
+          "operation": "tiketAntrean.count",
+          "startedMs": 42,
+          "durationMs": 184
+        }
+      ],
+      "durationMs": 230
+    },
+    {
+      "at": 1793256524517,
+      "id": 41,
+      "phase": "browser",
+      "request": {
+        "at": 1793256524515,
+        "id": 164,
+        "method": "GET",
+        "path": "/api/v1/display/<id>/snapshot",
+        "phase": "browser",
+        "status": 200,
+        "durationMs": 860
+      },
+      "options": {
+        "isolationLevel": "RepeatableRead",
+        "timeout": 15000
+      },
+      "site": [
+        "    at DisplayService.snapshot (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display.service.js:36:40)",
+        "    at DisplayController.snapshot (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display.controller.js:26:36)"
+      ],
+      "queries": [
+        {
+          "operation": "perangkatTampilan.findUnique",
+          "startedMs": 78,
+          "durationMs": 53
+        },
+        {
+          "operation": "layanan.findUniqueOrThrow",
+          "startedMs": 132,
+          "durationMs": 13
+        },
+        {
+          "operation": "loket.findMany",
+          "startedMs": 145,
+          "durationMs": 703
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 145,
+          "durationMs": 703
+        },
+        {
+          "operation": "tiketAntrean.count",
+          "startedMs": 145,
+          "durationMs": 703
+        },
+        {
+          "operation": "peristiwaAntrean.findFirst",
+          "startedMs": 145,
+          "durationMs": 703
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 145,
+          "durationMs": 703
+        },
+        {
+          "operation": "jadwalPraktik.findMany",
+          "startedMs": 145,
+          "durationMs": 703
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 145,
+          "durationMs": 703
+        },
+        {
+          "operation": "tiketAntrean.count",
+          "startedMs": 145,
+          "durationMs": 702
+        }
+      ],
+      "durationMs": 857
+    },
+    {
+      "at": 1793256527681,
+      "id": 42,
+      "phase": "browser",
+      "request": {
+        "at": 1793256527417,
+        "id": 166,
+        "method": "GET",
+        "path": "/api/v1/queue/snapshot",
+        "phase": "browser",
+        "status": 200,
+        "durationMs": 492
+      },
+      "options": {
+        "isolationLevel": "RepeatableRead"
+      },
+      "site": [
+        "    at QueueService.snapshotAntrean (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\queue\\queue.service.js:447:44)",
+        "    at QueueController.snapshotAntrean (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\queue\\queue.controller.js:51:34)"
+      ],
+      "queries": [
+        {
+          "operation": "pengguna.findUnique",
+          "startedMs": 6,
+          "durationMs": 13
+        },
+        {
+          "operation": "penugasanPetugas.findFirst",
+          "startedMs": 20,
+          "durationMs": 40
+        },
+        {
+          "operation": "loket.findMany",
+          "startedMs": 60,
+          "durationMs": 106
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 60,
+          "durationMs": 106
+        },
+        {
+          "operation": "tiketAntrean.count",
+          "startedMs": 60,
+          "durationMs": 106
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 60,
+          "durationMs": 106
+        },
+        {
+          "operation": "jadwalPraktik.findFirst",
+          "startedMs": 166,
+          "durationMs": 14
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 181,
+          "durationMs": 42
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 181,
+          "durationMs": 42
+        },
+        {
+          "operation": "tiketAntrean.count",
+          "startedMs": 181,
+          "durationMs": 42
+        }
+      ],
+      "durationMs": 227
+    },
+    {
+      "at": 1793256533223,
+      "id": 43,
+      "phase": "browser",
+      "request": {
+        "at": 1793256533222,
+        "id": 170,
+        "method": "GET",
+        "path": "/api/v1/display/<id>/snapshot",
+        "phase": "browser",
+        "status": 200,
+        "durationMs": 160
+      },
+      "options": {
+        "isolationLevel": "RepeatableRead",
+        "timeout": 15000
+      },
+      "site": [
+        "    at DisplayService.snapshot (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display.service.js:36:40)",
+        "    at DisplayController.snapshot (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display.controller.js:26:36)"
+      ],
+      "queries": [
+        {
+          "operation": "perangkatTampilan.findUnique",
+          "startedMs": 11,
+          "durationMs": 17
+        },
+        {
+          "operation": "layanan.findUniqueOrThrow",
+          "startedMs": 28,
+          "durationMs": 4
+        },
+        {
+          "operation": "loket.findMany",
+          "startedMs": 32,
+          "durationMs": 122
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 32,
+          "durationMs": 122
+        },
+        {
+          "operation": "tiketAntrean.count",
+          "startedMs": 32,
+          "durationMs": 122
+        },
+        {
+          "operation": "peristiwaAntrean.findFirst",
+          "startedMs": 32,
+          "durationMs": 122
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 32,
+          "durationMs": 122
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 32,
+          "durationMs": 122
+        },
+        {
+          "operation": "tiketAntrean.count",
+          "startedMs": 32,
+          "durationMs": 122
+        }
+      ],
+      "durationMs": 157
+    },
+    {
+      "at": 1793256534021,
+      "id": 44,
+      "phase": "browser",
+      "request": {
+        "at": 1793256534019,
+        "id": 172,
+        "method": "GET",
+        "path": "/api/v1/display/<id>/snapshot",
+        "phase": "browser",
+        "status": 200,
+        "durationMs": 96
+      },
+      "options": {
+        "isolationLevel": "RepeatableRead",
+        "timeout": 15000
+      },
+      "site": [
+        "    at DisplayService.snapshot (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display.service.js:36:40)",
+        "    at DisplayController.snapshot (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\api\\dist\\display\\display.controller.js:26:36)"
+      ],
+      "queries": [
+        {
+          "operation": "perangkatTampilan.findUnique",
+          "startedMs": 5,
+          "durationMs": 8
+        },
+        {
+          "operation": "layanan.findUniqueOrThrow",
+          "startedMs": 13,
+          "durationMs": 4
+        },
+        {
+          "operation": "loket.findMany",
+          "startedMs": 16,
+          "durationMs": 72
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 16,
+          "durationMs": 72
+        },
+        {
+          "operation": "tiketAntrean.count",
+          "startedMs": 16,
+          "durationMs": 72
+        },
+        {
+          "operation": "peristiwaAntrean.findFirst",
+          "startedMs": 16,
+          "durationMs": 72
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 16,
+          "durationMs": 72
+        },
+        {
+          "operation": "jadwalPraktik.findMany",
+          "startedMs": 17,
+          "durationMs": 71
+        },
+        {
+          "operation": "tiketAntrean.findMany",
+          "startedMs": 17,
+          "durationMs": 71
+        },
+        {
+          "operation": "tiketAntrean.count",
+          "startedMs": 17,
+          "durationMs": 71
+        }
+      ],
+      "durationMs": 93
+    }
+  ],
+  "requests": [
+    {
+      "at": 1793256390931,
+      "id": 1,
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "phase": "setup",
+      "status": 200,
+      "durationMs": 512
+    },
+    {
+      "at": 1793256391460,
+      "id": 2,
+      "method": "POST",
+      "path": "/api/v1/layanan",
+      "phase": "setup",
+      "status": 201,
+      "durationMs": 48
+    },
+    {
+      "at": 1793256391511,
+      "id": 3,
+      "method": "POST",
+      "path": "/api/v1/jadwal-layanan",
+      "phase": "setup",
+      "status": 201,
+      "durationMs": 50
+    },
+    {
+      "at": 1793256391564,
+      "id": 4,
+      "method": "POST",
+      "path": "/api/v1/loket",
+      "phase": "setup",
+      "status": 201,
+      "durationMs": 22
+    },
+    {
+      "at": 1793256391588,
+      "id": 5,
+      "method": "POST",
+      "path": "/api/v1/penugasan-petugas",
+      "phase": "setup",
+      "status": 201,
+      "durationMs": 54
+    },
+    {
+      "at": 1793256391645,
+      "id": 6,
+      "method": "POST",
+      "path": "/api/v1/dokter",
+      "phase": "setup",
+      "status": 201,
+      "durationMs": 13
+    },
+    {
+      "at": 1793256391660,
+      "id": 7,
+      "method": "POST",
+      "path": "/api/v1/dokter/<id>/layanan",
+      "phase": "setup",
+      "status": 201,
+      "durationMs": 33
+    },
+    {
+      "at": 1793256391696,
+      "id": 8,
+      "method": "POST",
+      "path": "/api/v1/jadwal-praktik",
+      "phase": "setup",
+      "status": 201,
+      "durationMs": 78
+    },
+    {
+      "at": 1793256391778,
+      "id": 9,
+      "method": "POST",
+      "path": "/api/v1/slot-praktik",
+      "phase": "setup",
+      "status": 201,
+      "durationMs": 79
+    },
+    {
+      "at": 1793256391869,
+      "id": 10,
+      "method": "POST",
+      "path": "/api/v1/dokter/<id>/akun",
+      "phase": "setup",
+      "status": 201,
+      "durationMs": 414
+    },
+    {
+      "at": 1793256392772,
+      "id": 11,
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 377
+    },
+    {
+      "at": 1793256393151,
+      "id": 12,
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 378
+    },
+    {
+      "at": 1793256393530,
+      "id": 13,
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 358
+    },
+    {
+      "at": 1793256393889,
+      "id": 14,
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 392
+    },
+    {
+      "at": 1793256394282,
+      "id": 15,
+      "method": "POST",
+      "path": "/api/v1/janji-temu",
+      "phase": "browser",
+      "status": 201,
+      "durationMs": 106
+    },
+    {
+      "at": 1793256401304,
+      "id": 16,
+      "method": "OPTIONS",
+      "path": "/api/v1/auth/login",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 1
+    },
+    {
+      "at": 1793256401307,
+      "id": 17,
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 565
+    },
+    {
+      "at": 1793256401888,
+      "id": 18,
+      "method": "OPTIONS",
+      "path": "/api/v1/auth/me",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 1
+    },
+    {
+      "at": 1793256401890,
+      "id": 19,
+      "method": "GET",
+      "path": "/api/v1/auth/me",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 13
+    },
+    {
+      "at": 1793256402093,
+      "id": 20,
+      "method": "OPTIONS",
+      "path": "/api/v1/layanan",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 1
+    },
+    {
+      "at": 1793256402095,
+      "id": 21,
+      "method": "GET",
+      "path": "/api/v1/layanan",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 139
+    },
+    {
+      "at": 1793256402099,
+      "id": 22,
+      "method": "OPTIONS",
+      "path": "/api/v1/dokter",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 0
+    },
+    {
+      "at": 1793256402100,
+      "id": 23,
+      "method": "OPTIONS",
+      "path": "/api/v1/loket",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 1
+    },
+    {
+      "at": 1793256402101,
+      "id": 24,
+      "method": "GET",
+      "path": "/api/v1/dokter",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 281
+    },
+    {
+      "at": 1793256402104,
+      "id": 25,
+      "method": "GET",
+      "path": "/api/v1/loket",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 395
+    },
+    {
+      "at": 1793256402110,
+      "id": 26,
+      "method": "OPTIONS",
+      "path": "/api/v1/jadwal-layanan",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 0
+    },
+    {
+      "at": 1793256402111,
+      "id": 27,
+      "method": "OPTIONS",
+      "path": "/api/v1/jadwal-praktik",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 0
+    },
+    {
+      "at": 1793256402111,
+      "id": 28,
+      "method": "GET",
+      "path": "/api/v1/jadwal-layanan",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 390
+    },
+    {
+      "at": 1793256402115,
+      "id": 29,
+      "method": "GET",
+      "path": "/api/v1/jadwal-praktik",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 395
+    },
+    {
+      "at": 1793256402120,
+      "id": 30,
+      "method": "OPTIONS",
+      "path": "/api/v1/penugasan-petugas",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 0
+    },
+    {
+      "at": 1793256402122,
+      "id": 31,
+      "method": "GET",
+      "path": "/api/v1/penugasan-petugas",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 156
+    },
+    {
+      "at": 1793256407272,
+      "id": 32,
+      "method": "OPTIONS",
+      "path": "/api/v1/auth/login",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 1
+    },
+    {
+      "at": 1793256407273,
+      "id": 33,
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 557
+    },
+    {
+      "at": 1793256407842,
+      "id": 34,
+      "method": "OPTIONS",
+      "path": "/api/v1/auth/me",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 0
+    },
+    {
+      "at": 1793256407843,
+      "id": 35,
+      "method": "GET",
+      "path": "/api/v1/auth/me",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 10
+    },
+    {
+      "at": 1793256407997,
+      "id": 36,
+      "method": "OPTIONS",
+      "path": "/api/v1/layanan",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 1
+    },
+    {
+      "at": 1793256408000,
+      "id": 37,
+      "method": "GET",
+      "path": "/api/v1/layanan",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 38
+    },
+    {
+      "at": 1793256408004,
+      "id": 38,
+      "method": "OPTIONS",
+      "path": "/api/v1/dokter",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 1
+    },
+    {
+      "at": 1793256408007,
+      "id": 39,
+      "method": "GET",
+      "path": "/api/v1/dokter",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 104
+    },
+    {
+      "at": 1793256408010,
+      "id": 40,
+      "method": "OPTIONS",
+      "path": "/api/v1/jadwal-praktik",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 1
+    },
+    {
+      "at": 1793256408011,
+      "id": 41,
+      "method": "OPTIONS",
+      "path": "/api/v1/tiket/saya",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 0
+    },
+    {
+      "at": 1793256408011,
+      "id": 42,
+      "method": "OPTIONS",
+      "path": "/api/v1/janji-temu",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 0
+    },
+    {
+      "at": 1793256408017,
+      "id": 43,
+      "method": "GET",
+      "path": "/api/v1/jadwal-praktik",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 132
+    },
+    {
+      "at": 1793256408019,
+      "id": 44,
+      "method": "GET",
+      "path": "/api/v1/tiket/saya",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 114
+    },
+    {
+      "at": 1793256408022,
+      "id": 45,
+      "method": "GET",
+      "path": "/api/v1/janji-temu",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 119
+    },
+    {
+      "at": 1793256408448,
+      "id": 46,
+      "method": "GET",
+      "path": "/api/v1/tiket/saya",
+      "phase": "browser",
+      "status": 304,
+      "durationMs": 101
+    },
+    {
+      "at": 1793256408451,
+      "id": 47,
+      "method": "GET",
+      "path": "/api/v1/janji-temu",
+      "phase": "browser",
+      "status": 304,
+      "durationMs": 142
+    },
+    {
+      "at": 1793256408454,
+      "id": 48,
+      "method": "GET",
+      "path": "/api/v1/layanan",
+      "phase": "browser",
+      "status": 304,
+      "durationMs": 66
+    },
+    {
+      "at": 1793256408456,
+      "id": 49,
+      "method": "GET",
+      "path": "/api/v1/dokter",
+      "phase": "browser",
+      "status": 304,
+      "durationMs": 130
+    },
+    {
+      "at": 1793256408459,
+      "id": 50,
+      "method": "GET",
+      "path": "/api/v1/jadwal-praktik",
+      "phase": "browser",
+      "status": 304,
+      "durationMs": 148
+    },
+    {
+      "at": 1793256412754,
+      "id": 51,
+      "method": "OPTIONS",
+      "path": "/api/v1/auth/login",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 1
+    },
+    {
+      "at": 1793256412755,
+      "id": 52,
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 723
+    },
+    {
+      "at": 1793256413490,
+      "id": 53,
+      "method": "OPTIONS",
+      "path": "/api/v1/auth/me",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 0
+    },
+    {
+      "at": 1793256413492,
+      "id": 54,
+      "method": "GET",
+      "path": "/api/v1/auth/me",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 17
+    },
+    {
+      "at": 1793256413762,
+      "id": 55,
+      "method": "OPTIONS",
+      "path": "/api/v1/portal-dokter/profil",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 1
+    },
+    {
+      "at": 1793256413765,
+      "id": 56,
+      "method": "GET",
+      "path": "/api/v1/portal-dokter/profil",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 475
+    },
+    {
+      "at": 1793256413767,
+      "id": 57,
+      "method": "OPTIONS",
+      "path": "/api/v1/portal-dokter/jadwal",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 0
+    },
+    {
+      "at": 1793256413768,
+      "id": 58,
+      "method": "OPTIONS",
+      "path": "/api/v1/portal-dokter/janji-temu",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 0
+    },
+    {
+      "at": 1793256413768,
+      "id": 59,
+      "method": "GET",
+      "path": "/api/v1/portal-dokter/jadwal",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 589
+    },
+    {
+      "at": 1793256413770,
+      "id": 60,
+      "method": "GET",
+      "path": "/api/v1/portal-dokter/janji-temu",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 633
+    },
+    {
+      "at": 1793256414420,
+      "id": 61,
+      "method": "OPTIONS",
+      "path": "/api/v1/portal-dokter/antrean/snapshot",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 0
+    },
+    {
+      "at": 1793256414422,
+      "id": 62,
+      "method": "GET",
+      "path": "/api/v1/portal-dokter/antrean/snapshot",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 751
+    },
+    {
+      "at": 1793256415205,
+      "id": 63,
+      "method": "GET",
+      "path": "/api/v1/portal-dokter/profil",
+      "phase": "browser",
+      "status": 304,
+      "durationMs": 306
+    },
+    {
+      "at": 1793256415210,
+      "id": 64,
+      "method": "GET",
+      "path": "/api/v1/portal-dokter/jadwal",
+      "phase": "browser",
+      "status": 304,
+      "durationMs": 326
+    },
+    {
+      "at": 1793256415212,
+      "id": 65,
+      "method": "GET",
+      "path": "/api/v1/portal-dokter/janji-temu",
+      "phase": "browser",
+      "status": 304,
+      "durationMs": 356
+    },
+    {
+      "at": 1793256415576,
+      "id": 66,
+      "method": "GET",
+      "path": "/api/v1/portal-dokter/antrean/snapshot",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 168
+    },
+    {
+      "at": 1793256417561,
+      "id": 67,
+      "method": "OPTIONS",
+      "path": "/api/v1/jadwal-praktik",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 1
+    },
+    {
+      "at": 1793256417562,
+      "id": 68,
+      "method": "GET",
+      "path": "/api/v1/jadwal-praktik",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 80
+    },
+    {
+      "at": 1793256417666,
+      "id": 69,
+      "method": "OPTIONS",
+      "path": "/api/v1/slot-praktik",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 1
+    },
+    {
+      "at": 1793256417667,
+      "id": 70,
+      "method": "GET",
+      "path": "/api/v1/slot-praktik",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 243
+    },
+    {
+      "at": 1793256418443,
+      "id": 71,
+      "method": "OPTIONS",
+      "path": "/api/v1/reservasi",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 1
+    },
+    {
+      "at": 1793256418445,
+      "id": 72,
+      "method": "POST",
+      "path": "/api/v1/reservasi",
+      "phase": "browser",
+      "status": 201,
+      "durationMs": 144
+    },
+    {
+      "at": 1793256418634,
+      "id": 73,
+      "method": "OPTIONS",
+      "path": "/api/v1/layanan",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 0
+    },
+    {
+      "at": 1793256418638,
+      "id": 74,
+      "method": "OPTIONS",
+      "path": "/api/v1/dokter",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 0
+    },
+    {
+      "at": 1793256418639,
+      "id": 75,
+      "method": "GET",
+      "path": "/api/v1/layanan",
+      "phase": "browser",
+      "status": 304,
+      "durationMs": 56
+    },
+    {
+      "at": 1793256418642,
+      "id": 76,
+      "method": "OPTIONS",
+      "path": "/api/v1/jadwal-praktik",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 0
+    },
+    {
+      "at": 1793256418643,
+      "id": 77,
+      "method": "GET",
+      "path": "/api/v1/dokter",
+      "phase": "browser",
+      "status": 304,
+      "durationMs": 72
+    },
+    {
+      "at": 1793256418646,
+      "id": 78,
+      "method": "GET",
+      "path": "/api/v1/jadwal-praktik",
+      "phase": "browser",
+      "status": 304,
+      "durationMs": 74
+    },
+    {
+      "at": 1793256418649,
+      "id": 79,
+      "method": "OPTIONS",
+      "path": "/api/v1/tiket/saya",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 0
+    },
+    {
+      "at": 1793256418650,
+      "id": 80,
+      "method": "GET",
+      "path": "/api/v1/tiket/saya",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 112
+    },
+    {
+      "at": 1793256418660,
+      "id": 81,
+      "method": "OPTIONS",
+      "path": "/api/v1/janji-temu",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 1
+    },
+    {
+      "at": 1793256418662,
+      "id": 82,
+      "method": "GET",
+      "path": "/api/v1/janji-temu",
+      "phase": "browser",
+      "status": 304,
+      "durationMs": 71
+    },
+    {
+      "at": 1793256418675,
+      "id": 83,
+      "method": "GET",
+      "path": "/api/v1/tiket/<id>",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 129
+    },
+    {
+      "at": 1793256418810,
+      "id": 84,
+      "method": "POST",
+      "path": "/api/v1/tiket/<id>/qr",
+      "phase": "browser",
+      "status": 201,
+      "durationMs": 45
+    },
+    {
+      "at": 1793256418898,
+      "id": 85,
+      "method": "GET",
+      "path": "/api/v1/tiket/saya",
+      "phase": "browser",
+      "status": 304,
+      "durationMs": 136
+    },
+    {
+      "at": 1793256418901,
+      "id": 86,
+      "method": "GET",
+      "path": "/api/v1/janji-temu",
+      "phase": "browser",
+      "status": 304,
+      "durationMs": 179
+    },
+    {
+      "at": 1793256418906,
+      "id": 87,
+      "method": "GET",
+      "path": "/api/v1/layanan",
+      "phase": "browser",
+      "status": 304,
+      "durationMs": 117
+    },
+    {
+      "at": 1793256418909,
+      "id": 88,
+      "method": "GET",
+      "path": "/api/v1/dokter",
+      "phase": "browser",
+      "status": 304,
+      "durationMs": 139
+    },
+    {
+      "at": 1793256418911,
+      "id": 89,
+      "method": "GET",
+      "path": "/api/v1/jadwal-praktik",
+      "phase": "browser",
+      "status": 304,
+      "durationMs": 240
+    },
+    {
+      "at": 1793256418914,
+      "id": 90,
+      "method": "POST",
+      "path": "/api/v1/layanan",
+      "phase": "browser",
+      "status": 201,
+      "durationMs": 146
+    },
+    {
+      "at": 1793256419162,
+      "id": 91,
+      "method": "GET",
+      "path": "/api/v1/jadwal-praktik",
+      "phase": "browser",
+      "status": 304,
+      "durationMs": 202
+    },
+    {
+      "at": 1793256419316,
+      "id": 92,
+      "method": "GET",
+      "path": "/api/v1/layanan",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 93
+    },
+    {
+      "at": 1793256419323,
+      "id": 93,
+      "method": "GET",
+      "path": "/api/v1/dokter",
+      "phase": "browser",
+      "status": 304,
+      "durationMs": 160
+    },
+    {
+      "at": 1793256419329,
+      "id": 94,
+      "method": "GET",
+      "path": "/api/v1/jadwal-praktik",
+      "phase": "browser",
+      "status": 304,
+      "durationMs": 155
+    },
+    {
+      "at": 1793256419375,
+      "id": 95,
+      "method": "GET",
+      "path": "/api/v1/slot-praktik",
+      "phase": "browser",
+      "status": 304,
+      "durationMs": 442
+    },
+    {
+      "at": 1793256419572,
+      "id": 96,
+      "method": "POST",
+      "path": "/api/v1/perangkat-display",
+      "phase": "browser",
+      "status": 201,
+      "durationMs": 228
+    },
+    {
+      "at": 1793256419804,
+      "id": 97,
+      "method": "POST",
+      "path": "/api/v1/perangkat-display/<id>/aktivasi",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 56
+    },
+    {
+      "at": 1793256419829,
+      "id": 98,
+      "method": "GET",
+      "path": "/api/v1/jadwal-praktik",
+      "phase": "browser",
+      "status": 304,
+      "durationMs": 89
+    },
+    {
+      "at": 1793256419930,
+      "id": 99,
+      "method": "GET",
+      "path": "/api/v1/slot-praktik",
+      "phase": "browser",
+      "status": 304,
+      "durationMs": 223
+    },
+    {
+      "at": 1793256422839,
+      "id": 100,
+      "method": "OPTIONS",
+      "path": "/api/v1/display/pairing",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 0
+    },
+    {
+      "at": 1793256422842,
+      "id": 101,
+      "method": "POST",
+      "path": "/api/v1/display/pairing",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 48
+    },
+    {
+      "at": 1793256422967,
+      "id": 102,
+      "method": "OPTIONS",
+      "path": "/api/v1/display/sesi",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 0
+    },
+    {
+      "at": 1793256422969,
+      "id": 103,
+      "method": "GET",
+      "path": "/api/v1/display/sesi",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 20
+    },
+    {
+      "at": 1793256423202,
+      "id": 104,
+      "method": "OPTIONS",
+      "path": "/api/v1/display/<id>/snapshot",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 1
+    },
+    {
+      "at": 1793256423204,
+      "id": 105,
+      "method": "GET",
+      "path": "/api/v1/display/<id>/snapshot",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 176
+    },
+    {
+      "at": 1793256432520,
+      "id": 106,
+      "method": "POST",
+      "path": "/api/v1/perangkat-display",
+      "phase": "browser",
+      "status": 201,
+      "durationMs": 43
+    },
+    {
+      "at": 1793256432567,
+      "id": 107,
+      "method": "POST",
+      "path": "/api/v1/perangkat-display/<id>/aktivasi",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 13
+    },
+    {
+      "at": 1793256435812,
+      "id": 108,
+      "method": "OPTIONS",
+      "path": "/api/v1/display/pairing",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 1
+    },
+    {
+      "at": 1793256435815,
+      "id": 109,
+      "method": "POST",
+      "path": "/api/v1/display/pairing",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 5744
+    },
+    {
+      "at": 1793256441965,
+      "id": 110,
+      "method": "OPTIONS",
+      "path": "/api/v1/display/sesi",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 0
+    },
+    {
+      "at": 1793256441967,
+      "id": 111,
+      "method": "GET",
+      "path": "/api/v1/display/sesi",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 464
+    },
+    {
+      "at": 1793256444606,
+      "id": 112,
+      "method": "OPTIONS",
+      "path": "/api/v1/display/<id>/snapshot",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 117
+    },
+    {
+      "at": 1793256444724,
+      "id": 113,
+      "method": "GET",
+      "path": "/api/v1/display/<id>/snapshot",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 2045
+    },
+    {
+      "at": 1793256449509,
+      "id": 114,
+      "method": "GET",
+      "path": "/api/v1/display/<id>/snapshot",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 3212
+    },
+    {
+      "at": 1793256449597,
+      "id": 115,
+      "method": "POST",
+      "path": "/api/v1/perangkat-display",
+      "phase": "browser",
+      "status": 201,
+      "durationMs": 1914
+    },
+    {
+      "at": 1793256451549,
+      "id": 116,
+      "method": "POST",
+      "path": "/api/v1/perangkat-display/<id>/aktivasi",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 535
+    },
+    {
+      "at": 1793256460018,
+      "id": 117,
+      "method": "OPTIONS",
+      "path": "/api/v1/display/pairing",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 1
+    },
+    {
+      "at": 1793256460022,
+      "id": 118,
+      "method": "POST",
+      "path": "/api/v1/display/pairing",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 543
+    },
+    {
+      "at": 1793256460666,
+      "id": 119,
+      "method": "OPTIONS",
+      "path": "/api/v1/display/sesi",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 1
+    },
+    {
+      "at": 1793256460668,
+      "id": 120,
+      "method": "GET",
+      "path": "/api/v1/display/sesi",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 208
+    },
+    {
+      "at": 1793256461551,
+      "id": 121,
+      "method": "OPTIONS",
+      "path": "/api/v1/display/<id>/snapshot",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 1
+    },
+    {
+      "at": 1793256461553,
+      "id": 122,
+      "method": "GET",
+      "path": "/api/v1/display/<id>/snapshot",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 2253
+    },
+    {
+      "at": 1793256464408,
+      "id": 123,
+      "method": "POST",
+      "path": "/api/v1/perangkat-display",
+      "phase": "browser",
+      "status": 201,
+      "durationMs": 484
+    },
+    {
+      "at": 1793256464465,
+      "id": 124,
+      "method": "OPTIONS",
+      "path": "/api/v1/display/<id>/snapshot",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 0
+    },
+    {
+      "at": 1793256464483,
+      "id": 125,
+      "method": "GET",
+      "path": "/api/v1/display/<id>/snapshot",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 684
+    },
+    {
+      "at": 1793256464905,
+      "id": 126,
+      "method": "POST",
+      "path": "/api/v1/perangkat-display/<id>/aktivasi",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 143
+    },
+    {
+      "at": 1793256469622,
+      "id": 127,
+      "method": "OPTIONS",
+      "path": "/api/v1/display/pairing",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 1
+    },
+    {
+      "at": 1793256469624,
+      "id": 128,
+      "method": "POST",
+      "path": "/api/v1/display/pairing",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 306
+    },
+    {
+      "at": 1793256469956,
+      "id": 129,
+      "method": "OPTIONS",
+      "path": "/api/v1/display/sesi",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 0
+    },
+    {
+      "at": 1793256469958,
+      "id": 130,
+      "method": "GET",
+      "path": "/api/v1/display/sesi",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 74
+    },
+    {
+      "at": 1793256470403,
+      "id": 131,
+      "method": "OPTIONS",
+      "path": "/api/v1/display/<id>/snapshot",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 0
+    },
+    {
+      "at": 1793256470405,
+      "id": 132,
+      "method": "GET",
+      "path": "/api/v1/display/<id>/snapshot",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 309
+    },
+    {
+      "at": 1793256473285,
+      "id": 133,
+      "method": "OPTIONS",
+      "path": "/api/v1/display/<id>/snapshot",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 7
+    },
+    {
+      "at": 1793256473308,
+      "id": 134,
+      "method": "GET",
+      "path": "/api/v1/display/<id>/snapshot",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 506
+    },
+    {
+      "at": 1793256479458,
+      "id": 135,
+      "method": "OPTIONS",
+      "path": "/api/v1/display/<id>/snapshot",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 1
+    },
+    {
+      "at": 1793256479488,
+      "id": 136,
+      "method": "GET",
+      "path": "/api/v1/display/<id>/snapshot",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 1022
+    },
+    {
+      "at": 1793256481638,
+      "id": 137,
+      "method": "OPTIONS",
+      "path": "/api/v1/auth/login",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 4
+    },
+    {
+      "at": 1793256481643,
+      "id": 138,
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 13700
+    },
+    {
+      "at": 1793256488852,
+      "id": 139,
+      "method": "OPTIONS",
+      "path": "/api/v1/display/<id>/snapshot",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 527
+    },
+    {
+      "at": 1793256489928,
+      "id": 140,
+      "method": "GET",
+      "path": "/api/v1/display/<id>/snapshot",
+      "phase": "browser",
+      "status": 503,
+      "durationMs": 2399
+    },
+    {
+      "at": 1793256494606,
+      "id": 141,
+      "method": "OPTIONS",
+      "path": "/api/v1/display/<id>/snapshot",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 1
+    },
+    {
+      "at": 1793256494695,
+      "id": 142,
+      "method": "GET",
+      "path": "/api/v1/display/<id>/snapshot",
+      "phase": "browser",
+      "status": 503,
+      "durationMs": 2049
+    },
+    {
+      "at": 1793256495421,
+      "id": 143,
+      "method": "OPTIONS",
+      "path": "/api/v1/auth/me",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 0
+    },
+    {
+      "at": 1793256495423,
+      "id": 144,
+      "method": "GET",
+      "path": "/api/v1/auth/me",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 1859
+    },
+    {
+      "at": 1793256497497,
+      "id": 145,
+      "method": "OPTIONS",
+      "path": "/api/v1/penugasan-petugas",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 2
+    },
+    {
+      "at": 1793256497521,
+      "id": 146,
+      "method": "GET",
+      "path": "/api/v1/penugasan-petugas",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 1615
+    },
+    {
+      "at": 1793256499320,
+      "id": 147,
+      "method": "OPTIONS",
+      "path": "/api/v1/queue/snapshot",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 1
+    },
+    {
+      "at": 1793256499340,
+      "id": 148,
+      "method": "GET",
+      "path": "/api/v1/queue/snapshot",
+      "phase": "browser",
+      "status": 500,
+      "durationMs": 6261
+    },
+    {
+      "at": 1793256503536,
+      "id": 149,
+      "method": "OPTIONS",
+      "path": "/api/v1/display/<id>/snapshot",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 1
+    },
+    {
+      "at": 1793256503926,
+      "id": 150,
+      "method": "GET",
+      "path": "/api/v1/display/<id>/snapshot",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 3478
+    },
+    {
+      "at": 1793256505718,
+      "id": 151,
+      "method": "OPTIONS",
+      "path": "/api/v1/queue/snapshot",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 1
+    },
+    {
+      "at": 1793256505928,
+      "id": 152,
+      "method": "GET",
+      "path": "/api/v1/queue/snapshot",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 1646
+    },
+    {
+      "at": 1793256507586,
+      "id": 153,
+      "method": "OPTIONS",
+      "path": "/api/v1/jadwal-praktik",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 1
+    },
+    {
+      "at": 1793256507590,
+      "id": 154,
+      "method": "GET",
+      "path": "/api/v1/jadwal-praktik",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 281
+    },
+    {
+      "at": 1793256509514,
+      "id": 155,
+      "method": "OPTIONS",
+      "path": "/api/v1/display/<id>/snapshot",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 1
+    },
+    {
+      "at": 1793256509722,
+      "id": 156,
+      "method": "GET",
+      "path": "/api/v1/display/<id>/snapshot",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 1397
+    },
+    {
+      "at": 1793256512364,
+      "id": 157,
+      "method": "OPTIONS",
+      "path": "/api/v1/queue/snapshot",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 0
+    },
+    {
+      "at": 1793256512367,
+      "id": 158,
+      "method": "GET",
+      "path": "/api/v1/queue/snapshot",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 304
+    },
+    {
+      "at": 1793256512679,
+      "id": 159,
+      "method": "OPTIONS",
+      "path": "/api/v1/jadwal-praktik",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 1
+    },
+    {
+      "at": 1793256512682,
+      "id": 160,
+      "method": "GET",
+      "path": "/api/v1/jadwal-praktik",
+      "phase": "browser",
+      "status": 304,
+      "durationMs": 59
+    },
+    {
+      "at": 1793256518224,
+      "id": 161,
+      "method": "OPTIONS",
+      "path": "/api/v1/display/<id>/snapshot",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 11
+    },
+    {
+      "at": 1793256518242,
+      "id": 162,
+      "method": "GET",
+      "path": "/api/v1/display/<id>/snapshot",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 255
+    },
+    {
+      "at": 1793256524470,
+      "id": 163,
+      "method": "OPTIONS",
+      "path": "/api/v1/display/<id>/snapshot",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 3
+    },
+    {
+      "at": 1793256524515,
+      "id": 164,
+      "method": "GET",
+      "path": "/api/v1/display/<id>/snapshot",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 860
+    },
+    {
+      "at": 1793256527384,
+      "id": 165,
+      "method": "OPTIONS",
+      "path": "/api/v1/queue/snapshot",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 2
+    },
+    {
+      "at": 1793256527417,
+      "id": 166,
+      "method": "GET",
+      "path": "/api/v1/queue/snapshot",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 492
+    },
+    {
+      "at": 1793256527918,
+      "id": 167,
+      "method": "OPTIONS",
+      "path": "/api/v1/jadwal-praktik",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 1
+    },
+    {
+      "at": 1793256527922,
+      "id": 168,
+      "method": "GET",
+      "path": "/api/v1/jadwal-praktik",
+      "phase": "browser",
+      "status": 304,
+      "durationMs": 49
+    },
+    {
+      "at": 1793256533204,
+      "id": 169,
+      "method": "OPTIONS",
+      "path": "/api/v1/display/<id>/snapshot",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 1
+    },
+    {
+      "at": 1793256533222,
+      "id": 170,
+      "method": "GET",
+      "path": "/api/v1/display/<id>/snapshot",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 160
+    },
+    {
+      "at": 1793256534015,
+      "id": 171,
+      "method": "OPTIONS",
+      "path": "/api/v1/display/<id>/snapshot",
+      "phase": "browser",
+      "status": 204,
+      "durationMs": 1
+    },
+    {
+      "at": 1793256534019,
+      "id": 172,
+      "method": "GET",
+      "path": "/api/v1/display/<id>/snapshot",
+      "phase": "browser",
+      "status": 200,
+      "durationMs": 96
+    }
+  ],
+  "maxActiveRequests": 6,
+  "phase": "setup",
+  "eventLoopDelayMs": {
+    "max": 1049.624575,
+    "mean": 37.881488398913845,
+    "p99": 216.137727
+  },
+  "pendingAtFinish": 0
+}

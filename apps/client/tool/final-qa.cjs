@@ -1,5 +1,5 @@
 /** Reproducible QA entry point: no seed/migration, no development DB writes.
- * node tool/final-qa.cjs unit|backend|browser|android [backend-suite]
+ * node tool/final-qa.cjs unit|backend|browser|android|benchmark [backend-suite]
  * Build API and Web (API_BASE_URL=http://127.0.0.1:3001/api/v1) beforehand.
  * Output is an allowlisted summary; raw test errors may contain credentials.
  */
@@ -7,13 +7,19 @@ const path = require("node:path");
 const fs = require("node:fs");
 const { spawn } = require("node:child_process");
 const api = path.resolve(__dirname, "../../api");
-const output = path.resolve(__dirname, "../../../docs/qa/evidence");
+const repositoryRoot = path.resolve(__dirname, "../../..");
+const output = path.resolve(
+  process.env.QUEUEB_QA_EVIDENCE_DIR ||
+    path.join(repositoryRoot, "docs/qa/evidence"),
+);
+if (!output.startsWith(repositoryRoot + path.sep))
+  throw Error("QA evidence must stay inside repository");
 const mode = process.argv[2];
 const suite = process.argv[3];
 if (suite && (mode !== "backend" || !/^[a-z0-9-]+$/.test(suite)))
   throw Error("Invalid QA suite");
-if (!["unit", "backend", "browser", "android"].includes(mode))
-  throw Error("Use unit|backend|browser|android");
+if (!["unit", "backend", "browser", "android", "benchmark"].includes(mode))
+  throw Error("Use unit|backend|browser|android|benchmark");
 require(path.join(api, "node_modules/dotenv")).config({
   path: path.resolve(api, "../../.env"),
   quiet: true,
@@ -93,11 +99,11 @@ async function run(args, cwd) {
     child.stdout.on("data", (b) => (text += b));
     child.stderr.on("data", (b) => (text += b));
     child.once("error", reject);
-    child.once("exit", (code) => {
+    child.once("exit", (code, signal) => {
       const clean = text.replace(/\x1b\[[0-9;]*m/g, "");
       const lines = clean.split(/\r?\n/);
       const summary = lines.filter((l) =>
-        /^(Test Suites:|Tests:|Time:|# tests |# pass |# fail |Target tervalidasi:|Target integrasi Flutter tervalidasi:|Final QA PASS:|Final QA failed phase:|Integrasi Flutter gagal:)/.test(
+        /^(Test Suites:|Tests:|Time:|# tests |# pass |# fail |Target tervalidasi:|Target integrasi Flutter tervalidasi:|Final QA PASS:|Final QA failed phase:|Integrasi Flutter gagal:|Recovery strict gate:)/.test(
           l,
         ),
       );
@@ -107,6 +113,9 @@ async function run(args, cwd) {
         );
         summary.push(
           ...lines.filter((l) => l.startsWith("Final QA scan diagnostics:")),
+        );
+        summary.push(
+          ...lines.filter((l) => l.startsWith("Final QA socket diagnostics:")),
         );
         summary.push(
           ...lines.filter((l) =>
@@ -127,10 +136,22 @@ async function run(args, cwd) {
       resolve({
         command: ["node", ...args].join(" "),
         exit: code ?? 1,
+        signal: signal || null,
         seconds: Number(((Date.now() - start) / 1000).toFixed(1)),
         summary,
         suites,
         fingerprints,
+        // ORM/SQL error codes only; raw server errors may contain fixture data.
+        diagnosticCodes: [
+          ...new Set(clean.match(/\b(?:P\d{4}|40P01|40001|57014)\b/g) || []),
+        ],
+        diagnosticErrorTypes: [
+          ...new Set(
+            clean.match(
+              /\b(?:PrismaClientKnownRequestError|PrismaClientUnknownRequestError|TypeError|RangeError)\b/g,
+            ) || [],
+          ),
+        ],
       });
     });
   });
@@ -177,7 +198,11 @@ async function run(args, cwd) {
             [
               [
                 path.join(__dirname, "run-live.cjs"),
-                mode === "android" ? "--final-android-qa" : "--final-e2e-qa",
+                mode === "android"
+                  ? "--final-android-qa"
+                  : mode === "benchmark"
+                    ? "--cleanup-benchmark"
+                    : "--final-e2e-qa",
               ],
               path.resolve(__dirname, ".."),
             ],

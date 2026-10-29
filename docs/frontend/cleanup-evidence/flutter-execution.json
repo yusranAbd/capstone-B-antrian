@@ -1,0 +1,12 @@
+{
+  "exit": 0,
+  "summary": [
+    "08:16 +1038: D:/WorkSpace/Flutter/capstone-B-antrian/apps/client/test/user_profile_test.dart: DOKTER logout saat panel role terbuka tidak membaca snapshot lama",
+    "08:16 +1039: D:/WorkSpace/Flutter/capstone-B-antrian/apps/client/test/user_profile_test.dart: (tearDownAll)",
+    "08:16 +1039: All tests passed!"
+  ],
+  "seconds": 505.4,
+  "testFiles": 67,
+  "excluded": "live_integration_test.dart requires explicitly configured guarded real server; browser and backend test runner execute real integration separately",
+  "command": "flutter test --no-pub --concurrency=1 --reporter expanded <all test/*_test.dart except live_integration_test.dart>"
+}

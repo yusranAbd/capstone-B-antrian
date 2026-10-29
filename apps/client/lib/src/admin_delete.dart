@@ -25,19 +25,6 @@ Future<AdminDeleteResult?> showAdminDelete(
   ),
 );
 
-class AdminDeleteButton extends StatelessWidget {
-  const AdminDeleteButton({super.key, required this.onPressed});
-  final VoidCallback? onPressed;
-  @override
-  Widget build(BuildContext context) => IconButton(
-    tooltip: 'Hapus',
-    constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-    padding: EdgeInsets.zero,
-    onPressed: onPressed,
-    icon: const Icon(Icons.delete_outline, color: Color(0xffb3261e), size: 20),
-  );
-}
-
 class _AdminDeleteDialog extends StatefulWidget {
   const _AdminDeleteDialog({
     required this.api,

@@ -1,0 +1,28 @@
+{
+  "mode": "backend",
+  "startedAt": "2026-10-29T05:34:46.464Z",
+  "target": "127.0.0.1:5433/capstone_antrean_test",
+  "results": [
+    {
+      "command": "node test/run-doctor-portal.cjs --suite=reservasi",
+      "exit": 0,
+      "seconds": 19.1,
+      "summary": [
+        "Target tervalidasi: 127.0.0.1:5433/capstone_antrean_test",
+        "Test Suites: 1 passed, 1 total",
+        "Tests:       12 passed, 12 total",
+        "Time:        17.792 s"
+      ],
+      "suites": [],
+      "fingerprints": [
+        {
+          "recordExisting": 13,
+          "dataExistingDanCleanupSesuai": true
+        }
+      ],
+      "diagnosticCodes": [],
+      "diagnosticErrorTypes": []
+    }
+  ],
+  "finishedAt": "2026-10-29T05:35:05.557Z"
+}

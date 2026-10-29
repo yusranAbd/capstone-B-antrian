@@ -1,0 +1,188 @@
+{
+  "environment": "Chrome headless / local test DB / Asia/Jakarta",
+  "transport": "real REST + Socket.IO; fake video QR; controlled Web Speech",
+  "startedAt": "2026-10-29T05:13:04.852Z",
+  "scenarios": [
+    {
+      "id": "appointment-live",
+      "status": "PASS",
+      "level": "Backend Integration",
+      "detail": "HIBRIDA appointment created by authenticated patient REST; browser booking not asserted here"
+    },
+    {
+      "id": "role-login",
+      "status": "PASS",
+      "level": "Browser E2E",
+      "detail": "ADMIN, PASIEN, DOKTER authenticated in distinct browser contexts"
+    },
+    {
+      "id": "patient-booking-ui",
+      "status": "PASS",
+      "level": "Browser E2E",
+      "detail": "Reservasi → Pilih Poliklinik → HIBRIDA walk-in → confirmation → real ticket"
+    },
+    {
+      "id": "native-audio",
+      "status": "PASS",
+      "level": "Browser E2E",
+      "detail": "Real FlutterTts/native id-ID engine: user-gesture activation, two start/end callbacks, mute/unmute; physical speaker remains unverified"
+    },
+    {
+      "id": "three-display-pairing",
+      "status": "PASS",
+      "level": "Browser E2E",
+      "detail": "A/C same Chrome context, B separate context; unique tab selectors; HttpOnly + SameSite Strict; masked projection"
+    },
+    {
+      "id": "one-scan-camera",
+      "status": "PASS",
+      "level": "Browser E2E",
+      "detail": "Actual Flutter QR decoder → atomic auto-antrean; controlled Y4M camera input, no physical camera claim"
+    },
+    {
+      "id": "web-session-policy",
+      "status": "PASS",
+      "level": "Browser E2E",
+      "detail": "Reload returns login; no bearer JWT in Web local/session storage; explicit re-login follows MemorySessionStore contract"
+    },
+    {
+      "id": "queue-six-commands",
+      "status": "PASS",
+      "level": "Browser E2E",
+      "detail": "PETUGAS UI CALL/RECALL/SKIP/REQUEUE/START/COMPLETE; live doctor monitoring, patient final SELESAI, scoped display/TTS"
+    },
+    {
+      "id": "appointment-through-complete",
+      "status": "FAIL",
+      "level": "Browser E2E",
+      "detail": "Assertion/action failed (Error); no secret-bearing diagnostics persisted"
+    }
+  ],
+  "layouts": [
+    {
+      "portal": "admin",
+      "width": 1366,
+      "height": 900,
+      "horizontal": false,
+      "vertical": false
+    },
+    {
+      "portal": "admin",
+      "width": 768,
+      "height": 1024,
+      "horizontal": false,
+      "vertical": false
+    },
+    {
+      "portal": "patient",
+      "width": 360,
+      "height": 800,
+      "horizontal": false,
+      "vertical": false
+    },
+    {
+      "portal": "patient",
+      "width": 390,
+      "height": 844,
+      "horizontal": false,
+      "vertical": false
+    },
+    {
+      "portal": "patient",
+      "width": 412,
+      "height": 915,
+      "horizontal": false,
+      "vertical": false
+    },
+    {
+      "portal": "patient",
+      "width": 1280,
+      "height": 900,
+      "horizontal": false,
+      "vertical": false
+    },
+    {
+      "portal": "doctor",
+      "width": 390,
+      "height": 844,
+      "horizontal": false,
+      "vertical": false
+    },
+    {
+      "portal": "doctor",
+      "width": 1366,
+      "height": 900,
+      "horizontal": false,
+      "vertical": false
+    },
+    {
+      "portal": "display",
+      "width": 1280,
+      "height": 720,
+      "horizontal": false,
+      "vertical": false
+    },
+    {
+      "portal": "display",
+      "width": 1366,
+      "height": 768,
+      "horizontal": false,
+      "vertical": false
+    },
+    {
+      "portal": "display",
+      "width": 1920,
+      "height": 1080,
+      "horizontal": false,
+      "vertical": false
+    },
+    {
+      "portal": "staff",
+      "width": 1366,
+      "height": 900,
+      "horizontal": false,
+      "vertical": false
+    },
+    {
+      "portal": "staff",
+      "width": 768,
+      "height": 1024,
+      "horizontal": false,
+      "vertical": false
+    },
+    {
+      "portal": "staff",
+      "width": 390,
+      "height": 844,
+      "horizontal": false,
+      "vertical": false
+    }
+  ],
+  "runtimeErrors": 0,
+  "nativeVoiceLanguages": [],
+  "physicalSpeakerVerified": false,
+  "nativeAudio": {
+    "languages": [
+      "en-US",
+      "id-ID"
+    ],
+    "physicalSpeakerVerified": false,
+    "callbacks": {
+      "requested": 2,
+      "started": 2,
+      "ended": 2,
+      "errors": []
+    }
+  },
+  "staffReadDiagnostics": {
+    "/api/v1/queue/snapshot HTTP 200": 23,
+    "/api/v1/jadwal-praktik HTTP 200": 23,
+    "/api/v1/queue/snapshot failed": 1,
+    "/api/v1/queue/snapshot HTTP 500": 1
+  },
+  "scanResponse": {
+    "status": "MENUNGGU",
+    "alreadyRegistered": false
+  },
+  "finishedAt": "2026-10-29T05:15:26.639Z"
+}

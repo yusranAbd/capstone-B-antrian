@@ -1,0 +1,203 @@
+{
+  "measuredAt": "2026-10-29T07:36:30.095Z",
+  "databases": {
+    "capstone_antrean": {
+      "identity": {
+        "db": "capstone_antrean",
+        "port": 5432,
+        "readonly": "on"
+      },
+      "fingerprint": {
+        "_prisma_migrations": {
+          "count": 8,
+          "digest": "7c0366d027bae95a7a385fdd21ba6c57"
+        },
+        "dokter": {
+          "count": 11,
+          "digest": "fa934944f5bba4aab893c0b65bd76be9"
+        },
+        "dokter_layanan": {
+          "count": 11,
+          "digest": "be4c5e4cf9dd9be6857eee0a10f02a20"
+        },
+        "jadwal_layanan": {
+          "count": 42,
+          "digest": "c6692831144c5bcbf6373dde353947b5"
+        },
+        "jadwal_praktik": {
+          "count": 156,
+          "digest": "4c57c6e8b4289fe29e0732c6d1961e93"
+        },
+        "janji_temu": {
+          "count": 33,
+          "digest": "5af2baa5f55b3a0d1ec2e8c1859c3029"
+        },
+        "layanan": {
+          "count": 7,
+          "digest": "204be5fd0abd6feda2c08258c15192d1"
+        },
+        "loket": {
+          "count": 9,
+          "digest": "a82d7f9669eb79bb5e7139bb46eea308"
+        },
+        "notifikasi": {
+          "count": 0,
+          "digest": null
+        },
+        "pengguna": {
+          "count": 62,
+          "digest": "0b0c1badf16e6543a54d06557c6a27d3"
+        },
+        "penugasan_petugas": {
+          "count": 8,
+          "digest": "b797d57ec10da11f933c2b35720d9d83"
+        },
+        "perangkat_tampilan": {
+          "count": 6,
+          "digest": "101003917577f82e9c1899d97523db76"
+        },
+        "peristiwa_antrean": {
+          "count": 116,
+          "digest": "5820776da5a7c7dbb947c9c1b905c6d5"
+        },
+        "sesi_pengguna": {
+          "count": 125,
+          "digest": "40476ba673b7719dc831ad6131b27e16"
+        },
+        "slot_praktik": {
+          "count": 1425,
+          "digest": "bfb01ba466b56f3a18618294b4e5f902"
+        },
+        "tiket_antrean": {
+          "count": 48,
+          "digest": "9cf8c9f9219dc146a04a4b2187026a70"
+        },
+        "urutan_antrean_harian": {
+          "count": 36,
+          "digest": "77e9a00a7fa5b9ac6139a3d57c134c96"
+        }
+      },
+      "settings": [
+        {
+          "name": "idle_in_transaction_session_timeout",
+          "setting": "0"
+        },
+        {
+          "name": "lock_timeout",
+          "setting": "0"
+        },
+        {
+          "name": "max_connections",
+          "setting": "100"
+        },
+        {
+          "name": "statement_timeout",
+          "setting": "0"
+        }
+      ],
+      "connections": []
+    },
+    "capstone_antrean_test": {
+      "identity": {
+        "db": "capstone_antrean_test",
+        "port": 5432,
+        "readonly": "on"
+      },
+      "fingerprint": {
+        "_prisma_migrations": {
+          "count": 8,
+          "digest": "a2b7a401896c6b856670eaf64e381e92"
+        },
+        "dokter": {
+          "count": 0,
+          "digest": null
+        },
+        "dokter_layanan": {
+          "count": 0,
+          "digest": null
+        },
+        "jadwal_layanan": {
+          "count": 0,
+          "digest": null
+        },
+        "jadwal_praktik": {
+          "count": 0,
+          "digest": null
+        },
+        "janji_temu": {
+          "count": 0,
+          "digest": null
+        },
+        "layanan": {
+          "count": 2,
+          "digest": "18dac4822e23532cedb0c0792dc6ee2d"
+        },
+        "loket": {
+          "count": 4,
+          "digest": "c58752d8cf67aa9394952c67d477e06b"
+        },
+        "notifikasi": {
+          "count": 0,
+          "digest": null
+        },
+        "pengguna": {
+          "count": 4,
+          "digest": "3a63e486b39bf8df88aeb64083c617f4"
+        },
+        "penugasan_petugas": {
+          "count": 0,
+          "digest": null
+        },
+        "perangkat_tampilan": {
+          "count": 0,
+          "digest": null
+        },
+        "peristiwa_antrean": {
+          "count": 0,
+          "digest": null
+        },
+        "sesi_pengguna": {
+          "count": 3,
+          "digest": "40a1455dcbee919dea455c978cfcf22e"
+        },
+        "slot_praktik": {
+          "count": 0,
+          "digest": null
+        },
+        "tiket_antrean": {
+          "count": 0,
+          "digest": null
+        },
+        "urutan_antrean_harian": {
+          "count": 0,
+          "digest": null
+        }
+      },
+      "settings": [
+        {
+          "name": "idle_in_transaction_session_timeout",
+          "setting": "0"
+        },
+        {
+          "name": "lock_timeout",
+          "setting": "0"
+        },
+        {
+          "name": "max_connections",
+          "setting": "100"
+        },
+        {
+          "name": "statement_timeout",
+          "setting": "0"
+        }
+      ],
+      "connections": []
+    }
+  },
+  "protectedHashes": {
+    "README.md": "2e510e2f30fb0fb1f9e211c74399b9a1371a57e8567d68aaa013b45c2ebd43e2",
+    "apps/client/lib/src/doctor_dashboard.dart": "3cef388bdaa3c41025d7fef9aa985c8d3deb8ffce37a649b6342fb6e15fd32e0",
+    "apps/client/lib/src/doctor_visual.dart": "00171978fbc3ee592013d1574737a1e220120d16c4209aab7dc6da65b5db02e1",
+    "apps/client/test/doctor_visual_refresh_test.dart": "095374a43f4e81783f047381151f63d7e2a8a129106f0ace41c1e34c234a012b"
+  }
+}

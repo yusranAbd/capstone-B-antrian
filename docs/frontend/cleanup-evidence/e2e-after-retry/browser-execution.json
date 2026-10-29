@@ -1,0 +1,37 @@
+{
+  "mode": "browser",
+  "startedAt": "2026-10-29T05:04:07.536Z",
+  "target": "127.0.0.1:5433/capstone_antrean_test",
+  "results": [
+    {
+      "command": "node D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\client\\tool\\run-live.cjs --final-e2e-qa",
+      "exit": 1,
+      "seconds": 186.9,
+      "summary": [
+        "Target integrasi Flutter tervalidasi: 127.0.0.1:5433/capstone_antrean_test",
+        "Final QA PASS: appointment-live",
+        "Final QA PASS: role-login",
+        "Final QA PASS: patient-booking-ui",
+        "Final QA PASS: native-audio",
+        "Final QA PASS: three-display-pairing",
+        "Final QA PASS: one-scan-camera",
+        "Final QA failed phase: queue-commands / TimeoutError",
+        "Integrasi Flutter gagal: Error",
+        "    at uiMutation (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\client\\tool\\browser-final-e2e.cjs:147:23)",
+        "    at finalQa (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\client\\tool\\browser-final-e2e.cjs:593:11)"
+      ],
+      "suites": [],
+      "fingerprints": [
+        {
+          "dataExisting": {
+            "jumlah": 13,
+            "hilang": 0,
+            "berubah": 0
+          },
+          "recordBaruTersisa": 0
+        }
+      ]
+    }
+  ],
+  "finishedAt": "2026-10-29T05:07:14.491Z"
+}

@@ -1,0 +1,768 @@
+{
+  "environment": "Chrome headless / local test DB / Asia/Jakarta",
+  "transport": "real REST + Socket.IO; fake video QR; controlled Web Speech",
+  "startedAt": "2026-10-29T07:40:35.823Z",
+  "scenarios": [
+    {
+      "id": "appointment-live",
+      "status": "PASS",
+      "level": "Backend Integration",
+      "detail": "HIBRIDA appointment created by authenticated patient REST; browser booking not asserted here"
+    },
+    {
+      "id": "role-login",
+      "status": "PASS",
+      "level": "Browser E2E",
+      "detail": "ADMIN, PASIEN, DOKTER authenticated in distinct browser contexts"
+    },
+    {
+      "id": "patient-booking-ui",
+      "status": "PASS",
+      "level": "Browser E2E",
+      "detail": "Reservasi → Pilih Poliklinik → HIBRIDA walk-in → confirmation → real ticket"
+    },
+    {
+      "id": "native-audio",
+      "status": "PASS",
+      "level": "Browser E2E",
+      "detail": "Real FlutterTts/native id-ID engine: user-gesture activation, two start/end callbacks, mute/unmute; physical speaker remains unverified"
+    },
+    {
+      "id": "three-display-pairing",
+      "status": "PASS",
+      "level": "Browser E2E",
+      "detail": "A/C same Chrome context, B separate context; unique tab selectors; HttpOnly + SameSite Strict; masked projection"
+    },
+    {
+      "id": "one-scan-camera",
+      "status": "PASS",
+      "level": "Browser E2E",
+      "detail": "Actual Flutter QR decoder → atomic auto-antrean; controlled Y4M camera input, no physical camera claim"
+    },
+    {
+      "id": "web-session-policy",
+      "status": "PASS",
+      "level": "Browser E2E",
+      "detail": "Reload returns login; no bearer JWT in Web local/session storage; explicit re-login follows MemorySessionStore contract"
+    },
+    {
+      "id": "queue-six-commands",
+      "status": "PASS",
+      "level": "Browser E2E",
+      "detail": "PETUGAS UI CALL/RECALL/SKIP/REQUEUE/START/COMPLETE; live doctor monitoring, patient final SELESAI, scoped display/TTS"
+    },
+    {
+      "id": "appointment-through-complete",
+      "status": "PASS",
+      "level": "Browser E2E",
+      "detail": "Real patient REST booking → second decoded QR → PETUGAS UI CALL/START/COMPLETE at actual slot start → patient UI SELESAI"
+    },
+    {
+      "id": "fullscreen",
+      "status": "PASS",
+      "level": "Browser E2E",
+      "detail": "Actual Chrome fullscreen enter/exit after user gesture; no physical monitor claim"
+    },
+    {
+      "id": "short-reconnect",
+      "status": "PASS",
+      "level": "Browser E2E",
+      "detail": "Server closes only A Engine.IO transport; actual new display:ready observed; B/C remain connected; refresh/reconnect silent"
+    },
+    {
+      "id": "rotate-revoke-active",
+      "status": "PASS",
+      "level": "Browser E2E",
+      "detail": "Active Socket.IO session A invalidated without API refresh; B/C remain connected; A re-pairs before revoke"
+    },
+    {
+      "id": "runtime",
+      "status": "PASS",
+      "level": "Browser E2E",
+      "detail": "No uncaught browser pageerror across tested portals"
+    }
+  ],
+  "layouts": [
+    {
+      "portal": "admin",
+      "width": 1366,
+      "height": 900,
+      "horizontal": false,
+      "vertical": false
+    },
+    {
+      "portal": "admin",
+      "width": 768,
+      "height": 1024,
+      "horizontal": false,
+      "vertical": false
+    },
+    {
+      "portal": "patient",
+      "width": 360,
+      "height": 800,
+      "horizontal": false,
+      "vertical": false
+    },
+    {
+      "portal": "patient",
+      "width": 390,
+      "height": 844,
+      "horizontal": false,
+      "vertical": false
+    },
+    {
+      "portal": "patient",
+      "width": 412,
+      "height": 915,
+      "horizontal": false,
+      "vertical": false
+    },
+    {
+      "portal": "patient",
+      "width": 1280,
+      "height": 900,
+      "horizontal": false,
+      "vertical": false
+    },
+    {
+      "portal": "doctor",
+      "width": 390,
+      "height": 844,
+      "horizontal": false,
+      "vertical": false
+    },
+    {
+      "portal": "doctor",
+      "width": 1366,
+      "height": 900,
+      "horizontal": false,
+      "vertical": false
+    },
+    {
+      "portal": "display",
+      "width": 1280,
+      "height": 720,
+      "horizontal": false,
+      "vertical": false
+    },
+    {
+      "portal": "display",
+      "width": 1366,
+      "height": 768,
+      "horizontal": false,
+      "vertical": false
+    },
+    {
+      "portal": "display",
+      "width": 1920,
+      "height": 1080,
+      "horizontal": false,
+      "vertical": false
+    },
+    {
+      "portal": "staff",
+      "width": 1366,
+      "height": 900,
+      "horizontal": false,
+      "vertical": false
+    },
+    {
+      "portal": "staff",
+      "width": 768,
+      "height": 1024,
+      "horizontal": false,
+      "vertical": false
+    },
+    {
+      "portal": "staff",
+      "width": 390,
+      "height": 844,
+      "horizontal": false,
+      "vertical": false
+    }
+  ],
+  "runtimeErrors": 0,
+  "nativeVoiceLanguages": [],
+  "physicalSpeakerVerified": false,
+  "nativeAudio": {
+    "languages": [
+      "en-US",
+      "id-ID"
+    ],
+    "physicalSpeakerVerified": false,
+    "callbacks": {
+      "requested": 2,
+      "started": 2,
+      "ended": 2,
+      "errors": []
+    }
+  },
+  "staffReadDiagnostics": {
+    "/api/v1/queue/snapshot HTTP 200": 31,
+    "/api/v1/jadwal-praktik HTTP 200": 31,
+    "/api/v1/queue/snapshot HTTP 500": 1,
+    "/api/v1/queue/snapshot failed": 1
+  },
+  "scanResponse": {
+    "status": "MENUNGGU",
+    "alreadyRegistered": false
+  },
+  "callConfirmed": {
+    "at": 1793259745547,
+    "status": "DIPANGGIL",
+    "version": 5
+  },
+  "cameraDiagnostics": {
+    "video": null,
+    "labels": {
+      "QR Check-in Otomatis": false,
+      "Kamera tidak tersedia": false,
+      "kedaluwarsa": false,
+      "belum tersinkron": false,
+      "Check-in berhasil": false
+    }
+  },
+  "mediaFailures": [],
+  "displayTrace": [
+    {
+      "monitor": 0,
+      "snapshots": [
+        {
+          "at": 1793259691979,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        },
+        {
+          "at": 1793259704667,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        },
+        {
+          "at": 1793259719262,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        },
+        {
+          "at": 1793259724526,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        },
+        {
+          "at": 1793259739655,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        },
+        {
+          "at": 1793259741930,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": "8c37d00f2460e2ee",
+          "action": "CALL"
+        },
+        {
+          "at": 1793259754601,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": "fa6a8b4bfb545727",
+          "action": "RECALL"
+        },
+        {
+          "at": 1793259754635,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": "fa6a8b4bfb545727",
+          "action": "RECALL"
+        },
+        {
+          "at": 1793259771151,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": "b7f95329f86464d4",
+          "action": "CALL"
+        },
+        {
+          "at": 1793259774164,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        },
+        {
+          "at": 1793259774190,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        },
+        {
+          "at": 1793259775118,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        },
+        {
+          "at": 1793259779162,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        },
+        {
+          "at": 1793259790971,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        },
+        {
+          "at": 1793259798307,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        },
+        {
+          "at": 1793259799039,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        },
+        {
+          "at": 1793259799333,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        },
+        {
+          "at": 1793259802483,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        }
+      ],
+      "signals": [
+        {
+          "at": 1793259691428,
+          "name": "display:ready",
+          "event": null,
+          "scopeMatches": true
+        },
+        {
+          "at": 1793259721898,
+          "name": "display:updated",
+          "action": "ENQUEUE",
+          "event": "e9ef9e07d37be167",
+          "scopeMatches": true,
+          "announcementCheck": false
+        },
+        {
+          "at": 1793259741077,
+          "name": "display:updated",
+          "action": "CALL",
+          "event": "7ca8fc50fce67e55",
+          "scopeMatches": true,
+          "announcementCheck": true
+        },
+        {
+          "at": 1793259749176,
+          "name": "display:updated",
+          "action": "RECALL",
+          "event": "8a4617ba0fa69dad",
+          "scopeMatches": true,
+          "announcementCheck": true
+        },
+        {
+          "at": 1793259754607,
+          "name": "display:updated",
+          "action": "SKIP",
+          "event": "531505906fc6a7d1",
+          "scopeMatches": true,
+          "announcementCheck": false
+        },
+        {
+          "at": 1793259754618,
+          "name": "display:updated",
+          "action": "REQUEUE",
+          "event": "2415fdf1a35e11c2",
+          "scopeMatches": true,
+          "announcementCheck": false
+        },
+        {
+          "at": 1793259756872,
+          "name": "display:updated",
+          "action": "CALL",
+          "event": "bd0255a0a390a968",
+          "scopeMatches": true,
+          "announcementCheck": true
+        },
+        {
+          "at": 1793259763956,
+          "name": "display:updated",
+          "action": "START",
+          "event": "f96f3edbde7693e2",
+          "scopeMatches": true,
+          "announcementCheck": false
+        },
+        {
+          "at": 1793259766180,
+          "name": "display:updated",
+          "action": "COMPLETE",
+          "event": "6be5ae19f3782c22",
+          "scopeMatches": true,
+          "announcementCheck": false
+        },
+        {
+          "at": 1793259774181,
+          "name": "display:updated",
+          "action": "ENQUEUE",
+          "event": "d61ef3aaac41f548",
+          "scopeMatches": true,
+          "announcementCheck": false
+        },
+        {
+          "at": 1793259783728,
+          "name": "display:updated",
+          "action": "CALL",
+          "event": "e6d65f4107bf2489",
+          "scopeMatches": true,
+          "announcementCheck": true
+        },
+        {
+          "at": 1793259783729,
+          "name": "display:updated",
+          "action": "START",
+          "event": "aab866699802c5cd",
+          "scopeMatches": true,
+          "announcementCheck": false
+        },
+        {
+          "at": 1793259788568,
+          "name": "display:updated",
+          "action": "COMPLETE",
+          "event": "cf5fd0a97a398423",
+          "scopeMatches": true,
+          "announcementCheck": false
+        },
+        {
+          "at": 1793259799768,
+          "name": "display:ready",
+          "event": null,
+          "scopeMatches": true
+        },
+        {
+          "at": 1793259803993,
+          "name": "display:ready",
+          "event": null,
+          "scopeMatches": true
+        }
+      ],
+      "browser": {
+        "visibility": "visible",
+        "focus": true,
+        "speech": {
+          "requested": 3,
+          "started": 3,
+          "ended": 3
+        }
+      }
+    },
+    {
+      "monitor": 1,
+      "snapshots": [
+        {
+          "at": 1793259697581,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        },
+        {
+          "at": 1793259710596,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        },
+        {
+          "at": 1793259730894,
+          "status": 503,
+          "deviceMatches": true,
+          "announcement": null
+        },
+        {
+          "at": 1793259740814,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        },
+        {
+          "at": 1793259756619,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        },
+        {
+          "at": 1793259770988,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        },
+        {
+          "at": 1793259785860,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        },
+        {
+          "at": 1793259800769,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        }
+      ],
+      "signals": [
+        {
+          "at": 1793259697214,
+          "name": "display:ready",
+          "event": null,
+          "scopeMatches": true
+        }
+      ],
+      "browser": {
+        "visibility": "visible",
+        "focus": true,
+        "speech": {
+          "requested": 1,
+          "started": 1,
+          "ended": 1
+        }
+      }
+    },
+    {
+      "monitor": 2,
+      "snapshots": [
+        {
+          "at": 1793259702516,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        },
+        {
+          "at": 1793259717610,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        },
+        {
+          "at": 1793259745755,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": "8c37d00f2460e2ee",
+          "action": "CALL"
+        },
+        {
+          "at": 1793259745897,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": "8c37d00f2460e2ee",
+          "action": "CALL"
+        },
+        {
+          "at": 1793259746376,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": "fa6a8b4bfb545727",
+          "action": "RECALL"
+        },
+        {
+          "at": 1793259751654,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        },
+        {
+          "at": 1793259753955,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        },
+        {
+          "at": 1793259755251,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": "b7f95329f86464d4",
+          "action": "CALL"
+        },
+        {
+          "at": 1793259757654,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        },
+        {
+          "at": 1793259762033,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        },
+        {
+          "at": 1793259762787,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        },
+        {
+          "at": 1793259771996,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        },
+        {
+          "at": 1793259775527,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        },
+        {
+          "at": 1793259780519,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": "3d1490521ea24e63",
+          "action": "CALL"
+        },
+        {
+          "at": 1793259783132,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        },
+        {
+          "at": 1793259784911,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        },
+        {
+          "at": 1793259790702,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        }
+      ],
+      "signals": [
+        {
+          "at": 1793259702193,
+          "name": "display:ready",
+          "event": null,
+          "scopeMatches": true
+        },
+        {
+          "at": 1793259742875,
+          "name": "display:updated",
+          "action": "ENQUEUE",
+          "event": "e9ef9e07d37be167",
+          "scopeMatches": true,
+          "announcementCheck": false
+        },
+        {
+          "at": 1793259745618,
+          "name": "display:updated",
+          "action": "CALL",
+          "event": "7ca8fc50fce67e55",
+          "scopeMatches": true,
+          "announcementCheck": true
+        },
+        {
+          "at": 1793259746125,
+          "name": "display:updated",
+          "action": "RECALL",
+          "event": "8a4617ba0fa69dad",
+          "scopeMatches": true,
+          "announcementCheck": true
+        },
+        {
+          "at": 1793259750995,
+          "name": "display:updated",
+          "action": "SKIP",
+          "event": "531505906fc6a7d1",
+          "scopeMatches": true,
+          "announcementCheck": false
+        },
+        {
+          "at": 1793259753691,
+          "name": "display:updated",
+          "action": "REQUEUE",
+          "event": "2415fdf1a35e11c2",
+          "scopeMatches": true,
+          "announcementCheck": false
+        },
+        {
+          "at": 1793259754920,
+          "name": "display:updated",
+          "action": "CALL",
+          "event": "bd0255a0a390a968",
+          "scopeMatches": true,
+          "announcementCheck": true
+        },
+        {
+          "at": 1793259757392,
+          "name": "display:updated",
+          "action": "START",
+          "event": "f96f3edbde7693e2",
+          "scopeMatches": true,
+          "announcementCheck": false
+        },
+        {
+          "at": 1793259759793,
+          "name": "display:updated",
+          "action": "COMPLETE",
+          "event": "6be5ae19f3782c22",
+          "scopeMatches": true,
+          "announcementCheck": false
+        },
+        {
+          "at": 1793259771687,
+          "name": "display:updated",
+          "action": "ENQUEUE",
+          "event": "d61ef3aaac41f548",
+          "scopeMatches": true,
+          "announcementCheck": false
+        },
+        {
+          "at": 1793259780262,
+          "name": "display:updated",
+          "action": "CALL",
+          "event": "e6d65f4107bf2489",
+          "scopeMatches": true,
+          "announcementCheck": true
+        },
+        {
+          "at": 1793259781834,
+          "name": "display:updated",
+          "action": "START",
+          "event": "aab866699802c5cd",
+          "scopeMatches": true,
+          "announcementCheck": false
+        },
+        {
+          "at": 1793259784041,
+          "name": "display:updated",
+          "action": "COMPLETE",
+          "event": "cf5fd0a97a398423",
+          "scopeMatches": true,
+          "announcementCheck": false
+        }
+      ],
+      "browser": {
+        "visibility": "visible",
+        "focus": true,
+        "speech": {
+          "requested": 5,
+          "started": 5,
+          "ended": 5
+        }
+      }
+    }
+  ],
+  "responseObserverErrors": [],
+  "finishedAt": "2026-10-29T07:43:24.495Z"
+}

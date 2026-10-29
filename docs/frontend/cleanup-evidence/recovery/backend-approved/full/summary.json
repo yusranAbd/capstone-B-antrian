@@ -1,0 +1,12 @@
+{
+  "suites": 31,
+  "tests": 387,
+  "passed": true,
+  "fingerprintsUnchanged": true,
+  "diagnosticCodes": [
+    "P2039"
+  ],
+  "startedAt": "2026-10-29T08:07:31.914Z",
+  "finishedAt": "2026-10-29T08:16:28.419Z",
+  "method": "31 fresh processes, serial; rollback fault-injection diagnostics retained"
+}

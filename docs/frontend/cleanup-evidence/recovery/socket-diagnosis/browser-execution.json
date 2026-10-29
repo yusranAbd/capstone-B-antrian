@@ -1,0 +1,44 @@
+{
+  "mode": "browser",
+  "startedAt": "2026-10-29T08:16:54.140Z",
+  "target": "127.0.0.1:5433/capstone_antrean_test",
+  "results": [
+    {
+      "command": "node D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\client\\tool\\run-live.cjs --final-e2e-qa",
+      "exit": 0,
+      "signal": null,
+      "seconds": 180.2,
+      "summary": [
+        "Target integrasi Flutter tervalidasi: 127.0.0.1:5433/capstone_antrean_test",
+        "Final QA PASS: appointment-live",
+        "Final QA PASS: role-login",
+        "Final QA PASS: patient-booking-ui",
+        "Final QA PASS: native-audio",
+        "Final QA PASS: three-display-pairing",
+        "Final QA PASS: one-scan-camera",
+        "Final QA PASS: web-session-policy",
+        "Final QA PASS: queue-six-commands",
+        "Final QA PASS: appointment-through-complete",
+        "Final QA PASS: fullscreen",
+        "Final QA PASS: short-reconnect",
+        "Final QA PASS: rotate-revoke-active",
+        "Final QA PASS: runtime",
+        "Final QA socket diagnostics: {\"namespace\":3,\"service\":2,\"matching\":1,\"connected\":1}"
+      ],
+      "suites": [],
+      "fingerprints": [
+        {
+          "dataExisting": {
+            "jumlah": 13,
+            "hilang": 0,
+            "berubah": 0
+          },
+          "recordBaruTersisa": 0
+        }
+      ],
+      "diagnosticCodes": [],
+      "diagnosticErrorTypes": []
+    }
+  ],
+  "finishedAt": "2026-10-29T08:19:54.323Z"
+}

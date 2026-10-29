@@ -1,0 +1,38 @@
+{
+  "mode": "unit",
+  "startedAt": "2026-10-29T07:37:21.777Z",
+  "target": "dummy localhost port 1 (no database)",
+  "results": [
+    {
+      "command": "node --test --test-reporter=tap tool/development-data.test.cjs",
+      "exit": 0,
+      "signal": null,
+      "seconds": 2.5,
+      "summary": [
+        "# tests 7",
+        "# pass 7",
+        "# fail 0"
+      ],
+      "suites": [],
+      "fingerprints": [],
+      "diagnosticCodes": [],
+      "diagnosticErrorTypes": []
+    },
+    {
+      "command": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand",
+      "exit": 0,
+      "signal": null,
+      "seconds": 47.4,
+      "summary": [
+        "Test Suites: 46 passed, 46 total",
+        "Tests:       679 passed, 679 total",
+        "Time:        44.505 s, estimated 49 s"
+      ],
+      "suites": [],
+      "fingerprints": [],
+      "diagnosticCodes": [],
+      "diagnosticErrorTypes": []
+    }
+  ],
+  "finishedAt": "2026-10-29T07:38:11.708Z"
+}

@@ -1,0 +1,17 @@
+# APPROVED AND APPLIED after explicit user reply: Setujui patch read snapshot tersebut.
+# Empirical motivation: default 5000ms snapshot expired at 5235/5246ms;
+# display transaction acquisition exceeded the current start-wait budget.
+# Preserves RepeatableRead, queries, API/RBAC and all mutation policies.
+# Nominal maxWait+timeout: queue 13s, display 18s; HTTP client is 20s,
+# excluding routing/network overhead. Longer connection retention is a risk.
+# Alternative: profile/optimize read queries while preserving current budgets.
+--- a/apps/api/src/queue/queue.service.ts
++++ b/apps/api/src/queue/queue.service.ts
+@@
+-      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
++      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead, maxWait: 3000, timeout: 10000 },
+--- a/apps/api/src/display/display.service.ts
++++ b/apps/api/src/display/display.service.ts
+@@
+-      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead, timeout: 15_000 },
++      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead, maxWait: 3000, timeout: 15_000 },

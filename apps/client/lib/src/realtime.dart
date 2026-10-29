@@ -157,39 +157,3 @@ class RealtimeFeed {
     _socket?.dispose();
   }
 }
-
-/// Coalesce events while fetching, then read again if changes arrived mid-request.
-class SnapshotLoader {
-  SnapshotLoader({
-    required this.fetch,
-    required this.onData,
-    required this.onError,
-  });
-  final Future<Json> Function() fetch;
-  final void Function(Json) onData;
-  final void Function(Object) onError;
-  bool _running = false, _dirty = false, _disposed = false;
-  Future<void> refresh() async {
-    if (_disposed) return;
-    _dirty = true;
-    if (_running) return;
-    _running = true;
-    try {
-      while (_dirty && !_disposed) {
-        _dirty = false;
-        try {
-          final data = await fetch();
-          if (!_disposed) onData(data);
-        } catch (e) {
-          if (!_disposed) onError(e);
-        }
-      }
-    } finally {
-      _running = false;
-    }
-  }
-
-  void dispose() {
-    _disposed = true;
-  }
-}

@@ -122,6 +122,26 @@ void main() {
     expect(f.speech.spoken.last, contains('after'));
     expect(f.feeds, hasLength(1));
   });
+  test('snapshot 500 does not synthesize unverified CALL; new RECALL works after recovery', () async {
+    await ready();
+    final path = 'GET /display/$clinicA/snapshot';
+    f.backend.failures[path] = 500;
+    await signal('upstream-failed-call');
+    expect(f.monitor.state.errorStatus, 500);
+    expect(f.speech.spoken, hasLength(1));
+    f.backend.failures.remove(path);
+    await f.monitor.refresh(silent: true);
+    await f.audio.settled;
+    expect(f.monitor.state.errorStatus, isNull);
+    expect(f.speech.spoken, hasLength(1));
+    await signal('recovered-recall', action: 'RECALL');
+    expect(f.speech.spoken.last, contains('recovered-recall'));
+    expect(f.speech.spoken, hasLength(2));
+    f.feeds.single.changed('event-recovered-recall', 'RECALL');
+    await f.monitor.refresh();
+    await f.audio.settled;
+    expect(f.speech.spoken, hasLength(2));
+  });
   test(
     '5C muted calls consumed without backlog when user activates audio',
     () async {

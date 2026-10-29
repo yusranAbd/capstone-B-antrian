@@ -1,0 +1,9 @@
+{
+  "target": "capstone_antrean_test",
+  "tagHash": "3f78542024ec01a8370b2ec86c0e8fad0624ec0b6cbb80d23c3100f19f8ef922",
+  "services": 2,
+  "users": 5,
+  "doctors": 1,
+  "source": "Exact run timestamp + W/QB/D unique codes + five synthetic account names; scoped FK cleanup only",
+  "cleanupApplied": true
+}

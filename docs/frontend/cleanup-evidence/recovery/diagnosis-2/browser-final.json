@@ -1,0 +1,348 @@
+{
+  "environment": "Chrome headless / local test DB / Asia/Jakarta",
+  "transport": "real REST + Socket.IO; fake video QR; controlled Web Speech",
+  "startedAt": "2026-10-29T06:46:32.760Z",
+  "scenarios": [
+    {
+      "id": "appointment-live",
+      "status": "PASS",
+      "level": "Backend Integration",
+      "detail": "HIBRIDA appointment created by authenticated patient REST; browser booking not asserted here"
+    },
+    {
+      "id": "role-login",
+      "status": "PASS",
+      "level": "Browser E2E",
+      "detail": "ADMIN, PASIEN, DOKTER authenticated in distinct browser contexts"
+    },
+    {
+      "id": "patient-booking-ui",
+      "status": "PASS",
+      "level": "Browser E2E",
+      "detail": "Reservasi → Pilih Poliklinik → HIBRIDA walk-in → confirmation → real ticket"
+    },
+    {
+      "id": "native-audio",
+      "status": "PASS",
+      "level": "Browser E2E",
+      "detail": "Real FlutterTts/native id-ID engine: user-gesture activation, two start/end callbacks, mute/unmute; physical speaker remains unverified"
+    },
+    {
+      "id": "three-display-pairing",
+      "status": "PASS",
+      "level": "Browser E2E",
+      "detail": "A/C same Chrome context, B separate context; unique tab selectors; HttpOnly + SameSite Strict; masked projection"
+    },
+    {
+      "id": "one-scan",
+      "status": "FAIL",
+      "level": "Browser E2E",
+      "detail": "Assertion/action failed (TimeoutError); no secret-bearing diagnostics persisted"
+    }
+  ],
+  "layouts": [
+    {
+      "portal": "admin",
+      "width": 1366,
+      "height": 900,
+      "horizontal": false,
+      "vertical": false
+    },
+    {
+      "portal": "admin",
+      "width": 768,
+      "height": 1024,
+      "horizontal": false,
+      "vertical": false
+    },
+    {
+      "portal": "patient",
+      "width": 360,
+      "height": 800,
+      "horizontal": false,
+      "vertical": false
+    },
+    {
+      "portal": "patient",
+      "width": 390,
+      "height": 844,
+      "horizontal": false,
+      "vertical": false
+    },
+    {
+      "portal": "patient",
+      "width": 412,
+      "height": 915,
+      "horizontal": false,
+      "vertical": false
+    },
+    {
+      "portal": "patient",
+      "width": 1280,
+      "height": 900,
+      "horizontal": false,
+      "vertical": false
+    },
+    {
+      "portal": "doctor",
+      "width": 390,
+      "height": 844,
+      "horizontal": false,
+      "vertical": false
+    },
+    {
+      "portal": "doctor",
+      "width": 1366,
+      "height": 900,
+      "horizontal": false,
+      "vertical": false
+    },
+    {
+      "portal": "display",
+      "width": 1280,
+      "height": 720,
+      "horizontal": false,
+      "vertical": false
+    },
+    {
+      "portal": "display",
+      "width": 1366,
+      "height": 768,
+      "horizontal": false,
+      "vertical": false
+    },
+    {
+      "portal": "display",
+      "width": 1920,
+      "height": 1080,
+      "horizontal": false,
+      "vertical": false
+    },
+    {
+      "portal": "staff",
+      "width": 1366,
+      "height": 900,
+      "horizontal": false,
+      "vertical": false
+    },
+    {
+      "portal": "staff",
+      "width": 768,
+      "height": 1024,
+      "horizontal": false,
+      "vertical": false
+    },
+    {
+      "portal": "staff",
+      "width": 390,
+      "height": 844,
+      "horizontal": false,
+      "vertical": false
+    }
+  ],
+  "runtimeErrors": 0,
+  "nativeVoiceLanguages": [],
+  "physicalSpeakerVerified": false,
+  "nativeAudio": {
+    "languages": [
+      "en-US",
+      "id-ID"
+    ],
+    "physicalSpeakerVerified": false,
+    "callbacks": {
+      "requested": 2,
+      "started": 2,
+      "ended": 2,
+      "errors": []
+    }
+  },
+  "staffReadDiagnostics": {
+    "/api/v1/queue/snapshot HTTP 500": 1,
+    "/api/v1/queue/snapshot HTTP 200": 3,
+    "/api/v1/queue/snapshot failed": 1,
+    "/api/v1/jadwal-praktik HTTP 200": 3
+  },
+  "cameraDiagnostics": {
+    "video": {
+      "width": 640,
+      "height": 480,
+      "ready": 4,
+      "paused": false,
+      "time": 20.758366,
+      "tracks": [
+        {
+          "ready": "live",
+          "enabled": true,
+          "muted": false
+        }
+      ]
+    },
+    "labels": {
+      "QR Check-in Otomatis": true,
+      "Kamera tidak tersedia": false,
+      "kedaluwarsa": false,
+      "belum tersinkron": false,
+      "Check-in berhasil": false
+    }
+  },
+  "mediaFailures": [],
+  "displayTrace": [
+    {
+      "monitor": 0,
+      "snapshots": [
+        {
+          "at": 1793256446863,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        },
+        {
+          "at": 1793256452856,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        },
+        {
+          "at": 1793256465218,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        },
+        {
+          "at": 1793256480569,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        },
+        {
+          "at": 1793256496830,
+          "status": 503,
+          "deviceMatches": true,
+          "announcement": null
+        },
+        {
+          "at": 1793256511180,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        },
+        {
+          "at": 1793256525425,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        }
+      ],
+      "signals": [
+        {
+          "at": 1793256444830,
+          "name": "display:ready",
+          "event": null,
+          "scopeMatches": true
+        }
+      ],
+      "browser": {
+        "visibility": "visible",
+        "focus": true,
+        "speech": {
+          "requested": 1,
+          "started": 1,
+          "ended": 1
+        }
+      }
+    },
+    {
+      "monitor": 1,
+      "snapshots": [
+        {
+          "at": 1793256463851,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        },
+        {
+          "at": 1793256473852,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        },
+        {
+          "at": 1793256492943,
+          "status": 503,
+          "deviceMatches": true,
+          "announcement": null
+        },
+        {
+          "at": 1793256507517,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        },
+        {
+          "at": 1793256518522,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        },
+        {
+          "at": 1793256533426,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        }
+      ],
+      "signals": [
+        {
+          "at": 1793256461521,
+          "name": "display:ready",
+          "event": null,
+          "scopeMatches": true
+        }
+      ],
+      "browser": {
+        "visibility": "visible",
+        "focus": true,
+        "speech": {
+          "requested": 1,
+          "started": 1,
+          "ended": 1
+        }
+      }
+    },
+    {
+      "monitor": 2,
+      "snapshots": [
+        {
+          "at": 1793256470728,
+          "status": 200,
+          "deviceMatches": true,
+          "announcement": null
+        }
+      ],
+      "signals": [
+        {
+          "at": 1793256470390,
+          "name": "display:ready",
+          "event": null,
+          "scopeMatches": true
+        },
+        {
+          "at": 1793256534312,
+          "name": "display:ready",
+          "event": null,
+          "scopeMatches": true
+        }
+      ],
+      "browser": {
+        "visibility": "visible",
+        "focus": true,
+        "speech": {
+          "requested": 1,
+          "started": 1,
+          "ended": 1
+        }
+      }
+    }
+  ],
+  "finishedAt": "2026-10-29T06:48:54.754Z"
+}

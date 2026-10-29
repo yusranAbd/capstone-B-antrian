@@ -1,0 +1,13 @@
+{
+  "method": "Read-only timestamp/role/fixture-pattern boolean only; no user ids, emails, tokens or hashes of credentials retained",
+  "windowStart": "2026-10-29T06:33:12.748Z",
+  "createdSessions": [
+    {
+      "dibuat_pada": "2026-10-29T06:34:05.688Z",
+      "peran": "USER",
+      "is_runner_fixture": false
+    }
+  ],
+  "clientArtifactContainsTestOrigin": true,
+  "clientArtifactContainsDefaultDevOrigin": false
+}

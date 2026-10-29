@@ -9,7 +9,6 @@ import 'package:queueb_client/src/api.dart';
 import 'package:queueb_client/src/admin_schema.dart';
 import 'package:queueb_client/src/config.dart';
 import 'package:queueb_client/src/display.dart';
-import 'package:queueb_client/src/realtime.dart';
 
 void main() {
   setUpAll(tz.initializeTimeZones);
@@ -326,39 +325,6 @@ void main() {
     );
     await api.register(' Pasien ', 'a@test.local', 'password');
     api.dispose();
-  });
-  test('Snapshot loader fetches again for mid-request events, no parallel requests', () async {
-    final first = Completer<Json>();
-    int calls = 0;
-    final seen = <int>[];
-    final loader = SnapshotLoader(
-      fetch: () async => ++calls == 1 ? first.future : {'version': calls},
-      onData: (data) => seen.add(data['version']),
-      onError: (e) => fail('$e'),
-    );
-    final pending = loader.refresh();
-    await loader.refresh();
-    await loader.refresh();
-    expect(calls, 1);
-    first.complete({'version': 1});
-    await pending;
-    expect(calls, 2);
-    expect(seen, [1, 2]);
-    loader.dispose();
-  });
-  test('Disposed loader cannot update another room', () async {
-    final result = Completer<Json>();
-    bool delivered = false;
-    final loader = SnapshotLoader(
-      fetch: () => result.future,
-      onData: (_) => delivered = true,
-      onError: (_) => fail('Unexpected'),
-    );
-    final pending = loader.refresh();
-    loader.dispose();
-    result.complete({});
-    await pending;
-    expect(delivered, isFalse);
   });
   test(
     'Display skips history, deduplicates CALL, distinguishes RECALL audit id',

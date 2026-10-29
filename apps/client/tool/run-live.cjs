@@ -1,5 +1,6 @@
 /** Real NestJS integration. Only unique fixtures on local capstone_antrean_test:5433. */
 const path = require("node:path");
+const fs = require("node:fs");
 const { randomUUID, randomBytes } = require("node:crypto");
 const { spawn } = require("node:child_process");
 const clientPath = path.resolve(__dirname, "..");
@@ -96,6 +97,11 @@ async function main() {
   const prisma = new PrismaService(
     new ConfigService({ DATABASE_URL: safeUrl }),
   );
+  const recovery =
+    process.argv.includes("--final-e2e-qa") ||
+    process.env.QUEUEB_RECOVERY_DIAGNOSTICS === "1"
+      ? require("./recovery-observer.cjs").observe(prisma)
+      : null;
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(PrismaService)
     .useValue(prisma)
@@ -111,11 +117,33 @@ async function main() {
     })
     .compile();
   const app = moduleRef.createNestApplication();
+  if (recovery) app.use(recovery.middleware);
+  if (recovery) app.useGlobalInterceptors(recovery.interceptor);
   app.useLogger(["warn", "error"]);
   configureApp(app);
   let serviceId = "";
   let doctorId = "";
   let fixture;
+  let ownershipJournal;
+  function saveOwnership(clean = false) {
+    if (!ownershipJournal) return;
+    fs.writeFileSync(
+      ownershipJournal,
+      JSON.stringify(
+        {
+          target: "127.0.0.1:5433/capstone_antrean_test",
+          unique: fixture.unique,
+          serviceId,
+          doctorId,
+          users,
+          extraServiceIds: [...fixture.extraServiceIds],
+          clean,
+        },
+        null,
+        2,
+      ) + "\n",
+    );
+  }
   const users = [];
   let code = 1;
   try {
@@ -258,7 +286,10 @@ async function main() {
       extraServiceIds: [],
       extraUserIds: [],
     };
-    if (process.argv.includes("--final-e2e-qa")) {
+    if (
+      process.argv.includes("--final-e2e-qa") ||
+      process.argv.includes("--cleanup-benchmark")
+    ) {
       const email = `flutter-doctor-${unique.toLowerCase()}@test.local`;
       const provision = await post(`/dokter/${doctorId}/akun`, {
         email,
@@ -271,9 +302,16 @@ async function main() {
       );
       fixture.disconnectDisplay = (deviceId) => {
         let closed = 0;
+        const probe = { namespace: 0, service: 0, matching: 0, connected: 0 };
         for (const socket of app
           .get(DisplayRealtimeGateway)
           .server.sockets.values()) {
+          probe.namespace++;
+          if (socket.data?.display?.layananId === serviceId) probe.service++;
+          if (socket.data?.display?.perangkatId === deviceId) {
+            probe.matching++;
+            if (socket.connected) probe.connected++;
+          }
           if (
             socket.data?.display?.layananId === serviceId &&
             socket.data.display.perangkatId === deviceId
@@ -282,9 +320,25 @@ async function main() {
             closed++;
           }
         }
+        if (process.env.QUEUEB_RECOVERY_DIAGNOSTICS === "1")
+          console.log("Final QA socket diagnostics: " + JSON.stringify(probe));
         return closed;
       };
-      fixture.finalQa = true;
+      fixture.cleanupBenchmark = process.argv.includes("--cleanup-benchmark");
+      fixture.finalQa = !fixture.cleanupBenchmark;
+      if (fixture.cleanupBenchmark) {
+        const { RealtimeGateway } = require(
+          path.join(apiPath, "dist/realtime/realtime.gateway.js"),
+        );
+        fixture.socketCounts = () =>
+          Object.fromEntries(
+            ["queue", "patient", "doctor", "display"].map((name) => [
+              name,
+              app.get(RealtimeGateway).server.server.of("/" + name).sockets
+                .size,
+            ]),
+          );
+      }
       code = 0;
     } else if (process.argv.includes("--final-android-qa")) {
       const email = `flutter-doctor-${unique.toLowerCase()}@test.local`;
@@ -430,7 +484,8 @@ async function main() {
       });
     if (
       code === 0 &&
-      (fixture.finalQa ||
+      (fixture.cleanupBenchmark ||
+        fixture.finalQa ||
         process.argv.includes("--browser") ||
         process.argv.includes("--browser-only") ||
         fixture.doctorProfile ||
@@ -444,12 +499,38 @@ async function main() {
         fixture.displayV2 ||
         fixture.displayPairing)
     ) {
-      await require("./browser-smoke.cjs")(fixture);
+      recovery?.phase("browser");
+      if (fixture.finalQa) {
+        ownershipJournal = path.join(
+          clientPath,
+          "build",
+          `qa-owned-${fixture.unique}.json`,
+        );
+        const ownedServices = fixture.extraServiceIds;
+        fixture.extraServiceIds = new Proxy(ownedServices, {
+          get(target, key) {
+            if (key !== "push") return Reflect.get(target, key);
+            return (...ids) => {
+              const length = Array.prototype.push.apply(target, ids);
+              saveOwnership();
+              return length;
+            };
+          },
+        });
+        saveOwnership();
+      }
+      if (fixture.finalQa) {
+        await require("./browser-qa-worker.cjs").runBrowserWorker(fixture);
+      } else {
+        await require("./browser-smoke.cjs")(fixture);
+      }
     }
   } catch (error) {
     code = 1;
     console.error("Integrasi Flutter gagal: " + (error.code || error.name));
   } finally {
+    recovery?.phase("teardown");
+    await recovery?.drain();
     // Only unique codes registered by this run, never development/master data.
     if (fixture?.extraServiceCodes.length || fixture?.extraServiceIds.length) {
       const owned = await prisma.layanan.findMany({
@@ -531,6 +612,15 @@ async function main() {
     }
   }
   const after = await readState();
+  const recoveryReport = recovery?.finish();
+  if (
+    fixture?.finalQa &&
+    recoveryReport &&
+    require("./recovery-observer.cjs").hasServerFailure(recoveryReport)
+  ) {
+    code = 1;
+    console.error("Recovery strict gate: HTTP_5XX_OR_P2028");
+  }
   let existing = 0,
     missing = 0,
     changed = 0,
@@ -551,6 +641,7 @@ async function main() {
     }),
   );
   process.exitCode = missing || changed || remaining ? 1 : code;
+  saveOwnership(!missing && !changed && !remaining);
 }
 main().catch((error) => {
   console.error("Integrasi Flutter gagal: " + (error.code || error.name));

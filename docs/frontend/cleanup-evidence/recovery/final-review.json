@@ -1,0 +1,59 @@
+{
+  "measuredAt": "2026-10-29T08:25:57.572Z",
+  "branch": "main",
+  "head": "c6e64417801567188fb1495b75ec9dc9ca4dfc37",
+  "remoteHead": "c6e64417801567188fb1495b75ec9dc9ca4dfc37",
+  "aheadBehind": "0\t0",
+  "stagedPaths": [],
+  "protectedUnchanged": true,
+  "oldUntrackedPreserved": true,
+  "initialWindowDeltas": [
+    {
+      "database": "capstone_antrean",
+      "table": "sesi_pengguna",
+      "beforeCount": 124,
+      "afterCount": 125
+    }
+  ],
+  "approvedPatchWindowDatabasesUnchanged": true,
+  "fixture": [
+    {
+      "dataExisting": {
+        "jumlah": 13,
+        "hilang": 0,
+        "berubah": 0
+      },
+      "recordBaruTersisa": 0
+    }
+  ],
+  "browser": {
+    "passedGroups": 13,
+    "http5xx": 0,
+    "transactionErrors": 0,
+    "pendingAtFinish": 0,
+    "responseObserverErrors": 0
+  },
+  "backend": {
+    "suites": 31,
+    "tests": 387,
+    "passed": true,
+    "fingerprintsUnchanged": true,
+    "diagnosticCodes": [
+      "P2039"
+    ],
+    "startedAt": "2026-10-29T08:07:31.914Z",
+    "finishedAt": "2026-10-29T08:16:28.419Z",
+    "method": "31 fresh processes, serial; rollback fault-injection diagnostics retained"
+  },
+  "privacy": {
+    "filesScanned": 152,
+    "extensions": [
+      ".json",
+      ".patch"
+    ],
+    "findings": [],
+    "method": "Pattern scan of JSON/MD/patch artifacts for JWT, QR, database credentials and email; not a general secret-detection guarantee"
+  },
+  "status": "CLEANUP READY BUT BLOCKED",
+  "blocker": "Initial development sesi_pengguna 124→125 writer remains unattributed; no waiver of the original unchanged-development safety gate. Record preserved. Current approved-patch window unchanged."
+}

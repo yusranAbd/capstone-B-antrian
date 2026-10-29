@@ -1,0 +1,26 @@
+{
+  "branch": "main",
+  "head": "c6e64417801567188fb1495b75ec9dc9ca4dfc37",
+  "protectedHashes": {
+    "README.md": "2e510e2f30fb0fb1f9e211c74399b9a1371a57e8567d68aaa013b45c2ebd43e2",
+    "apps/client/lib/src/doctor_dashboard.dart": "3cef388bdaa3c41025d7fef9aa985c8d3deb8ffce37a649b6342fb6e15fd32e0",
+    "apps/client/lib/src/doctor_visual.dart": "00171978fbc3ee592013d1574737a1e220120d16c4209aab7dc6da65b5db02e1",
+    "apps/client/test/doctor_visual_refresh_test.dart": "095374a43f4e81783f047381151f63d7e2a8a129106f0ace41c1e34c234a012b"
+  },
+  "protectedHashesUnchanged": true,
+  "indexEmpty": true,
+  "backendDependencyAssetWorkflowDiffEmpty": true,
+  "productionFiles": 8,
+  "productionAndTestAddedLines": 0,
+  "productionAndTestDeletedLines": 694,
+  "evidenceJsonFilesScanned": 70,
+  "secretPatternMatchingFiles": [],
+  "limitations": "Pattern scan supplements manual review; no universal secret-detection claim. No staging/commit/push because final E2E failed.",
+  "preservedInitialUntracked": [
+    "apps/web/",
+    "backups/",
+    "sql/",
+    "docs/frontend/DOCTOR_DASHBOARD_COMPACT_REVIEW.md",
+    "docs/frontend/images/doctor-compact/"
+  ]
+}

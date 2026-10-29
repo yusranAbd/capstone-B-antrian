@@ -1,0 +1,30 @@
+{
+  "before": [
+    {
+      "visibility": "visible",
+      "focus": true
+    },
+    {
+      "visibility": "visible",
+      "focus": true
+    },
+    {
+      "visibility": "visible",
+      "focus": true
+    }
+  ],
+  "after": [
+    {
+      "visibility": "visible",
+      "focus": true
+    },
+    {
+      "visibility": "visible",
+      "focus": true
+    },
+    {
+      "visibility": "visible",
+      "focus": true
+    }
+  ]
+}

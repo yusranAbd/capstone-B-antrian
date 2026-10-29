@@ -1,0 +1,45 @@
+{
+  "results": [
+    {
+      "exit": 0,
+      "summary": [
+        "Analyzing client...                                             ",
+        "No issues found! (ran in 22.5s)"
+      ],
+      "kind": "analyze",
+      "seconds": 31.1
+    },
+    {
+      "exit": 0,
+      "summary": [
+        "08:58 +1039: D:/WorkSpace/Flutter/capstone-B-antrian/apps/client/test/user_profile_test.dart: DOKTER logout saat panel role terbuka tidak membaca snapshot lama",
+        "08:59 +1040: D:/WorkSpace/Flutter/capstone-B-antrian/apps/client/test/user_profile_test.dart: (tearDownAll)",
+        "08:59 +1040: All tests passed!"
+      ],
+      "kind": "test",
+      "seconds": 549.4
+    },
+    {
+      "exit": 0,
+      "summary": [
+        "Font asset \"MaterialIcons-Regular.otf\" was tree-shaken, reducing it from 1645184 to 21952 bytes (98.7% reduction). Tree-shaking can be disabled by providing the --no-tree-shake-icons flag when building your app.",
+        "Compiling lib\\main.dart for the Web...                             20.9s",
+        "√ Built build\\web"
+      ],
+      "kind": "web",
+      "seconds": 24.3
+    },
+    {
+      "exit": 0,
+      "summary": [
+        "If you are a plugin author, please migrate your plugin to Built-in Kotlin using this guide: https://docs.flutter.dev/release/breaking-changes/migrate-to-built-in-kotlin/for-plugin-authors",
+        "Running Gradle task 'assembleDebug'...                            142.6s",
+        "√ Built build\\app\\outputs\\flutter-apk\\app-debug.apk"
+      ],
+      "kind": "apk",
+      "seconds": 160.0
+    }
+  ],
+  "testFiles": 67,
+  "apkGradle": "single-use daemon via GRADLE_OPTS; production build flags unchanged"
+}

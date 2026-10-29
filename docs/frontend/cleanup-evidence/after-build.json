@@ -1,0 +1,27 @@
+{
+  "measuredAt": "2026-10-29T04:04:59.6917296Z",
+  "results": [
+    {
+      "exit": 0,
+      "kind": "web",
+      "command": "flutter build web --no-pub --release --no-web-resources-cdn --no-wasm-dry-run --dart-define=API_BASE_URL=http://127.0.0.1:3001/api/v1 --dart-define=SERVICE_TIME_ZONE=Asia/Jakarta",
+      "summary": [
+        "Font asset \"MaterialIcons-Regular.otf\" was tree-shaken, reducing it from 1645184 to 21952 bytes (98.7% reduction). Tree-shaking can be disabled by providing the --no-tree-shake-icons flag when building your app.",
+        "Compiling lib\\main.dart for the Web...                            187.0s",
+        "√ Built build\\web"
+      ],
+      "seconds": 193.1
+    },
+    {
+      "exit": 0,
+      "kind": "apk",
+      "command": "flutter build apk --debug --no-pub --target=lib/main.dart --dart-define=API_BASE_URL=http://127.0.0.1:3001/api/v1 --dart-define=SERVICE_TIME_ZONE=Asia/Jakarta",
+      "summary": [
+        "If you are a plugin author, please migrate your plugin to Built-in Kotlin using this guide: https://docs.flutter.dev/release/breaking-changes/migrate-to-built-in-kotlin/for-plugin-authors",
+        "Running Gradle task 'assembleDebug'...                             76.4s",
+        "√ Built build\\app\\outputs\\flutter-apk\\app-debug.apk"
+      ],
+      "seconds": 86.7
+    }
+  ]
+}

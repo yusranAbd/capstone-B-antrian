@@ -11,9 +11,19 @@ const { enter, button, reveal, cameraVideo } =
   require("./browser-demo.cjs").helpers;
 const base = "http://127.0.0.1:8080/";
 const api = "http://127.0.0.1:3001/api/v1";
+// Each role is a concurrently observed monitor in this test. Keep headless
+// background tabs scheduled while another role's page is brought to front.
+const browserArgs = [
+  "--disable-background-timer-throttling",
+  "--disable-renderer-backgrounding",
+  "--disable-backgrounding-occluded-windows",
+];
 
 module.exports = async function finalQa({ fixture: f, root }) {
-  const output = path.resolve(__dirname, "../../../docs/qa/evidence");
+  const output = path.resolve(
+    process.env.QUEUEB_QA_EVIDENCE_DIR ||
+      path.resolve(__dirname, "../../../docs/qa/evidence"),
+  );
   fs.mkdirSync(output, { recursive: true });
   const report = {
     environment: "Chrome headless / local test DB / Asia/Jakarta",
@@ -26,9 +36,22 @@ module.exports = async function finalQa({ fixture: f, root }) {
   const contexts = [],
     browsers = [],
     errors = [];
+  const recoveryDisplays = [];
+  const responseObservers =
+    require("./qa-event-observers.cjs").eventObservers();
+  const recoveryHash = (id) =>
+    typeof id === "string"
+      ? require("node:crypto")
+          .createHash("sha256")
+          .update(id)
+          .digest("hex")
+          .slice(0, 16)
+      : null;
   const video = path.join(root, "final-qa-camera.y4m");
   let phase = "setup";
   let nativeDiagnosticPage;
+  let recoveryCameraPage;
+  const mediaFailures = [];
   const deadline = setTimeout(
     () => browsers.forEach((b) => b.close().catch(() => {})),
     12 * 60000,
@@ -80,6 +103,31 @@ module.exports = async function finalQa({ fixture: f, root }) {
     if (!context) contexts.push(c);
     const p = await c.newPage();
     p.on("pageerror", () => errors.push("pageerror"));
+    if (account === "petugas") {
+      // Counts/status only: never persist query strings, IDs or response bodies.
+      const reads = (report.staffReadDiagnostics = {});
+      const readPath = (request) => {
+        const pathname = new URL(request.url()).pathname;
+        return request.method() === "GET" &&
+          ["/api/v1/queue/snapshot", "/api/v1/jadwal-praktik"].includes(
+            pathname,
+          )
+          ? pathname
+          : null;
+      };
+      p.on("response", (response) => {
+        const route = readPath(response.request());
+        if (!route) return;
+        const key = route + " HTTP " + response.status();
+        reads[key] = (reads[key] || 0) + 1;
+      });
+      p.on("requestfailed", (request) => {
+        const route = readPath(request);
+        if (!route) return;
+        const key = route + " failed";
+        reads[key] = (reads[key] || 0) + 1;
+      });
+    }
     await p.goto(base);
     if (account) {
       await enter(p, "Email", f[account].email);
@@ -92,6 +140,8 @@ module.exports = async function finalQa({ fixture: f, root }) {
     return p;
   }
   async function shot(page, name) {
+    // Audit runs can retain assertion summaries without fixture screenshots.
+    if (process.env.QUEUEB_QA_SCREENSHOTS === "0") return;
     await page.bringToFront();
     await page.mouse.move(1, 1);
     await page.screenshot({
@@ -114,6 +164,11 @@ module.exports = async function finalQa({ fixture: f, root }) {
     }
   }
   async function uiMutation(page, route, action) {
+    await page.bringToFront();
+    const queueCommand = route.startsWith("/queue/");
+    const commandReady = () =>
+      expect(page.getByRole("button", { name: /Pindai QR/ })).toBeEnabled();
+    if (queueCommand) await commandReady();
     const wait = page.waitForResponse(
       (r) =>
         r.request().method() === "POST" &&
@@ -123,6 +178,9 @@ module.exports = async function finalQa({ fixture: f, root }) {
     await action();
     const r = await wait;
     assert.ok(r.ok(), "UI mutation HTTP " + r.status());
+    // A successful POST precedes the BLoC's required snapshot reconciliation.
+    // Wait for the visible admission gate before issuing another command.
+    if (queueCommand) await commandReady();
     return r.json();
   }
   try {
@@ -141,7 +199,11 @@ module.exports = async function finalQa({ fixture: f, root }) {
       "HIBRIDA appointment created by authenticated patient REST; browser booking not asserted here",
       "Backend Integration",
     );
-    const b = await chromium.launch({ channel: "chrome", headless: true });
+    const b = await chromium.launch({
+      channel: "chrome",
+      headless: true,
+      args: browserArgs,
+    });
     browsers.push(b);
     phase = "login-layout";
     const admin = await open(b, "admin");
@@ -356,6 +418,7 @@ module.exports = async function finalQa({ fixture: f, root }) {
     // Controlled utterances record only counts/lang; never patient text.
     const speech = () => {
       window.__qaSpeech = 0;
+      window.__qaSpeechStats = { requested: 0, started: 0, ended: 0 };
       let timer;
       const Native = window.SpeechSynthesisUtterance;
       window.SpeechSynthesisUtterance = class extends Native {
@@ -378,8 +441,13 @@ module.exports = async function finalQa({ fixture: f, root }) {
       speechSynthesis.cancel = () => clearTimeout(timer);
       speechSynthesis.speak = (u) => {
         window.__qaSpeech++;
+        window.__qaSpeechStats.requested++;
         u.dispatchEvent(new Event("start"));
-        timer = setTimeout(() => u.dispatchEvent(new Event("end")), 30);
+        window.__qaSpeechStats.started++;
+        timer = setTimeout(() => {
+          u.dispatchEvent(new Event("end"));
+          window.__qaSpeechStats.ended++;
+        }, 30);
       };
     };
     await shared.addInitScript(speech);
@@ -399,9 +467,24 @@ module.exports = async function finalQa({ fixture: f, root }) {
         )
       ).kode;
       const p = await open(b, null, undefined, c);
+      const trace = { monitor: index, snapshots: [], signals: [] };
+      recoveryDisplays.push({ p, trace });
       const snapshots = [],
         events = [];
-      p.on("response", async (r) => {
+      responseObservers.on(p, "response", async (r) => {
+        const route = new URL(r.url()).pathname;
+        if (route === "/api/v1/display/" + service + "/snapshot") {
+          const data = r.ok() ? await r.json().catch(() => null) : null;
+          trace.snapshots.push({
+            at: Date.now(),
+            status: r.status(),
+            deviceMatches:
+              (await r.request().headerValue("x-display-device-id")) ===
+              device.id,
+            announcement: recoveryHash(data?.pengumumanTerakhir?.peristiwaId),
+            action: data?.pengumumanTerakhir?.aksi,
+          });
+        }
         if (
           new URL(r.url()).pathname ===
             "/api/v1/display/" + service + "/snapshot" &&
@@ -417,10 +500,26 @@ module.exports = async function finalQa({ fixture: f, root }) {
           if (
             typeof frame.payload === "string" &&
             frame.payload.includes("display:")
-          )
+          ) {
+            try {
+              const [name, data] = JSON.parse(
+                frame.payload.slice(frame.payload.indexOf("[")),
+              );
+              trace.signals.push({
+                at: Date.now(),
+                name,
+                action: data?.aksi,
+                event: recoveryHash(data?.eventId),
+                scopeMatches: data?.layananId === service,
+                announcementCheck: data?.perluPeriksaPengumuman,
+              });
+            } catch {
+              /* Non-event frame has no diagnostic payload. */
+            }
             events.push(
               frame.payload.includes("display:ready") ? "ready" : "updated",
             );
+          }
         }),
       );
       await button(p, "Masuk ke Public Display");
@@ -457,12 +556,26 @@ module.exports = async function finalQa({ fixture: f, root }) {
       channel: "chrome",
       headless: true,
       args: [
+        ...browserArgs,
         "--use-fake-device-for-media-stream",
         "--use-file-for-fake-video-capture=" + video,
       ],
     });
     browsers.push(camera);
     const staff = await open(camera, "petugas");
+    recoveryCameraPage = staff;
+    staff.on("requestfailed", (request) => {
+      const u = new URL(request.url());
+      if (!["http:", "https:"].includes(u.protocol)) return;
+      if (!u.pathname.startsWith("/api/v1/"))
+        mediaFailures.push({
+          host: u.hostname,
+          path: u.pathname.replace(/[0-9a-f]{8}-[0-9a-f-]{27,}/gi, "<id>"),
+          error: /^net::ERR_[A-Z_]+$/.test(request.failure()?.errorText || "")
+            ? request.failure().errorText
+            : "other",
+        });
+    });
     await staff.context().grantPermissions(["camera"]);
     await expect(
       staff.getByText("Realtime terhubung", { exact: false }).first(),
@@ -533,6 +646,11 @@ module.exports = async function finalQa({ fixture: f, root }) {
       button(staff, "Panggil berikutnya"),
     );
     assert.equal(called.tiketId, walk.id);
+    report.callConfirmed = {
+      at: Date.now(),
+      status: called.status,
+      version: called.versi,
+    };
     for (const d of [a, c]) {
       await d.p.bringToFront();
       await expect(
@@ -559,12 +677,13 @@ module.exports = async function finalQa({ fixture: f, root }) {
     await uiMutation(staff, "/queue/" + walk.id + "/lewati", () =>
       button(staff, "Lewati"),
     );
-    await button(staff, "Aksi " + walk.nomorAntrean);
-    await uiMutation(staff, "/queue/" + walk.id + "/antre-ulang", () =>
-      staff
+    await uiMutation(staff, "/queue/" + walk.id + "/antre-ulang", async () => {
+      // Readiness is checked before the popup hides background semantics.
+      await button(staff, "Aksi " + walk.nomorAntrean);
+      await staff
         .getByRole("menuitem", { name: "Kembalikan ke Antrean", exact: true })
-        .click(),
-    );
+        .click();
+    });
     await uiMutation(staff, "/queue/panggil", () =>
       button(staff, "Panggil berikutnya"),
     );
@@ -708,7 +827,9 @@ module.exports = async function finalQa({ fixture: f, root }) {
     await button(a.p, "Muat ulang");
     assert.equal(await speechCount(a), spoken);
     const readyBefore = a.events.filter((e) => e === "ready").length;
-    assert.equal(f.disconnectDisplay(a.id), 1);
+    const disconnected = await f.disconnectDisplay(a.id);
+    report.reconnectProbe = { readyBefore, disconnected, expected: 1 };
+    assert.equal(disconnected, 1);
     await expect
       .poll(() => a.events.filter((e) => e === "ready").length)
       .toBeGreaterThan(readyBefore);
@@ -801,14 +922,77 @@ module.exports = async function finalQa({ fixture: f, root }) {
     throw new Error("Final browser QA failed in " + phase);
   } finally {
     clearTimeout(deadline);
+    await responseObservers.drain();
+    responseObservers.closing();
+    if (
+      process.env.QUEUEB_RECOVERY_DIAGNOSTICS === "1" &&
+      recoveryCameraPage &&
+      !recoveryCameraPage.isClosed()
+    ) {
+      report.cameraDiagnostics = await recoveryCameraPage
+        .evaluate(() => {
+          const video = document.querySelector("video");
+          const text =
+            document.body.innerText +
+            [...document.querySelectorAll("[aria-label]")]
+              .map((n) => n.getAttribute("aria-label"))
+              .join("\n");
+          return {
+            video: video
+              ? {
+                  width: video.videoWidth,
+                  height: video.videoHeight,
+                  ready: video.readyState,
+                  paused: video.paused,
+                  time: video.currentTime,
+                  tracks: [...(video.srcObject?.getVideoTracks?.() || [])].map(
+                    (t) => ({
+                      ready: t.readyState,
+                      enabled: t.enabled,
+                      muted: t.muted,
+                    }),
+                  ),
+                }
+              : null,
+            labels: Object.fromEntries(
+              [
+                "QR Check-in Otomatis",
+                "Kamera tidak tersedia",
+                "kedaluwarsa",
+                "belum tersinkron",
+                "Check-in berhasil",
+              ].map((k) => [k, text.includes(k)]),
+            ),
+          };
+        })
+        .catch(() => null);
+      report.mediaFailures = mediaFailures;
+    }
+    if (process.env.QUEUEB_RECOVERY_DIAGNOSTICS === "1") {
+      report.displayTrace = [];
+      for (const { p, trace } of recoveryDisplays) {
+        trace.browser = await p
+          .evaluate(() => ({
+            visibility: document.visibilityState,
+            focus: document.hasFocus(),
+            speech: window.__qaSpeechStats,
+          }))
+          .catch(() => null);
+        report.displayTrace.push(trace);
+      }
+    }
     report.runtimeErrors = errors.length;
+    report.responseObserverErrors = responseObservers.errors;
     report.finishedAt = new Date().toISOString();
+    for (const c of contexts) await c.close().catch(() => {});
+    for (const b of browsers) await b.close().catch(() => {});
+    await responseObservers.drain();
+    if (fs.existsSync(video)) fs.unlinkSync(video);
     fs.writeFileSync(
       path.join(output, "browser-final.json"),
       JSON.stringify(report, null, 2) + "\n",
     );
-    for (const c of contexts) await c.close().catch(() => {});
-    for (const b of browsers) await b.close().catch(() => {});
-    if (fs.existsSync(video)) fs.unlinkSync(video);
+    if (responseObservers.errors.length)
+      throw Error("Response observer failed");
   }
 };

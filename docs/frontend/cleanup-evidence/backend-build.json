@@ -1,0 +1,5 @@
+{
+  "exit": 0,
+  "command": "node node_modules/@nestjs/cli/bin/nest.js build",
+  "seconds": 45.1
+}

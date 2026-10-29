@@ -1,0 +1,34 @@
+{
+  "mode": "browser",
+  "startedAt": "2026-10-29T06:59:46.996Z",
+  "target": "127.0.0.1:5433/capstone_antrean_test",
+  "results": [
+    {
+      "command": "node D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\client\\tool\\run-live.cjs --final-e2e-qa",
+      "exit": 1,
+      "seconds": 349.1,
+      "summary": [
+        "Target integrasi Flutter tervalidasi: 127.0.0.1:5433/capstone_antrean_test",
+        "Final QA PASS: appointment-live",
+        "Final QA PASS: role-login",
+        "Final QA PASS: patient-booking-ui",
+        "Final QA PASS: native-audio",
+        "Final QA PASS: three-display-pairing",
+        "Final QA PASS: one-scan-camera",
+        "Final QA PASS: web-session-policy",
+        "Final QA PASS: queue-six-commands",
+        "Final QA failed phase: appointment-through-complete / Error",
+        "    at finalQa (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\client\\tool\\browser-final-e2e.cjs:758:7)"
+      ],
+      "suites": [],
+      "fingerprints": [],
+      "diagnosticCodes": [
+        "P2028"
+      ],
+      "diagnosticErrorTypes": [
+        "PrismaClientKnownRequestError"
+      ]
+    }
+  ],
+  "finishedAt": "2026-10-29T07:05:36.088Z"
+}

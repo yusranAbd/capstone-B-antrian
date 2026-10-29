@@ -1,0 +1,17 @@
+{
+  "authorization": "Explicit user reply: Setujui patch read snapshot tersebut",
+  "scope": {
+    "queueSnapshot": {
+      "isolation": "RepeatableRead unchanged",
+      "maxWait": 3000,
+      "timeout": 10000
+    },
+    "displaySnapshot": {
+      "isolation": "RepeatableRead unchanged",
+      "maxWait": 3000,
+      "timeout": 15000
+    }
+  },
+  "mutationsQueriesApiRbacSchemaUnchanged": true,
+  "applied": true
+}

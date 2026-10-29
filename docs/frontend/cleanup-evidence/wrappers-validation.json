@@ -1,0 +1,13 @@
+{
+  "testExit": 0,
+  "resolvedWarning": "Removed config.dart import no longer used after StaffHeaderContext deletion",
+  "analyze": [
+    "Analyzing client...                                             ",
+    "No issues found! (ran in 24.8s)"
+  ],
+  "analyzeExit": 0,
+  "test": [
+    "00:47 +50: D:/WorkSpace/Flutter/capstone-B-antrian/apps/client/test/staff_compact_test.dart: (tearDownAll)",
+    "00:48 +50: All tests passed!"
+  ]
+}

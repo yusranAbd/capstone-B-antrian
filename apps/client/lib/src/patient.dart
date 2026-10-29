@@ -30,13 +30,6 @@ import 'patient_reservations.dart';
 import 'patient_mobile_v5.dart';
 import 'patient_scroll_shell.dart';
 
-String appointmentDetails(Json appointment, AppConfig config) {
-  final slot = object(appointment['slotPraktik']);
-  final session = object(slot['jadwalPraktik']);
-  final doctor = object(object(session['dokterLayanan'])['dokter']);
-  return 'Janji temu: ${label(doctor)}\nRuang: ${label(object(session['loket']))}\nSlot: ${config.instantLabel(slot['mulaiPada'])} – ${config.instantLabel(slot['selesaiPada'])}';
-}
-
 class PatientPage extends StatefulWidget {
   const PatientPage({
     super.key,

@@ -1,0 +1,42 @@
+{
+  "method": "Read-only c6e6441 vs working-tree critical path, CRLF normalized; release JS from measured before/after cleanup both include protected local doctor edits; no claim a pristine c6 binary was rerun",
+  "files": [
+    {
+      "file": "apps/api/src/queue/queue.service.ts",
+      "baseline": "7dc20e63e6f4b5bcdd8641442a82735e77e4d64fab73947254c01973babec506",
+      "working": "7dc20e63e6f4b5bcdd8641442a82735e77e4d64fab73947254c01973babec506"
+    },
+    {
+      "file": "apps/api/src/display/display.service.ts",
+      "baseline": "7bfbf7911692c74488d04be6b778b014e203ed649f0ea86c49a7897892ae50e2",
+      "working": "7bfbf7911692c74488d04be6b778b014e203ed649f0ea86c49a7897892ae50e2"
+    },
+    {
+      "file": "apps/api/src/prisma/prisma.service.ts",
+      "baseline": "ede402f620d90244d14091c8bca37e6e70cdebe18e23e65c50bf5055b9a1203e",
+      "working": "ede402f620d90244d14091c8bca37e6e70cdebe18e23e65c50bf5055b9a1203e"
+    },
+    {
+      "file": "apps/api/src/realtime/realtime-broadcast.service.ts",
+      "baseline": "6b5c80e66a7e80192bc33777d646efb28b5798d261978e8cbcb9e14ad651d9cd",
+      "working": "6b5c80e66a7e80192bc33777d646efb28b5798d261978e8cbcb9e14ad651d9cd"
+    },
+    {
+      "file": "apps/client/lib/src/features/display/application/display_monitor_bloc.dart",
+      "baseline": "cf00b8c8e2cea84ecbda8328e948346b84f9fd04249e12f0ab1ab1a2a0efede8",
+      "working": "cf00b8c8e2cea84ecbda8328e948346b84f9fd04249e12f0ab1ab1a2a0efede8"
+    },
+    {
+      "file": "apps/client/lib/src/features/display/services/announcement_gate.dart",
+      "baseline": "5e94694cbef9e66f1e64dc23a099991bb643ebb7009b57b89d50e94536d379ff",
+      "working": "5e94694cbef9e66f1e64dc23a099991bb643ebb7009b57b89d50e94536d379ff"
+    },
+    {
+      "file": "apps/client/lib/src/features/display/services/display_audio_controller.dart",
+      "baseline": "023572dc2fdc18203087a80ceb60d7eed06f5ec29d51e267eb75343d89ca36fc",
+      "working": "023572dc2fdc18203087a80ceb60d7eed06f5ec29d51e267eb75343d89ca36fc"
+    }
+  ],
+  "allCriticalPathsIdentical": true,
+  "beforeAfterMainJsIdentical": true
+}

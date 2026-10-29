@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'config.dart';
 import 'mobile_ui.dart';
 
 // Operational QueueB / shared blue palette / compact service console.
@@ -70,99 +69,6 @@ abstract final class StaffStyle {
   }
 }
 
-class StaffLiveStatus extends StatelessWidget {
-  const StaffLiveStatus(this.status, {super.key});
-  final String status;
-  @override
-  Widget build(BuildContext context) {
-    final connected = status == 'Realtime terhubung';
-    return Tooltip(
-      message: status,
-      child: Semantics(
-        label: status,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              connected ? Icons.wifi_rounded : Icons.sync_rounded,
-              size: 16,
-              color: connected ? QueueBStyle.success : QueueBStyle.warning,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              connected
-                  ? 'Realtime terhubung'
-                  : status.contains('terputus') ||
-                        status.contains('belum tersambung')
-                  ? 'Realtime terputus'
-                  : status.contains('ditolak')
-                  ? 'Izin realtime ditolak'
-                  : 'Menyinkronkan…',
-              style: const TextStyle(fontSize: 12, color: QueueBStyle.muted),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class StaffHeaderContext extends StatelessWidget {
-  const StaffHeaderContext({
-    super.key,
-    required this.name,
-    required this.room,
-    required this.status,
-  });
-  final String name, status;
-  final Json? room;
-  @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) => Row(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        if (constraints.maxWidth > 560 && room != null) ...[
-          Flexible(
-            child: Text(
-              '${label(object(room!['layanan']))} · ${room!['kode'] ?? label(room!)}',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 13),
-            ),
-          ),
-          const SizedBox(width: 18),
-        ],
-        if (constraints.maxWidth > 400) ...[
-          StaffLiveStatus(status),
-          const SizedBox(width: 18),
-        ],
-        if (constraints.maxWidth > 180)
-          Flexible(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const Text(
-                  'Petugas pelayanan',
-                  style: TextStyle(fontSize: 11, color: QueueBStyle.muted),
-                ),
-              ],
-            ),
-          ),
-      ],
-    ),
-  );
-}
-
 class StaffPanel extends StatelessWidget {
   const StaffPanel({
     super.key,
@@ -221,70 +127,6 @@ class StaffPanel extends StatelessWidget {
           ],
         ),
       ),
-    ),
-  );
-}
-
-class StaffMetric extends StatelessWidget {
-  const StaffMetric({
-    super.key,
-    required this.title,
-    required this.value,
-    required this.detail,
-    required this.icon,
-  });
-  final String title, value, detail;
-  final IconData icon;
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      border: Border.all(color: QueueBStyle.border),
-      borderRadius: BorderRadius.circular(StaffStyle.radius),
-    ),
-    child: Row(
-      children: [
-        Icon(icon, color: QueueBStyle.darkTeal, size: 22),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(fontSize: 12, color: QueueBStyle.muted),
-              ),
-              const SizedBox(height: 2),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
-                children: [
-                  Text(
-                    value,
-                    style: const TextStyle(
-                      fontSize: 26,
-                      height: 1.1,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      detail,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: QueueBStyle.muted,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
     ),
   );
 }

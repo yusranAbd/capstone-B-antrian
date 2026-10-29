@@ -1,0 +1,10 @@
+{
+  "placeholdersRemaining": false,
+  "protectedHashesUnchanged": true,
+  "indexEmpty": true,
+  "all40FingerprintsClean": true,
+  "format": "Dart 10 files, zero changes; Prettier all 7 matched files pass",
+  "diffWhitespaceCheck": "exit 0",
+  "releaseGate": "BLOCKED_FINAL_E2E",
+  "commitPush": "not performed under user all-gates-pass condition"
+}

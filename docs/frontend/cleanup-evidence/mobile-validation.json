@@ -1,0 +1,12 @@
+{
+  "testExit": 0,
+  "analyzeExit": 0,
+  "analyze": [
+    "Analyzing client...                                             ",
+    "No issues found! (ran in 26.8s)"
+  ],
+  "test": [
+    "01:05 +79: D:/WorkSpace/Flutter/capstone-B-antrian/apps/client/test/patient_v2_test.dart: (tearDownAll)",
+    "01:05 +79: All tests passed!"
+  ]
+}

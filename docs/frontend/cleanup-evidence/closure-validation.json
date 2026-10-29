@@ -1,0 +1,13 @@
+{
+  "note": "Stopped preliminary full suite after AST closure review found unused StaffLiveStatus; final full suite starts after this validation",
+  "analyze": [
+    "Analyzing client...                                             ",
+    "No issues found! (ran in 23.8s)"
+  ],
+  "testExit": 0,
+  "analyzeExit": 0,
+  "test": [
+    "00:09 +12: (tearDownAll)",
+    "00:09 +12: All tests passed!"
+  ]
+}

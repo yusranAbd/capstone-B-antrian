@@ -280,6 +280,28 @@ describe('Queue REST Snapshot (e2e)', () => {
     expect(JSON.stringify(body)).not.toContain('kataSandiHash');
   });
 
+  it('enam snapshot paralel mempertahankan scope dan status kanonis tanpa mengirim mutasi', async () => {
+    const outcomes = await Promise.allSettled(
+      Array.from({ length: 6 }, () => getSnapshot(petugas.token, loketId).expect(200)),
+    );
+    const responses = outcomes.map((outcome) => {
+      if (outcome.status === 'rejected') throw outcome.reason;
+      return outcome.value;
+    });
+    for (const response of responses) {
+      const body = response.body as SnapshotAntrean;
+      expect(body.layanan.id).toBe(layananId);
+      expect(body.loketPeminta.id).toBe(loketId);
+      expect(body.menunggu.total).toBe(1);
+      expect(body.menunggu.tiket).toEqual([
+        expect.objectContaining({ tiketId, status: StatusTiket.MENUNGGU }),
+      ]);
+      expect(body.loket.every((loket) => loket.tiketAktif.length === 0)).toBe(true);
+      expect(JSON.stringify(body)).not.toContain(petugas.token);
+    }
+    await getSnapshot(petugas.token, loketLainId).expect(403);
+  });
+
   it('sesudah CALL commit snapshot berpindah dari MENUNGGU menjadi DIPANGGIL', async () => {
     const responsCall = await request(server())
       .post('/api/v1/queue/panggil')

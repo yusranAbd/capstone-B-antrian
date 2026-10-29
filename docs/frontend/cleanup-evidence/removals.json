@@ -1,0 +1,331 @@
+[
+  {
+    "name": "DoctorCard",
+    "file": "apps/client/lib/src/mobile_ui.dart",
+    "line": 299,
+    "offset": 9660,
+    "end": 10587,
+    "superclass": "StatelessWidget",
+    "mixins": [],
+    "abstract": false,
+    "references": [
+      {
+        "file": "apps/client/lib/src/mobile_ui.dart",
+        "line": 300,
+        "offset": 9712,
+        "owner": "DoctorCard"
+      }
+    ],
+    "decision": "REMOVE",
+    "proof": "AST import graph plus exact identifier search across lib/test/integration/web/android/tool; no registration/router/generated consumers; private painter only belongs to removed HospitalVisual",
+    "removedSha256": "0788d3de102bc0cc4145131b5b55640db49840c7c2e6e3335aa06d68f6351379"
+  },
+  {
+    "name": "HospitalVisual",
+    "file": "apps/client/lib/src/mobile_ui.dart",
+    "line": 328,
+    "offset": 10591,
+    "end": 10985,
+    "superclass": "StatelessWidget",
+    "mixins": [],
+    "abstract": false,
+    "references": [
+      {
+        "file": "apps/client/lib/src/mobile_ui.dart",
+        "line": 329,
+        "offset": 10647,
+        "owner": "HospitalVisual"
+      }
+    ],
+    "decision": "REMOVE",
+    "proof": "AST import graph plus exact identifier search across lib/test/integration/web/android/tool; no registration/router/generated consumers; private painter only belongs to removed HospitalVisual",
+    "removedSha256": "9423065db7e7f22d21f56b5a7493a78863543df862cc43fbfd759ab5e91a3cb3"
+  },
+  {
+    "name": "_HospitalPainter",
+    "file": "apps/client/lib/src/mobile_ui.dart",
+    "line": 344,
+    "offset": 10989,
+    "end": 12563,
+    "superclass": "CustomPainter",
+    "mixins": [],
+    "abstract": false,
+    "references": [
+      {
+        "file": "apps/client/lib/src/mobile_ui.dart",
+        "line": 337,
+        "offset": 10890,
+        "owner": "HospitalVisual"
+      }
+    ],
+    "decision": "REMOVE",
+    "proof": "AST import graph plus exact identifier search across lib/test/integration/web/android/tool; no registration/router/generated consumers; private painter only belongs to removed HospitalVisual",
+    "removedSha256": "b282347ef91ae767c6590a785ef3ccec3a9510759c73e1f4bfb829d703f0827c"
+  },
+  {
+    "name": "AdminDeleteButton",
+    "file": "apps/client/lib/src/admin_delete.dart",
+    "line": 28,
+    "offset": 551,
+    "end": 998,
+    "superclass": "StatelessWidget",
+    "mixins": [],
+    "abstract": false,
+    "references": [
+      {
+        "file": "apps/client/lib/src/admin_delete.dart",
+        "line": 29,
+        "offset": 609,
+        "owner": "AdminDeleteButton"
+      }
+    ],
+    "decision": "REMOVE",
+    "proof": "Zero external AST identifiers; whole-repository exact-token search only declaration/constructor; main/test import graph plus router/provider/platform/generated/config inspection; no consumers or side effects",
+    "removedSha256": "d68d099e61c28875d30457428086b503dbb543938c63092a58b629aa6e79cf34"
+  },
+  {
+    "name": "PatientWordmark",
+    "file": "apps/client/lib/src/patient_design.dart",
+    "line": 240,
+    "offset": 8373,
+    "end": 9548,
+    "superclass": "StatelessWidget",
+    "mixins": [],
+    "abstract": false,
+    "references": [
+      {
+        "file": "apps/client/lib/src/patient_design.dart",
+        "line": 241,
+        "offset": 8430,
+        "owner": "PatientWordmark"
+      }
+    ],
+    "decision": "REMOVE",
+    "proof": "Zero external AST identifiers; whole-repository exact-token search only declaration/constructor; main/test import graph plus router/provider/platform/generated/config inspection; no consumers or side effects",
+    "removedSha256": "442dca6f565b8b82a15c7c200a5e452fcdd9131ae026d51cd0bee2f0e281c9f9"
+  },
+  {
+    "name": "PatientHomeBrand",
+    "file": "apps/client/lib/src/patient_home.dart",
+    "line": 25,
+    "offset": 955,
+    "end": 2024,
+    "superclass": "StatelessWidget",
+    "mixins": [],
+    "abstract": false,
+    "references": [
+      {
+        "file": "apps/client/lib/src/patient_home.dart",
+        "line": 26,
+        "offset": 1013,
+        "owner": "PatientHomeBrand"
+      }
+    ],
+    "decision": "REMOVE",
+    "proof": "Zero external AST identifiers; whole-repository exact-token search only declaration/constructor; main/test import graph plus router/provider/platform/generated/config inspection; no consumers or side effects",
+    "removedSha256": "6ff7c90aae37a164efed3d750e746ab69e2ae6b3572a2a4b7c99b894f1e60fb9"
+  },
+  {
+    "name": "PatientHomeShortcuts",
+    "file": "apps/client/lib/src/patient_home.dart",
+    "line": 319,
+    "offset": 9958,
+    "end": 14032,
+    "superclass": "StatelessWidget",
+    "mixins": [],
+    "abstract": false,
+    "references": [
+      {
+        "file": "apps/client/lib/src/patient_home.dart",
+        "line": 320,
+        "offset": 10020,
+        "owner": "PatientHomeShortcuts"
+      }
+    ],
+    "decision": "REMOVE",
+    "proof": "Zero external AST identifiers; whole-repository exact-token search only declaration/constructor; main/test import graph plus router/provider/platform/generated/config inspection; no consumers or side effects",
+    "removedSha256": "4986f479f33e5a1539f1668f3ffa20786b637e1909d7fdcd6b0a7653a1c56240"
+  },
+  {
+    "name": "PatientHomeTip",
+    "file": "apps/client/lib/src/patient_home.dart",
+    "line": 981,
+    "offset": 32902,
+    "end": 34036,
+    "superclass": "StatelessWidget",
+    "mixins": [],
+    "abstract": false,
+    "references": [
+      {
+        "file": "apps/client/lib/src/patient_home.dart",
+        "line": 982,
+        "offset": 32958,
+        "owner": "PatientHomeTip"
+      }
+    ],
+    "decision": "REMOVE",
+    "proof": "Zero external AST identifiers; whole-repository exact-token search only declaration/constructor; main/test import graph plus router/provider/platform/generated/config inspection; no consumers or side effects",
+    "removedSha256": "b2d849258cd05613c3e456af545f6fae2c7edb25bd8707b1787a14eb08a559b6"
+  },
+  {
+    "name": "PatientWelcome",
+    "file": "apps/client/lib/src/patient_ui.dart",
+    "line": 203,
+    "offset": 6488,
+    "end": 7983,
+    "superclass": "StatelessWidget",
+    "mixins": [],
+    "abstract": false,
+    "references": [
+      {
+        "file": "apps/client/lib/src/patient_ui.dart",
+        "line": 204,
+        "offset": 6544,
+        "owner": "PatientWelcome"
+      }
+    ],
+    "decision": "REMOVE",
+    "proof": "Zero external AST identifiers; whole-repository exact-token search only declaration/constructor; main/test import graph plus router/provider/platform/generated/config inspection; no consumers or side effects",
+    "removedSha256": "947effc2ca760557a35f4a16d6252577120fdae4374e88df0ac2bfa755711286"
+  },
+  {
+    "name": "PatientClinicGrid",
+    "file": "apps/client/lib/src/patient_ui.dart",
+    "line": 249,
+    "offset": 7987,
+    "end": 9990,
+    "superclass": "StatelessWidget",
+    "mixins": [],
+    "abstract": false,
+    "references": [
+      {
+        "file": "apps/client/lib/src/patient_ui.dart",
+        "line": 250,
+        "offset": 8046,
+        "owner": "PatientClinicGrid"
+      }
+    ],
+    "decision": "REMOVE",
+    "proof": "Zero external AST identifiers; whole-repository exact-token search only declaration/constructor; main/test import graph plus router/provider/platform/generated/config inspection; no consumers or side effects",
+    "removedSha256": "cd4e2257ddb9379f01a86f22c83c02ed2b14a071cedaeee8ca215b6b36ad996d"
+  },
+  {
+    "name": "StaffHeaderContext",
+    "file": "apps/client/lib/src/staff_ui.dart",
+    "line": 110,
+    "offset": 3828,
+    "end": 5547,
+    "superclass": "StatelessWidget",
+    "mixins": [],
+    "abstract": false,
+    "references": [
+      {
+        "file": "apps/client/lib/src/staff_ui.dart",
+        "line": 111,
+        "offset": 3888,
+        "owner": "StaffHeaderContext"
+      }
+    ],
+    "decision": "REMOVE",
+    "proof": "Zero external AST identifiers; whole-repository exact-token search only declaration/constructor; main/test import graph plus router/provider/platform/generated/config inspection; no consumers or side effects",
+    "removedSha256": "2c04e9f578f22fa21e393470c1eeff8c801cfeac56760ef1adeafa618127ee21"
+  },
+  {
+    "name": "StaffMetric",
+    "file": "apps/client/lib/src/staff_ui.dart",
+    "line": 228,
+    "offset": 7320,
+    "end": 9285,
+    "superclass": "StatelessWidget",
+    "mixins": [],
+    "abstract": false,
+    "references": [
+      {
+        "file": "apps/client/lib/src/staff_ui.dart",
+        "line": 229,
+        "offset": 7373,
+        "owner": "StaffMetric"
+      }
+    ],
+    "decision": "REMOVE",
+    "proof": "Zero external AST identifiers; whole-repository exact-token search only declaration/constructor; main/test import graph plus router/provider/platform/generated/config inspection; no consumers or side effects",
+    "removedSha256": "d3929cbd85d594cd52366afd27137ac6028abedb6f15494423d5fc403eeeced0"
+  },
+  {
+    "name": "appointmentDetails",
+    "file": "apps/client/lib/src/patient.dart",
+    "line": 33,
+    "offset": 1099,
+    "end": 1517,
+    "kind": "function",
+    "externalIdentifierReferences": 0,
+    "decision": "REMOVE",
+    "references": [],
+    "proof": "Zero external AST identifiers; whole-repository exact-token search only declaration/constructor; main/test import graph plus router/provider/platform/generated/config inspection; no consumers or side effects",
+    "removedSha256": "3513343e1af4affea8380d8d2835658744552ab4f37e9257181fa9c23598c177"
+  },
+  {
+    "name": "SnapshotLoader",
+    "file": "apps/client/lib/src/realtime.dart",
+    "line": 161,
+    "offset": 4807,
+    "end": 5655,
+    "superclass": null,
+    "mixins": [],
+    "abstract": false,
+    "decision": "REMOVE",
+    "references": [
+      {
+        "file": "apps/client/lib/src/realtime.dart",
+        "line": 163,
+        "offset": 4916,
+        "owner": "SnapshotLoader"
+      },
+      {
+        "file": "apps/client/test/core_test.dart",
+        "line": 334,
+        "offset": 10272,
+        "owner": null
+      },
+      {
+        "file": "apps/client/test/core_test.dart",
+        "line": 352,
+        "offset": 10851,
+        "owner": null
+      }
+    ],
+    "removedSha256": "1e7716fb2fcd7705050a5403d1b32edc0590b1b96ab5c934b586816b4e8a560e",
+    "proof": "No production references; exactly two implementation-only core tests; behavior retained by real StaffQueueBloc/DisplayMonitorBloc tests",
+    "retiredTestsSha256": "faab5f36df347bce0c9004a72b902ecbe6dfc5835c1fd3fcfd461a19a67873b9",
+    "retiredTests": [
+      "Snapshot loader fetches again for mid-request events, no parallel requests",
+      "Disposed loader cannot update another room"
+    ],
+    "coverage": [
+      "display_snapshot_bloc_test.dart: all callers await active and trailing refresh (S02); burst invalidations; invalidation during trailing read; stale old-device response; close while fetching",
+      "staff_snapshot_bloc_test.dart: old room schedule; logout during fetch"
+    ]
+  },
+  {
+    "name": "StaffLiveStatus",
+    "file": "apps/client/lib/src/staff_ui.dart",
+    "line": 72,
+    "offset": 2626,
+    "end": 3801,
+    "superclass": "StatelessWidget",
+    "mixins": [],
+    "abstract": false,
+    "decision": "REMOVE",
+    "offsetScope": "after first cleanup group",
+    "references": [
+      {
+        "file": "apps/client/lib/src/staff_ui.dart",
+        "line": 73,
+        "offset": 2683,
+        "owner": "StaffLiveStatus"
+      }
+    ],
+    "removedSha256": "3197f8093520df42949f0a7d79319cea55f8c7392b930a5f319e720442a30b84",
+    "proof": "Closed dead subtree: only original consumer was removed StaffHeaderContext; repeated AST and whole-repo exact-token search now find only declaration/constructor; no configuration or runtime registration"
+  }
+]

@@ -1,0 +1,48 @@
+{
+  "mode": "browser",
+  "startedAt": "2026-10-29T07:47:10.306Z",
+  "target": "127.0.0.1:5433/capstone_antrean_test",
+  "results": [
+    {
+      "command": "node D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\client\\tool\\run-live.cjs --final-e2e-qa",
+      "exit": 1,
+      "signal": null,
+      "seconds": 220.8,
+      "summary": [
+        "Target integrasi Flutter tervalidasi: 127.0.0.1:5433/capstone_antrean_test",
+        "Final QA PASS: appointment-live",
+        "Final QA PASS: role-login",
+        "Final QA PASS: patient-booking-ui",
+        "Final QA PASS: native-audio",
+        "Final QA PASS: three-display-pairing",
+        "Final QA PASS: one-scan-camera",
+        "Final QA PASS: web-session-policy",
+        "Final QA PASS: queue-six-commands",
+        "Final QA failed phase: appointment-through-complete / Error",
+        "Integrasi Flutter gagal: BROWSER_WORKER_FAILED",
+        "Recovery strict gate: HTTP_5XX_OR_P2028",
+        "    at commandReady (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\client\\tool\\browser-final-e2e.cjs:170:63)",
+        "    at uiMutation (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\client\\tool\\browser-final-e2e.cjs:183:29)",
+        "    at async finalQa (D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\client\\tool\\browser-final-e2e.cjs:771:22)"
+      ],
+      "suites": [],
+      "fingerprints": [
+        {
+          "dataExisting": {
+            "jumlah": 13,
+            "hilang": 0,
+            "berubah": 0
+          },
+          "recordBaruTersisa": 0
+        }
+      ],
+      "diagnosticCodes": [
+        "P2028"
+      ],
+      "diagnosticErrorTypes": [
+        "PrismaClientKnownRequestError"
+      ]
+    }
+  ],
+  "finishedAt": "2026-10-29T07:50:51.134Z"
+}

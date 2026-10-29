@@ -1,0 +1,13 @@
+{
+  "exit": 0,
+  "seconds": 1.1,
+  "summary": [
+    "# tests 8",
+    "# pass 8",
+    "# fail 0",
+    "# cancelled 0",
+    "# skipped 0",
+    "# todo 0"
+  ],
+  "scope": "Test-only observer, async event cleanup and browser worker IPC"
+}

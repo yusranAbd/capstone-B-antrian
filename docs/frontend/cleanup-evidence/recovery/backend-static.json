@@ -1,0 +1,22 @@
+{
+  "results": [
+    {
+      "seconds": 16.9,
+      "exit": 0,
+      "kind": "typecheck",
+      "summary": null
+    },
+    {
+      "seconds": 7.3,
+      "exit": 0,
+      "kind": "lint",
+      "summary": null
+    },
+    {
+      "seconds": 26.8,
+      "exit": 0,
+      "kind": "build",
+      "summary": null
+    }
+  ]
+}

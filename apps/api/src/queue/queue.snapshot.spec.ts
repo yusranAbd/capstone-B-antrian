@@ -235,6 +235,8 @@ describe('QueueService - REST Snapshot', () => {
     await service.snapshotAntrean(petugasId, loketId);
     expect(transaksi).toHaveBeenCalledWith(expect.any(Function), {
       isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead,
+      maxWait: 3000,
+      timeout: 10000,
     });
     expect(tx.loket.findMany).toHaveBeenCalledTimes(1);
     expect(tx.tiketAntrean.findMany).toHaveBeenCalledTimes(4);

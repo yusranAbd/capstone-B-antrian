@@ -1,0 +1,248 @@
+{
+  "target": "127.0.0.1:5433/capstone_antrean_test",
+  "method": "Saved guarded execution fingerprints, includes failed attempts; no development database writes",
+  "executions": 40,
+  "allFingerprintsClean": true,
+  "runs": [
+    {
+      "file": "backend-after\\backend-execution.json",
+      "exit": 1,
+      "existingRecords": 13,
+      "clean": true
+    },
+    {
+      "file": "backend-isolated\\backend-admin-delete-execution.json",
+      "exit": 0,
+      "existingRecords": 13,
+      "clean": true
+    },
+    {
+      "file": "backend-isolated\\backend-admin-management-p0-execution.json",
+      "exit": 0,
+      "existingRecords": 13,
+      "clean": true
+    },
+    {
+      "file": "backend-isolated\\backend-app-execution.json",
+      "exit": 0,
+      "existingRecords": 13,
+      "clean": true
+    },
+    {
+      "file": "backend-isolated\\backend-auth-execution.json",
+      "exit": 0,
+      "existingRecords": 13,
+      "clean": true
+    },
+    {
+      "file": "backend-isolated\\backend-auto-check-in-execution.json",
+      "exit": 0,
+      "existingRecords": 13,
+      "clean": true
+    },
+    {
+      "file": "backend-isolated\\backend-display-execution.json",
+      "exit": 0,
+      "existingRecords": 13,
+      "clean": true
+    },
+    {
+      "file": "backend-isolated\\backend-display-pairing-execution.json",
+      "exit": 0,
+      "existingRecords": 13,
+      "clean": true
+    },
+    {
+      "file": "backend-isolated\\backend-display-realtime-execution.json",
+      "exit": 0,
+      "existingRecords": 13,
+      "clean": true
+    },
+    {
+      "file": "backend-isolated\\backend-doctor-daily-queue-execution.json",
+      "exit": 0,
+      "existingRecords": 13,
+      "clean": true
+    },
+    {
+      "file": "backend-isolated\\backend-doctor-portal-execution.json",
+      "exit": 0,
+      "existingRecords": 13,
+      "clean": true
+    },
+    {
+      "file": "backend-isolated\\backend-doctor-profile-execution.json",
+      "exit": 0,
+      "existingRecords": 13,
+      "clean": true
+    },
+    {
+      "file": "backend-isolated\\backend-dokter-execution.json",
+      "exit": 0,
+      "existingRecords": 13,
+      "clean": true
+    },
+    {
+      "file": "backend-isolated\\backend-hospital-hibrida-execution.json",
+      "exit": 0,
+      "existingRecords": 13,
+      "clean": true
+    },
+    {
+      "file": "backend-isolated\\backend-hospital-integrasi-execution.json",
+      "exit": 0,
+      "existingRecords": 13,
+      "clean": true
+    },
+    {
+      "file": "backend-isolated\\backend-hospital-selector-execution.json",
+      "exit": 0,
+      "existingRecords": 13,
+      "clean": true
+    },
+    {
+      "file": "backend-isolated\\backend-jadwal-layanan-execution.json",
+      "exit": 0,
+      "existingRecords": 13,
+      "clean": true
+    },
+    {
+      "file": "backend-isolated\\backend-jadwal-praktik-execution.json",
+      "exit": 0,
+      "existingRecords": 13,
+      "clean": true
+    },
+    {
+      "file": "backend-isolated\\backend-janji-temu-execution.json",
+      "exit": 0,
+      "existingRecords": 13,
+      "clean": true
+    },
+    {
+      "file": "backend-isolated\\backend-layanan-execution.json",
+      "exit": 0,
+      "existingRecords": 13,
+      "clean": true
+    },
+    {
+      "file": "backend-isolated\\backend-loket-execution.json",
+      "exit": 0,
+      "existingRecords": 13,
+      "clean": true
+    },
+    {
+      "file": "backend-isolated\\backend-patient-realtime-execution.json",
+      "exit": 0,
+      "existingRecords": 13,
+      "clean": true
+    },
+    {
+      "file": "backend-isolated\\backend-penugasan-petugas-execution.json",
+      "exit": 0,
+      "existingRecords": 13,
+      "clean": true
+    },
+    {
+      "file": "backend-isolated\\backend-qr-check-in-execution.json",
+      "exit": 0,
+      "existingRecords": 13,
+      "clean": true
+    },
+    {
+      "file": "backend-isolated\\backend-queue-broadcast-execution.json",
+      "exit": 0,
+      "existingRecords": 13,
+      "clean": true
+    },
+    {
+      "file": "backend-isolated\\backend-queue-snapshot-execution.json",
+      "exit": 0,
+      "existingRecords": 13,
+      "clean": true
+    },
+    {
+      "file": "backend-isolated\\backend-realtime-room-execution.json",
+      "exit": 0,
+      "existingRecords": 13,
+      "clean": true
+    },
+    {
+      "file": "backend-isolated\\backend-reservasi-execution.json",
+      "exit": 0,
+      "existingRecords": 13,
+      "clean": true
+    },
+    {
+      "file": "backend-isolated\\backend-slot-praktik-execution.json",
+      "exit": 0,
+      "existingRecords": 13,
+      "clean": true
+    },
+    {
+      "file": "backend-isolated\\backend-socket-origin-execution.json",
+      "exit": 0,
+      "existingRecords": 13,
+      "clean": true
+    },
+    {
+      "file": "backend-isolated\\backend-tiket-execution.json",
+      "exit": 0,
+      "existingRecords": 13,
+      "clean": true
+    },
+    {
+      "file": "backend-isolated\\backend-user-profile-execution.json",
+      "exit": 0,
+      "existingRecords": 13,
+      "clean": true
+    },
+    {
+      "file": "backend-targeted\\backend-hospital-hibrida-execution.json",
+      "exit": 0,
+      "existingRecords": 13,
+      "clean": true
+    },
+    {
+      "file": "e2e-after\\browser-execution.json",
+      "exit": 1,
+      "existingRecords": 13,
+      "clean": true
+    },
+    {
+      "file": "e2e-after-retry\\browser-execution.json",
+      "exit": 1,
+      "existingRecords": 13,
+      "clean": true
+    },
+    {
+      "file": "e2e-backend-rebuilt\\browser-execution.json",
+      "exit": 1,
+      "existingRecords": 13,
+      "clean": true
+    },
+    {
+      "file": "e2e-final\\browser-execution.json",
+      "exit": 1,
+      "existingRecords": 13,
+      "clean": true
+    },
+    {
+      "file": "e2e-verified\\browser-execution.json",
+      "exit": 1,
+      "existingRecords": 13,
+      "clean": true
+    },
+    {
+      "file": "runtime-after\\benchmark-execution.json",
+      "exit": 0,
+      "existingRecords": 13,
+      "clean": true
+    },
+    {
+      "file": "runtime-before\\benchmark-execution.json",
+      "exit": 0,
+      "existingRecords": 13,
+      "clean": true
+    }
+  ]
+}

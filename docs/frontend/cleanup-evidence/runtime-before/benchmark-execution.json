@@ -1,0 +1,27 @@
+{
+  "mode": "benchmark",
+  "startedAt": "2026-10-29T03:36:43.536Z",
+  "target": "127.0.0.1:5433/capstone_antrean_test",
+  "results": [
+    {
+      "command": "node D:\\WorkSpace\\Flutter\\capstone-B-antrian\\apps\\client\\tool\\run-live.cjs --cleanup-benchmark",
+      "exit": 0,
+      "seconds": 44.7,
+      "summary": [
+        "Target integrasi Flutter tervalidasi: 127.0.0.1:5433/capstone_antrean_test"
+      ],
+      "suites": [],
+      "fingerprints": [
+        {
+          "dataExisting": {
+            "jumlah": 13,
+            "hilang": 0,
+            "berubah": 0
+          },
+          "recordBaruTersisa": 0
+        }
+      ]
+    }
+  ],
+  "finishedAt": "2026-10-29T03:37:28.234Z"
+}

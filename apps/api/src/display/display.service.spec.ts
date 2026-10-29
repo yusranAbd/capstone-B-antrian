@@ -177,6 +177,7 @@ describe('DisplayService - snapshot publik berbasis token perangkat', () => {
     await service.snapshot(layananId, token);
     expect(transaction).toHaveBeenCalledWith(expect.any(Function), {
       isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead,
+      maxWait: 3000,
       timeout: 15_000,
     });
   });

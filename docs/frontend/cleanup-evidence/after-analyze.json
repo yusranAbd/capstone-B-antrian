@@ -1,0 +1,8 @@
+{
+  "exit": 0,
+  "summary": [
+    "Analyzing client...                                             ",
+    "No issues found! (ran in 23.8s)"
+  ],
+  "source": "final closure validation; source unchanged during complete suite"
+}

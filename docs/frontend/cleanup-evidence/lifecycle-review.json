@@ -1,0 +1,734 @@
+{
+  "method": "Static review supplement; constructor/listen sites are not live-object counts. Cleanup locations are inspection anchors, not automated proof of semantic ownership.",
+  "groups": [
+    {
+      "file": "apps/client/lib/src/admin.dart",
+      "owner": "_AdminPageState",
+      "sites": [
+        {
+          "type": "DefaultTabController",
+          "line": 613
+        }
+      ],
+      "cleanupAnchors": [
+        142,
+        143,
+        145,
+        148,
+        150,
+        151,
+        152,
+        1005,
+        1007,
+        1009
+      ]
+    },
+    {
+      "file": "apps/client/lib/src/admin.dart",
+      "owner": "_AdminEditorState",
+      "sites": [
+        {
+          "type": "TextEditingController",
+          "line": 731
+        }
+      ],
+      "cleanupAnchors": [
+        142,
+        143,
+        145,
+        148,
+        150,
+        151,
+        152,
+        1005,
+        1007,
+        1009
+      ]
+    },
+    {
+      "file": "apps/client/lib/src/admin_delete.dart",
+      "owner": "_AdminDeleteDialogState",
+      "sites": [
+        {
+          "type": "TextEditingController",
+          "line": 45
+        }
+      ],
+      "cleanupAnchors": [
+        56,
+        57,
+        58
+      ]
+    },
+    {
+      "file": "apps/client/lib/src/admin_display.dart",
+      "owner": "_DeviceEditorState",
+      "sites": [
+        {
+          "type": "TextEditingController",
+          "line": 346
+        }
+      ],
+      "cleanupAnchors": [
+        52,
+        53,
+        54,
+        55,
+        356,
+        357,
+        358,
+        517,
+        518,
+        519,
+        521
+      ]
+    },
+    {
+      "file": "apps/client/lib/src/admin_display.dart",
+      "owner": "_ActivationScopeState",
+      "sites": [
+        {
+          "type": "Timer",
+          "line": 487
+        }
+      ],
+      "cleanupAnchors": [
+        52,
+        53,
+        54,
+        55,
+        356,
+        357,
+        358,
+        517,
+        518,
+        519,
+        521
+      ]
+    },
+    {
+      "file": "apps/client/lib/src/admin_doctor_profile.dart",
+      "owner": "_AdminDoctorEditorState",
+      "sites": [
+        {
+          "type": "TextEditingController",
+          "line": 46
+        },
+        {
+          "type": "TextEditingController",
+          "line": 49
+        },
+        {
+          "type": "TextEditingController",
+          "line": 52
+        },
+        {
+          "type": "TextEditingController",
+          "line": 55
+        }
+      ],
+      "cleanupAnchors": [
+        148,
+        149,
+        150,
+        151,
+        152,
+        153
+      ]
+    },
+    {
+      "file": "apps/client/lib/src/admin_practice_form.dart",
+      "owner": "_PracticeScheduleEditorState",
+      "sites": [
+        {
+          "type": "TextEditingController",
+          "line": 43
+        },
+        {
+          "type": "TextEditingController",
+          "line": 66
+        },
+        {
+          "type": "TextEditingController",
+          "line": 67
+        },
+        {
+          "type": "TextEditingController",
+          "line": 68
+        }
+      ],
+      "cleanupAnchors": [
+        261,
+        262,
+        263,
+        264,
+        265,
+        266
+      ]
+    },
+    {
+      "file": "apps/client/lib/src/admin_schedules.dart",
+      "owner": "_BulkScheduleEditorState",
+      "sites": [
+        {
+          "type": "TextEditingController",
+          "line": 275
+        },
+        {
+          "type": "TextEditingController",
+          "line": 276
+        },
+        {
+          "type": "TextEditingController",
+          "line": 277
+        }
+      ],
+      "cleanupAnchors": [
+        317,
+        318,
+        319,
+        320,
+        321,
+        322,
+        323
+      ]
+    },
+    {
+      "file": "apps/client/lib/src/admin_staff.dart",
+      "owner": "_StaffAccountEditorState",
+      "sites": [
+        {
+          "type": "TextEditingController",
+          "line": 235
+        },
+        {
+          "type": "TextEditingController",
+          "line": 236
+        },
+        {
+          "type": "TextEditingController",
+          "line": 237
+        }
+      ],
+      "cleanupAnchors": [
+        241,
+        242,
+        243,
+        245,
+        246
+      ]
+    },
+    {
+      "file": "apps/client/lib/src/admin_ui.dart",
+      "owner": "_AdminSearchChoiceState",
+      "sites": [
+        {
+          "type": "TextEditingController",
+          "line": 374
+        }
+      ],
+      "cleanupAnchors": [
+        211,
+        212,
+        213,
+        395,
+        396,
+        397
+      ]
+    },
+    {
+      "file": "apps/client/lib/src/api.dart",
+      "owner": "QueueApi",
+      "sites": [
+        {
+          "type": "Timer",
+          "line": 456
+        }
+      ],
+      "cleanupAnchors": [
+        379,
+        436,
+        441,
+        567,
+        592,
+        595,
+        596,
+        597,
+        598
+      ]
+    },
+    {
+      "file": "apps/client/lib/src/app.dart",
+      "owner": "_LoginPageState",
+      "sites": [
+        {
+          "type": "TextEditingController",
+          "line": 300
+        },
+        {
+          "type": "TextEditingController",
+          "line": 301
+        },
+        {
+          "type": "TextEditingController",
+          "line": 302
+        }
+      ],
+      "cleanupAnchors": [
+        84,
+        90,
+        91,
+        92,
+        332,
+        333,
+        334,
+        335,
+        336
+      ]
+    },
+    {
+      "file": "apps/client/lib/src/display.dart",
+      "owner": "_DisplayPageState",
+      "sites": [
+        {
+          "type": "TextEditingController",
+          "line": 43
+        },
+        {
+          "type": "TextEditingController",
+          "line": 44
+        },
+        {
+          "type": "TextEditingController",
+          "line": 45
+        },
+        {
+          "type": "DisplayAudioController",
+          "line": 54
+        },
+        {
+          "type": "ValueNotifier",
+          "line": 59
+        },
+        {
+          "type": "Timer",
+          "line": 88
+        }
+      ],
+      "cleanupAnchors": [
+        131,
+        133,
+        134,
+        135,
+        136,
+        137,
+        138,
+        139,
+        140,
+        141,
+        142,
+        143,
+        144
+      ]
+    },
+    {
+      "file": "apps/client/lib/src/display_board.dart",
+      "owner": "_PatientQueueState",
+      "sites": [
+        {
+          "type": "Timer",
+          "line": 483
+        }
+      ],
+      "cleanupAnchors": [
+        489,
+        490,
+        491,
+        752,
+        753,
+        754
+      ]
+    },
+    {
+      "file": "apps/client/lib/src/display_board.dart",
+      "owner": "_RoomStripState",
+      "sites": [
+        {
+          "type": "Timer",
+          "line": 746
+        }
+      ],
+      "cleanupAnchors": [
+        489,
+        490,
+        491,
+        752,
+        753,
+        754
+      ]
+    },
+    {
+      "file": "apps/client/lib/src/doctor_account.dart",
+      "owner": "_DoctorAccountDialogState",
+      "sites": [
+        {
+          "type": "TextEditingController",
+          "line": 23
+        },
+        {
+          "type": "TextEditingController",
+          "line": 23
+        }
+      ],
+      "cleanupAnchors": [
+        30,
+        31,
+        32,
+        33
+      ]
+    },
+    {
+      "file": "apps/client/lib/src/doctor_schedule_ui.dart",
+      "owner": "_PracticeDateStripState",
+      "sites": [
+        {
+          "type": "ScrollController",
+          "line": 121
+        }
+      ],
+      "cleanupAnchors": [
+        146,
+        147,
+        148
+      ]
+    },
+    {
+      "file": "apps/client/lib/src/features/display/data/display_device_repository.dart",
+      "owner": "DisplayDeviceRepository",
+      "sites": [
+        {
+          "type": "RealtimeFeed",
+          "line": 182
+        }
+      ],
+      "cleanupAnchors": [
+        196,
+        200
+      ]
+    },
+    {
+      "file": "apps/client/lib/src/features/display/services/display_audio_controller.dart",
+      "owner": "FlutterDisplaySpeech",
+      "sites": [
+        {
+          "type": "FlutterTts",
+          "line": 15
+        }
+      ],
+      "cleanupAnchors": [
+        156,
+        164
+      ]
+    },
+    {
+      "file": "apps/client/lib/src/features/doctor/data/doctor_repository.dart",
+      "owner": "ApiDoctorRepository",
+      "sites": [
+        {
+          "type": "PatientUpdates",
+          "line": 21
+        }
+      ],
+      "cleanupAnchors": [
+        59,
+        60,
+        62,
+        119,
+        123
+      ]
+    },
+    {
+      "file": "apps/client/lib/src/features/patient/data/patient_repository.dart",
+      "owner": "PatientRepository",
+      "sites": [
+        {
+          "type": "PatientUpdates",
+          "line": 16
+        },
+        {
+          "type": "ValueNotifier",
+          "line": 23
+        }
+      ],
+      "cleanupAnchors": [
+        57,
+        58,
+        225,
+        230,
+        232,
+        233
+      ]
+    },
+    {
+      "file": "apps/client/lib/src/features/staff/data/staff_queue_repository.dart",
+      "owner": "StaffQueueRepository",
+      "sites": [
+        {
+          "type": "RealtimeFeed",
+          "line": 67
+        }
+      ],
+      "cleanupAnchors": [
+        174,
+        178,
+        179
+      ]
+    },
+    {
+      "file": "apps/client/lib/src/patient.dart",
+      "owner": "_PatientPageState",
+      "sites": [
+        {
+          "type": "TextEditingController",
+          "line": 101
+        },
+        {
+          "type": "TextEditingController",
+          "line": 123
+        }
+      ],
+      "cleanupAnchors": [
+        291,
+        320,
+        355,
+        356,
+        357,
+        358,
+        359,
+        360,
+        361,
+        362,
+        363,
+        1008,
+        1579,
+        1621,
+        1639,
+        1641,
+        1642,
+        1643,
+        1644
+      ]
+    },
+    {
+      "file": "apps/client/lib/src/patient.dart",
+      "owner": "_TicketDialogState",
+      "sites": [
+        {
+          "type": "Timer",
+          "line": 1550
+        },
+        {
+          "type": "Timer",
+          "line": 1601
+        }
+      ],
+      "cleanupAnchors": [
+        291,
+        320,
+        355,
+        356,
+        357,
+        358,
+        359,
+        360,
+        361,
+        362,
+        363,
+        1008,
+        1579,
+        1621,
+        1639,
+        1641,
+        1642,
+        1643,
+        1644
+      ]
+    },
+    {
+      "file": "apps/client/lib/src/patient_home_v6.dart",
+      "owner": "PatientHomeModes",
+      "sites": [
+        {
+          "type": "DefaultTabController",
+          "line": 195
+        }
+      ],
+      "cleanupAnchors": [
+        318,
+        319,
+        320,
+        321
+      ]
+    },
+    {
+      "file": "apps/client/lib/src/patient_home_v6.dart",
+      "owner": "_PatientHomeTabsState",
+      "sites": [
+        {
+          "type": "TabController",
+          "line": 224
+        }
+      ],
+      "cleanupAnchors": [
+        318,
+        319,
+        320,
+        321
+      ]
+    },
+    {
+      "file": "apps/client/lib/src/patient_reservations.dart",
+      "owner": "_ReservationListState",
+      "sites": [
+        {
+          "type": "TextEditingController",
+          "line": 340
+        },
+        {
+          "type": "ScrollController",
+          "line": 341
+        }
+      ],
+      "cleanupAnchors": [
+        344,
+        345,
+        346,
+        347
+      ]
+    },
+    {
+      "file": "apps/client/lib/src/patient_scroll_shell.dart",
+      "owner": "_PatientScrollShellState",
+      "sites": [
+        {
+          "type": "AnimationController",
+          "line": 32
+        }
+      ],
+      "cleanupAnchors": [
+        189,
+        190,
+        191,
+        192
+      ]
+    },
+    {
+      "file": "apps/client/lib/src/patient_sync.dart",
+      "owner": "PatientUpdates",
+      "sites": [
+        {
+          "type": "Timer",
+          "line": 54
+        },
+        {
+          "type": "ValueNotifier",
+          "line": 68
+        },
+        {
+          "type": "Timer",
+          "line": 158
+        }
+      ],
+      "cleanupAnchors": [
+        31,
+        86,
+        172,
+        180,
+        182,
+        183,
+        185,
+        186,
+        187,
+        188
+      ]
+    },
+    {
+      "file": "apps/client/lib/src/queue.dart",
+      "owner": "_QueuePageState",
+      "sites": [
+        {
+          "type": "TextEditingController",
+          "line": 36
+        }
+      ],
+      "cleanupAnchors": [
+        116,
+        119,
+        120,
+        121,
+        122
+      ]
+    },
+    {
+      "file": "apps/client/lib/src/staff_qr_scanner.dart",
+      "owner": "_StaffQrScannerState",
+      "sites": [
+        {
+          "type": "MobileScannerController",
+          "line": 73
+        }
+      ],
+      "cleanupAnchors": [
+        140,
+        145,
+        146
+      ]
+    },
+    {
+      "file": "apps/client/lib/src/user_profile.dart",
+      "owner": "_UserProfilePageState",
+      "sites": [
+        {
+          "type": "TextEditingController",
+          "line": 147
+        },
+        {
+          "type": "TextEditingController",
+          "line": 150
+        },
+        {
+          "type": "TextEditingController",
+          "line": 151
+        },
+        {
+          "type": "TextEditingController",
+          "line": 152
+        }
+      ],
+      "cleanupAnchors": [
+        221,
+        223,
+        225,
+        227
+      ]
+    }
+  ],
+  "additionalOwners": [
+    {
+      "owner": "StaffQueueBloc",
+      "resource": "injected periodicTimer ?? Timer.periodic",
+      "cleanup": "close cancels poll, removes repository listener, stops feed and rejects late state"
+    },
+    {
+      "owner": "DisplayMonitorBloc",
+      "resource": "injected periodicTimer ?? Timer.periodic",
+      "cleanup": "close cancels poll, disconnects owned scope and removes device listener"
+    },
+    {
+      "owner": "PatientUpdates / RealtimeFeed",
+      "resource": "Socket.IO factories",
+      "cleanup": "dispose socket; remove credential listener; guard socket identity/disposed/generation"
+    }
+  ],
+  "outcome": "No reproduced lifecycle defect in reviewed paths; retained behavior covered by existing resource/session/realtime tests and scoped browser sockets. No universal leak-free claim."
+}
