@@ -114,3 +114,7 @@ test('fixed live seed window fails before a later reset, without faking domain t
   ])
     assert.throws(() => assertSeedWindow(new Date(t)));
 });
+
+// Keep the scoped V2 safety tests in the existing tooling CI lifecycle.
+require('./development-dataset-v2.test.cjs');
+require('./development-dataset-v2-audit.test.cjs');

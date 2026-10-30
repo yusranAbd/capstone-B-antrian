@@ -53,6 +53,10 @@ module.exports = async ({ fixture: f }) => {
       "ADMINISTRASI",
       "APOTEK",
       "APOTIK",
+      "LABORATORIUM",
+      "RADIOLOGI",
+      "KASIR",
+      "REKAM_MEDIS",
     ];
     const existing = await request("/layanan", admin);
     assert(
@@ -61,21 +65,27 @@ module.exports = async ({ fixture: f }) => {
     );
     for (const [i, code] of codes.entries()) {
       f.extraServiceCodes.push(code);
-      await request("/layanan", admin, {
+      const dto = {
         kode: code,
         nama:
           code === "PENDAFTARAN"
             ? "Pendaftaran"
-            : code === "APOTEK"
-              ? "Apotek"
-              : code[0] + code.slice(1).toLowerCase(),
+            : code === "KASIR"
+              ? "Kasir/Pembayaran"
+              : code === "REKAM_MEDIS"
+                ? "Rekam Medis"
+                : code === "APOTEK"
+                  ? "Apotek"
+                  : code[0] + code.slice(1).toLowerCase(),
         prefixAntrean: "HV" + String.fromCharCode(65 + i),
         durasiDasarMenit: 15,
         modeReservasi: "ANTREAN_HARIAN",
         deskripsi: code.startsWith("APOT")
           ? "Layanan Farmasi"
           : "Layanan Administrasi",
-      });
+      };
+      if (code === "REKAM_MEDIS") await f.createHomeMedicalRecords(dto);
+      else await request("/layanan", admin, dto);
     }
     browser = await chromium.launch({ channel: "chrome", headless: true });
     for (const reduced of f.homeV7Before ? [false] : [false, true]) {
@@ -255,6 +265,36 @@ module.exports = async ({ fixture: f }) => {
         await expect(page).toHaveURL(/#\/patient$/);
         await page.mouse.wheel(0, -1800);
         await expect(greeting).toBeVisible();
+        phase = "additional-daily-cards";
+        const additionalDailyFlows = [];
+        for (const name of [
+          "Laboratorium",
+          "Radiologi",
+          "Kasir/Pembayaran",
+          "Rekam Medis",
+        ]) {
+          await enter(page, "Cari dokter, poliklinik, atau layanan...", name);
+          const card = page
+            .getByRole("button", {
+              name: new RegExp(
+                "^" + name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\.",
+              ),
+            })
+            .first();
+          await expect(card).toBeVisible();
+          await expect(card).toHaveAccessibleName(
+            /Total check-in hari ini 0\. 0 menunggu/,
+          );
+          await card.click();
+          await expect(page).toHaveURL(/#\/patient\/reservations\/new/);
+          assert.equal(writes.length, 0);
+          await page.goBack();
+          await expect(page).toHaveURL(/#\/patient$/);
+          await button(page, "Bersihkan pencarian");
+          additionalDailyFlows.push(name);
+        }
+        await page.mouse.wheel(0, -1800);
+        await expect(greeting).toBeVisible();
         phase = "avatar";
         await button(page, "Profil pasien");
         await expect(page).toHaveURL(/#\/patient\/profile$/);
@@ -294,6 +334,7 @@ module.exports = async ({ fixture: f }) => {
           reducedMotion: reduced,
           realScrollDownUp: true,
           pharmacyFlow: true,
+          additionalDailyFlows,
           programmaticScrollIgnored: true,
           smallScrollIgnored: true,
           cardInitialPosts: 0,

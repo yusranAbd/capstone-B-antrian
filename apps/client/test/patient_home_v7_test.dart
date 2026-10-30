@@ -98,6 +98,10 @@ void main() {
       final cases = {
         'PENDAFTARAN': (PatientServiceCategory.registration, 0xff10b981),
         'APOTEK': (PatientServiceCategory.pharmacy, 0xff3b82f6),
+        'LABORATORIUM': (PatientServiceCategory.laboratory, 0xff8b5cf6),
+        'RADIOLOGI': (PatientServiceCategory.radiology, 0xff3b82f6),
+        'KASIR': (PatientServiceCategory.billing, 0xfff59e0b),
+        'REKAM_MEDIS': (PatientServiceCategory.medicalRecords, 0xff10b981),
         'POLI_UMUM': (PatientServiceCategory.general, 0xff8b5cf6),
         'POLI_GIGI': (PatientServiceCategory.dental, 0xfff59e0b),
       };

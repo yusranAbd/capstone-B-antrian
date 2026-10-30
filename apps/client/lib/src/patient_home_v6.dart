@@ -20,12 +20,11 @@ abstract final class PatientHomeV6Style {
 // identify auxiliary desks, independently of the booking mode. No catalog rows
 // are invented here; administrators still own the actual records in the API.
 bool isAuxiliaryHomeService(Json clinic) => const {
-  'PENDAFTARAN',
+  ...patientDailyServiceOrder,
   'REGISTRASI',
   'ADMINISTRASI',
-  'APOTEK',
   'APOTIK',
-}.contains('${clinic['kode'] ?? ''}'.toUpperCase());
+}.contains('${clinic['kode'] ?? ''}'.trim().toUpperCase());
 
 bool supportsHomeWalkIn(Json clinic) =>
     clinic['aktif'] != false &&

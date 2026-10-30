@@ -482,6 +482,24 @@ async function main() {
     } else if (process.argv.includes("--patient-home-v7")) {
       fixture.patientHomeV7 = true;
       fixture.homeV7Before = process.argv.includes("--before");
+      // Mirror V2 provisioning for this persisted code: the HTTP create DTO
+      // excludes underscores, while the existing domain service accepts it.
+      // No production validation change; fixture ownership/cleanup stays guarded.
+      fixture.createHomeMedicalRecords = async (dto) => {
+        if (
+          dto.kode !== "REKAM_MEDIS" ||
+          !fixture.extraServiceCodes.includes(dto.kode)
+        )
+          throw Error(
+            "Only registered Home medical-records fixture is allowed",
+          );
+        if (await prisma.layanan.findUnique({ where: { kode: dto.kode } }))
+          throw Error("Home fixture must not replace an existing service");
+        const { LayananService } = require(
+          path.join(apiPath, "dist/layanan/layanan.service.js"),
+        );
+        return app.get(LayananService).create(dto);
+      };
       code = 0;
     } else if (process.argv.includes("--motion-v1")) {
       const email = `flutter-doctor-${unique.toLowerCase()}@test.local`;

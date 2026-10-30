@@ -6,7 +6,27 @@ import 'patient_design.dart';
 import 'user_profile.dart';
 import 'features/patient/models/patient_queue_models.dart';
 
-enum PatientServiceCategory { registration, pharmacy, general, dental, other }
+enum PatientServiceCategory {
+  registration,
+  pharmacy,
+  laboratory,
+  radiology,
+  billing,
+  medicalRecords,
+  general,
+  dental,
+  other,
+}
+
+/// Presentation order for supported auxiliary service codes, never catalog data.
+const patientDailyServiceOrder = [
+  'PENDAFTARAN',
+  'APOTEK',
+  'LABORATORIUM',
+  'RADIOLOGI',
+  'KASIR',
+  'REKAM_MEDIS',
+];
 
 PatientServiceCategory homeServiceCategory(
   Json clinic,
@@ -15,6 +35,10 @@ PatientServiceCategory homeServiceCategory(
   'REGISTRASI' ||
   'ADMINISTRASI' => PatientServiceCategory.registration,
   'APOTEK' || 'APOTIK' => PatientServiceCategory.pharmacy,
+  'LABORATORIUM' => PatientServiceCategory.laboratory,
+  'RADIOLOGI' => PatientServiceCategory.radiology,
+  'KASIR' => PatientServiceCategory.billing,
+  'REKAM_MEDIS' => PatientServiceCategory.medicalRecords,
   'UMUM' || 'POLI_UMUM' || 'POLIKLINIK_UMUM' => PatientServiceCategory.general,
   'GIGI' || 'POLI_GIGI' || 'POLIKLINIK_GIGI' => PatientServiceCategory.dental,
   _ => PatientServiceCategory.other,
@@ -22,27 +46,23 @@ PatientServiceCategory homeServiceCategory(
 
 /// Home priorities only; the remaining catalog rows keep their relative order.
 List<Json> registrationFirst(List<Json> services) {
-  var index = services.indexWhere(
-    (c) => '${c['kode']}'.trim().toUpperCase() == 'PENDAFTARAN',
-  );
-  if (index < 0) {
-    index = services.indexWhere(
-      (c) => homeServiceCategory(c) == PatientServiceCategory.registration,
+  final priorities = <int>{};
+  for (final code in patientDailyServiceOrder) {
+    var index = services.indexWhere(
+      (c) => '${c['kode']}'.trim().toUpperCase() == code,
     );
-  }
-  var pharmacy = services.indexWhere(
-    (c) => '${c['kode']}'.trim().toUpperCase() == 'APOTEK',
-  );
-  if (pharmacy < 0) {
-    pharmacy = services.indexWhere(
-      (c) => homeServiceCategory(c) == PatientServiceCategory.pharmacy,
-    );
+    if (index < 0 && (code == 'PENDAFTARAN' || code == 'APOTEK')) {
+      final category = code == 'PENDAFTARAN'
+          ? PatientServiceCategory.registration
+          : PatientServiceCategory.pharmacy;
+      index = services.indexWhere((c) => homeServiceCategory(c) == category);
+    }
+    if (index >= 0) priorities.add(index);
   }
   return [
-    if (index >= 0) services[index],
-    if (pharmacy >= 0 && pharmacy != index) services[pharmacy],
+    for (final index in priorities) services[index],
     for (var i = 0; i < services.length; i++)
-      if (i != index && i != pharmacy) services[i],
+      if (!priorities.contains(i)) services[i],
   ];
 }
 
@@ -78,22 +98,34 @@ Json? homeServiceTicket(
 
 abstract final class PatientServiceAccent {
   static Color color(PatientServiceCategory category) => switch (category) {
-    PatientServiceCategory.registration => const Color(0xff10b981),
-    PatientServiceCategory.pharmacy => const Color(0xff3b82f6),
-    PatientServiceCategory.general => const Color(0xff8b5cf6),
-    PatientServiceCategory.dental => const Color(0xfff59e0b),
+    PatientServiceCategory.registration ||
+    PatientServiceCategory.medicalRecords => const Color(0xff10b981),
+    PatientServiceCategory.pharmacy ||
+    PatientServiceCategory.radiology => const Color(0xff3b82f6),
+    PatientServiceCategory.general ||
+    PatientServiceCategory.laboratory => const Color(0xff8b5cf6),
+    PatientServiceCategory.dental ||
+    PatientServiceCategory.billing => const Color(0xfff59e0b),
     PatientServiceCategory.other => PatientDesign.primary,
   };
   static Color ink(PatientServiceCategory category) => switch (category) {
-    PatientServiceCategory.registration => const Color(0xff047857),
-    PatientServiceCategory.pharmacy => const Color(0xff1d4ed8),
-    PatientServiceCategory.general => const Color(0xff6d28d9),
-    PatientServiceCategory.dental => const Color(0xff92400e),
+    PatientServiceCategory.registration ||
+    PatientServiceCategory.medicalRecords => const Color(0xff047857),
+    PatientServiceCategory.pharmacy ||
+    PatientServiceCategory.radiology => const Color(0xff1d4ed8),
+    PatientServiceCategory.general ||
+    PatientServiceCategory.laboratory => const Color(0xff6d28d9),
+    PatientServiceCategory.dental ||
+    PatientServiceCategory.billing => const Color(0xff92400e),
     PatientServiceCategory.other => PatientDesign.primary,
   };
   static IconData icon(PatientServiceCategory category) => switch (category) {
     PatientServiceCategory.registration => Icons.assignment_outlined,
     PatientServiceCategory.pharmacy => Icons.medication_outlined,
+    PatientServiceCategory.laboratory => Icons.science_outlined,
+    PatientServiceCategory.radiology => Icons.image_outlined,
+    PatientServiceCategory.billing => Icons.payments_outlined,
+    PatientServiceCategory.medicalRecords => Icons.medical_information_outlined,
     PatientServiceCategory.general => Icons.medical_services_outlined,
     PatientServiceCategory.dental => Icons.health_and_safety_outlined,
     PatientServiceCategory.other => Icons.local_hospital_outlined,
@@ -101,6 +133,10 @@ abstract final class PatientServiceAccent {
   static String subtitle(PatientServiceCategory category) => switch (category) {
     PatientServiceCategory.registration => 'Layanan Administrasi',
     PatientServiceCategory.pharmacy => 'Layanan Farmasi',
+    PatientServiceCategory.laboratory => 'Layanan Laboratorium',
+    PatientServiceCategory.radiology => 'Layanan Radiologi',
+    PatientServiceCategory.billing => 'Layanan Pembayaran',
+    PatientServiceCategory.medicalRecords => 'Layanan Rekam Medis',
     PatientServiceCategory.general => 'Layanan Pemeriksaan',
     PatientServiceCategory.dental => 'Layanan Kesehatan Gigi',
     PatientServiceCategory.other => 'Layanan antrean harian',
