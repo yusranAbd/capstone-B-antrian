@@ -215,6 +215,9 @@ void main() {
       await t.tap(find.text('Total hari ini'));
       await t.pumpAndSettle();
       expect(taps, 2);
+      await t.tap(find.text('Sedang dilayani\nBelum tersedia'));
+      await t.pumpAndSettle();
+      expect(taps, 3);
       await t.sendKeyEvent(LogicalKeyboardKey.tab);
       await t.pumpAndSettle();
       final material = t.widget<Material>(
@@ -223,14 +226,14 @@ void main() {
       expect((material.shape! as RoundedRectangleBorder).side.width, 2);
       await t.sendKeyEvent(LogicalKeyboardKey.enter);
       await t.pumpAndSettle();
-      expect(taps, 3);
+      expect(taps, 4);
       expect(t.takeException(), isNull);
       semantics.dispose();
     },
   );
 
   testWidgets(
-    'only an explicitly supplied personal ticket is labeled personal',
+    'personal ticket and unavailable serving never expose uncontracted queue data',
     (t) async {
       await t.pumpWidget(
         MaterialApp(
@@ -243,6 +246,14 @@ void main() {
                     'nomorAntrean': 'GLOBAL-999',
                     'total': 42,
                     'menunggu': 31,
+                    'totalCheckIn': 42,
+                    'lastCalled': {'nomorAntrean': 'PEN-007'},
+                    'currentlyServing': {
+                      'nomorAntrean': 'PEN-007',
+                      'namaPasien': 'Pasien Lain Rahasia',
+                      'nik': 'NIK-TEST-PRIVATE',
+                      'nomorTelepon': 'PHONE-TEST-PRIVATE',
+                    },
                   },
                 ),
                 const PatientServiceCardV7(
@@ -257,9 +268,15 @@ void main() {
       expect(find.text('GLOBAL-999'), findsNothing);
       expect(find.text('42'), findsNothing);
       expect(find.text('31 menunggu'), findsNothing);
-      expect(find.text('Nomor Antreanmu'), findsOneWidget);
+      expect(find.text('Nomor Antreanmu'), findsNWidgets(2));
       expect(find.text('PEN-008'), findsOneWidget);
       expect(find.text('Belum ada tiket'), findsOneWidget);
+      expect(find.text('PEN-007'), findsNothing);
+      expect(find.text('Pasien Lain Rahasia'), findsNothing);
+      expect(find.text('NIK-TEST-PRIVATE'), findsNothing);
+      expect(find.text('PHONE-TEST-PRIVATE'), findsNothing);
+      expect(find.text('Sedang dilayani\nBelum tersedia'), findsNWidgets(2));
+      expect(find.text('Live'), findsNothing);
     },
   );
 
@@ -337,6 +354,14 @@ void main() {
         final number = t.getRect(find.text('PENDAFTARAN-12345678901234567890'));
         expect(card.contains(number.topLeft), isTrue);
         expect(card.contains(number.bottomRight), isTrue);
+        final serving = t.getRect(find.text('Sedang dilayani\nBelum tersedia'));
+        expect(serving.top, greaterThan(number.bottom));
+        expect(card.contains(serving.topLeft), isTrue);
+        expect(card.contains(serving.bottomRight), isTrue);
+        expect(
+          t.getRect(find.text('Total hari ini')).left,
+          greaterThan(serving.right),
+        );
       });
     }
   }

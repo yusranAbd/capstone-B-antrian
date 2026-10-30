@@ -1,7 +1,9 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter/foundation.dart';
 
 import '../data/patient_repository.dart';
 import '../models/patient_models.dart';
+import '../models/patient_queue_models.dart';
 
 class PatientOverviewState {
   const PatientOverviewState(this.snapshot, this.load, this.errors);
@@ -30,6 +32,7 @@ class PatientOverviewCubit extends Cubit<PatientOverviewState> {
     repository.addListener(_changed);
   }
   final PatientRepository repository;
+  ValueListenable<PatientQueueState> get queueState => repository.queueState;
   bool _closing = false;
   Future<void>? _pending;
   void _changed() {

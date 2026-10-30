@@ -5,11 +5,12 @@ import { PrismaModule } from '../prisma/prisma.module';
 
 import { LayananController } from './layanan.controller';
 import { LayananService } from './layanan.service';
+import { PatientQueueSummaryService } from './patient-queue-summary.service';
 
 @Module({
   imports: [PrismaModule, AuthModule],
   controllers: [LayananController],
-  providers: [LayananService],
+  providers: [LayananService, PatientQueueSummaryService],
   exports: [LayananService],
 })
 export class LayananModule {}

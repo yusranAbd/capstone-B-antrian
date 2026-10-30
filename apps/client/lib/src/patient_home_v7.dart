@@ -4,6 +4,7 @@ import 'api.dart';
 import 'config.dart';
 import 'patient_design.dart';
 import 'user_profile.dart';
+import 'features/patient/models/patient_queue_models.dart';
 
 enum PatientServiceCategory { registration, pharmacy, general, dental, other }
 
@@ -19,7 +20,7 @@ PatientServiceCategory homeServiceCategory(
   _ => PatientServiceCategory.other,
 };
 
-/// Stable presentation-only move; neither the input nor other catalog order changes.
+/// Home priorities only; the remaining catalog rows keep their relative order.
 List<Json> registrationFirst(List<Json> services) {
   var index = services.indexWhere(
     (c) => '${c['kode']}'.trim().toUpperCase() == 'PENDAFTARAN',
@@ -29,11 +30,19 @@ List<Json> registrationFirst(List<Json> services) {
       (c) => homeServiceCategory(c) == PatientServiceCategory.registration,
     );
   }
-  if (index <= 0) return services;
+  var pharmacy = services.indexWhere(
+    (c) => '${c['kode']}'.trim().toUpperCase() == 'APOTEK',
+  );
+  if (pharmacy < 0) {
+    pharmacy = services.indexWhere(
+      (c) => homeServiceCategory(c) == PatientServiceCategory.pharmacy,
+    );
+  }
   return [
-    services[index],
-    ...services.take(index),
-    ...services.skip(index + 1),
+    if (index >= 0) services[index],
+    if (pharmacy >= 0 && pharmacy != index) services[pharmacy],
+    for (var i = 0; i < services.length; i++)
+      if (i != index && i != pharmacy) services[i],
   ];
 }
 
@@ -103,10 +112,12 @@ class PatientServiceCardV7 extends StatefulWidget {
     super.key,
     required this.clinic,
     this.ticket,
+    this.queue,
     this.onTap,
   });
   final Json clinic;
   final Json? ticket;
+  final PatientQueueView? queue;
   final VoidCallback? onTap;
 
   @override
@@ -131,12 +142,34 @@ class _PatientServiceCardV7State extends State<PatientServiceCardV7> {
         ? PatientServiceAccent.subtitle(category)
         : description;
     final radius = BorderRadius.circular(20);
+    final candidate = widget.queue ?? const PatientQueueView();
+    final queue =
+        candidate.summary == null ||
+            candidate.summary!.serviceId == '${clinic['id']}'
+        ? candidate
+        : const PatientQueueView();
+    final summary = queue.summary;
+    final servingNumbers = summary?.serving
+        .map(
+          (s) => summary.serving.length > 1
+              ? '${s.roomCode}: ${s.number}'
+              : s.number,
+        )
+        .join('\n');
+    final serving = summary == null
+        ? 'Belum tersedia'
+        : summary.serving.isEmpty
+        ? 'Belum ada pelayanan aktif'
+        : servingNumbers!;
+    final queueSemantics = summary == null
+        ? 'Informasi antrean yang sedang dilayani belum tersedia. Total check-in hari ini dan jumlah menunggu belum tersedia.'
+        : 'Sedang dilayani: $serving. Total check-in hari ini ${summary.checkedInTotal ?? 'belum tersedia'}. ${summary.waitingCount == null ? 'Jumlah menunggu belum tersedia' : '${summary.waitingCount} menunggu'}. ${queue.freshness}.';
     return Semantics(
       button: true,
       enabled: onTap != null,
       onTap: onTap,
       label:
-          '${label(clinic)}. $subtitle. ${hasTicket ? 'Nomor Antreanmu $number' : 'Belum ada tiket untuk hari ini'}. Statistik antrean belum tersedia. Pilih layanan.',
+          '${label(clinic)}. $subtitle. ${hasTicket ? 'Nomor Antreanmu $number' : 'Belum ada tiket untuk hari ini'}. $queueSemantics Pilih layanan.',
       excludeSemantics: true,
       child: Container(
         decoration: BoxDecoration(
@@ -248,18 +281,16 @@ class _PatientServiceCardV7State extends State<PatientServiceCardV7> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    hasTicket
-                                        ? 'Nomor Antreanmu'
-                                        : 'Nomor antrean',
-                                    style: const TextStyle(
+                                  const Text(
+                                    'Nomor Antreanmu',
+                                    style: TextStyle(
                                       fontSize: 12,
                                       color: PatientDesign.muted,
                                     ),
                                   ),
                                   const SizedBox(height: 4),
                                   Tooltip(
-                                    message: hasTicket ? number : 'Nomor panggilan belum tersedia dari sumber data pasien.',
+                                    message: hasTicket ? number : 'Belum ada tiket milik Anda untuk layanan hari ini.',
                                     child: Text(
                                       hasTicket ? number : '—',
                                       softWrap: true,
@@ -270,6 +301,44 @@ class _PatientServiceCardV7State extends State<PatientServiceCardV7> {
                                         fontWeight: FontWeight.w800,
                                         color: ink,
                                       ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 5,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: accent.withValues(alpha: .09),
+                                      borderRadius: BorderRadius.circular(9),
+                                    ),
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Padding(
+                                          padding: const EdgeInsets.only(
+                                            top: 1,
+                                          ),
+                                          child: Icon(
+                                            Icons.support_agent_rounded,
+                                            size: 14,
+                                            color: ink,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Expanded(
+                                          child: Text(
+                                            'Sedang dilayani\n$serving',
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              height: 1.3,
+                                              color: PatientDesign.ink,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                   const SizedBox(height: 6),
@@ -288,41 +357,58 @@ class _PatientServiceCardV7State extends State<PatientServiceCardV7> {
                             Container(
                               width: 1,
                               height: MediaQuery.textScalerOf(context)
-                                  .scale(64),
+                                  .scale(112),
                               margin: const EdgeInsets.symmetric(
                                 horizontal: 10,
                               ),
                               color: accent.withValues(alpha: .2),
                             ),
-                            const Expanded(
+                            Expanded(
                               flex: 2,
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
+                                  const Text(
                                     'Total hari ini',
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: PatientDesign.muted,
                                     ),
                                   ),
-                                  SizedBox(height: 4),
+                                  const SizedBox(height: 4),
                                   Text(
-                                    '—',
-                                    style: TextStyle(
+                                    '${summary?.checkedInTotal ?? '—'}',
+                                    key: ValueKey(
+                                      'patient-queue-total-${clinic['id']}',
+                                    ),
+                                    style: const TextStyle(
                                       fontSize: 23,
                                       fontWeight: FontWeight.w700,
                                       color: PatientDesign.ink,
                                     ),
                                   ),
-                                  SizedBox(height: 6),
+                                  const SizedBox(height: 6),
                                   Text(
-                                    'Belum tersedia',
-                                    style: TextStyle(
+                                    summary?.waitingCount == null
+                                        ? 'Belum tersedia'
+                                        : '${summary!.waitingCount} menunggu',
+                                    style: const TextStyle(
                                       fontSize: 11,
                                       color: PatientDesign.muted,
                                     ),
                                   ),
+                                  if (widget.queue != null) ...[
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      queue.freshness,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: queue.live
+                                            ? PatientDesign.success
+                                            : PatientDesign.muted,
+                                      ),
+                                    ),
+                                  ],
                                 ],
                               ),
                             ),

@@ -7,9 +7,10 @@ import { PatientRealtimeGateway } from './patient-realtime.gateway';
 
 describe('PatientInvalidationInterceptor', () => {
   const invalidate = jest.fn(),
+    invalidateQueue = jest.fn(),
     findUnique = jest.fn();
   const interceptor = new PatientInvalidationInterceptor(
-    { invalidate } as unknown as PatientRealtimeGateway,
+    { invalidate, invalidateQueue } as unknown as PatientRealtimeGateway,
     { tiketAntrean: { findUnique } } as unknown as PrismaService,
   );
   function context(controller: string, role = 'USER', method = 'POST') {
@@ -26,7 +27,12 @@ describe('PatientInvalidationInterceptor', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     invalidate.mockResolvedValue(undefined);
-    findUnique.mockResolvedValue({ penggunaId: 'owner' });
+    invalidateQueue.mockResolvedValue(undefined);
+    findUnique.mockResolvedValue({
+      penggunaId: 'owner',
+      layananId: 'service',
+      tanggalAntrean: new Date('2026-10-30T00:00:00Z'),
+    });
   });
   it('tidak mengirim sebelum operasi selesai atau ketika transaksi gagal', async () => {
     const pending = new Subject<unknown>();
@@ -62,10 +68,11 @@ describe('PatientInvalidationInterceptor', () => {
       );
       expect(findUnique).toHaveBeenCalledWith({
         where: { id: 'ticket' },
-        select: { penggunaId: true },
+        select: { penggunaId: true, layananId: true, tanggalAntrean: true },
       });
       expect(invalidate).toHaveBeenCalledWith('TIKET', 'owner');
       expect(invalidate).not.toHaveBeenCalledWith('TIKET', 'actor');
+      expect(invalidateQueue).toHaveBeenCalledWith('service', '2026-10-30');
     },
   );
   it.each([

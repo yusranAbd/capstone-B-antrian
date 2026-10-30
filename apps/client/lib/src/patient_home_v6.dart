@@ -5,6 +5,7 @@ import 'config.dart';
 import 'patient_design.dart';
 import 'patient_home.dart';
 import 'patient_home_v7.dart';
+import 'features/patient/models/patient_queue_models.dart';
 
 /// Home presentation only; booking and invalidation remain in PatientPage.
 enum PatientHomeMode { walkIn, appointment }
@@ -355,14 +356,20 @@ class PatientHomeService extends StatelessWidget {
     super.key,
     required this.clinic,
     this.ticket,
+    this.queue,
     this.onTap,
   });
   final Json clinic;
   final Json? ticket;
+  final PatientQueueView? queue;
   final VoidCallback? onTap;
   @override
-  Widget build(BuildContext context) =>
-      PatientServiceCardV7(clinic: clinic, ticket: ticket, onTap: onTap);
+  Widget build(BuildContext context) => PatientServiceCardV7(
+    clinic: clinic,
+    ticket: ticket,
+    queue: queue,
+    onTap: onTap,
+  );
 }
 
 class PatientHomeDoctorV6 extends StatelessWidget {

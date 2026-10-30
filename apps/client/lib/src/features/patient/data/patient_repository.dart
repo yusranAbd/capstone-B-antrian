@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../../../api.dart';
 import '../../../config.dart';
 import '../../../patient_sync.dart';
 import '../models/patient_models.dart';
+import '../models/patient_queue_models.dart';
 
 const patientCatalogPaths = {'/layanan', '/dokter', '/jadwal-praktik'};
 const patientVisitPaths = {'/tiket/saya', '/janji-temu'};
@@ -16,6 +19,8 @@ class PatientRepository extends ChangeNotifier {
       updates = updates ?? PatientUpdates(api: api) {
     api.addListener(_sessionChanged);
     this.updates.addListener(_invalidated);
+    this.updates.queueSubscribed.addListener(_queueFeedChanged);
+    this.updates.status.addListener(_queueFeedChanged);
   }
   final QueueApi api;
   final PatientUpdates updates;
@@ -30,6 +35,113 @@ class PatientRepository extends ChangeNotifier {
   final _cancelling = <String>{}, _issuing = <String>{};
   bool _ended = false, _disposed = false, _feedDisposed = false;
   int _epoch = 0;
+  final queueState = ValueNotifier(PatientQueueState());
+  Set<String> _queueIds = const {};
+  String _queueDate = '';
+  final _queueValues = <String, PatientQueueSummary>{};
+  final _queueDirty = <String>{}, _queueErrors = <String>{};
+  Set<String> _queueReading = const {};
+  Future<void>? _queuePending;
+  int _queueEpoch = 0, _queueRevision = 0;
+
+  /// Presentation configures the visible Home service identities outside build.
+  void configureQueueScope(Iterable<String> services, String date) {
+    if (!active || !validPatientQueueDate(date)) return;
+    final ids = services.where((id) => id.isNotEmpty).toSet();
+    if (setEquals(ids, _queueIds) && date == _queueDate) {
+      updates.watchQueue(ids, date);
+      return;
+    }
+    _queueEpoch++;
+    _queueRevision++;
+    if (date != _queueDate) _queueValues.clear();
+    _queueValues.removeWhere((id, _) => !ids.contains(id));
+    _queueIds = Set.unmodifiable(ids);
+    _queueDate = date;
+    _queueDirty.clear();
+    _queueReading = const {};
+    _queueErrors.clear();
+    _queueDirty.addAll(ids);
+    _publishQueue();
+    updates.watchQueue(ids, date);
+    unawaited(refreshQueue());
+  }
+
+  void _queueFeedChanged() {
+    if (active) _publishQueue();
+  }
+
+  void _publishQueue() {
+    if (!active) return;
+    queueState.value = PatientQueueState(
+      date: _queueDate,
+      summaries: _queueValues,
+      loading: {..._queueReading, ..._queueDirty},
+      errors: _queueErrors,
+      connected: updates.queueConnected,
+    );
+  }
+
+  Future<void> refreshQueue([Iterable<String>? services]) {
+    if (!active || _queueIds.isEmpty || _queueDate.isEmpty) {
+      return Future.value();
+    }
+    final ids = (services ?? _queueIds).where(_queueIds.contains).toSet();
+    if (ids.isEmpty) return Future.value();
+    _queueDirty.addAll(ids);
+    _queueRevision++;
+    _publishQueue();
+    return _queuePending ??= _drainQueue().whenComplete(() async {
+      _queuePending = null;
+      if (active && _queueDirty.isNotEmpty) {
+        await refreshQueue(Set.of(_queueDirty));
+      }
+    });
+  }
+
+  Future<void> _drainQueue() async {
+    while (active && _queueDirty.isNotEmpty) {
+      final ids = Set<String>.of(_queueDirty),
+          epoch = _queueEpoch,
+          revision = _queueRevision,
+          date = _queueDate;
+      _queueDirty.clear();
+      _queueReading = ids;
+      _publishQueue();
+      try {
+        final path = Uri(
+          path: '/layanan/antrean',
+          queryParameters: {
+            'tanggal': date,
+            'layananId': (ids.toList()..sort()).join(','),
+          },
+        ).toString();
+        final raw = await api.request('GET', path);
+        if (!active) return;
+        if (epoch != _queueEpoch) continue;
+        if (revision != _queueRevision) {
+          _queueDirty.addAll(ids);
+          continue;
+        }
+        final summaries = PatientQueueSummary.parseBatch(raw, ids, date);
+        _queueValues.addAll(summaries);
+        _queueErrors.removeAll(ids);
+      } catch (_) {
+        if (!active) return;
+        if (epoch != _queueEpoch) continue;
+        if (revision != _queueRevision) {
+          _queueDirty.addAll(ids);
+          continue;
+        }
+        _queueErrors.addAll(ids);
+      }
+      if (epoch == _queueEpoch && active) {
+        _queueReading = const {};
+        _publishQueue();
+      }
+    }
+  }
+
   bool get active =>
       !_disposed &&
       !_ended &&
@@ -47,6 +159,10 @@ class PatientRepository extends ChangeNotifier {
     _dirty.clear();
     _errors.clear();
     _snapshot = PatientSnapshot();
+    _queueEpoch++;
+    _queueDirty.clear();
+    _queueValues.clear();
+    queueState.value = PatientQueueState();
     _closeFeed();
     notifyListeners();
   }
@@ -55,17 +171,30 @@ class PatientRepository extends ChangeNotifier {
     if (_feedDisposed) return;
     _feedDisposed = true;
     updates.removeListener(_invalidated);
+    updates.queueSubscribed.removeListener(_queueFeedChanged);
+    updates.status.removeListener(_queueFeedChanged);
     updates.dispose();
   }
 
   void _invalidated() {
     if (!active) return;
     final kinds = updates.lastKinds;
+    if (kinds.contains('ANTREAN') || kinds.contains('KATALOG')) {
+      unawaited(
+        refreshQueue(
+          kinds.contains('KATALOG') || updates.lastQueueIds.isEmpty
+              ? null
+              : updates.lastQueueIds,
+        ),
+      );
+    }
+    final visitKinds = kinds.intersection({'TIKET', 'KATALOG'});
+    if (visitKinds.isEmpty) return;
     refresh({
       if (kinds.contains('TIKET')) ...patientVisitPaths,
       if (kinds.contains('KATALOG')) ...patientCatalogPaths,
     });
-    invalidations.value = (invalidations.value.$1 + 1, kinds);
+    invalidations.value = (invalidations.value.$1 + 1, visitKinds);
   }
 
   /// All readers await the same drain, including every required trailing read.
@@ -229,6 +358,7 @@ class PatientRepository extends ChangeNotifier {
     _dirty.clear();
     api.removeListener(_sessionChanged);
     _closeFeed();
+    queueState.dispose();
     invalidations.dispose();
     super.dispose();
   }

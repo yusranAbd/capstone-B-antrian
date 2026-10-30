@@ -71,10 +71,26 @@ export class PatientInvalidationInterceptor implements NestInterceptor {
             if (typeof data?.tiketId === 'string') {
               const ticket = await this.prisma.tiketAntrean.findUnique({
                 where: { id: data.tiketId },
-                select: { penggunaId: true },
+                select: {
+                  penggunaId: true,
+                  layananId: true,
+                  tanggalAntrean: true,
+                },
               });
-              if (ticket)
-                await this.gateway.invalidate('TIKET', ticket.penggunaId);
+              if (ticket) {
+                const notifications = await Promise.allSettled([
+                  this.gateway.invalidate('TIKET', ticket.penggunaId),
+                  this.gateway.invalidateQueue(
+                    ticket.layananId,
+                    ticket.tanggalAntrean.toISOString().slice(0, 10),
+                  ),
+                ]);
+                if (notifications.some((n) => n.status === 'rejected')) {
+                  this.logger.warn(
+                    'Invalidasi antrean pasien gagal; transaksi tetap tersimpan',
+                  );
+                }
+              }
             }
           }
         } catch {

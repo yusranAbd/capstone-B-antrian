@@ -1,5 +1,65 @@
 # QueueB | Panduan Integrasi REST API, Socket.IO, dan Public Display
 
+## Tambahan V7.1 — agregat antrean pasien (30 Oktober 2026)
+
+**GET /api/v1/layanan/antrean?layananId=<uuid,uuid>&tanggal=YYYY-MM-DD** menggunakan JWT/session existing dan role **USER**. Cookie perangkat Display bukan kredensial pasien. Route ini terdaftar sebelum `/layanan/:id`. Header `Cache-Control: no-store`. Kontrak lama tetap berlaku.
+
+`tanggal` opsional: default tanggal pelayanan server **Asia/Jakarta**, bukan tanggal browser. Format dan kalender divalidasi ketat; tanggal invalid 400. `layananId` opsional: CSV 1–100 UUID v4 unik; bila dihilangkan, semua layanan aktif. ID invalid/duplikat/batch berlebih 400; layanan tidak ada/nonaktif 404 generik. Hanya katalog layanan aktif yang dapat dibaca, tanpa akses tiket privat atau scope operasional petugas.
+
+```json
+{
+  "versiSkema": 1,
+  "tanggalPelayanan": "2026-10-30",
+  "diperolehPada": "2026-10-30T03:00:00.000Z",
+  "layanan": [
+    {
+      "layananId": "UUID layanan aktif",
+      "totalCheckIn": 0,
+      "jumlahMenunggu": 0,
+      "sedangDilayani": []
+    }
+  ]
+}
+```
+
+Contoh struktur di atas merupakan ilustrasi kontrak, bukan data untuk UI. Setiap item `sedangDilayani` berisi **loketId, kodeLoket, nomorAntrean**; beberapa loket dipertahankan sebagai collection. Tidak ada nama/ID pasien, NIK, diagnosis, telepon, ID tiket, raw QR atau token dalam read-model ini.
+
+| Field | Sumber persisted dan semantik |
+|---|---|
+| totalCheckIn | Jumlah row tiket unik pada layanan/tanggal dengan `checkInPada != null`; kumulatif termasuk tiket selesai. Tidak memakai join, total reservasi, event, atau nomor terbesar. Nol merupakan hasil query yang sah. |
+| jumlahMenunggu | Tiket `MENUNGGU` yang telah check-in dan mempunyai `urutanMasukAntrean`. CHECK_IN tanpa enqueue, DIPANGGIL, DILAYANI, DILEWATI dan status terminal tidak dihitung menunggu. |
+| sedangDilayani | Hanya `DILAYANI`, sudah check-in, loket aktif dengan layanan yang cocok. CALL/last-called bukan pelayanan aktif. Collection kosong berarti tidak ada pelayanan aktif yang memenuhi query. |
+| diperolehPada | Waktu pembacaan server, bukan versi monotonic database atau waktu event terakhir. |
+
+Ketiga proyeksi dibaca dalam transaksi **SELECT-only RepeatableRead** yang sama (maxWait 3 detik, timeout 10 detik). Tidak mengubah query/lock/state machine Queue Engine, schema, migration, idempotency atau aturan check-in. Repeated scan/retry/CALL/RECALL/SKIP/REQUEUE/START/COMPLETE tidak membuat check-in baru.
+
+### Subscription dan invalidation V7.1
+
+Gunakan koneksi `/patient` existing. Event client **patient:antrean:ikuti**:
+
+```json
+{"layananIds": ["UUID layanan aktif"], "tanggalPelayanan": "2026-10-30"}
+```
+
+Server memvalidasi JWT/session USER aktif, tanggal kalender dan maksimum 100 UUID unik yang seluruhnya aktif. ACK sukses: `{ok:true, versiSkema:1, layananIds:[...], tanggalPelayanan:...}` dengan ID canonical; ditolak `{ok:false, versiSkema:1}`. Array kosong melepas subscription. Pergantian scope meninggalkan room antrean lama; disconnect membersihkan membership. Tidak membuka namespace staff atau wildcard data privat.
+
+Setelah response sukses dari transaksi check-in/queue existing, interceptor membaca scope tiket persisted lalu mengirim **patient:updated** ke room layanan/tanggal yang telah diotorisasi:
+
+```json
+{
+  "versiSkema": 1,
+  "eventId": "UUID event",
+  "jenis": "ANTREAN",
+  "terjadiPada": "2026-10-30T03:00:00.000Z",
+  "layananId": "UUID layanan aktif",
+  "tanggalPelayanan": "2026-10-30"
+}
+```
+
+Session subscriber diperiksa kembali saat emit. Kind TIKET/KATALOG dan payload lama tetap kompatibel. Rollback/error handler tidak mengirim success invalidation. Kegagalan notifikasi pascacommit dicatat dan tidak mengubah hasil command yang telah tersimpan. Delivery best effort, tanpa outbox baru: klien wajib GET awal, reconcile sesudah ACK/reconnect, dan reconcile berkala. Jangan menghitung `total++` dari event, jangan mengulang POST check-in untuk memperbaiki notifikasi.
+
+Frontend V7.1 memakai satu PatientRepository/PatientUpdates existing: satu socket, batch GET, scope/session generation guard, serialized single-flight dan trailing refresh. Respons lama yang terinvalidasi tidak diterapkan. Card membedakan loading, valid zero, missing/error dan data terakhir. Label Live hanya saat subscription terkonfirmasi, data sesuai hari dan segar, tanpa refresh/error tertunda. Nomor pribadi tetap dari `/tiket/saya`, terpisah dari nomor pelayanan umum. Lihat [laporan V7/V7.1](../frontend/PATIENT_HOME_V7_REALTIME_QUEUE_CARDS.md) untuk hasil QA aktual dan batasannya.
+
 **Lokasi repository:** `docs/backend/API_INTEGRATION_GUIDE.md`
 **Versi dokumen:** 1.6 — Public Display Monitor V3 dan proyeksi nama sesuai kebijakan server
 **Tanggal penelaahan:** 19 Oktober 2026

@@ -6,9 +6,17 @@ const assert = require("node:assert/strict"),
   path = require("node:path");
 const { enter, button } = require("./browser-demo.cjs").helpers;
 module.exports = async ({ fixture: f }) => {
-  const out = path.resolve(
-    __dirname,
-    "../build/home-v7/browser-" + (f.homeV7Before ? "before" : "after"),
+  const buildRoot = path.resolve(__dirname, "../build");
+  const evidenceRoot = process.env.QUEUEB_HOME_V7_EVIDENCE_DIR
+    ? path.resolve(process.env.QUEUEB_HOME_V7_EVIDENCE_DIR)
+    : path.join(buildRoot, "home-v7");
+  assert(
+    evidenceRoot.startsWith(buildRoot + path.sep),
+    "Evidence must stay inside client/build",
+  );
+  const out = path.join(
+    evidenceRoot,
+    "browser-" + (f.homeV7Before ? "before" : "after"),
   );
   fs.mkdirSync(out, { recursive: true });
   const root = path.resolve(__dirname, "../build/web/canvaskit");
@@ -135,6 +143,14 @@ module.exports = async ({ fixture: f }) => {
           .getByRole("button", { name: /Pendaftaran/ })
           .first();
         await expect(registration).toBeVisible();
+        if (!f.homeV7Before) {
+          await expect(registration).toHaveAccessibleName(
+            /Belum ada pelayanan aktif/,
+          );
+          await expect(registration).toHaveAccessibleName(
+            /Total check-in hari ini 0\. 0 menunggu/,
+          );
+        }
         await page.screenshot({
           path: path.join(
             out,
@@ -222,6 +238,23 @@ module.exports = async ({ fixture: f }) => {
         await page.goBack();
         await expect(page).toHaveURL(/#\/patient$/);
         await expect(greeting).toBeVisible();
+        phase = "pharmacy-card";
+        await page.mouse.move(180, 570);
+        await page.mouse.wheel(0, 300);
+        const pharmacy = page
+          .getByRole("button", { name: /^Apotek\./ })
+          .first();
+        await expect(pharmacy).toBeVisible();
+        await expect(pharmacy).toHaveAccessibleName(
+          /Belum ada pelayanan aktif.*Total check-in hari ini 0/,
+        );
+        await pharmacy.click();
+        await expect(page).toHaveURL(/#\/patient\/reservations\/new/);
+        assert.equal(writes.length, 0);
+        await page.goBack();
+        await expect(page).toHaveURL(/#\/patient$/);
+        await page.mouse.wheel(0, -1800);
+        await expect(greeting).toBeVisible();
         phase = "avatar";
         await button(page, "Profil pasien");
         await expect(page).toHaveURL(/#\/patient\/profile$/);
@@ -260,6 +293,7 @@ module.exports = async ({ fixture: f }) => {
           status: "PASS",
           reducedMotion: reduced,
           realScrollDownUp: true,
+          pharmacyFlow: true,
           programmaticScrollIgnored: true,
           smallScrollIgnored: true,
           cardInitialPosts: 0,
@@ -292,7 +326,12 @@ module.exports = async ({ fixture: f }) => {
     fs.writeFileSync(
       path.join(out, "summary.json"),
       JSON.stringify(
-        { status: f.homeV7Before ? "BASELINE_CAPTURED" : "PASS", cases },
+        {
+          status: f.homeV7Before ? "BASELINE_CAPTURED" : "UI_PASS",
+          checkInCounter: "AUTHORITATIVE_INITIAL_ZERO",
+          currentlyServing: "NO_ACTIVE_SERVICE",
+          cases,
+        },
         null,
         2,
       ) + "\n",
@@ -301,7 +340,7 @@ module.exports = async ({ fixture: f }) => {
       "Home V7 browser: " +
         (f.homeV7Before
           ? "BASELINE CAPTURED"
-          : "PASS normal/reduced scroll +card +profile +tabs +logout"),
+          : "UI PASS normal/reduced scroll +card +profile +tabs +logout; authoritative initial GET"),
     );
   } catch (error) {
     fs.writeFileSync(

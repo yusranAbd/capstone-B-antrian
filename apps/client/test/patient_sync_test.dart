@@ -32,6 +32,18 @@ class FakePatientSocket extends Fake implements io.Socket {
   }
 
   @override
+  void emitWithAck(
+    String event,
+    dynamic data, {
+    Function? ack,
+    bool binary = false,
+  }) {
+    // This legacy fake does not authorize queue subscriptions. Queue-specific
+    // tests supply an explicit ACK implementation and authoritative GET data.
+    ack?.call({'ok': false, 'versiSkema': 1});
+  }
+
+  @override
   void dispose() {
     disposed = true;
     handlers.clear();

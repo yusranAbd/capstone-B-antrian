@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
+import 'package:flutter/foundation.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 
 import 'api.dart';
@@ -53,6 +54,16 @@ class PatientUpdates extends ChangeNotifier with WidgetsBindingObserver {
     _connect();
     _poll = Timer.periodic(fallbackInterval, (_) {
       if (!_foreground) return;
+      if (namespace == 'patient' &&
+          _queueDate.isNotEmpty &&
+          _queueDate != api.config.today) {
+        _queueWatchVersion++;
+        _queueWatchSent = null;
+        _queueAckTimeout?.cancel();
+        queueSubscribed.value = false;
+        invalidate();
+        return;
+      }
       if (!_connected) _socket?.connect();
       if (!_connected ||
           DateTime.now().difference(_lastRefresh) >= reconcileInterval) {
@@ -66,6 +77,75 @@ class PatientUpdates extends ChangeNotifier with WidgetsBindingObserver {
   final PatientSocketFactory _factory;
   final Duration debounce, fallbackInterval, reconcileInterval;
   final status = ValueNotifier('Menghubungkan realtime…');
+  final queueSubscribed = ValueNotifier(false);
+  Set<String> _queueIds = const {}, _lastQueueIds = const {};
+  final _pendingQueueIds = <String>{};
+  Set<String> get lastQueueIds => _lastQueueIds;
+  String _queueDate = '';
+  int _queueWatchVersion = 0;
+  int? _queueWatchSent;
+  Timer? _queueAckTimeout;
+  bool get queueConnected => _connected && _foreground && queueSubscribed.value;
+
+  void watchQueue(Set<String> ids, String date) {
+    if (namespace != 'patient' || _disposed) return;
+    if (!setEquals(_queueIds, ids) || _queueDate != date) {
+      _queueIds = Set.unmodifiable(ids);
+      _queueDate = date;
+      _queueWatchVersion++;
+      _pendingQueueIds.clear();
+      queueSubscribed.value = false;
+    }
+    _sendQueueWatch();
+  }
+
+  void _sendQueueWatch() {
+    if (_disposed ||
+        namespace != 'patient' ||
+        !_connected ||
+        !_foreground ||
+        _queueDate.isEmpty ||
+        _queueWatchSent == _queueWatchVersion ||
+        queueSubscribed.value) {
+      return;
+    }
+    final socket = _socket;
+    if (socket == null) return;
+    final version = _queueWatchVersion;
+    _queueWatchSent = version;
+    _queueAckTimeout?.cancel();
+    _queueAckTimeout = Timer(const Duration(seconds: 5), () {
+      if (_disposed || version != _queueWatchVersion) return;
+      _queueWatchSent = null;
+      queueSubscribed.value = false;
+    });
+    socket.emitWithAck(
+      'patient:antrean:ikuti',
+      {
+        'layananIds': _queueIds.toList()..sort(),
+        'tanggalPelayanan': _queueDate,
+      },
+      ack: (dynamic value) {
+        if (_disposed || socket != _socket || version != _queueWatchVersion) {
+          return;
+        }
+        _queueAckTimeout?.cancel();
+        final ack = object(value), ids = ack['layananIds'];
+        final valid =
+            ack['ok'] == true &&
+            ack['versiSkema'] == 1 &&
+            ack['tanggalPelayanan'] == _queueDate &&
+            ids is List &&
+            ids.every((id) => id is String) &&
+            ids.length == _queueIds.length &&
+            setEquals(ids.cast<String>().toSet(), _queueIds);
+        _queueWatchSent = valid ? version : null;
+        queueSubscribed.value = valid && _queueIds.isNotEmpty;
+        if (valid && _queueIds.isNotEmpty) invalidate(kinds: {'ANTREAN'});
+      },
+    );
+  }
+
   final _seen = <String>{};
   final _pendingKinds = <String>{};
   Set<String> _lastKinds = const {'TIKET', 'KATALOG'};
@@ -86,6 +166,10 @@ class PatientUpdates extends ChangeNotifier with WidgetsBindingObserver {
     _socket?.dispose();
     _socket = null;
     _connected = false;
+    _queueAckTimeout?.cancel();
+    _queueWatchSent = null;
+    _queueWatchVersion++;
+    queueSubscribed.value = false;
     _token = api.accessToken;
     if (_disposed ||
         !api.config.realtime ||
@@ -109,30 +193,46 @@ class PatientUpdates extends ChangeNotifier with WidgetsBindingObserver {
       if (!current() || object(value)['versiSkema'] != 1) return;
       _connected = true;
       status.value = 'Realtime terhubung';
+      _sendQueueWatch();
       invalidate();
     });
     socket.on('$namespace:updated', (dynamic value) {
       if (!current()) return;
       final event = object(value), id = object(value)['eventId'];
+      final queueEvent = namespace == 'patient' && event['jenis'] == 'ANTREAN';
+      if (queueEvent &&
+          (event['tanggalPelayanan'] != _queueDate ||
+              !_queueIds.contains(event['layananId']))) {
+        return;
+      }
       if (event['versiSkema'] != 1 ||
-          !eventKinds.contains(event['jenis']) ||
+          (!queueEvent && !eventKinds.contains(event['jenis'])) ||
           id is! String ||
           id.isEmpty ||
           !_seen.add(id)) {
         return;
       }
       if (_seen.length > 256) _seen.remove(_seen.first);
+      if (queueEvent) _pendingQueueIds.add('${event['layananId']}');
       invalidate(kinds: {'${event['jenis']}'});
     });
     socket.on('disconnect', (dynamic reason) {
       if (!current()) return;
       _connected = false;
+      _queueWatchVersion++;
+      _queueWatchSent = null;
+      _queueAckTimeout?.cancel();
+      queueSubscribed.value = false;
       status.value = 'Realtime terputus · sinkronisasi berkala aktif';
       if (reason == 'io server disconnect') _renew();
     });
     socket.on('connect_error', (dynamic error) {
       if (!current()) return;
       _connected = false;
+      _queueWatchVersion++;
+      _queueWatchSent = null;
+      _queueAckTimeout?.cancel();
+      queueSubscribed.value = false;
       status.value = 'Realtime belum tersambung · sinkronisasi berkala aktif';
       if ('$error'.toUpperCase().contains('UNAUTHORIZED')) _renew();
     });
@@ -153,12 +253,15 @@ class PatientUpdates extends ChangeNotifier with WidgetsBindingObserver {
 
   void invalidate({Set<String> kinds = const {'TIKET', 'KATALOG'}}) {
     if (_disposed || !_foreground) return;
+    _sendQueueWatch();
     _pendingKinds.addAll(kinds);
     if (_debouncer?.isActive == true) return;
     _debouncer = Timer(debounce, () {
       if (!_disposed && _foreground) {
         _lastRefresh = DateTime.now();
         _lastKinds = Set.unmodifiable(_pendingKinds);
+        _lastQueueIds = Set.unmodifiable(_pendingQueueIds);
+        _pendingQueueIds.clear();
         _pendingKinds.clear();
         notifyListeners();
       }
@@ -170,6 +273,10 @@ class PatientUpdates extends ChangeNotifier with WidgetsBindingObserver {
     _foreground = state == AppLifecycleState.resumed;
     if (!_foreground) {
       _debouncer?.cancel();
+      _queueWatchVersion++;
+      _queueWatchSent = null;
+      _queueAckTimeout?.cancel();
+      queueSubscribed.value = false;
       return;
     }
     if (!_connected) _connect();
@@ -180,11 +287,13 @@ class PatientUpdates extends ChangeNotifier with WidgetsBindingObserver {
   void dispose() {
     _disposed = true;
     _poll?.cancel();
+    _queueAckTimeout?.cancel();
     _debouncer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     api.removeListener(_credentialsChanged);
     _socket?.dispose();
     status.dispose();
+    queueSubscribed.dispose();
     super.dispose();
   }
 }

@@ -30,6 +30,7 @@ const tables = [
 ];
 
 async function main() {
+  const patientQueueV71 = process.argv.includes("--patient-queue-v7-1");
   if (!process.env.DATABASE_URL)
     throw new Error("DATABASE_URL lokal wajib tersedia");
   const url = new URL(process.env.DATABASE_URL);
@@ -99,6 +100,7 @@ async function main() {
   );
   const recovery =
     process.argv.includes("--final-e2e-qa") ||
+    patientQueueV71 ||
     process.env.QUEUEB_RECOVERY_DIAGNOSTICS === "1"
       ? require("./recovery-observer.cjs").observe(prisma)
       : null;
@@ -160,6 +162,7 @@ async function main() {
       ["petugas", "PETUGAS"],
       ["patient1", "USER"],
       ["patient2", "USER"],
+      ...(patientQueueV71 ? [["patient3", "USER"]] : []),
     ]) {
       const account = await prisma.pengguna.create({
         data: {
@@ -198,15 +201,28 @@ async function main() {
     }).format(new Date());
     const start = new Date(`${date}T00:00:00+07:00`);
     const end = new Date(`${date}T23:59:00+07:00`);
+    if (
+      patientQueueV71 &&
+      (await prisma.layanan.count({
+        where: { kode: { in: ["PENDAFTARAN", "APOTEK"] } },
+      }))
+    )
+      throw new Error("Reserved queue QA codes already exist");
     serviceId = (
       await post("/layanan", {
-        kode: `W${unique}`,
-        nama: process.argv.includes("--display-v2")
-          ? "Poliklinik Mata"
-          : "Poli Fixture Flutter",
-        prefixAntrean: process.argv.includes("--display-v2") ? "M" : "WF",
+        kode: patientQueueV71 ? "PENDAFTARAN" : `W${unique}`,
+        nama: patientQueueV71
+          ? "Pendaftaran"
+          : process.argv.includes("--display-v2")
+            ? "Poliklinik Mata"
+            : "Poli Fixture Flutter",
+        prefixAntrean: patientQueueV71
+          ? "PEN"
+          : process.argv.includes("--display-v2")
+            ? "M"
+            : "WF",
         durasiDasarMenit: 15,
-        modeReservasi: "HIBRIDA",
+        modeReservasi: patientQueueV71 ? "ANTREAN_HARIAN" : "HIBRIDA",
       })
     ).id;
     await post("/jadwal-layanan", {
@@ -270,7 +286,7 @@ async function main() {
     fixture = {
       date,
       unique,
-      serviceCode: `W${unique}`,
+      serviceCode: patientQueueV71 ? "PENDAFTARAN" : `W${unique}`,
       ...accounts,
       roomId: room.id,
       roomName: room.nama,
@@ -439,6 +455,29 @@ async function main() {
       code = 0;
     } else if (process.argv.includes("--demo-browser")) {
       fixture.demoFull = true;
+      code = 0;
+    } else if (patientQueueV71) {
+      fixture.patientQueueV71 = true;
+      const { PatientRealtimeGateway } = require(
+        path.join(apiPath, "dist/realtime/patient-realtime.gateway.js"),
+      );
+      const namespace = app.get(PatientRealtimeGateway).server;
+      const ownSockets = (id) => {
+        if (
+          ![
+            accounts.patient1.id,
+            accounts.patient2.id,
+            accounts.patient3.id,
+          ].includes(id)
+        )
+          throw Error("Only owned USER sockets may be inspected");
+        return [...namespace.sockets.values()].filter(
+          (s) => s.data.patientIdentity?.id === id,
+        );
+      };
+      fixture.patientSocketCount = (id) => ownSockets(id).length;
+      fixture.disconnectPatient = (id) =>
+        ownSockets(id).forEach((s) => s.conn.close());
       code = 0;
     } else if (process.argv.includes("--patient-home-v7")) {
       fixture.patientHomeV7 = true;
@@ -634,12 +673,14 @@ async function main() {
     (fixture?.finalQa ||
       fixture?.patientMotion ||
       fixture?.motionV1 ||
-      fixture?.patientHomeV7) &&
+      fixture?.patientHomeV7 ||
+      fixture?.patientQueueV71) &&
     recoveryReport &&
     (require("./recovery-observer.cjs").hasServerFailure(recoveryReport) ||
       ((fixture?.patientMotion ||
         fixture?.motionV1 ||
-        fixture?.patientHomeV7) &&
+        fixture?.patientHomeV7 ||
+        fixture?.patientQueueV71) &&
         recoveryReport.pendingAtFinish !== 0))
   ) {
     code = 1;

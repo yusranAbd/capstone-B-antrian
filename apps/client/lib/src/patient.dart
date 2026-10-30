@@ -13,6 +13,7 @@ import 'features/patient/application/patient_overview_cubit.dart';
 import 'features/patient/application/patient_booking_cubit.dart';
 import 'features/patient/data/patient_booking_repository.dart';
 import 'features/patient/models/patient_models.dart';
+import 'features/patient/models/patient_queue_models.dart';
 import 'features/patient/application/patient_reservations_cubit.dart';
 import 'features/patient/application/patient_ticket_cubit.dart';
 
@@ -345,6 +346,16 @@ class _PatientPageState extends State<PatientPage> {
   }
 
   void _scopeChanged() {
+    if (mounted && repository.active) {
+      repository.configureQueueScope(
+        homeWalkInClinics(
+          repository.snapshot.services,
+          repository.snapshot.doctors,
+          '',
+        ).map((s) => '${s['id']}'),
+        widget.api.config.today,
+      );
+    }
     if (mounted && !repository.active) {
       setState(() {
         _error = message = null;
@@ -967,20 +978,27 @@ class _PatientPageState extends State<PatientPage> {
                   itemCount: walkIns.length,
                   itemBuilder: (context, index) => Padding(
                     padding: const EdgeInsets.only(bottom: 8),
-                    child: PatientHomeService(
-                      clinic: walkIns[index],
-                      ticket: homeServiceTicket(
-                        tickets,
-                        '${walkIns[index]['id']}',
-                        widget.api.config.today,
-                        widget.api.user?['id']?.toString(),
+                    child: ValueListenableBuilder<PatientQueueState>(
+                      valueListenable: overviewCubit.queueState,
+                      builder: (context, queue, _) => PatientHomeService(
+                        clinic: walkIns[index],
+                        queue: queue.forService(
+                          '${walkIns[index]['id']}',
+                          widget.api.config.today,
+                        ),
+                        ticket: homeServiceTicket(
+                          tickets,
+                          '${walkIns[index]['id']}',
+                          widget.api.config.today,
+                          widget.api.user?['id']?.toString(),
+                        ),
+                        onTap: busy
+                            ? null
+                            : () {
+                                startRegistration(false);
+                                selectService('${walkIns[index]['id']}');
+                              },
                       ),
-                      onTap: busy
-                          ? null
-                          : () {
-                              startRegistration(false);
-                              selectService('${walkIns[index]['id']}');
-                            },
                     ),
                   ),
                 ),

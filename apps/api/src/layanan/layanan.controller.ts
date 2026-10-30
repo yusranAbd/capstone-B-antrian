@@ -3,10 +3,12 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   Param,
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 
@@ -21,11 +23,16 @@ import { PeranPengguna } from '../generated/prisma/client';
 import { CreateLayananDto } from './dto/create-layanan.dto';
 import { UpdateLayananDto } from './dto/update-layanan.dto';
 import { LayananService } from './layanan.service';
+import { PatientQueueQueryDto } from './dto/patient-queue-query.dto';
+import { PatientQueueSummaryService } from './patient-queue-summary.service';
 
 @Controller('layanan')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class LayananController {
-  constructor(private readonly layananService: LayananService) {}
+  constructor(
+    private readonly layananService: LayananService,
+    private readonly patientQueue: PatientQueueSummaryService,
+  ) {}
 
   // =====================================
   // CREATE - ADMIN
@@ -49,6 +56,13 @@ export class LayananController {
   // =====================================
   // READ ONE - AUTHENTICATED USERS
   // =====================================
+
+  @Get('antrean')
+  @Roles(PeranPengguna.USER)
+  @Header('Cache-Control', 'no-store')
+  patientSummary(@Query() query: PatientQueueQueryDto) {
+    return this.patientQueue.snapshot(query);
+  }
 
   @Get(':id')
   findOne(
