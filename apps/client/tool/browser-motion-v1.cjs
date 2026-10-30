@@ -5,13 +5,22 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { enter, button } = require("./browser-demo.cjs").helpers;
+const { sampleFrames } = require("./motion-profile.cjs");
 const base = "http://127.0.0.1:8080/";
 const api = "http://127.0.0.1:3001/api/v1";
 
 module.exports = async ({ fixture: f }) => {
-  const output = path.resolve(__dirname, "../build/motion-v1/browser");
+  const buildRoot = path.resolve(__dirname, "../build");
+  const output = process.env.QUEUEB_MOTION_EVIDENCE_DIR
+    ? path.resolve(process.env.QUEUEB_MOTION_EVIDENCE_DIR)
+    : path.join(buildRoot, "motion-v1/browser");
+  assert(
+    output.startsWith(buildRoot + path.sep),
+    "Evidence must stay in build",
+  );
   fs.mkdirSync(output, { recursive: true });
   const cases = [];
+  const profiles = [];
   let browser;
   let phase = "patient-pilot";
   const engineRoot = path.resolve(__dirname, "../build/web/canvaskit");
@@ -264,8 +273,21 @@ module.exports = async ({ fixture: f }) => {
       const { page, context, trace } = await open("petugas", reduced);
       try {
         phase = "staff-six-commands";
+        await sampleFrames(
+          page,
+          reduced ? "staff-idle-reduced" : "staff-idle-normal",
+          async () => {},
+          profiles,
+        );
         const command = (route, action) =>
-          mutation(page, "POST", route, action, true);
+          route === "/queue/panggil"
+            ? sampleFrames(
+                page,
+                reduced ? "staff-call-reduced" : "staff-call-normal",
+                () => mutation(page, "POST", route, action, true),
+                profiles,
+              )
+            : mutation(page, "POST", route, action, true);
         assert.equal(
           (
             await command("/queue/panggil", () =>
@@ -515,7 +537,10 @@ module.exports = async ({ fixture: f }) => {
         {
           status: "PASS",
           cases,
-          display: "unchanged; covered by Flutter regression",
+          display:
+            process.env.QUEUEB_MOTION_PROFILE === "1"
+              ? "separate compiled final-E2E Display coverage"
+              : "unchanged; covered by Flutter regression",
         },
         null,
         2,
@@ -536,6 +561,11 @@ module.exports = async ({ fixture: f }) => {
     console.error("Motion V1 browser failed phase: " + phase);
     throw error;
   } finally {
+    if (profiles.length)
+      fs.writeFileSync(
+        path.join(output, "motion-frame-profile.json"),
+        JSON.stringify(profiles, null, 2),
+      );
     await browser?.close();
   }
 };

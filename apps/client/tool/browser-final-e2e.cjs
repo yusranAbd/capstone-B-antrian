@@ -11,6 +11,7 @@ const { enter, button, reveal, cameraVideo } =
   require("./browser-demo.cjs").helpers;
 const base = "http://127.0.0.1:8080/";
 const api = "http://127.0.0.1:3001/api/v1";
+const { sampleFrames } = require("./motion-profile.cjs");
 // Each role is a concurrently observed monitor in this test. Keep headless
 // background tabs scheduled while another role's page is brought to front.
 const browserArgs = [
@@ -37,6 +38,7 @@ module.exports = async function finalQa({ fixture: f, root }) {
     browsers = [],
     errors = [];
   const recoveryDisplays = [];
+  const profiles = [];
   const responseObservers =
     require("./qa-event-observers.cjs").eventObservers();
   const recoveryHash = (id) =>
@@ -649,6 +651,7 @@ module.exports = async function finalQa({ fixture: f, root }) {
       "Actual Flutter QR decoder → atomic auto-antrean; controlled Y4M camera input, no physical camera claim",
     );
     phase = "queue-commands";
+    await sampleFrames(a.p, "display-idle", async () => {}, profiles);
     await doctor.bringToFront();
     const speechCount = (d) => d.p.evaluate(() => window.__qaSpeech);
     const before = await speechCount(a);
@@ -656,6 +659,19 @@ module.exports = async function finalQa({ fixture: f, root }) {
       button(staff, "Panggil berikutnya"),
     );
     assert.equal(called.tiketId, walk.id);
+    await sampleFrames(
+      a.p,
+      "display-call-after-server-commit",
+      () =>
+        expect(
+          a.p.getByText(walk.nomorAntrean, { exact: true }).first(),
+        ).toBeVisible(),
+      profiles,
+    );
+    if (process.env.QUEUEB_MOTION_PROFILE === "1")
+      await a.p.screenshot({
+        path: path.join(output, "display-called-motion.png"),
+      });
     report.callConfirmed = {
       at: Date.now(),
       status: called.status,
@@ -1012,6 +1028,11 @@ module.exports = async function finalQa({ fixture: f, root }) {
     report.runtimeErrors = errors.length;
     report.responseObserverErrors = responseObservers.errors;
     report.finishedAt = new Date().toISOString();
+    if (profiles.length)
+      fs.writeFileSync(
+        path.join(output, "motion-frame-profile.json"),
+        JSON.stringify(profiles, null, 2),
+      );
     for (const c of contexts) await c.close().catch(() => {});
     for (const b of browsers) await b.close().catch(() => {});
     await responseObservers.drain();

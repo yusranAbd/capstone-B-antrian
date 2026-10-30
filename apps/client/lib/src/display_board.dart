@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 
 import 'config.dart';
 import 'mobile_ui.dart';
+import 'queueb_motion.dart';
+import 'queueb_value_motion.dart';
 
 /// Renders only the allowlisted, privacy-filtered display snapshot.
 class DisplayBoard extends StatelessWidget {
@@ -220,152 +222,179 @@ class DisplayBoard extends StatelessWidget {
 
   Widget _hero(bool large) {
     final call = currentCall(snapshot);
-    return Container(
-      key: const ValueKey('display-call-panel'),
-      padding: EdgeInsets.all(large ? 28 : 20),
-      decoration: BoxDecoration(
-        color: QueueBStyle.hero,
-        borderRadius: BorderRadius.circular(20),
+    final announcement = object(snapshot?['pengumumanTerakhir']);
+    return QueueBValueMotion(
+      value: (
+        call?.room['kode'],
+        call?.ticket['nomorAntrean'],
+        announcement['peristiwaId'],
       ),
-      child: DefaultTextStyle.merge(
-        style: const TextStyle(color: Colors.white, fontSize: 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                const Icon(
-                  Icons.campaign_outlined,
-                  color: Colors.white,
-                  size: 24,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    call == null ? 'INFORMASI PANGGILAN' : 'SEDANG DIPANGGIL',
-                    style: TextStyle(
-                      fontSize: large ? 22 : 18,
-                      fontWeight: FontWeight.w600,
+      scope: (
+        object(snapshot?['layanan'])['kode'],
+        snapshot?['tanggalPelayanan'],
+      ),
+      available: snapshot != null && !rejected,
+      highlight: true,
+      animateChild: false,
+      borderOnly: true,
+      radius: 20,
+      highlightColor: QueueBStyle.mint,
+      child: Container(
+        key: const ValueKey('display-call-panel'),
+        padding: EdgeInsets.all(large ? 28 : 20),
+        decoration: BoxDecoration(
+          color: QueueBStyle.hero,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: DefaultTextStyle.merge(
+          style: const TextStyle(color: Colors.white, fontSize: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  const Icon(
+                    Icons.campaign_outlined,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      call == null ? 'INFORMASI PANGGILAN' : 'SEDANG DIPANGGIL',
+                      style: TextStyle(
+                        fontSize: large ? 22 : 18,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
-            if (call != null) ...[
-              Expanded(
-                child: Center(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      '${call.ticket['nomorAntrean']}',
-                      key: const ValueKey('display-call-number'),
-                      style: TextStyle(
-                        fontSize: large ? 320 : 240,
-                        height: 1,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                        letterSpacing: -4,
-                        fontFeatures: const [FontFeature.tabularFigures()],
+                ],
+              ),
+              if (call != null) ...[
+                Expanded(
+                  child: Center(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: QueueBValueMotion(
+                        value: (call.room['kode'], call.ticket['nomorAntrean']),
+                        scope: (
+                          object(snapshot?['layanan'])['kode'],
+                          snapshot?['tanggalPelayanan'],
+                        ),
+                        available: snapshot != null && !rejected,
+                        duration: QueueBMotion.display,
+                        child: Text(
+                          '${call.ticket['nomorAntrean']}',
+                          key: const ValueKey('display-call-number'),
+                          style: TextStyle(
+                            fontSize: large ? 320 : 240,
+                            height: 1,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                            letterSpacing: -4,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-              if (call.ticket['namaPasien'] is String)
+                if (call.ticket['namaPasien'] is String)
+                  Text(
+                    '${call.ticket['namaPasien']}',
+                    key: const ValueKey('display-call-name'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: large ? 38 : 28,
+                      height: 1.15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                const SizedBox(height: 12),
+                Container(
+                  key: const ValueKey('display-call-destination'),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: QueueBStyle.console,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.meeting_room_outlined,
+                        color: Colors.white,
+                        size: 26,
+                      ),
+                      const SizedBox(width: 10),
+                      Flexible(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Loket ${call.room['kode']}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: large ? 34 : 26,
+                                height: 1.1,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${call.room['nama']}',
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: large ? 24 : 20,
+                                height: 1.1,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ] else ...[
+                const Spacer(),
+                if (snapshot == null && !rejected && error == null)
+                  const Center(
+                    child: CircularProgressIndicator(color: Colors.white),
+                  ),
+                const SizedBox(height: 16),
                 Text(
-                  '${call.ticket['namaPasien']}',
-                  key: const ValueKey('display-call-name'),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  rejected
+                      ? 'Akses display ditolak'
+                      : snapshot == null
+                      ? error == null
+                            ? 'Memuat antrean…'
+                            : 'Menunggu koneksi'
+                      : 'Belum ada nomor dipanggil.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: large ? 38 : 28,
-                    height: 1.15,
-                    fontWeight: FontWeight.w700,
+                    fontSize: large ? 44 : 32,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-              const SizedBox(height: 12),
-              Container(
-                key: const ValueKey('display-call-destination'),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
+                const SizedBox(height: 12),
+                const Text(
+                  'Perhatikan layar dan dengarkan panggilan petugas.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 18, color: QueueBStyle.mint),
                 ),
-                decoration: BoxDecoration(
-                  color: QueueBStyle.console,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.meeting_room_outlined,
-                      color: Colors.white,
-                      size: 26,
-                    ),
-                    const SizedBox(width: 10),
-                    Flexible(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Loket ${call.room['kode']}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: large ? 34 : 26,
-                              height: 1.1,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '${call.room['nama']}',
-                            textAlign: TextAlign.center,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: large ? 24 : 20,
-                              height: 1.1,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ] else ...[
-              const Spacer(),
-              if (snapshot == null && !rejected && error == null)
-                const Center(
-                  child: CircularProgressIndicator(color: Colors.white),
-                ),
-              const SizedBox(height: 16),
-              Text(
-                rejected
-                    ? 'Akses display ditolak'
-                    : snapshot == null
-                    ? error == null
-                          ? 'Memuat antrean…'
-                          : 'Menunggu koneksi'
-                    : 'Belum ada nomor dipanggil.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: large ? 44 : 32,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Perhatikan layar dan dengarkan panggilan petugas.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 18, color: QueueBStyle.mint),
-              ),
-              const Spacer(),
+                const Spacer(),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

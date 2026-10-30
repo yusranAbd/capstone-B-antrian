@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:queueb_client/src/queueb_motion.dart';
 import 'package:queueb_client/src/api.dart';
 import 'package:queueb_client/src/features/staff/application/staff_queue_bloc.dart';
 import 'package:queueb_client/src/features/staff/data/staff_queue_repository.dart';
@@ -115,7 +116,9 @@ void main() {
           );
           expect(api.status, op.expectedStatus);
           expect(api.count(commandPath(op), 'POST'), 1);
-          await tester.pump(const Duration(milliseconds: 210));
+          await tester.pump(
+            QueueBMotion.component + const Duration(milliseconds: 10),
+          );
           if (!reduced) expect(opacity(tester), 1);
           final ownerCount = owners.created.length,
               readCount = api.calls.length;

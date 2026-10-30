@@ -5,6 +5,7 @@ const assert = require("node:assert/strict"),
   fs = require("node:fs"),
   path = require("node:path");
 const { enter, button } = require("./browser-demo.cjs").helpers;
+const { sampleFrames } = require("./motion-profile.cjs");
 module.exports = async ({ fixture: f }) => {
   const buildRoot = path.resolve(__dirname, "../build");
   const evidenceRoot = process.env.QUEUEB_HOME_V7_EVIDENCE_DIR
@@ -28,6 +29,7 @@ module.exports = async ({ fixture: f }) => {
   let browser,
     phase = "fixtures";
   const cases = [];
+  const profiles = [];
   async function request(route, token, body) {
     const r = await fetch(api + route, {
       method: body ? "POST" : "GET",
@@ -172,6 +174,12 @@ module.exports = async ({ fixture: f }) => {
           continue;
         }
         phase = "initial-chrome";
+        await sampleFrames(
+          page,
+          reduced ? "patient-idle-reduced" : "patient-idle-normal",
+          async () => {},
+          profiles,
+        );
         const greeting = page.getByRole("group", { name: /^Selamat datang,/ });
         const tickets = page.getByRole("tab", {
           name: "Tiket Saya",
@@ -179,6 +187,32 @@ module.exports = async ({ fixture: f }) => {
         });
         await expect(greeting).toBeVisible();
         await expect(tickets).toBeVisible();
+        const responsiveWidths = [];
+        if (process.env.QUEUEB_MOTION_PROFILE === "1") {
+          phase = "motion-responsive-viewports";
+          for (const width of [320, 360, 390, 430, 768, 1366]) {
+            await page.setViewportSize({
+              width,
+              height: width >= 768 ? 768 : 844,
+            });
+            await expect(registration).toBeVisible();
+            await expect(greeting).toBeVisible();
+            await expect(tickets).toBeVisible();
+            const bounds = await registration.boundingBox();
+            assert(
+              bounds && bounds.x >= -1 && bounds.x + bounds.width <= width + 1,
+              "Service card must stay inside viewport",
+            );
+            await page.screenshot({
+              path: path.join(
+                out,
+                `home-${reduced ? "reduced" : "normal"}-${width}.png`,
+              ),
+            });
+            responsiveWidths.push(width);
+          }
+          await page.setViewportSize({ width: 390, height: 844 });
+        }
         phase = "programmatic-scroll";
         // Inspect the actual semantics scroll container rather than guessing an ID.
         const scrollHandle = await page.evaluateHandle(
@@ -227,7 +261,12 @@ module.exports = async ({ fixture: f }) => {
         await expect(greeting).toBeVisible();
         await expect(tickets).toBeVisible();
         phase = "scroll";
-        await page.mouse.wheel(0, 420);
+        await sampleFrames(
+          page,
+          reduced ? "patient-scroll-reduced" : "patient-scroll-normal",
+          () => page.mouse.wheel(0, 420),
+          profiles,
+        );
         await expect(greeting).not.toBeVisible();
         await expect(tickets).not.toBeVisible();
         await page.screenshot({
@@ -242,7 +281,12 @@ module.exports = async ({ fixture: f }) => {
         await page.mouse.wheel(0, -1800);
         await expect(registration).toBeVisible();
         phase = "card";
-        await registration.click();
+        await sampleFrames(
+          page,
+          reduced ? "patient-card-route-reduced" : "patient-card-route-normal",
+          () => registration.click(),
+          profiles,
+        );
         await expect(page).toHaveURL(/#\/patient\/reservations\/new/);
         assert.equal(writes.length, 0);
         await page.goBack();
@@ -332,6 +376,7 @@ module.exports = async ({ fixture: f }) => {
         cases.push({
           status: "PASS",
           reducedMotion: reduced,
+          responsiveWidths,
           realScrollDownUp: true,
           pharmacyFlow: true,
           additionalDailyFlows,
@@ -395,6 +440,11 @@ module.exports = async ({ fixture: f }) => {
     console.error("Home V7 browser phase: " + phase);
     throw error;
   } finally {
+    if (profiles.length)
+      fs.writeFileSync(
+        path.join(out, "motion-frame-profile.json"),
+        JSON.stringify(profiles, null, 2),
+      );
     await browser?.close();
   }
 };

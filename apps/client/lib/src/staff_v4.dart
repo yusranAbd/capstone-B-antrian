@@ -4,6 +4,8 @@ import 'config.dart';
 import 'mobile_ui.dart';
 import 'doctor_professional.dart';
 import 'staff_ui.dart';
+import 'queueb_motion.dart';
+import 'queueb_value_motion.dart';
 
 class StaffToolbar extends StatelessWidget implements PreferredSizeWidget {
   const StaffToolbar({
@@ -312,7 +314,9 @@ class _StaffPatientListState extends State<StaffPatientList> {
           final waiting = state == 'MENUNGGU';
           return Align(
             alignment: Alignment.centerLeft,
-            child: Container(
+            child: AnimatedContainer(
+              duration: QueueBMotion.duration(context, QueueBMotion.micro),
+              curve: QueueBMotion.entering,
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
               decoration: BoxDecoration(
                 color: waiting
@@ -423,49 +427,58 @@ class _StaffPatientListState extends State<StaffPatientList> {
                         final time = widget.config.instantLabel(
                           t['checkInPada'],
                         );
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 6),
-                          child: table
-                              ? Row(
-                                  children: [
-                                    cell(Text('${start + i + 1}'), 5),
-                                    cell(number(t), 17),
-                                    cell(name(t), 29),
-                                    cell(status(t), 19),
-                                    cell(
+                        return QueueBValueMotion(
+                          key: ValueKey(t['id']),
+                          scope: t['id'],
+                          value: t['status'],
+                          animateChild: false,
+                          highlight: true,
+                          highlightColor: QueueBStyle.teal,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            child: table
+                                ? Row(
+                                    children: [
+                                      cell(Text('${start + i + 1}'), 5),
+                                      cell(number(t), 17),
+                                      cell(name(t), 29),
+                                      cell(status(t), 19),
+                                      cell(
+                                        Text(
+                                          time,
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            color: QueueBStyle.muted,
+                                          ),
+                                        ),
+                                        23,
+                                      ),
+                                      cell(menu(t), 7),
+                                    ],
+                                  )
+                                : Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          number(t),
+                                          const SizedBox(width: 10),
+                                          Expanded(child: status(t)),
+                                          menu(t),
+                                        ],
+                                      ),
+                                      name(t),
                                       Text(
-                                        time,
+                                        'Check-in: $time',
                                         style: const TextStyle(
                                           fontSize: 11,
                                           color: QueueBStyle.muted,
                                         ),
                                       ),
-                                      23,
-                                    ),
-                                    cell(menu(t), 7),
-                                  ],
-                                )
-                              : Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        number(t),
-                                        const SizedBox(width: 10),
-                                        Expanded(child: status(t)),
-                                        menu(t),
-                                      ],
-                                    ),
-                                    name(t),
-                                    Text(
-                                      'Check-in: $time',
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        color: QueueBStyle.muted,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                    ],
+                                  ),
+                          ),
                         );
                       },
                     ),

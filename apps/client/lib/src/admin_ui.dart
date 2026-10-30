@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'config.dart';
 import 'mobile_ui.dart';
 import 'queueb_palette.dart';
+import 'queueb_value_motion.dart';
 
 abstract final class AdminStyle {
   static const radius = 16.0;
@@ -325,19 +326,7 @@ class _AdminTableSource extends DataTableSource {
             MouseRegion(
               onEnter: owner.widget.compact ? (_) => hover(index) : null,
               onExit: owner.widget.compact ? (_) => hover(null) : null,
-              child:
-                  col.cell?.call(row) ??
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 220),
-                    child: Tooltip(
-                      message: '${col.value(row) ?? '—'}',
-                      child: Text(
-                        '${col.value(row) ?? '—'}',
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ),
+              child: _cell(row, col),
             ),
           ),
       ],
@@ -346,6 +335,35 @@ class _AdminTableSource extends DataTableSource {
 
   @override
   int get rowCount => rows.length;
+  Widget _cell(Json row, AdminColumn col) {
+    final child =
+        col.cell?.call(row) ??
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 220),
+          child: Tooltip(
+            message: '${col.value(row) ?? '—'}',
+            child: Text(
+              '${col.value(row) ?? '—'}',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        );
+    if (row['id'] == null || !col.title.toLowerCase().startsWith('status')) {
+      return child;
+    }
+    return QueueBValueMotion(
+      key: ValueKey<Object>((row['id'], col.title)),
+      scope: row['id'],
+      value: col.value(row),
+      animateChild: false,
+      highlight: true,
+      borderOnly: true,
+      highlightColor: AdminStyle.blue,
+      child: child,
+    );
+  }
+
   @override
   bool get isRowCountApproximate => false;
   @override

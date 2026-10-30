@@ -26,15 +26,18 @@ void main() {
       ),
     ),
   );
-  test('motion tokens are bounded and retain the patient pilot defaults', () {
-    expect(QueueBMotion.instant, Duration.zero);
-    expect(QueueBMotion.fast.inMilliseconds, 160);
-    expect(QueueBMotion.standard.inMilliseconds, 200);
-    expect(QueueBMotion.emphasis.inMilliseconds, 260);
-    expect(QueueBMotion.minimumOpacity, .88);
-    expect(QueueBMotion.verticalOffset, 3);
-    expect(QueueBMotion.curve, Curves.easeOut);
-  });
+  test(
+    'motion tokens share V2 timing through the patient compatibility API',
+    () {
+      expect(QueueBMotion.instant, Duration.zero);
+      expect(QueueBMotion.fast.inMilliseconds, 160);
+      expect(QueueBMotion.standard.inMilliseconds, 260);
+      expect(QueueBMotion.emphasis.inMilliseconds, 260);
+      expect(QueueBMotion.minimumOpacity, .88);
+      expect(QueueBMotion.verticalOffset, 10);
+      expect(QueueBMotion.curve, Curves.easeOutCubic);
+    },
+  );
   testWidgets('initial confirmed hydration and remount never animate', (
     tester,
   ) async {
@@ -58,7 +61,9 @@ void main() {
         await tester.pump();
         expect(find.byType(Animate), reduced ? findsNothing : findsOneWidget);
         expect(find.bySemanticsLabel('Data disimpan.'), findsOneWidget);
-        await tester.pump(const Duration(milliseconds: 210));
+        await tester.pump(
+          QueueBMotion.component + const Duration(milliseconds: 10),
+        );
         await tester.pumpWidget(feedback(confirmed: true, reduced: reduced));
         if (!reduced) {
           final opacity = tester

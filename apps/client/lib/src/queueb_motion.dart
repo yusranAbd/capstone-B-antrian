@@ -1,15 +1,44 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
-/// Local presentation tokens; no theme, route or business behavior.
+/// One presentation clock; aliases retain the V1/patient helper API.
 abstract final class QueueBMotion {
   static const instant = Duration.zero;
-  static const fast = Duration(milliseconds: 160);
-  static const standard = Duration(milliseconds: 200);
-  static const emphasis = Duration(milliseconds: 260);
-  static const curve = Curves.easeOut;
+  static const press = Duration(milliseconds: 120);
+  static const release = Duration(milliseconds: 160);
+  static const micro = Duration(milliseconds: 180);
+  static const component = Duration(milliseconds: 260);
+  static const navigation = Duration(milliseconds: 320);
+  static const realtime = Duration(milliseconds: 280);
+  static const highlight = Duration(milliseconds: 600);
+  static const display = Duration(milliseconds: 400);
+  static const stagger = Duration(milliseconds: 40);
+  static const fast = release;
+  static const standard = component;
+  static const emphasis = component;
+  static const entering = Curves.easeOutCubic;
+  static const exiting = Curves.easeInCubic;
+  static const position = Curves.easeInOutCubic;
+  static const curve = entering;
   static const minimumOpacity = 0.88;
-  static const verticalOffset = 3.0;
+  static const verticalOffset = 10.0;
+  static const routeOffset = 12.0;
+  static const pressedScale = .985;
+  static const modalScale = .97;
+  static const scrollThreshold = 20.0;
+
+  static bool reduced(BuildContext context) =>
+      MediaQuery.disableAnimationsOf(context);
+
+  static Duration duration(BuildContext context, Duration value) =>
+      reduced(context) ? instant : value;
+
+  static AnimationStyle modalStyle(BuildContext context) => AnimationStyle(
+    duration: duration(context, component),
+    reverseDuration: duration(context, component),
+    curve: entering,
+    reverseCurve: exiting,
+  );
 }
 
 /// Presentation-only identity; no account, patient or backend event data.

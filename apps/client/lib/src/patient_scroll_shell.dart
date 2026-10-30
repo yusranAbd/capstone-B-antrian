@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
 import 'patient_scroll_input.dart';
+import 'queueb_motion.dart';
 
 /// Patient-only chrome. Content stays mounted while the bars release space.
 /// No timers or scroll controllers are attached to the individual pages.
@@ -34,13 +35,13 @@ class _PatientScrollShellState extends State<PatientScrollShell>
   late final _controller = AnimationController(
     vsync: this,
     value: 1,
-    duration: const Duration(milliseconds: 220),
-    reverseDuration: const Duration(milliseconds: 220),
+    duration: QueueBMotion.component,
+    reverseDuration: QueueBMotion.component,
   );
   late final _visibility = CurvedAnimation(
     parent: _controller,
-    curve: Curves.easeOutCubic,
-    reverseCurve: Curves.easeInOutCubic,
+    curve: QueueBMotion.position,
+    reverseCurve: QueueBMotion.position,
   );
   bool _userScrolling = false;
   double _travel = 0;
@@ -147,7 +148,7 @@ class _PatientScrollShellState extends State<PatientScrollShell>
       if (notification.metrics.maxScrollExtent > 0 && delta != 0) {
         if (_travel.sign != delta.sign) _travel = 0;
         _travel += delta;
-        if (_travel.abs() >= 12) _show(_travel < 0);
+        if (_travel.abs() >= QueueBMotion.scrollThreshold) _show(_travel < 0);
       }
     }
     return false;

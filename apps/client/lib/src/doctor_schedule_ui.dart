@@ -4,6 +4,8 @@ import 'config.dart';
 import 'mobile_ui.dart';
 import 'patient_design.dart';
 import 'doctor_professional.dart';
+import 'queueb_content_motion.dart';
+import 'queueb_motion.dart';
 
 // QueueB existing tokens and navigation; reference: doctor profile + calendar.
 class DoctorProfileCard extends StatelessWidget {
@@ -163,38 +165,49 @@ class _PracticeDateStripState extends State<PracticeDateStrip> {
           selected: selected,
           child: SizedBox(
             width: 72,
-            child: OutlinedButton(
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                backgroundColor: selected
-                    ? PatientDesign.darkTeal
-                    : Colors.white,
-                foregroundColor: selected ? Colors.white : PatientDesign.navy,
-                side: BorderSide(
-                  color: selected ? PatientDesign.teal : PatientDesign.border,
+            child: QueueBSelectionMotion(
+              key: ValueKey(text),
+              selected: selected,
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  animationDuration: QueueBMotion.duration(
+                    context,
+                    QueueBMotion.micro,
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 8,
+                  ),
+                  backgroundColor: selected
+                      ? PatientDesign.darkTeal
+                      : Colors.white,
+                  foregroundColor: selected ? Colors.white : PatientDesign.navy,
+                  side: BorderSide(
+                    color: selected ? PatientDesign.teal : PatientDesign.border,
+                  ),
                 ),
-              ),
-              onPressed: widget.enabled ? () => widget.onChanged(text) : null,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    const [
-                      'Sen',
-                      'Sel',
-                      'Rab',
-                      'Kam',
-                      'Jum',
-                      'Sab',
-                      'Min',
-                    ][day.weekday - 1],
-                  ),
-                  Text(
-                    '${day.day}/${day.month}',
-                    style: const TextStyle(fontWeight: FontWeight.w800),
-                  ),
-                  Text('${day.year}', style: const TextStyle(fontSize: 10)),
-                ],
+                onPressed: widget.enabled ? () => widget.onChanged(text) : null,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      const [
+                        'Sen',
+                        'Sel',
+                        'Rab',
+                        'Kam',
+                        'Jum',
+                        'Sab',
+                        'Min',
+                      ][day.weekday - 1],
+                    ),
+                    Text(
+                      '${day.day}/${day.month}',
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    Text('${day.year}', style: const TextStyle(fontSize: 10)),
+                  ],
+                ),
               ),
             ),
           ),

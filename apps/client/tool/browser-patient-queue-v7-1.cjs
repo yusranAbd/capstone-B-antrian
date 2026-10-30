@@ -7,6 +7,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs"),
   path = require("node:path");
 const { enter, button, cameraVideo } = require("./browser-demo.cjs").helpers;
+const { sampleFrames } = require("./motion-profile.cjs");
 const api = "http://127.0.0.1:3001/api/v1";
 const args = [
   "--disable-background-timer-throttling",
@@ -14,13 +15,20 @@ const args = [
   "--disable-backgrounding-occluded-windows",
 ];
 module.exports = async ({ fixture: f }) => {
-  const out = path.resolve(__dirname, "../build/v7-1/browser-realtime");
+  const buildRoot = path.resolve(__dirname, "../build");
+  const out = process.env.QUEUEB_REALTIME_EVIDENCE_DIR
+    ? path.resolve(process.env.QUEUEB_REALTIME_EVIDENCE_DIR)
+    : path.join(buildRoot, "v7-1/browser-realtime");
+  assert(out.startsWith(buildRoot + path.sep), "Evidence must stay in build");
   fs.mkdirSync(out, { recursive: true });
   const video = path.join(out, "owned-camera.y4m");
   const contexts = [],
     browsers = [],
     cases = [],
     errors = [];
+  const profiles = [];
+  let cameraPage;
+  const mediaFailures = [];
   let staffAuthorization;
   let phase = "fixtures",
     fault = false,
@@ -77,6 +85,18 @@ module.exports = async ({ fixture: f }) => {
       },
     );
     const p = await c.newPage();
+    if (camera) {
+      cameraPage = p;
+      p.on("requestfailed", (request) => {
+        const url = new URL(request.url());
+        if (url.pathname.startsWith("/api/v1/")) return;
+        const error = request.failure()?.errorText || "";
+        mediaFailures.push({
+          host: url.hostname,
+          error: /^net::ERR_[A-Z_]+$/.test(error) ? error : "other",
+        });
+      });
+    }
     const stats = {
       reads: 0,
       automaticPosts: 0,
@@ -254,7 +274,12 @@ module.exports = async ({ fixture: f }) => {
     phase = "check-in";
     const before = [a.stats.scopedEvents, other.stats.scopedEvents];
     await scan(staff, tickets[0].qr, tickets[0].id);
-    await total(a, 1);
+    await sampleFrames(
+      a.p,
+      "patient-authoritative-check-in",
+      () => total(a, 1),
+      profiles,
+    );
     await total(other, 1);
     for (const [i, user] of [a, other].entries()) {
       assert(user.stats.scopedEvents > before[i]);
@@ -358,6 +383,44 @@ module.exports = async ({ fixture: f }) => {
       ),
     );
   } catch (error) {
+    const cameraDiagnostics =
+      cameraPage && !cameraPage.isClosed()
+        ? await cameraPage
+            .evaluate(() => {
+              const v = document.querySelector("video");
+              const labels = [...document.querySelectorAll("[aria-label]")]
+                .map((n) => n.getAttribute("aria-label"))
+                .join("\n");
+              return {
+                video: v
+                  ? {
+                      width: v.videoWidth,
+                      height: v.videoHeight,
+                      ready: v.readyState,
+                      paused: v.paused,
+                      time: v.currentTime,
+                      tracks: [...(v.srcObject?.getVideoTracks?.() || [])].map(
+                        (t) => ({
+                          ready: t.readyState,
+                          enabled: t.enabled,
+                          muted: t.muted,
+                        }),
+                      ),
+                    }
+                  : null,
+                labels: Object.fromEntries(
+                  [
+                    "QR Check-in Otomatis",
+                    "Kamera tidak tersedia",
+                    "kedaluwarsa",
+                    "belum tersinkron",
+                    "Check-in berhasil",
+                  ].map((k) => [k, labels.includes(k)]),
+                ),
+              };
+            })
+            .catch(() => null)
+        : null;
     fs.writeFileSync(
       path.join(out, "summary.json"),
       JSON.stringify(
@@ -369,6 +432,8 @@ module.exports = async ({ fixture: f }) => {
           cases,
           http5xx,
           errors,
+          cameraDiagnostics,
+          mediaFailures,
         },
         null,
         2,
@@ -377,6 +442,11 @@ module.exports = async ({ fixture: f }) => {
     console.error("V7.1 realtime failed at " + phase + ": " + error.message);
     throw error;
   } finally {
+    if (profiles.length)
+      fs.writeFileSync(
+        path.join(out, "motion-frame-profile.json"),
+        JSON.stringify(profiles, null, 2),
+      );
     clearTimeout(deadline);
     for (const c of contexts) await c.close().catch(() => {});
     for (const b of browsers) await b.close().catch(() => {});

@@ -5,6 +5,7 @@ import 'config.dart';
 import 'patient_design.dart';
 import 'patient_home.dart';
 import 'patient_home_v7.dart';
+import 'queueb_motion.dart';
 import 'features/patient/models/patient_queue_models.dart';
 
 /// Home presentation only; booking and invalidation remain in PatientPage.
@@ -222,14 +223,36 @@ class PatientHomeTabs extends StatefulWidget {
   State<PatientHomeTabs> createState() => _PatientHomeTabsState();
 }
 
+/// Keep the same controller/index/stack when the platform preference changes.
+/// TabBar and TabBarView both read the current duration for their next action.
+class _HomeMotionTabController extends TabController {
+  _HomeMotionTabController({
+    required super.initialIndex,
+    required super.vsync,
+    required this.reduced,
+  }) : super(length: 2, animationDuration: QueueBMotion.component);
+  final bool Function() reduced;
+
+  @override
+  Duration get animationDuration =>
+      reduced() ? Duration.zero : QueueBMotion.component;
+
+  @override
+  void animateTo(int value, {Duration? duration, Curve curve = Curves.ease}) =>
+      super.animateTo(
+        value,
+        duration: reduced()
+            ? Duration.zero
+            : duration ?? QueueBMotion.component,
+        curve: curve == Curves.ease ? QueueBMotion.position : curve,
+      );
+}
+
 class _PatientHomeTabsState extends State<PatientHomeTabs>
     with SingleTickerProviderStateMixin {
-  late final _tabs = TabController(
-    length: 2,
+  late final _tabs = _HomeMotionTabController(
     initialIndex: widget.value.index,
-    animationDuration: MediaQuery.disableAnimationsOf(context)
-        ? Duration.zero
-        : const Duration(milliseconds: 220),
+    reduced: () => QueueBMotion.reduced(context),
     vsync: this,
   )..addListener(_selectionChanged);
 
@@ -247,7 +270,7 @@ class _PatientHomeTabsState extends State<PatientHomeTabs>
         widget.value.index,
         duration: MediaQuery.disableAnimationsOf(context)
             ? Duration.zero
-            : const Duration(milliseconds: 220),
+            : QueueBMotion.component,
       );
     }
   }

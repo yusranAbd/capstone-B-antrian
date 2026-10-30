@@ -30,6 +30,9 @@ import 'doctor_schedule_ui.dart';
 import 'doctor_professional.dart';
 import 'patient_ui.dart';
 import 'patient_motion.dart';
+import 'queueb_motion.dart';
+import 'queueb_interaction_motion.dart';
+import 'queueb_content_motion.dart';
 import 'patient_home.dart';
 import 'patient_home_v6.dart';
 import 'patient_home_v7.dart';
@@ -137,6 +140,20 @@ class _PatientPageState extends State<PatientPage> {
   bool reviewing = false;
   String search = '', channel = 'Semua';
   String homeQuery = '';
+  final _homeEntrances = <String, QueueBMotionOnce>{};
+  List<String>? _entranceServices;
+  Widget _homeEntrance(Json service, Widget child) {
+    final id = '${service['id']}';
+    final ordinal = _entranceServices?.indexOf(id) ?? -1;
+    if (ordinal < 0) return child;
+    return QueueBContentEntrance(
+      key: ValueKey(('home-service-motion', id)),
+      once: _homeEntrances.putIfAbsent(id, QueueBMotionOnce.new),
+      index: ordinal,
+      child: child,
+    );
+  }
+
   PatientHomeMode homeMode = PatientHomeMode.walkIn;
   final homeSearch = TextEditingController();
   String? homeClinicId;
@@ -407,12 +424,15 @@ class _PatientPageState extends State<PatientPage> {
     final accepted = request.appointment
         ? await showDialog<bool>(
                 context: context,
-                builder: (_) => AppointmentReview(
-                  doctor: request.doctor,
-                  clinic: request.clinic,
-                  session: request.session,
-                  slot: request.slot,
-                  config: widget.api.config,
+                animationStyle: QueueBMotion.modalStyle(context),
+                builder: (_) => QueueBModalMotion(
+                  child: AppointmentReview(
+                    doctor: request.doctor,
+                    clinic: request.clinic,
+                    session: request.session,
+                    slot: request.slot,
+                    config: widget.api.config,
+                  ),
                 ),
               ) ==
               true
@@ -891,6 +911,9 @@ class _PatientPageState extends State<PatientPage> {
           : null,
     );
     final walkIns = homeWalkInClinics(services, doctors, homeQuery);
+    if (!loading && walkIns.isNotEmpty) {
+      _entranceServices ??= walkIns.take(5).map((s) => '${s['id']}').toList();
+    }
     return PatientHomeTabs(
       value: homeMode,
       onChanged: busy ? null : (mode) => setState(() => homeMode = mode),
@@ -976,28 +999,31 @@ class _PatientPageState extends State<PatientPage> {
                 )
               : SliverList.builder(
                   itemCount: walkIns.length,
-                  itemBuilder: (context, index) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: ValueListenableBuilder<PatientQueueState>(
-                      valueListenable: overviewCubit.queueState,
-                      builder: (context, queue, _) => PatientHomeService(
-                        clinic: walkIns[index],
-                        queue: queue.forService(
-                          '${walkIns[index]['id']}',
-                          widget.api.config.today,
+                  itemBuilder: (context, index) => _homeEntrance(
+                    walkIns[index],
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: ValueListenableBuilder<PatientQueueState>(
+                        valueListenable: overviewCubit.queueState,
+                        builder: (context, queue, _) => PatientHomeService(
+                          clinic: walkIns[index],
+                          queue: queue.forService(
+                            '${walkIns[index]['id']}',
+                            widget.api.config.today,
+                          ),
+                          ticket: homeServiceTicket(
+                            tickets,
+                            '${walkIns[index]['id']}',
+                            widget.api.config.today,
+                            widget.api.user?['id']?.toString(),
+                          ),
+                          onTap: busy
+                              ? null
+                              : () {
+                                  startRegistration(false);
+                                  selectService('${walkIns[index]['id']}');
+                                },
                         ),
-                        ticket: homeServiceTicket(
-                          tickets,
-                          '${walkIns[index]['id']}',
-                          widget.api.config.today,
-                          widget.api.user?['id']?.toString(),
-                        ),
-                        onTap: busy
-                            ? null
-                            : () {
-                                startRegistration(false);
-                                selectService('${walkIns[index]['id']}');
-                              },
                       ),
                     ),
                   ),

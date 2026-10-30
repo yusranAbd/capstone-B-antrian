@@ -16,6 +16,7 @@ import 'mobile_ui.dart';
 import 'staff_ui.dart';
 import 'staff_v4.dart';
 import 'queueb_motion.dart';
+import 'queueb_value_motion.dart';
 
 class QueuePage extends StatefulWidget {
   const QueuePage({
@@ -495,12 +496,16 @@ class _QueuePageState extends State<QueuePage> with WidgetsBindingObserver {
                         ),
                       ],
                       for (final t in active) ...[
-                        Text(
-                          '${t['nomorAntrean']}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 40,
-                            fontWeight: FontWeight.w800,
+                        QueueBValueMotion(
+                          value: t['nomorAntrean'],
+                          scope: selectedRoom?['id'],
+                          child: Text(
+                            '${t['nomorAntrean']}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 40,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
                         ),
                         if (t['namaPasien'] != null)

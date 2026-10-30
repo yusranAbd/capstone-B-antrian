@@ -8,6 +8,8 @@ import '../doctor.dart';
 import '../patient.dart';
 import '../queue.dart';
 import '../display.dart';
+import '../queueb_motion.dart';
+import '../queueb_interaction_motion.dart';
 import '../user_profile.dart';
 import 'route_policy.dart';
 import 'route_refresh_notifier.dart';
@@ -176,14 +178,20 @@ class AppRouting {
                     GoRoute(
                       path: 'new',
                       name: 'patient-booking',
-                      builder: (_, _) =>
-                          const PatientBranchView(index: 1, bookingView: true),
+                      pageBuilder: (context, state) => _patientPage(
+                        context,
+                        state,
+                        const PatientBranchView(index: 1, bookingView: true),
+                      ),
                     ),
                     GoRoute(
                       path: 'doctors/:doctorId',
                       name: 'patient-doctor',
-                      builder: (_, _) =>
-                          const PatientBranchView(index: 1, bookingView: true),
+                      pageBuilder: (context, state) => _patientPage(
+                        context,
+                        state,
+                        const PatientBranchView(index: 1, bookingView: true),
+                      ),
                     ),
                   ],
                 ),
@@ -200,11 +208,13 @@ class AppRouting {
                     GoRoute(
                       path: ':ticketId',
                       name: 'patient-ticket',
-                      pageBuilder: (_, state) => NoTransitionPage<void>(
-                        key: ValueKey(state.uri.path),
-                        child: PatientTicketRoute(
+                      pageBuilder: (context, state) => _patientPage(
+                        context,
+                        state,
+                        PatientTicketRoute(
                           ticketId: state.pathParameters['ticketId']!,
                         ),
+                        key: ValueKey(state.uri.path),
                       ),
                     ),
                   ],
@@ -281,6 +291,22 @@ class AppRouting {
   }
 
   final QueueApi api;
+  CustomTransitionPage<void> _patientPage(
+    BuildContext context,
+    GoRouterState state,
+    Widget child, {
+    LocalKey? key,
+  }) => CustomTransitionPage<void>(
+    key: key ?? state.pageKey,
+    transitionDuration: QueueBMotion.duration(context, QueueBMotion.navigation),
+    reverseTransitionDuration: QueueBMotion.duration(
+      context,
+      QueueBMotion.navigation,
+    ),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+        QueueBRouteMotion(animation: animation, child: child),
+    child: child,
+  );
   late final ValueNotifier<RoutingConfig> _configuration;
   late Object _configuredScope;
   final rootKey = GlobalKey<NavigatorState>(debugLabel: 'root');

@@ -151,7 +151,9 @@ void main() {
     expect(opacity(tester), closeTo(0.88, 0.001));
     await tester.pump(const Duration(milliseconds: 100));
     expect(opacity(tester), greaterThan(0.88));
-    await tester.pump(const Duration(milliseconds: 110));
+    await tester.pump(
+      PatientMicroEntrance.duration - const Duration(milliseconds: 90),
+    );
     expect(opacity(tester), 1);
     await tester.pumpWidget(
       demo(token, text: 'Pendaftaran berhasil. Tiket siap.'),

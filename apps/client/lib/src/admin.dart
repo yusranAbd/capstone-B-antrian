@@ -30,6 +30,7 @@ import 'features/admin/application/display_management_cubit.dart';
 import 'features/admin/application/display_management_state.dart';
 import 'features/admin/data/admin_display_repository.dart';
 import 'queueb_motion.dart';
+import 'queueb_interaction_motion.dart';
 
 class AdminPage extends StatefulWidget {
   const AdminPage({
@@ -236,50 +237,53 @@ class _AdminPageState extends State<AdminPage> {
     final bulk = resource.path == '/jadwal-layanan' && row == null;
     final changed = await showDialog<bool>(
       context: context,
+      animationStyle: QueueBMotion.modalStyle(context),
       barrierDismissible: false,
-      builder: (context) => bulk
-          ? BulkScheduleEditor(
-              api: widget.api,
-              clinics: catalog['/layanan'] ?? [],
-              repository: scheduleRepository,
-            )
-          : resource.path == '/jadwal-praktik'
-          ? PracticeScheduleEditor(
-              api: widget.api,
-              catalog: catalog,
-              catalogSource: catalogRepository,
-              row: row,
-              onSave: cubit == null
-                  ? null
-                  : (body) => cubit.save(body, id: row?['id'] as String?),
-            )
-          : resource.path == '/dokter'
-          ? AdminDoctorEditor(
-              api: widget.api,
-              row: row,
-              saveProfile: cubit == null
-                  ? null
-                  : (id, body) => cubit.save(body, id: id),
-            )
-          : _AdminEditor(
-              api: widget.api,
-              resource: resource,
-              row: row,
-              catalog: catalog,
-              initialSession: session,
-              catalogSource:
-                  resource.path == '/jadwal-layanan' ||
-                      resource.path == '/penugasan-petugas'
-                  ? catalogRepository
-                  : null,
-              onSave: cubit == null
-                  ? slot
-                        ? (body) => slotsById(
-                            '${row?['jadwalPraktikId'] ?? body['jadwalPraktikId']}',
-                          ).save(body, id: row?['id'] as String?)
-                        : null
-                  : (body) => cubit.save(body, id: row?['id'] as String?),
-            ),
+      builder: (context) => QueueBModalMotion(
+        child: bulk
+            ? BulkScheduleEditor(
+                api: widget.api,
+                clinics: catalog['/layanan'] ?? [],
+                repository: scheduleRepository,
+              )
+            : resource.path == '/jadwal-praktik'
+            ? PracticeScheduleEditor(
+                api: widget.api,
+                catalog: catalog,
+                catalogSource: catalogRepository,
+                row: row,
+                onSave: cubit == null
+                    ? null
+                    : (body) => cubit.save(body, id: row?['id'] as String?),
+              )
+            : resource.path == '/dokter'
+            ? AdminDoctorEditor(
+                api: widget.api,
+                row: row,
+                saveProfile: cubit == null
+                    ? null
+                    : (id, body) => cubit.save(body, id: id),
+              )
+            : _AdminEditor(
+                api: widget.api,
+                resource: resource,
+                row: row,
+                catalog: catalog,
+                initialSession: session,
+                catalogSource:
+                    resource.path == '/jadwal-layanan' ||
+                        resource.path == '/penugasan-petugas'
+                    ? catalogRepository
+                    : null,
+                onSave: cubit == null
+                    ? slot
+                          ? (body) => slotsById(
+                              '${row?['jadwalPraktikId'] ?? body['jadwalPraktikId']}',
+                            ).save(body, id: row?['id'] as String?)
+                          : null
+                    : (body) => cubit.save(body, id: row?['id'] as String?),
+              ),
+      ),
     );
     if (mounted && (changed == true || bulk || resource.path == '/dokter')) {
       if ((cubit != null || slot) && changed == true) _error = null;
@@ -440,6 +444,7 @@ class _AdminPageState extends State<AdminPage> {
   Future<void> openMenu() async {
     await showModalBottomSheet<void>(
       context: context,
+      sheetAnimationStyle: QueueBMotion.modalStyle(context),
       isScrollControlled: true,
       builder: (sheetContext) => SafeArea(
         child: SizedBox(
