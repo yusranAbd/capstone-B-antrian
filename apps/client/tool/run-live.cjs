@@ -440,6 +440,16 @@ async function main() {
     } else if (process.argv.includes("--demo-browser")) {
       fixture.demoFull = true;
       code = 0;
+    } else if (process.argv.includes("--motion-v1")) {
+      const email = `flutter-doctor-${unique.toLowerCase()}@test.local`;
+      const provision = await post(`/dokter/${doctorId}/akun`, {
+        email,
+        kataSandi: password,
+      });
+      users.push(provision.akun.id);
+      fixture.doctor = { id: provision.akun.id, email, password };
+      fixture.motionV1 = true;
+      code = 0;
     } else if (process.argv.includes("--patient-motion")) {
       fixture.patientMotion = true;
       code = 0;
@@ -617,10 +627,11 @@ async function main() {
   const after = await readState();
   const recoveryReport = recovery?.finish();
   if (
-    (fixture?.finalQa || fixture?.patientMotion) &&
+    (fixture?.finalQa || fixture?.patientMotion || fixture?.motionV1) &&
     recoveryReport &&
     (require("./recovery-observer.cjs").hasServerFailure(recoveryReport) ||
-      (fixture?.patientMotion && recoveryReport.pendingAtFinish !== 0))
+      ((fixture?.patientMotion || fixture?.motionV1) &&
+        recoveryReport.pendingAtFinish !== 0))
   ) {
     code = 1;
     console.error("Recovery strict gate: HTTP_5XX_OR_P2028_OR_PENDING");

@@ -29,6 +29,7 @@ import 'features/admin/application/staff_management_cubit.dart';
 import 'features/admin/application/display_management_cubit.dart';
 import 'features/admin/application/display_management_state.dart';
 import 'features/admin/data/admin_display_repository.dart';
+import 'queueb_motion.dart';
 
 class AdminPage extends StatefulWidget {
   const AdminPage({
@@ -89,7 +90,19 @@ class _AdminPageState extends State<AdminPage> {
             : assignments
       : null;
   List<Json> get data => masterCubit?.rows ?? const [];
-  String? session, _error, message;
+  String? session, _error, _message;
+  QueueBMotionOnce? _messageMotion;
+  String? get message => _message;
+  set message(String? value) {
+    _message = value;
+    // Existing assignments occur at successful CRUD/dialog completion. This
+    // presentation identity also distinguishes repeated identical save text.
+    _messageMotion =
+        value != null && catalogRepository.active && widget.routeChild == null
+        ? QueueBMotionOnce()
+        : null;
+  }
+
   String? get error => selected == 6 && staffTab == 0
       ? _error
       : masterCubit?.state.error?.toString() ?? _error;
@@ -562,7 +575,15 @@ class _AdminPageState extends State<AdminPage> {
               error != null
                   ? AdminNotice(error!, error: true)
                   : const SizedBox.shrink(),
-              message != null ? AdminNotice(message!) : const SizedBox.shrink(),
+              if (message != null)
+                if (_messageMotion case final event?)
+                  QueueBMicroEntrance(
+                    key: const ValueKey('admin-crud-feedback'),
+                    once: event,
+                    child: AdminNotice(message!),
+                  )
+                else
+                  AdminNotice(message!),
               if (selected == 6) ...[
                 const SizedBox(height: 8),
                 TabBar(

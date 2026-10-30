@@ -6,8 +6,11 @@ const fs = require("node:fs");
 const path = require("node:path");
 const assert = require("node:assert/strict");
 
-module.exports = async ({ fixture }) => {
-  const output = path.resolve(__dirname, "../build/animate-pilot/browser");
+module.exports = async ({
+  fixture,
+  output = path.resolve(__dirname, "../build/animate-pilot/browser"),
+  prepareContext,
+}) => {
   fs.mkdirSync(output, { recursive: true });
   const browser = await chromium.launch({
     channel: process.env.FLUTTER_BROWSER_CHANNEL || "chrome",
@@ -22,6 +25,7 @@ module.exports = async ({ fixture }) => {
         viewport: { width: 390, height: 844 },
         reducedMotion: reduced ? "reduce" : "no-preference",
       });
+      if (prepareContext) await prepareContext(context);
       const page = await context.newPage();
       try {
         await page.bringToFront();

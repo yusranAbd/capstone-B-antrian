@@ -15,6 +15,7 @@ import 'widgets.dart';
 import 'mobile_ui.dart';
 import 'staff_ui.dart';
 import 'staff_v4.dart';
+import 'queueb_motion.dart';
 
 class QueuePage extends StatefulWidget {
   const QueuePage({
@@ -252,7 +253,18 @@ class _QueuePageState extends State<QueuePage> with WidgetsBindingObserver {
                       semanticsLabel: 'Memproses tindakan',
                     ),
                   if (error != null) MobileNotice(error!, error: true),
-                  if (message != null) MobileNotice(message!),
+                  QueueBConfirmedFeedback(
+                    key: const ValueKey('staff-command-feedback'),
+                    // Confirmed is emitted only after the existing REST drain.
+                    // Do not gate on synchronized/loading: polling changes them
+                    // while retaining this same confirmed command feedback.
+                    confirmed:
+                        state.command == StaffCommandStatus.confirmed &&
+                        message != null,
+                    child: message == null
+                        ? const SizedBox.shrink()
+                        : MobileNotice(message!),
+                  ),
                   if (room == null && !loading)
                     const StaffPanel(
                       title: 'Ruang pelayanan',
