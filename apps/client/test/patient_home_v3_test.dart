@@ -11,6 +11,7 @@ import 'package:queueb_client/src/app.dart';
 import 'package:queueb_client/src/config.dart';
 import 'package:queueb_client/src/patient_home.dart';
 import 'package:queueb_client/src/patient_home_v6.dart';
+import 'package:queueb_client/src/patient_home_v7.dart';
 import 'package:queueb_client/src/doctor_professional.dart';
 
 import 'patient_v2_test.dart' show PatientV2Backend;
@@ -203,7 +204,10 @@ void main() {
       );
       expect(find.byTooltip('Aktivitas tiket'), findsNothing);
       expect(find.byTooltip('Profil akun'), findsNothing);
-      expect(find.byType(PatientHomeHeaderV6), findsOneWidget);
+      expect(find.byType(PatientHomeHeaderV6), findsNothing);
+      expect(find.byType(PatientHomeAppBarV7), findsOneWidget);
+      expect(find.byTooltip('Notifikasi'), findsOneWidget);
+      expect(find.byTooltip('Profil pasien'), findsOneWidget);
       expect(find.byType(PatientHomeService), findsWidgets);
       expect(find.byType(PatientHomeDoctorV6), findsNothing);
       expect(find.text('Kunjungan Terdekat'), findsNothing);

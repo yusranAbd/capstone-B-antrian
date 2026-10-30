@@ -440,6 +440,10 @@ async function main() {
     } else if (process.argv.includes("--demo-browser")) {
       fixture.demoFull = true;
       code = 0;
+    } else if (process.argv.includes("--patient-home-v7")) {
+      fixture.patientHomeV7 = true;
+      fixture.homeV7Before = process.argv.includes("--before");
+      code = 0;
     } else if (process.argv.includes("--motion-v1")) {
       const email = `flutter-doctor-${unique.toLowerCase()}@test.local`;
       const provision = await post(`/dokter/${doctorId}/akun`, {
@@ -627,10 +631,15 @@ async function main() {
   const after = await readState();
   const recoveryReport = recovery?.finish();
   if (
-    (fixture?.finalQa || fixture?.patientMotion || fixture?.motionV1) &&
+    (fixture?.finalQa ||
+      fixture?.patientMotion ||
+      fixture?.motionV1 ||
+      fixture?.patientHomeV7) &&
     recoveryReport &&
     (require("./recovery-observer.cjs").hasServerFailure(recoveryReport) ||
-      ((fixture?.patientMotion || fixture?.motionV1) &&
+      ((fixture?.patientMotion ||
+        fixture?.motionV1 ||
+        fixture?.patientHomeV7) &&
         recoveryReport.pendingAtFinish !== 0))
   ) {
     code = 1;

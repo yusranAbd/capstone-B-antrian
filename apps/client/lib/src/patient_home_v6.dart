@@ -4,7 +4,7 @@ import 'package:flutter/gestures.dart';
 import 'config.dart';
 import 'patient_design.dart';
 import 'patient_home.dart';
-import 'patient_ui.dart';
+import 'patient_home_v7.dart';
 
 /// Home presentation only; booking and invalidation remain in PatientPage.
 enum PatientHomeMode { walkIn, appointment }
@@ -44,24 +44,27 @@ List<Json> homeWalkInClinics(
   List<Json> clinics,
   List<Json> doctors,
   String query,
-) => clinics.where((clinic) {
-  if (!supportsHomeWalkIn(clinic)) return false;
-  if ('${label(clinic)} ${clinic['deskripsi'] ?? ''} ${clinic['kode'] ?? ''}'
-      .toLowerCase()
-      .contains(query)) {
-    return true;
-  }
-  return doctors.any(
-    (doctor) =>
-        doctor['aktif'] != false &&
-        '${label(doctor)} ${doctor['spesialisasi'] ?? ''}'
-            .toLowerCase()
-            .contains(query) &&
-        rows(doctor['dokterLayanan']).any(
-          (link) => link['aktif'] == true && link['layananId'] == clinic['id'],
-        ),
-  );
-}).toList();
+) => registrationFirst(
+  clinics.where((clinic) {
+    if (!supportsHomeWalkIn(clinic)) return false;
+    if ('${label(clinic)} ${clinic['deskripsi'] ?? ''} ${clinic['kode'] ?? ''}'
+        .toLowerCase()
+        .contains(query)) {
+      return true;
+    }
+    return doctors.any(
+      (doctor) =>
+          doctor['aktif'] != false &&
+          '${label(doctor)} ${doctor['spesialisasi'] ?? ''}'
+              .toLowerCase()
+              .contains(query) &&
+          rows(doctor['dokterLayanan']).any(
+            (link) =>
+                link['aktif'] == true && link['layananId'] == clinic['id'],
+          ),
+    );
+  }).toList(),
+);
 
 class PatientHomeHeaderV6 extends StatelessWidget {
   const PatientHomeHeaderV6({super.key, required this.name});
@@ -348,29 +351,18 @@ class _HomeTabHeader extends SliverPersistentHeaderDelegate {
 }
 
 class PatientHomeService extends StatelessWidget {
-  const PatientHomeService({super.key, required this.clinic, this.onTap});
+  const PatientHomeService({
+    super.key,
+    required this.clinic,
+    this.ticket,
+    this.onTap,
+  });
   final Json clinic;
+  final Json? ticket;
   final VoidCallback? onTap;
   @override
-  Widget build(BuildContext context) => _HomeListTile(
-    onTap: onTap,
-    leading: Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        color: PatientHomeV6Style.soft,
-        borderRadius: BorderRadius.circular(13),
-      ),
-      child: Icon(
-        clinicIcon(label(clinic)),
-        color: PatientHomeV6Style.walkIn,
-        size: 23,
-      ),
-    ),
-    title: label(clinic),
-    subtitle: 'Antrean harian · Pilih tanggal pelayanan',
-    accent: PatientHomeV6Style.walkIn,
-  );
+  Widget build(BuildContext context) =>
+      PatientServiceCardV7(clinic: clinic, ticket: ticket, onTap: onTap);
 }
 
 class PatientHomeDoctorV6 extends StatelessWidget {
@@ -391,68 +383,5 @@ class PatientHomeDoctorV6 extends StatelessWidget {
     config: config,
     onTap: onTap,
     scheduleUnavailable: scheduleUnavailable,
-  );
-}
-
-class _HomeListTile extends StatelessWidget {
-  const _HomeListTile({
-    required this.leading,
-    required this.title,
-    required this.subtitle,
-    required this.accent,
-    this.onTap,
-  });
-  final Widget leading;
-  final String title, subtitle;
-  final Color accent;
-  final VoidCallback? onTap;
-  @override
-  Widget build(BuildContext context) => Material(
-    color: PatientDesign.paper,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(18),
-      side: const BorderSide(color: PatientDesign.border),
-    ),
-    child: InkWell(
-      borderRadius: BorderRadius.circular(18),
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            leading,
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: PatientDesign.ink,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      height: 1.3,
-                      color: PatientDesign.muted,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 6),
-            Icon(Icons.chevron_right_rounded, size: 22, color: accent),
-          ],
-        ),
-      ),
-    ),
   );
 }

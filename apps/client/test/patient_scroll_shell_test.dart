@@ -8,6 +8,8 @@ void main() {
     bool accessible = false,
     bool reduced = false,
     int count = 40,
+    Object pageKey = 0,
+    VoidCallback? onNavigation,
   }) async {
     t.view.physicalSize = const Size(320, 568);
     t.view.devicePixelRatio = 1;
@@ -21,11 +23,14 @@ void main() {
             disableAnimations: reduced,
           ),
           child: PatientScrollShell(
-            pageKey: 0,
+            pageKey: pageKey,
             header: AppBar(title: const Text('Header')),
-            bottomNavigationBar: const SizedBox(
+            bottomNavigationBar: SizedBox(
               height: 60,
-              child: Text('Navigation'),
+              child: TextButton(
+                onPressed: onNavigation,
+                child: const Text('Navigation'),
+              ),
             ),
             body: ListView(
               children: [
@@ -48,6 +53,7 @@ void main() {
   }
 
   final bottom = find.byKey(const ValueKey('patient-chrome-bottom'));
+  final top = find.byKey(const ValueKey('patient-chrome-top'));
   final vertical = find.byWidgetPredicate(
     (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
   );
@@ -108,5 +114,84 @@ void main() {
     await t.pump();
     expect(t.getSize(bottom).height, 60);
     expect(t.takeException(), isNull);
+  });
+
+  testWidgets(
+    'Both bars release space and input, then become tappable after reverse scroll',
+    (t) async {
+      var taps = 0;
+      final semantics = t.ensureSemantics();
+      await launch(t, onNavigation: () => taps++);
+      final topHeight = t.getSize(top).height;
+      final initialBodyHeight = t.getSize(vertical).height;
+      await t.drag(vertical, const Offset(0, -180));
+      await t.pumpAndSettle();
+      expect(t.getSize(top).height, 0);
+      expect(t.getSize(bottom).height, 0);
+      expect(
+        t.getSize(vertical).height,
+        closeTo(initialBodyHeight + topHeight + 60, .01),
+      );
+      expect(find.text('Navigation').hitTestable(), findsNothing);
+      // The retained widget still has a label, but is excluded from the tree.
+      expect(
+        t
+            .widget<ExcludeSemantics>(
+              find
+                  .ancestor(of: bottom, matching: find.byType(ExcludeSemantics))
+                  .first,
+            )
+            .excluding,
+        isTrue,
+      );
+      final excludes = find.ancestor(
+        of: bottom,
+        matching: find.byType(IgnorePointer),
+      );
+      expect(t.widget<IgnorePointer>(excludes.first).ignoring, isTrue);
+      await t.drag(vertical, const Offset(0, 80));
+      await t.pumpAndSettle();
+      expect(t.getSize(top).height, topHeight);
+      expect(t.getSize(bottom).height, 60);
+      await t.tap(find.text('Navigation'));
+      expect(taps, 1);
+      semantics.dispose();
+    },
+  );
+
+  testWidgets(
+    '1–2 pixel input never flickers and returning to top restores chrome',
+    (t) async {
+      await launch(t);
+      final position = t.state<ScrollableState>(vertical).position;
+      position.jumpTo(100);
+      await t.pumpAndSettle();
+      final gesture = await t.startGesture(t.getCenter(vertical));
+      // Cross the platform touch slop, then reverse by only two pixels.
+      await gesture.moveBy(const Offset(0, -40));
+      await t.pumpAndSettle();
+      expect(t.getSize(bottom).height, 0);
+      await gesture.moveBy(const Offset(0, 2));
+      await t.pumpAndSettle();
+      expect(t.getSize(bottom).height, 0);
+      await gesture.up();
+      position.jumpTo(0);
+      await t.pumpAndSettle();
+      expect(t.getSize(top).height, greaterThan(0));
+      expect(t.getSize(bottom).height, 60);
+    },
+  );
+
+  testWidgets('A page change restores reduced-motion chrome immediately', (
+    t,
+  ) async {
+    await launch(t, reduced: true);
+    await t.drag(vertical, const Offset(0, -160));
+    await t.pump();
+    expect(t.getSize(top).height, 0);
+    await launch(t, reduced: true, pageKey: 1);
+    expect(t.getSize(top).height, greaterThan(0));
+    expect(t.getSize(bottom).height, 60);
+    expect(t.binding.transientCallbackCount, 0);
   });
 }

@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
+import 'patient_scroll_input.dart';
+
 /// Patient-only chrome. Content stays mounted while the bars release space.
 /// No timers or scroll controllers are attached to the individual pages.
 class PatientScrollShell extends StatefulWidget {
@@ -33,7 +35,7 @@ class _PatientScrollShellState extends State<PatientScrollShell>
     vsync: this,
     value: 1,
     duration: const Duration(milliseconds: 220),
-    reverseDuration: const Duration(milliseconds: 180),
+    reverseDuration: const Duration(milliseconds: 220),
   );
   late final _visibility = CurvedAnimation(
     parent: _controller,
@@ -43,6 +45,26 @@ class _PatientScrollShellState extends State<PatientScrollShell>
   bool _userScrolling = false;
   double _travel = 0;
   BuildContext? _scrollContext;
+  bool _targetVisible = true;
+  final _inputClock = Stopwatch();
+  Duration? _lastInput;
+  double _inputDirection = 0;
+  late final void Function() _stopInput;
+
+  @override
+  void initState() {
+    super.initState();
+    _inputClock.start();
+    _stopInput = observePatientScrollInput((direction) {
+      if (_lastInput == null ||
+          _inputClock.elapsed - _lastInput! >
+              const Duration(milliseconds: 450)) {
+        _travel = 0;
+      }
+      _lastInput = _inputClock.elapsed;
+      _inputDirection = direction;
+    });
+  }
 
   // main.dart always enables Web semantics; that flag alone does not identify
   // a screen reader there. Native platforms retain their accessibility policy.
@@ -53,7 +75,12 @@ class _PatientScrollShellState extends State<PatientScrollShell>
   void didChangeDependencies() {
     super.didChangeDependencies();
     // A screen reader enabled mid-session must never inherit hidden controls.
-    if (_keepControlsVisible) _controller.value = 1;
+    if (_keepControlsVisible) {
+      _targetVisible = true;
+      _controller.value = 1;
+    } else if (MediaQuery.disableAnimationsOf(context)) {
+      _controller.value = _targetVisible ? 1 : 0;
+    }
   }
 
   @override
@@ -63,12 +90,18 @@ class _PatientScrollShellState extends State<PatientScrollShell>
       _userScrolling = false;
       _travel = 0;
       _scrollContext = null;
-      _controller.forward();
+      _lastInput = null;
+      _show(true);
     }
   }
 
   void _show(bool visible) {
     final target = visible ? 1.0 : 0.0;
+    if (_targetVisible == visible &&
+        (_controller.value == target || _controller.isAnimating)) {
+      return;
+    }
+    _targetVisible = visible;
     if (MediaQuery.disableAnimationsOf(context)) {
       _controller.value = target;
     } else if (visible) {
@@ -81,10 +114,9 @@ class _PatientScrollShellState extends State<PatientScrollShell>
   bool _onScroll(ScrollNotification notification) {
     // Ignore horizontal strips, programmatic ensureVisible/jumpTo and dialogs.
     // Home opts into vertical notifications from its nested tab lists only.
-    // Web semantics maps native DOM scrolling to jumpTo, so
-    // Web updates also count as scrolling without disabling semantics.
+    // Web semantics maps DOM scrolling to jumpTo; trusted input must precede it.
     if (notification.metrics.axis != Axis.vertical ||
-        (notification.depth != 0 && !widget.acceptNestedScrolls) ||
+        !_relevant(notification.context, notification.depth) ||
         _keepControlsVisible ||
         ModalRoute.of(context)?.isCurrent == false) {
       return false;
@@ -93,20 +125,49 @@ class _PatientScrollShellState extends State<PatientScrollShell>
       _userScrolling = notification.direction != ScrollDirection.idle;
       if (!_userScrolling) _travel = 0;
     }
-    if (notification is ScrollUpdateNotification &&
-        (kIsWeb || _userScrolling || notification.dragDetails != null)) {
+    if (notification is ScrollUpdateNotification) {
       final delta = notification.scrollDelta ?? 0;
-      if (delta != 0) _scrollContext = notification.context;
+      // Restoring the top always restores navigation, including a clamped offset.
+      // Only hiding requires evidence of user input.
       if (notification.metrics.pixels <= 0) {
         _travel = 0;
         _show(true);
-      } else if (notification.metrics.maxScrollExtent > 0 && delta != 0) {
+        return false;
+      }
+      final webInput =
+          kIsWeb &&
+          _lastInput != null &&
+          _inputClock.elapsed - _lastInput! <
+              const Duration(milliseconds: 450) &&
+          delta.sign == _inputDirection;
+      if (!_userScrolling && notification.dragDetails == null && !webInput) {
+        return false;
+      }
+      if (delta != 0) _scrollContext = notification.context;
+      if (notification.metrics.maxScrollExtent > 0 && delta != 0) {
         if (_travel.sign != delta.sign) _travel = 0;
         _travel += delta;
-        if (_travel.abs() >= 8) _show(_travel < 0);
+        if (_travel.abs() >= 12) _show(_travel < 0);
       }
     }
     return false;
+  }
+
+  bool _relevant(BuildContext? context, int depth) {
+    if (depth == 0) return true;
+    if (!widget.acceptNestedScrolls || context == null) return false;
+    ScrollView? nearest;
+    context.visitAncestorElements((element) {
+      if (element.widget is ScrollView) {
+        nearest = element.widget as ScrollView;
+        return false;
+      }
+      return true;
+    });
+    return const [
+      PageStorageKey('home-walk-in-list'),
+      PageStorageKey('home-appointment-list'),
+    ].contains(nearest?.key);
   }
 
   Widget _bar(Widget child, {required bool bottom}) => Focus(
@@ -115,15 +176,26 @@ class _PatientScrollShellState extends State<PatientScrollShell>
     },
     child: IgnorePointer(
       ignoring: _controller.value == 0,
-      child: ExcludeSemantics(
-        excluding: !kIsWeb && _controller.value == 0,
-        child: SizeTransition(
-          key: ValueKey(
-            bottom ? 'patient-chrome-bottom' : 'patient-chrome-top',
+      child: ExcludeFocus(
+        excluding: _controller.value == 0,
+        child: ExcludeSemantics(
+          excluding: _controller.value == 0,
+          child: SizeTransition(
+            key: ValueKey(
+              bottom ? 'patient-chrome-bottom' : 'patient-chrome-top',
+            ),
+            sizeFactor: _visibility,
+            alignment: bottom ? Alignment.bottomCenter : Alignment.topCenter,
+            child: ClipRect(
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: Offset(0, bottom ? 1 : -1),
+                  end: Offset.zero,
+                ).animate(_visibility),
+                child: FadeTransition(opacity: _visibility, child: child),
+              ),
+            ),
           ),
-          sizeFactor: _visibility,
-          alignment: bottom ? Alignment.bottomCenter : Alignment.topCenter,
-          child: FadeTransition(opacity: _visibility, child: child),
         ),
       ),
     ),
@@ -143,7 +215,7 @@ class _PatientScrollShellState extends State<PatientScrollShell>
           // Collapsing bars can make a short page fit or clamp its offset to
           // zero. Restore controls even when no reverse scroll is possible.
           if (identical(notification.context, _scrollContext) &&
-              (notification.depth == 0 || widget.acceptNestedScrolls) &&
+              _relevant(notification.context, notification.depth) &&
               metrics.axis == Axis.vertical &&
               (metrics.maxScrollExtent <= 0 || metrics.pixels <= 0) &&
               _controller.value < 1 &&
@@ -188,6 +260,8 @@ class _PatientScrollShellState extends State<PatientScrollShell>
   @override
   void dispose() {
     _visibility.dispose();
+    _stopInput();
+    _inputClock.stop();
     _controller.dispose();
     super.dispose();
   }

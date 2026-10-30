@@ -31,6 +31,7 @@ import 'patient_ui.dart';
 import 'patient_motion.dart';
 import 'patient_home.dart';
 import 'patient_home_v6.dart';
+import 'patient_home_v7.dart';
 import 'user_profile.dart';
 import 'patient_reservations.dart';
 import 'patient_mobile_v5.dart';
@@ -889,9 +890,6 @@ class _PatientPageState extends State<PatientPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                PatientHomeHeaderV6(
-                  name: '${widget.api.user?['nama'] ?? 'Pasien'}',
-                ),
                 if (loading)
                   const LinearProgressIndicator(
                     semanticsLabel: 'Memuat data pelayanan',
@@ -971,6 +969,12 @@ class _PatientPageState extends State<PatientPage> {
                     padding: const EdgeInsets.only(bottom: 8),
                     child: PatientHomeService(
                       clinic: walkIns[index],
+                      ticket: homeServiceTicket(
+                        tickets,
+                        '${walkIns[index]['id']}',
+                        widget.api.config.today,
+                        widget.api.user?['id']?.toString(),
+                      ),
                       onTap: busy
                           ? null
                           : () {
@@ -1135,8 +1139,34 @@ class _PatientPageState extends State<PatientPage> {
               child: PatientScrollShell(
                 pageKey:
                     '$tab:$reservationCreating:$serviceId:$bookingStage:$doctorDetail',
-                // Home owns its compact identity; no duplicate app bar or notification.
-                header: null,
+                header: tab == 0
+                    ? PatientHomeAppBarV7(
+                        api: widget.api,
+                        height: PatientHomeAppBarV7.heightFor(context),
+                        onProfile: () {
+                          if (widget.navigationShell == null) {
+                            setState(() => tab = 5);
+                          } else {
+                            _go('/patient/profile');
+                          }
+                        },
+                        onNotifications: () => showDialog<void>(
+                          context: context,
+                          builder: (c) => AlertDialog(
+                            title: const Text('Notifikasi'),
+                            content: const Text(
+                              'Notifikasi belum tersedia. Periksa status terbaru melalui Tiket Saya.',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(c),
+                                child: const Text('Tutup'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : null,
                 acceptNestedScrolls: tab == 0,
                 floatingActionButton: tab == 2 && !reservationCreating
                     ? FloatingActionButton.extended(

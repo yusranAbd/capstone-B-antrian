@@ -78,6 +78,8 @@ module.exports = async function browserSmoke(fixture) {
   await new Promise((resolve) => server.listen(8080, "127.0.0.1", resolve));
   let browser, lastPage;
   try {
+    if (fixture.patientHomeV7)
+      return await require("./browser-patient-home-v7.cjs")({ fixture });
     if (fixture.motionV1)
       return await require("./browser-motion-v1.cjs")({ fixture });
     if (fixture.patientMotion)
