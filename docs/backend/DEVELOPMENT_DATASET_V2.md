@@ -1,6 +1,6 @@
 # Development Dataset V2 — 30 Oktober 2026
 
-**Status: V2 FUNCTIONALLY VERIFIED — HISTORICAL SESSION AUDIT UNRESOLVED.** Pada 30 Oktober 2026 pengguna menyetujui pengecualian historis terbatas untuk penutupan development dan selective commit/push. Ketiga sesi lama tetap UNATTRIBUTED; `historicalStrict=FAIL`, `historicalSessionAttribution=FAIL`, dan `stageAGate=FAIL` dipertahankan. Lima kandidat cleanup tetap utuh. Lihat [keputusan penutupan](#final-closure--accepted-historical-audit-exception) dan [backlog keamanan](AUTH_SESSION_AUDIT_FOLLOWUP.md). Bagian refresh/smoke awal di bawah adalah catatan historis, bukan klaim bahwa audit keamanan telah lulus.
+**Status: V2 FUNCTIONALLY VERIFIED & PUSHED — HISTORICAL SESSION AUDIT UNRESOLVED.** Source V2 dipush pada commit `529cc02bd334a8df9c90228d22a9249cb174d837`; CI untuk SHA tersebut selesai SUCCESS. Pada 30 Oktober 2026 pengguna menyetujui pengecualian historis terbatas untuk penutupan development dan selective commit/push. Ketiga sesi lama tetap UNATTRIBUTED; `historicalStrict=FAIL`, `historicalSessionAttribution=FAIL`, dan `stageAGate=FAIL` dipertahankan. Lima kandidat cleanup tetap utuh. Lihat [keputusan penutupan](#final-closure--accepted-historical-audit-exception) dan [backlog keamanan](AUTH_SESSION_AUDIT_FOLLOWUP.md). Bagian refresh/smoke awal di bawah adalah catatan historis, bukan klaim bahwa audit keamanan telah lulus.
 
 Target tunggal maintenance: **127.0.0.1:5433/capstone_antrean**, PostgreSQL 18, schema public. Semua automated mutation tests memakai **127.0.0.1:5433/capstone_antrean_test**, bukan development. Timezone pelayanan tetap **Asia/Jakarta**. Tidak ada perubahan Prisma schema/migration, Queue Engine atau auth/RBAC. Perluasan katalog frontend dijelaskan pada hasil verifikasi akhir. Tidak ada deployment publik.
 
@@ -254,7 +254,7 @@ Tidak melakukan stage, commit atau push. Fetch terakhir membuktikan HEAD `251236
 
 ## Final Closure — Accepted Historical Audit Exception
 
-Tanggal keputusan: **30 Oktober 2026, Asia/Jayapura (WIT)**. Status fungsional: **V2 FUNCTIONALLY VERIFIED — HISTORICAL SESSION AUDIT UNRESOLVED**. Keputusan ini menggantikan larangan Git pada tahap verifikasi sebelumnya hanya untuk selective release source V2 development. Hasil audit historis di bagian sebelumnya tetap berlaku dan evidence gagal tidak dihapus.
+Tanggal keputusan: **30 Oktober 2026, Asia/Jayapura (WIT)**. Status penutupan source: **V2 FUNCTIONALLY VERIFIED & PUSHED — HISTORICAL SESSION AUDIT UNRESOLVED**. Keputusan ini menggantikan larangan Git pada tahap verifikasi sebelumnya hanya untuk selective release source V2 development. Hasil audit historis di bagian sebelumnya tetap berlaku dan evidence gagal tidak dihapus.
 
 ### Penerimaan risiko dan batas persetujuan
 
@@ -315,6 +315,16 @@ Pemeriksaan baru: review setiap file kelompok A/B, fingerprint **6/6** protected
 Evidence closure terpisah di `apps/client/build/dataset-v2-closure/`: manifest hash source, status Git awal, format/tooling/analyze/targeted logs, hasil fingerprint, serta metadata sesi aman. Report read-only lengkap `closure-start-20261030.json` dan `closure-final-20261030.json` berada pada batch privat semula. Masing-masing CLI tetap **exit 2** untuk historical gate FAIL, dengan readOnlyAuditWindow PASS. Staged secret scan, daftar file serta sinkronisasi remote harus PASS sebelum commit; hasil aktual Git/CI dicatat setelah release.
 
 Keputusan: selective commit berbahasa Indonesia dan push **fast-forward** ke `origin/main` diizinkan bila seluruh gate lain lulus. Pengecualian ini hanya menerima risiko historis di atas; `stageAGate` tidak diubah menjadi PASS. Hasil SHA/push/CI harus dicatat berdasarkan eksekusi aktual. Tidak ada deployment publik atau produksi.
+
+### Hasil selective release dan CI aktual
+
+Commit sumber **`529cc02bd334a8df9c90228d22a9249cb174d837`**, pesan `chore(database): finalisasi dataset V2 dan audit sesi pengembangan`, mencakup tepat **14 file kelompok A/B**. Parent `251236fd734691a992d55ff4e151bfe4925099f2`. Isi commit cocok dengan index yang ditinjau. Staged diff check PASS; seluruh staged blob cocok working copy yang ditinjau; pemeriksaan nilai credential privat/environment yang diketahui serta literal JWT tidak menemukan kebocoran. Ini pemeriksaan terarah, bukan klaim audit secret seluruh repository.
+
+Push `251236f..529cc02` ke `origin/main` berhasil **fast-forward**, tanpa force; sesudah push main dan origin/main sama (0 ahead/0 behind). Tidak melakukan reset/clean/stash destruktif. Fingerprint protected **6/6** cocok baseline; **30 entri status lokal di luar release** tetap sama dan index kembali kosong. Perubahan dokter/README, backup dan untracked historis tidak masuk commit. Tidak ditemukan P0/P1 baru dalam review scope perubahan V2; penerimaan risiko historis tetap terpisah.
+
+[CI run 41061729516](https://github.com/yusranAbd/capstone-b-antrian/actions/runs/41061729516) untuk **exact SHA `529cc02bd334a8df9c90228d22a9249cb174d837`** selesai **completed / success**. Ketiga job — **Detect Projects**, **NestJS Checks**, dan **Flutter Checks** — SUCCESS pada checkout CI bersih. Workflow memeriksa struktur, format/analyze/tests Flutter, serta Prisma generate/lint/tests/build API. Tidak mengklaim SQL integration, Web/APK atau browser dijalankan oleh workflow ini; evidence lokal untuk pemeriksaan tersebut sudah dipisahkan di atas. CI memverifikasi source yang dipush, tanpa perubahan lokal historis yang dikeluarkan dari release.
+
+Pembaruan dokumentasi penutupan yang mencatat hasil aktual ini tidak mengubah kode fungsional. SHA dan CI HEAD terakhir setelah commit dokumentasi diverifikasi lagi dalam laporan penutupan; tabel CI di paragraf sebelumnya secara spesifik merujuk commit sumber, bukan klaim prematur atas commit berikutnya. Tidak ada deployment aplikasi/database atau sinkronisasi data ke production.
 
 ### Backlog kontrak katalog — CATALOG-01 (OPEN)
 
