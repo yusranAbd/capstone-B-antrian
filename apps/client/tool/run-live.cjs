@@ -440,6 +440,9 @@ async function main() {
     } else if (process.argv.includes("--demo-browser")) {
       fixture.demoFull = true;
       code = 0;
+    } else if (process.argv.includes("--patient-motion")) {
+      fixture.patientMotion = true;
+      code = 0;
     } else if (process.argv.includes("--browser-only")) {
       const patient = await call("/auth/login", {
         email: accounts.patient1.email,
@@ -614,12 +617,13 @@ async function main() {
   const after = await readState();
   const recoveryReport = recovery?.finish();
   if (
-    fixture?.finalQa &&
+    (fixture?.finalQa || fixture?.patientMotion) &&
     recoveryReport &&
-    require("./recovery-observer.cjs").hasServerFailure(recoveryReport)
+    (require("./recovery-observer.cjs").hasServerFailure(recoveryReport) ||
+      (fixture?.patientMotion && recoveryReport.pendingAtFinish !== 0))
   ) {
     code = 1;
-    console.error("Recovery strict gate: HTTP_5XX_OR_P2028");
+    console.error("Recovery strict gate: HTTP_5XX_OR_P2028_OR_PENDING");
   }
   let existing = 0,
     missing = 0,

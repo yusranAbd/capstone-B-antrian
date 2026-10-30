@@ -28,6 +28,7 @@ import 'patient_sync.dart';
 import 'doctor_schedule_ui.dart';
 import 'doctor_professional.dart';
 import 'patient_ui.dart';
+import 'patient_motion.dart';
 import 'patient_home.dart';
 import 'patient_home_v6.dart';
 import 'user_profile.dart';
@@ -64,6 +65,9 @@ class _PatientPageState extends State<PatientPage> {
   PatientUpdates get updates => repository.updates;
   late final PatientBookingCubit booking;
   late final PatientReservationsCubit reservations;
+  PatientMotionOnce _bookingPanelMotion = PatientMotionOnce();
+  PatientMotionOnce? _bookingSuccessMotion;
+  String? _bookingSuccessText;
   int _tab = 0;
   int get tab => widget.navigationShell == null
       ? _tab
@@ -416,6 +420,8 @@ class _PatientPageState extends State<PatientPage> {
       setState(() {
         message =
             'Pendaftaran berhasil.${issued['nomorAntrean'] == null ? '' : ' Tiket ${issued['nomorAntrean']}.'} Tiket tersedia di Tiket Saya.';
+        _bookingSuccessText = message;
+        _bookingSuccessMotion = PatientMotionOnce();
         tab = 1;
       });
     } catch (e) {
@@ -536,6 +542,7 @@ class _PatientPageState extends State<PatientPage> {
 
   void startRegistration(bool isAppointment) {
     setState(() {
+      _bookingPanelMotion = PatientMotionOnce();
       reservationCreating = true;
       reservationMode = 'legacy';
       booking.invalidateNearest();
@@ -572,6 +579,7 @@ class _PatientPageState extends State<PatientPage> {
     final method = await chooseReservationMethod(context);
     if (!mounted || method == null || busy) return;
     setState(() {
+      _bookingPanelMotion = PatientMotionOnce();
       tab = 2;
       reservationCreating = true;
       reservationMode = method;
@@ -1542,9 +1550,12 @@ class _PatientPageState extends State<PatientPage> {
           const SizedBox(height: 8),
           Text(clinicName, style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 12),
-          const Text(
-            'Tanggal praktik',
-            style: TextStyle(fontWeight: FontWeight.w700),
+          PatientMicroEntrance(
+            once: _bookingPanelMotion,
+            child: const Text(
+              'Tanggal praktik',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
           ),
           const SizedBox(height: 8),
           if (dates.isNotEmpty) ...[
@@ -1782,7 +1793,15 @@ class _PatientPageState extends State<PatientPage> {
                   ],
                 ),
                 if (error != null) MobileNotice(error!, error: true),
-                if (message != null) MobileNotice(message!),
+                if (message != null)
+                  if (message == _bookingSuccessText &&
+                      _bookingSuccessMotion != null)
+                    PatientMicroEntrance(
+                      once: _bookingSuccessMotion!,
+                      child: MobileNotice(message!),
+                    )
+                  else
+                    MobileNotice(message!),
                 if (loading) const LinearProgressIndicator(),
               ],
             ),
