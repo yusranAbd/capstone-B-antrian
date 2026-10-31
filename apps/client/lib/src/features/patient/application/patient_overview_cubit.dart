@@ -11,7 +11,7 @@ class PatientOverviewState {
   final PatientLoad load;
   final Map<String, Object> errors;
   String? get error => errors.entries
-      .where((e) => e.key != '/jadwal-praktik')
+      .where((e) => !{'/jadwal-praktik', '/jadwal-layanan'}.contains(e.key))
       .firstOrNull
       ?.value
       .toString();

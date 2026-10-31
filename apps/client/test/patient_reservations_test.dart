@@ -181,7 +181,7 @@ void main() {
       t.view.resetPhysicalSize();
       t.view.resetDevicePixelRatio();
     });
-    await t.tap(find.widgetWithText(NavigationDestination, 'Reservasi'));
+    await t.tap(find.widgetWithText(NavigationDestination, 'Riwayat'));
     await t.pumpAndSettle();
   }
 
@@ -228,7 +228,13 @@ void main() {
       'reservation cards, FAB, bottom sheet and navigation fit $size',
       (t) async {
         await launch(t, ReservationBackend(), size: size);
-        expect(find.text('Reservasi Saya'), findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byType(ReservationList),
+            matching: find.text('Riwayat'),
+          ),
+          findsOneWidget,
+        );
         expect(
           t.getBottomLeft(find.byType(FloatingActionButton)).dy,
           lessThanOrEqualTo(t.getTopLeft(find.byType(NavigationBar)).dy),
@@ -247,7 +253,13 @@ void main() {
         expect(find.widgetWithText(FilledButton, 'Lanjutkan'), findsNothing);
         expect(t.takeException(), isNull);
         await press(t, find.byTooltip('Tutup pilihan reservasi'));
-        expect(find.text('Reservasi Saya'), findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byType(ReservationList),
+            matching: find.text('Riwayat'),
+          ),
+          findsOneWidget,
+        );
       },
     );
   }
@@ -387,7 +399,7 @@ void main() {
         b.requests.any((r) => r.$1 == 'POST' && r.$2 == '/janji-temu'),
         isFalse,
       );
-      await press(t, find.widgetWithText(NavigationDestination, 'Reservasi'));
+      await press(t, find.widgetWithText(NavigationDestination, 'Riwayat'));
       b.slotsAvailable = false;
       await press(t, find.byType(FloatingActionButton));
       await press(t, find.text('Jadwal Terdekat'));

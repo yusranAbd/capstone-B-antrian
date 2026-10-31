@@ -57,6 +57,7 @@ class PatientFixture {
     '/layanan': [],
     '/dokter': [],
     '/jadwal-praktik': [],
+    '/jadwal-layanan': [],
     '/tiket/saya': [],
     '/janji-temu': [],
   };

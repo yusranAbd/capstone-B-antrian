@@ -411,7 +411,7 @@ class _ReservationListState extends State<ReservationList> {
                 children: [
                   const Expanded(
                     child: Text(
-                      'Reservasi Saya',
+                      'Riwayat',
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w800,

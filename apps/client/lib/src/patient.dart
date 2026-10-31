@@ -36,6 +36,9 @@ import 'queueb_content_motion.dart';
 import 'patient_home.dart';
 import 'patient_home_v6.dart';
 import 'patient_home_v7.dart';
+import 'patient_home_v8.dart';
+import 'patient_information.dart';
+import 'patient_navigation.dart';
 import 'user_profile.dart';
 import 'patient_reservations.dart';
 import 'patient_mobile_v5.dart';
@@ -76,12 +79,13 @@ class _PatientPageState extends State<PatientPage> {
   int _tab = 0;
   int get tab => widget.navigationShell == null
       ? _tab
-      : [0, 2, 1, 3, 5][widget.navigationShell!.currentIndex];
+      : patientBranchTabs[widget.navigationShell!.currentIndex];
   set tab(int value) {
     if (widget.navigationShell == null) {
       _tab = value;
     } else if (value != 2) {
-      widget.navigationShell!.goBranch([0, 2, 1, 3, 5].indexOf(value));
+      final branch = patientBranchTabs.indexOf(value);
+      if (branch >= 0) widget.navigationShell!.goBranch(branch);
     }
   }
 
@@ -168,6 +172,10 @@ class _PatientPageState extends State<PatientPage> {
   List<Json> get services => overviewCubit.state.snapshot.services
       .where((s) => s['aktif'] != false)
       .toList();
+  List<Json> get serviceHours => overviewCubit.state.snapshot.serviceHours;
+  bool get hoursAvailable =>
+      overviewCubit.state.snapshot.collections.containsKey('/jadwal-layanan') &&
+      !overviewCubit.state.errors.containsKey('/jadwal-layanan');
   List<Json> get doctors => overviewCubit.state.snapshot.doctors
       .where((d) => d['aktif'] != false)
       .toList();
@@ -890,15 +898,6 @@ class _PatientPageState extends State<PatientPage> {
     final visit = appointments
         .where((a) => object(a['tiket'])['id'] == active?['id'])
         .firstOrNull;
-    final bookedDoctor = object(
-      object(
-        object(object(visit?['slotPraktik'])['jadwalPraktik'])['dokterLayanan'],
-      )['dokter'],
-    );
-    final doctor = {
-      ...?doctors.where((d) => d['id'] == bookedDoctor['id']).firstOrNull,
-      ...bookedDoctor,
-    };
     final appointmentClinics = services.where(supportsHomeAppointment).toList();
     final previews = homeDoctorPreviews(
       doctors,
@@ -928,12 +927,15 @@ class _PatientPageState extends State<PatientPage> {
                   const LinearProgressIndicator(
                     semanticsLabel: 'Memuat data pelayanan',
                   ),
-                const SizedBox(height: 14),
-                PatientHomeWelcome(
-                  name: '${widget.api.user?['nama'] ?? 'Pasien'}',
-                  controller: homeSearch,
-                  onSearch: (v) =>
-                      setState(() => homeQuery = v.toLowerCase().trim()),
+                ListenableBuilder(
+                  listenable: widget.api,
+                  builder: (_, _) => PatientHomeWelcomeV8(
+                    name: '${widget.api.user?['nama'] ?? 'Pasien'}',
+                    now: DateTime.now(),
+                    controller: homeSearch,
+                    onSearch: (v) =>
+                        setState(() => homeQuery = v.toLowerCase().trim()),
+                  ),
                 ),
                 if (error != null) ...[
                   const SizedBox(height: 8),
@@ -961,26 +963,18 @@ class _PatientPageState extends State<PatientPage> {
                         )
                       : const SizedBox.shrink(),
                 ),
-                if (active != null) ...[
-                  const SizedBox(height: 10),
-                  PatientHomeSectionTitle(
-                    'Kunjungan Terdekat',
-                    action: 'Lihat Semua',
-                    onPressed: busy ? null : () => setState(() => tab = 1),
-                  ),
-                  const SizedBox(height: 4),
-                  PatientHomeVisit(
-                    ticket: active,
-                    doctor: doctor,
-                    appointment: visit,
-                    config: widget.api.config,
-                    onTicket: busy ? null : () => openTicket(active),
-                    onQr: busy
-                        ? null
-                        : () => openTicket(active, issueQrOnOpen: true),
-                  ),
-                ],
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
+                PatientHomeVisitV8(
+                  ticket: active,
+                  appointment: visit,
+                  config: widget.api.config,
+                  loading: loading,
+                  unavailable: error != null,
+                  onOpen: busy || active == null
+                      ? null
+                      : () => openTicket(active),
+                ),
+                const SizedBox(height: 12),
               ],
             ),
           ),
@@ -1007,6 +1001,12 @@ class _PatientPageState extends State<PatientPage> {
                         valueListenable: overviewCubit.queueState,
                         builder: (context, queue, _) => PatientHomeService(
                           clinic: walkIns[index],
+                          hours: patientServiceHours(
+                            serviceHours,
+                            '${walkIns[index]['id']}',
+                            widget.api.config.today,
+                            available: hoursAvailable,
+                          ),
                           queue: queue.forService(
                             '${walkIns[index]['id']}',
                             widget.api.config.today,
@@ -1182,11 +1182,11 @@ class _PatientPageState extends State<PatientPage> {
               },
               child: PatientScrollShell(
                 pageKey:
-                    '$tab:$reservationCreating:$serviceId:$bookingStage:$doctorDetail',
+                    '$tab:${tab == 0 ? homeMode.name : ''}:$reservationCreating:$serviceId:$bookingStage:$doctorDetail',
                 header: tab == 0
-                    ? PatientHomeAppBarV7(
+                    ? PatientHomeAppBarV8(
                         api: widget.api,
-                        height: PatientHomeAppBarV7.heightFor(context),
+                        height: PatientHomeAppBarV8.heightFor(context),
                         onProfile: () {
                           if (widget.navigationShell == null) {
                             setState(() => tab = 5);
@@ -1199,7 +1199,7 @@ class _PatientPageState extends State<PatientPage> {
                           builder: (c) => AlertDialog(
                             title: const Text('Notifikasi'),
                             content: const Text(
-                              'Notifikasi belum tersedia. Periksa status terbaru melalui Tiket Saya.',
+                              'Notifikasi belum tersedia. Periksa status terbaru melalui Riwayat.',
                             ),
                             actions: [
                               TextButton(
@@ -1229,7 +1229,7 @@ class _PatientPageState extends State<PatientPage> {
                 floatingActionButtonLocation:
                     FloatingActionButtonLocation.endFloat,
                 bottomNavigationBar: PatientBottomNavigation(
-                  selectedIndex: tab == 4 ? 0 : [0, 2, 1, 3, 5].indexOf(tab),
+                  selectedIndex: patientBottomIndex(tab),
                   onSelected: busy
                       ? null
                       : (i) {
@@ -1239,11 +1239,11 @@ class _PatientPageState extends State<PatientPage> {
                             if (i == 1) {
                               showReservations();
                             } else {
-                              shell.goBranch(i);
+                              shell.goBranch(patientBottomBranches[i]);
                             }
                           } else {
                             setState(() {
-                              tab = [0, 2, 1, 3, 5][i];
+                              tab = patientBottomTabs[i];
                               if (tab == 5) profileVisited = true;
                               reservationFlowVersion++;
                               booking.invalidateNearest();
@@ -1254,12 +1254,14 @@ class _PatientPageState extends State<PatientPage> {
                 ),
                 body: ColoredBox(
                   color: tab == 0
-                      ? PatientHomeStyle.background
+                      ? PatientHomeV8Style.background
                       : PatientDesign.background,
                   child: Align(
                     alignment: Alignment.topCenter,
                     child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 760),
+                      constraints: BoxConstraints(
+                        maxWidth: tab == 0 ? 680 : 760,
+                      ),
                       child:
                           widget.navigationShell ??
                           IndexedStack(
@@ -1304,6 +1306,8 @@ class _PatientPageState extends State<PatientPage> {
                                       onRefresh: load,
                                       onTicket: (ticket) => openTicket(ticket),
                                     )
+                                  : tab == 6
+                                  ? _information()
                                   : ListView(
                                       key: PageStorageKey(
                                         '$tab:$serviceId:$bookingStage:$doctorDetail',
@@ -1413,9 +1417,24 @@ class _PatientPageState extends State<PatientPage> {
         api: widget.api,
         onReturnToPatient: () => widget.navigationShell!.goBranch(0),
       ),
+      5 => _information(),
       _ => const SizedBox.shrink(),
     };
   }
+
+  Widget _information() => PatientInformation(
+    services: services,
+    hours: serviceHours,
+    date: widget.api.config.today,
+    timeZone: widget.api.config.serviceTimeZone,
+    hoursAvailable: hoursAvailable,
+    loading: loading,
+    error: error,
+    hoursError: overviewCubit.state.errors.containsKey('/jadwal-layanan')
+        ? 'Jam operasional belum dapat dimuat. Coba muat ulang informasi.'
+        : null,
+    onRefresh: busy || loading ? null : load,
+  );
 
   Widget _registration(BuildContext context) {
     if (serviceId == null && ['doctors', 'nearest'].contains(reservationMode)) {
@@ -2214,7 +2233,7 @@ class _TicketDialogState extends State<_TicketDialog> {
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     child: LinearProgressIndicator(
-                      semanticsLabel: widget.issueQrOnOpen
+                      semanticsLabel: widget.issueQrOnOpen || busy
                           ? 'Memuat QR check-in'
                           : 'Memuat tiket',
                     ),

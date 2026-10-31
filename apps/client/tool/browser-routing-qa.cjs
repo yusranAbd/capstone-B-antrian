@@ -18,13 +18,6 @@ const admin = [
   "/admin/displays",
   "/admin/profile",
 ];
-const patient = [
-  "/patient",
-  "/patient/reservations",
-  "/patient/tickets",
-  "/patient/appointments",
-  "/patient/profile",
-];
 
 module.exports = async ({ browser, fixture, displayPage, displayId }) => {
   const report = {
@@ -134,24 +127,30 @@ module.exports = async ({ browser, fixture, displayPage, displayId }) => {
     const p = await page();
     await cold(p, "/patient/reservations/new", "patient1");
     pass("T12: cold booking is navigation without mutation");
-    const destinations = [
-      "Beranda",
-      "Reservasi",
-      "Tiket Saya",
-      "Janji Temu",
-      "Profil",
+    const destinations = ["Beranda", "Riwayat", "Informasi", "Profil"];
+    const publicPatient = [
+      "/patient",
+      "/patient/reservations",
+      "/patient/information",
+      "/patient/profile",
     ];
     for (let i = 0; i < destinations.length; i++) {
       await tab(p, destinations[i]);
-      await location(p, patient[i]);
+      await location(p, publicPatient[i]);
     }
-    await tab(p, "Reservasi");
+    for (const legacy of ["/patient/tickets", "/patient/appointments"]) {
+      await p.goto(base + "#" + legacy);
+      await location(p, legacy);
+    }
+    await tab(p, "Riwayat");
     await location(p, "/patient/reservations");
     await p.goto(base + "#/patient/reservations/new");
     await location(p, "/patient/reservations/new");
-    await tab(p, "Reservasi");
+    await tab(p, "Riwayat");
     await location(p, "/patient/reservations");
-    pass("T10-T12: five branch URLs and reservation retap");
+    pass(
+      "T10-T12: four public destinations, retained legacy URLs and history retap",
+    );
     await cold(
       p,
       `/patient/reservations/doctors/${fixture.doctorId}?clinic=${fixture.serviceId}`,

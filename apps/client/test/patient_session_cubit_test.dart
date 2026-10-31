@@ -10,7 +10,7 @@ import 'package:queueb_client/src/features/patient/application/patient_reservati
 import 'package:queueb_client/src/features/patient/application/patient_ticket_cubit.dart';
 import 'package:queueb_client/src/features/patient/models/patient_models.dart';
 import 'package:queueb_client/src/patient.dart';
-import 'package:queueb_client/src/patient_home.dart';
+import 'package:queueb_client/src/patient_home_v8.dart';
 import 'package:timezone/data/latest.dart' as tz;
 
 import 'patient_cubit_fixture.dart';
@@ -32,15 +32,17 @@ void main() {
   }
 
   Future<void> qr(WidgetTester tester) async {
-    final visit = tester.widget<PatientHomeVisit>(
-      find.byType(PatientHomeVisit),
+    final visit = tester.widget<PatientHomeVisitV8>(
+      find.byType(PatientHomeVisitV8),
     );
-    visit.onQr!();
+    visit.onOpen!();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Terbitkan QR'));
     await tester.pumpAndSettle();
   }
 
   testWidgets(
-    'all five destinations retain one feed and shared visit owners without rebuild fetches',
+    'all four public destinations retain one feed and shared visit owners without rebuild fetches',
     (tester) async {
       final sockets = <FakePatientSocket>[];
       final f = PatientFixture(
@@ -59,13 +61,7 @@ void main() {
       final overview = context.read<PatientOverviewCubit>(),
           booking = context.read<PatientBookingCubit>(),
           visits = context.read<PatientReservationsCubit>();
-      for (final label in [
-        'Reservasi',
-        'Tiket Saya',
-        'Janji Temu',
-        'Profil',
-        'Beranda',
-      ]) {
+      for (final label in ['Riwayat', 'Informasi', 'Profil', 'Beranda']) {
         final target = find.widgetWithText(NavigationDestination, label).last;
         await tester.ensureVisible(target);
         await tester.tap(target);
@@ -77,7 +73,8 @@ void main() {
       expect(f.reads['/tiket/saya'], 1);
       expect(overview.state.snapshot, same(visits.state.snapshot));
       expect(booking.patient, same(f.repository));
-      expect(find.byType(PatientHomeVisit), findsNothing);
+      expect(find.byType(PatientHomeVisitV8), findsOneWidget);
+      expect(find.text('Belum ada kunjungan mendatang.'), findsOneWidget);
       expect(f.writes, 0);
       await tester.pumpWidget(const SizedBox());
       f.dispose();
@@ -181,7 +178,12 @@ void main() {
       await open(tester, f);
       final gate = Completer<void>();
       f.mutationGate = gate;
-      tester.widget<PatientHomeVisit>(find.byType(PatientHomeVisit)).onQr!();
+      tester
+          .widget<PatientHomeVisitV8>(find.byType(PatientHomeVisitV8))
+          .onOpen!();
+      await tester.pumpAndSettle();
+      expect(f.writes, 0);
+      await tester.tap(find.text('Terbitkan QR'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
       expect(f.writes, 1);

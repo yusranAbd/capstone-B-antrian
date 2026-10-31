@@ -257,7 +257,7 @@ module.exports = async ({ fixture: f }) => {
     await expect(card(other)).toHaveAccessibleName(
       new RegExp("Nomor Antreanmu " + tickets[1].number),
     );
-    await enter(c.p, "Cari dokter, poliklinik, atau layanan...", "Apotek");
+    await enter(c.p, "Cari layanan, poli, atau informasi...", "Apotek");
     await total(c, 0, "Apotek");
     pass("A-initial-authoritative-distinct-personal-tickets");
     const camera = await chromium.launch({
@@ -311,6 +311,24 @@ module.exports = async ({ fixture: f }) => {
       new RegExp("Nomor Antreanmu " + tickets[1].number),
     );
     pass("D-call-start-serving-separate-personal-ticket-total-unchanged");
+    // Capture the compiled V8 UI with distinct, authoritative personal/serving
+    // numbers. Viewport changes are read-only and keep the same session owner.
+    for (const width of [360, 390, 430, 1366]) {
+      await other.p.setViewportSize({
+        width,
+        height: width >= 768 ? 768 : 844,
+      });
+      await expect(card(other)).toHaveAccessibleName(
+        new RegExp("Nomor Antreanmu " + tickets[1].number),
+      );
+      await expect(card(other)).toHaveAccessibleName(
+        new RegExp("Sedang dilayani: .*" + tickets[0].number),
+      );
+      await other.p.screenshot({
+        path: path.join(out, `home-v8-live-${width}.png`),
+      });
+    }
+    await other.p.setViewportSize({ width: 390, height: 844 });
     await total(c, 0, "Apotek");
     await expect(card(c, "Apotek")).toHaveAccessibleName(/Belum ada tiket/);
     pass("E-other-service-no-count-or-private-ticket-leakage");

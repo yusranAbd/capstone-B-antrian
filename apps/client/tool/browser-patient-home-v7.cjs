@@ -86,8 +86,26 @@ module.exports = async ({ fixture: f }) => {
           ? "Layanan Farmasi"
           : "Layanan Administrasi",
       };
-      if (code === "REKAM_MEDIS") await f.createHomeMedicalRecords(dto);
-      else await request("/layanan", admin, dto);
+      const created =
+        code === "REKAM_MEDIS"
+          ? await f.createHomeMedicalRecords(dto)
+          : await request("/layanan", admin, dto);
+      const weekdays = [
+        "MINGGU",
+        "SENIN",
+        "SELASA",
+        "RABU",
+        "KAMIS",
+        "JUMAT",
+        "SABTU",
+      ];
+      await request("/jadwal-layanan", admin, {
+        layananId: created.id,
+        hari: weekdays[new Date(f.date + "T12:00:00Z").getUTCDay()],
+        jamBuka: "08:00",
+        jamTutup: "16:00",
+        kapasitasHarian: 100,
+      });
     }
     browser = await chromium.launch({ channel: "chrome", headless: true });
     for (const reduced of f.homeV7Before ? [false] : [false, true]) {
@@ -180,9 +198,11 @@ module.exports = async ({ fixture: f }) => {
           async () => {},
           profiles,
         );
-        const greeting = page.getByRole("group", { name: /^Selamat datang,/ });
+        const greeting = page
+          .getByText("QueueB Hospital", { exact: true })
+          .first();
         const tickets = page.getByRole("tab", {
-          name: "Tiket Saya",
+          name: "Riwayat",
           exact: true,
         });
         await expect(greeting).toBeVisible();
@@ -317,7 +337,7 @@ module.exports = async ({ fixture: f }) => {
           "Kasir/Pembayaran",
           "Rekam Medis",
         ]) {
-          await enter(page, "Cari dokter, poliklinik, atau layanan...", name);
+          await enter(page, "Cari layanan, poli, atau informasi...", name);
           const card = page
             .getByRole("button", {
               name: new RegExp(
@@ -339,6 +359,18 @@ module.exports = async ({ fixture: f }) => {
         }
         await page.mouse.wheel(0, -1800);
         await expect(greeting).toBeVisible();
+        phase = "home-appointment-segment";
+        const appointments = page.getByRole("tab", {
+          name: "Janji Temu",
+          exact: true,
+        });
+        await appointments.click();
+        await expect(appointments).toHaveAttribute("aria-selected", "true");
+        await page
+          .getByRole("tab", { name: "Ambil Antrean", exact: true })
+          .click();
+        await expect(registration).toBeVisible();
+        assert.equal(writes.length, 0);
         phase = "avatar";
         await button(page, "Profil pasien");
         await expect(page).toHaveURL(/#\/patient\/profile$/);
@@ -346,12 +378,18 @@ module.exports = async ({ fixture: f }) => {
         await expect(page).toHaveURL(/#\/patient$/);
         phase = "tabs";
         for (const [label, url] of [
-          ["Tiket Saya", "/tickets"],
-          ["Reservasi", "/reservations"],
+          ["Riwayat", "/reservations"],
+          ["Informasi", "/information"],
           ["Beranda", ""],
         ]) {
           await page.getByRole("tab", { name: label, exact: true }).click();
           await expect(page).toHaveURL(new RegExp("#/patient" + url + "$"));
+          if (label === "Informasi") {
+            await expect(
+              page.getByRole("group", { name: /^Informasi layanan / }),
+            ).toBeVisible();
+            await expect(page.getByText(/08\.00–16\.00/).first()).toBeVisible();
+          }
         }
         phase = "notification";
         await button(page, "Notifikasi");
@@ -380,6 +418,7 @@ module.exports = async ({ fixture: f }) => {
           realScrollDownUp: true,
           pharmacyFlow: true,
           additionalDailyFlows,
+          homeAppointmentSegment: true,
           programmaticScrollIgnored: true,
           smallScrollIgnored: true,
           cardInitialPosts: 0,
@@ -423,7 +462,7 @@ module.exports = async ({ fixture: f }) => {
       ) + "\n",
     );
     console.log(
-      "Home V7 browser: " +
+      "Home V8 browser: " +
         (f.homeV7Before
           ? "BASELINE CAPTURED"
           : "UI PASS normal/reduced scroll +card +profile +tabs +logout; authoritative initial GET"),
@@ -437,7 +476,7 @@ module.exports = async ({ fixture: f }) => {
         2,
       ) + "\n",
     );
-    console.error("Home V7 browser phase: " + phase);
+    console.error("Home V8 browser phase: " + phase);
     throw error;
   } finally {
     if (profiles.length)

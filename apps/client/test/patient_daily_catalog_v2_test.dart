@@ -11,6 +11,7 @@ import 'package:queueb_client/src/app.dart';
 import 'package:queueb_client/src/config.dart';
 import 'package:queueb_client/src/patient_home_v6.dart';
 import 'package:queueb_client/src/patient_home_v7.dart';
+import 'package:queueb_client/src/patient_home_v8.dart';
 
 import 'patient_home_v3_test.dart' show HomeBackend;
 
@@ -157,9 +158,9 @@ void main() {
         await t.pumpAndSettle();
         await t.enterText(find.byType(TextField).first, dailyNames[index]);
         await t.pumpAndSettle();
-        expect(find.byType(PatientServiceCardV7), findsOneWidget);
+        expect(find.byType(PatientServiceTicketV8), findsOneWidget);
         expect(posts, 0);
-        await t.tap(find.byType(PatientServiceCardV7));
+        await t.tap(find.byType(PatientServiceTicketV8));
         await t.pumpAndSettle();
         final router =
             t.widget<MaterialApp>(find.byType(MaterialApp)).routerConfig!

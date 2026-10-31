@@ -320,11 +320,10 @@ void main() {
     await launch(tester, backend);
     await tester.ensureVisible(find.text('Kunjungan Terdekat'));
     expect(find.text('Kunjungan Terdekat'), findsOneWidget);
-    expect(find.text('UM-001'), findsOneWidget);
-    await press(
-      tester,
-      find.widgetWithText(NavigationDestination, 'Tiket Saya'),
-    );
+    await press(tester, find.text('Lihat Detail'));
+    expect(find.text('Tiket UM-001'), findsOneWidget);
+    await press(tester, find.text('Tutup'));
+    await openPatientTickets(tester);
     expect(find.text('Tiket Saya'), findsWidgets);
     expect(find.text('UM-004'), findsOneWidget);
     expect(find.text('UM-001'), findsOneWidget);

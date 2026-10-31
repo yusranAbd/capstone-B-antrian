@@ -11,7 +11,7 @@ import 'package:queueb_client/src/app.dart';
 import 'package:queueb_client/src/config.dart';
 import 'package:queueb_client/src/patient_home.dart';
 import 'package:queueb_client/src/patient_home_v6.dart';
-import 'package:queueb_client/src/patient_home_v7.dart';
+import 'package:queueb_client/src/patient_home_v8.dart';
 import 'package:queueb_client/src/doctor_professional.dart';
 
 import 'patient_v2_test.dart' show PatientV2Backend;
@@ -189,7 +189,7 @@ void main() {
     Size(412, 915),
     Size(1366, 768),
   ]) {
-    testWidgets('V6 modes, header and five destinations fit $size', (
+    testWidgets('V8 modes, header and four destinations fit $size', (
       tester,
     ) async {
       await launch(
@@ -205,12 +205,17 @@ void main() {
       expect(find.byTooltip('Aktivitas tiket'), findsNothing);
       expect(find.byTooltip('Profil akun'), findsNothing);
       expect(find.byType(PatientHomeHeaderV6), findsNothing);
-      expect(find.byType(PatientHomeAppBarV7), findsOneWidget);
+      expect(find.byType(PatientHomeAppBarV8), findsOneWidget);
       expect(find.byTooltip('Notifikasi'), findsOneWidget);
       expect(find.byTooltip('Profil pasien'), findsOneWidget);
+      if (find.byType(PatientHomeService).evaluate().isEmpty) {
+        await tester.drag(find.byType(PatientHomeTabs), const Offset(0, -240));
+        await tester.pumpAndSettle();
+      }
       expect(find.byType(PatientHomeService), findsWidgets);
       expect(find.byType(PatientHomeDoctorV6), findsNothing);
-      expect(find.text('Kunjungan Terdekat'), findsNothing);
+      expect(find.text('Kunjungan Terdekat'), findsOneWidget);
+      expect(find.text('Belum ada kunjungan mendatang.'), findsOneWidget);
       await press(tester, find.byKey(const ValueKey('home-mode-appointment')));
       expect(find.byType(ChoiceChip), findsNWidgets(12));
       await tester.scrollUntilVisible(
@@ -229,18 +234,12 @@ void main() {
             .session?['id'],
         'session-home',
       );
-      for (final destination in [
-        'Reservasi',
-        'Tiket Saya',
-        'Janji Temu',
-        'Profil',
-        'Beranda',
-      ]) {
+      for (final destination in ['Riwayat', 'Informasi', 'Profil', 'Beranda']) {
         await press(
           tester,
           find.widgetWithText(NavigationDestination, destination),
         );
-        expect(find.byType(NavigationDestination), findsNWidgets(5));
+        expect(find.byType(NavigationDestination), findsNWidgets(4));
         expect(find.byTooltip('Keluar akun'), findsNothing);
         expect(tester.takeException(), isNull);
       }
@@ -295,13 +294,13 @@ void main() {
         b.tickets.add(b.ticket);
         b.appointments.add(b.appointmentFixture);
         await launch(tester, b, width: width);
-        final card = find.byType(PatientHomeVisit);
-        final view = tester.widget<PatientHomeVisit>(card);
-        expect(view.ticket['id'], uid);
-        expect(view.doctor['spesialisasi'], 'Anak');
-        expect(view.doctor['fotoProfil'], contains('/media/dokter/'));
+        final card = find.byType(PatientHomeVisitV8);
+        final view = tester.widget<PatientHomeVisitV8>(card);
+        expect(view.ticket, isNotNull);
+        expect(view.ticket!['id'], uid);
+        expect(view.appointment!['id'], b.appointmentFixture['id']);
         expect(
-          find.descendant(of: card, matching: find.text('dr. Sindi QA')),
+          find.descendant(of: card, matching: find.text(label(b.service))),
           findsOneWidget,
         );
         expect(
@@ -309,10 +308,9 @@ void main() {
             of: card,
             matching: find.byType(ProfessionalDoctorAvatar),
           ),
-          findsOneWidget,
+          findsNothing,
         );
-        expect(find.text('08:00 – 08:30'), findsOneWidget);
-        expect(find.text('RU · Ruang Umum'), findsOneWidget);
+        expect(find.textContaining('08:00 – 08:30'), findsOneWidget);
         expect(
           tester.getTopLeft(card).dy,
           greaterThan(tester.getBottomLeft(find.byType(TextField).first).dy),
@@ -322,7 +320,9 @@ void main() {
           lessThan(tester.getTopLeft(find.byType(PatientHomeModes)).dy),
         );
         expect(find.byType(PatientHomeBanner), findsNothing);
-        await press(tester, find.text('QR Code'));
+        await press(tester, find.text('Lihat Detail'));
+        expect(b.requests.where((r) => r.$1 == 'POST'), isEmpty);
+        await press(tester, find.text('Terbitkan QR'));
         expect(find.byType(QrImageView), findsOneWidget);
         expect(find.text('Perbarui QR'), findsOneWidget);
         expect(
@@ -345,7 +345,8 @@ void main() {
       expect(b.requests.where((r) => r.$1 == 'POST'), isEmpty);
       expect(find.byType(QrImageView), findsNothing);
       await press(tester, find.text('Tutup'));
-      await press(tester, find.text('QR Code'));
+      await press(tester, find.text('Lihat Detail'));
+      await press(tester, find.text('Terbitkan QR'));
       expect(
         tester.widget<QrImageView>(find.byType(QrImageView)).semanticsLabel,
         'QR check-in tiket UM-001',
@@ -370,7 +371,13 @@ void main() {
       await launch(tester, b);
       if (condition == 'changedStatus') b.status = 'CHECK_IN';
       if (condition == 'readFailed') b.failTicketRead = true;
-      await press(tester, find.text('QR Code'));
+      await press(tester, find.text('Lihat Detail'));
+      final issue = find.widgetWithText(FilledButton, 'Terbitkan QR');
+      expect(
+        issue.evaluate().isEmpty ||
+            tester.widget<FilledButton>(issue).onPressed == null,
+        isTrue,
+      );
       expect(find.byType(QrImageView), findsNothing);
       expect(b.requests.where((r) => r.$1 == 'POST'), isEmpty);
       if (condition == 'future') {
@@ -398,10 +405,20 @@ void main() {
       b.tickets.add(b.ticket);
       await launch(tester, b);
       final action = tester
-          .widget<PatientHomeVisit>(find.byType(PatientHomeVisit))
-          .onQr!;
+          .widget<PatientHomeVisitV8>(find.byType(PatientHomeVisitV8))
+          .onOpen!;
       action();
       action();
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(b.requests.where((r) => r.$1 == 'POST'), isEmpty);
+      final issue = tester
+          .widget<FilledButton>(
+            find.widgetWithText(FilledButton, 'Terbitkan QR'),
+          )
+          .onPressed!;
+      issue();
+      issue();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
       expect(find.byType(AlertDialog), findsOneWidget);
@@ -439,11 +456,14 @@ void main() {
       b.tickets.add(b.ticket);
       await launch(tester, b);
       expect(
-        tester.widget<PatientHomeVisit>(find.byType(PatientHomeVisit)).doctor,
-        isEmpty,
+        tester
+            .widget<PatientHomeVisitV8>(find.byType(PatientHomeVisitV8))
+            .appointment,
+        isNull,
       );
       expect(find.textContaining('08:00 –'), findsNothing);
-      await press(tester, find.text('QR Code'));
+      await press(tester, find.text('Lihat Detail'));
+      await press(tester, find.text('Terbitkan QR'));
       expect(find.text('expired'), findsNothing);
       expect(find.textContaining('QR sudah kedaluwarsa'), findsOneWidget);
       await press(tester, find.text('Tutup'));
@@ -451,8 +471,13 @@ void main() {
         b.tickets[0] = {...b.ticket, 'status': status};
         await tester.pump(const Duration(seconds: 31));
         await tester.pumpAndSettle();
-        expect(find.text('Kunjungan Terdekat'), findsNothing);
-        expect(find.byType(PatientHomeVisit), findsNothing);
+        expect(find.text('Belum ada kunjungan mendatang.'), findsOneWidget);
+        expect(
+          tester
+              .widget<PatientHomeVisitV8>(find.byType(PatientHomeVisitV8))
+              .ticket,
+          isNull,
+        );
       }
     },
   );
@@ -515,8 +540,8 @@ void main() {
       await launch(tester, b);
       expect(
         tester
-            .widget<PatientHomeVisit>(find.byType(PatientHomeVisit))
-            .ticket['id'],
+            .widget<PatientHomeVisitV8>(find.byType(PatientHomeVisitV8))
+            .ticket!['id'],
         uid,
       );
       b.tickets[1] = {...b.ticket, 'status': 'DIPANGGIL'};
@@ -525,11 +550,11 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         tester
-            .widget<PatientHomeVisit>(find.byType(PatientHomeVisit))
-            .ticket['status'],
+            .widget<PatientHomeVisitV8>(find.byType(PatientHomeVisitV8))
+            .ticket!['status'],
         'DIPANGGIL',
       );
-      await press(tester, find.text('QR Code'));
+      await press(tester, find.text('Lihat Detail'));
       expect(find.textContaining('UM-001'), findsWidgets);
       expect(find.byType(AlertDialog), findsOneWidget);
     },
@@ -541,12 +566,17 @@ void main() {
       final b = HomeBackend()..homeGate = Completer<void>();
       await launch(tester, b, settle: false);
       expect(find.byType(PatientHomeLoading), findsWidgets);
-      expect(find.text('Kunjungan Terdekat'), findsNothing);
+      expect(find.text('Memuat kunjungan…'), findsOneWidget);
       b.failHomeSchedule = true;
       b.homeGate!.complete();
       await tester.pumpAndSettle();
-      expect(find.byType(PatientHomeVisit), findsNothing);
-      expect(find.text('Kunjungan Terdekat'), findsNothing);
+      expect(
+        tester
+            .widget<PatientHomeVisitV8>(find.byType(PatientHomeVisitV8))
+            .ticket,
+        isNull,
+      );
+      expect(find.text('Belum ada kunjungan mendatang.'), findsOneWidget);
       await press(tester, find.byKey(const ValueKey('home-mode-appointment')));
       expect(find.text('Jadwal praktik belum dapat dimuat.'), findsOneWidget);
       expect(find.byType(PatientHomeDoctorV6), findsNothing);

@@ -6,6 +6,7 @@ import '../app.dart';
 import '../admin.dart';
 import '../doctor.dart';
 import '../patient.dart';
+import '../patient_navigation.dart';
 import '../queue.dart';
 import '../display.dart';
 import '../queueb_motion.dart';
@@ -49,7 +50,7 @@ class AppRouting {
   RoutingConfig _routes() {
     final adminKey = GlobalKey<NavigatorState>(debugLabel: 'admin');
     final patientKeys = List.generate(
-      5,
+      patientBranchTabs.length,
       (i) => GlobalKey<NavigatorState>(debugLabel: 'patient-$i'),
     );
     return RoutingConfig(
@@ -238,6 +239,16 @@ class AppRouting {
                   path: '/patient/profile',
                   name: 'patient-profile',
                   builder: (_, _) => const PatientBranchView(index: 4),
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              navigatorKey: patientKeys[5],
+              routes: [
+                GoRoute(
+                  path: '/patient/information',
+                  name: 'patient-information',
+                  builder: (_, _) => const PatientBranchView(index: 5),
                 ),
               ],
             ),

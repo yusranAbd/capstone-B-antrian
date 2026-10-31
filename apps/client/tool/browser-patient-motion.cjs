@@ -74,7 +74,7 @@ module.exports = async ({
         await expect(page).toHaveURL(/#\/patient$/);
         await expect.poll(() => patientSockets).toBe(1);
         phase = "reservation-catalog";
-        await page.getByRole("tab", { name: "Reservasi", exact: true }).click();
+        await page.getByRole("tab", { name: "Riwayat", exact: true }).click();
         await page
           .getByRole("button", { name: "Buat Reservasi", exact: true })
           .click();
@@ -147,9 +147,8 @@ module.exports = async ({
         });
         for (const [label, destination] of [
           ["Beranda", ""],
-          ["Reservasi", "/reservations"],
-          ["Tiket Saya", "/tickets"],
-          ["Janji Temu", "/appointments"],
+          ["Riwayat", "/reservations"],
+          ["Informasi", "/information"],
           ["Profil", "/profile"],
         ]) {
           phase = "navigation-" + label;
@@ -180,7 +179,7 @@ module.exports = async ({
           status: "PASS",
           bookingPosts: posts,
           qrPosts,
-          navigationTabs: 5,
+          navigationTabs: 4,
           runtimeErrors: errors.length,
           http5xx: serverErrors.length,
           socketConnections: patientSockets,
@@ -240,7 +239,7 @@ module.exports = async ({
       ) + "\n",
     );
     console.log(
-      "Patient motion browser: PASS (normal/reduced, explicit booking, five tabs, logout)",
+      "Patient motion browser: PASS (normal/reduced, explicit booking, four public destinations, logout)",
     );
   } catch (error) {
     fs.writeFileSync(

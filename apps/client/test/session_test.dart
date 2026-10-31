@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'patient_test_navigation.dart';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -594,10 +596,7 @@ void main() {
       await api.restoreSession();
       await tester.pumpWidget(QueueBApp(api: api));
       await tester.pumpAndSettle();
-      await tester.tap(
-        find.widgetWithText(NavigationDestination, 'Tiket Saya'),
-      );
-      await tester.pumpAndSettle();
+      await openPatientTickets(tester);
       await tester.tap(find.text('Lihat Tiket / QR'));
       await tester.pumpAndSettle();
       expect(find.byType(AlertDialog), findsOneWidget);
@@ -676,7 +675,7 @@ void main() {
         find.text(switch (role) {
           'ADMIN' => 'Poliklinik',
           'PETUGAS' => 'Ruang yang ditugaskan',
-          _ => 'Bagaimana kabar Anda hari ini?',
+          _ => 'Semoga harimu sehat dan lancar',
         }),
         findsWidgets,
       );

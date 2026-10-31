@@ -4,6 +4,7 @@ import 'config.dart';
 import 'mobile_ui.dart';
 import 'patient_design.dart';
 import 'doctor_professional.dart';
+import 'queueb_motion.dart';
 
 // Tokens remain in QueueBStyle; no changes to shared themes or other roles.
 String patientDate(String value) {
@@ -69,6 +70,7 @@ IconData clinicIcon(String name) {
 
 /// Compact patient-only navigation; no changes to shared role themes.
 class PatientBottomNavigation extends StatelessWidget {
+  static const activeColor = Color(0xff0968d8);
   const PatientBottomNavigation({
     super.key,
     required this.selectedIndex,
@@ -81,7 +83,7 @@ class PatientBottomNavigation extends StatelessWidget {
   Widget build(BuildContext context) => Align(
     heightFactor: 1,
     child: ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 520),
+      constraints: const BoxConstraints(maxWidth: 680),
       child: DecoratedBox(
         decoration: const BoxDecoration(
           color: PatientDesign.paper,
@@ -93,28 +95,33 @@ class PatientBottomNavigation extends StatelessWidget {
             data: NavigationBarTheme.of(context).copyWith(
               iconTheme: WidgetStateProperty.resolveWith(
                 (states) => IconThemeData(
-                  size: 21,
+                  size: 25,
                   color: states.contains(WidgetState.selected)
-                      ? PatientDesign.darkTeal
+                      ? activeColor
                       : PatientDesign.muted,
                 ),
               ),
               labelTextStyle: WidgetStateProperty.resolveWith(
                 (states) => TextStyle(
-                  fontSize: 10,
+                  fontSize: 12,
                   fontWeight: states.contains(WidgetState.selected)
                       ? FontWeight.w700
                       : FontWeight.w500,
                   color: states.contains(WidgetState.selected)
-                      ? PatientDesign.darkTeal
+                      ? activeColor
                       : PatientDesign.muted,
                 ),
               ),
             ),
             child: NavigationBar(
-              height: 60,
+              height: (MediaQuery.textScalerOf(context).scale(12) * 1.2 + 52)
+                  .clamp(68, double.infinity),
+              animationDuration: QueueBMotion.duration(
+                context,
+                QueueBMotion.component,
+              ),
               backgroundColor: PatientDesign.paper,
-              indicatorColor: PatientDesign.soft,
+              indicatorColor: Colors.transparent,
               selectedIndex: selectedIndex,
               onDestinationSelected: onSelected,
               destinations: const [
@@ -124,16 +131,12 @@ class PatientBottomNavigation extends StatelessWidget {
                   label: 'Beranda',
                 ),
                 NavigationDestination(
-                  icon: Icon(Icons.add_circle_outline),
-                  label: 'Reservasi',
+                  icon: Icon(Icons.history_rounded),
+                  label: 'Riwayat',
                 ),
                 NavigationDestination(
-                  icon: Icon(Icons.confirmation_number_outlined),
-                  label: 'Tiket Saya',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.calendar_month_outlined),
-                  label: 'Janji Temu',
+                  icon: Icon(Icons.info_outline_rounded),
+                  label: 'Informasi',
                 ),
                 NavigationDestination(
                   icon: Icon(Icons.person_outline),

@@ -26,7 +26,7 @@ void main() {
     f.dispose();
   });
   test(
-    'initial overview is lazy and loads the existing five endpoints once',
+    'initial overview is lazy and loads the catalog and owned visits once',
     () async {
       expect(f.calls, isEmpty);
       await c.refresh();
@@ -52,6 +52,35 @@ void main() {
       expect(c.state.snapshot.collections.containsKey('/tiket/saya'), isTrue);
     },
   );
+  test('optional service-hours failure stays unavailable without hiding owned visits and recovers in the same owner', () async {
+    f.failures['/jadwal-layanan'] = 503;
+    await c.refresh();
+    expect(c.state.snapshot.services, hasLength(1));
+    expect(c.state.snapshot.collections.containsKey('/tiket/saya'), isTrue);
+    expect(
+      c.state.snapshot.collections.containsKey('/jadwal-layanan'),
+      isFalse,
+    );
+    expect(c.state.error, isNull);
+    expect(c.state.errors.keys, contains('/jadwal-layanan'));
+    f.failures.clear();
+    f.data['/jadwal-layanan'] = [
+      {
+        'id': 'hours',
+        'layananId': 'clinic',
+        'hari': 'SABTU',
+        'jamBuka': '08:00',
+        'jamTutup': '16:00',
+        'aktif': true,
+      },
+    ];
+    await c.refresh(paths: const ['/jadwal-layanan']);
+    expect(c.state.snapshot.serviceHours.single['id'], 'hours');
+    expect(c.state.errors, isEmpty);
+    expect(f.reads['/jadwal-layanan'], 2);
+    expect(f.reads['/tiket/saya'], 1);
+    expect(c.repository, same(f.repository));
+  });
   test('malformed arrays are failures, not verified empty data', () async {
     f.malformed = true;
     await c.refresh();
@@ -166,7 +195,8 @@ void main() {
       expect(owner.state.load, PatientLoad.loaded);
       expect(find.text('Ambil Antrean'), findsWidgets);
       expect(find.text('Janji Temu'), findsWidgets);
-      expect(find.text('Kunjungan Terdekat'), findsNothing);
+      expect(find.text('Kunjungan Terdekat'), findsOneWidget);
+      expect(find.text('Belum ada kunjungan mendatang.'), findsOneWidget);
       final count = f.calls.length;
       (element as StatefulElement).markNeedsBuild();
       await tester.pumpAndSettle();

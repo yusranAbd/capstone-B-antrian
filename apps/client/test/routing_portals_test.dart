@@ -174,7 +174,7 @@ void main() {
   });
 
   testWidgets(
-    'patient five lazy branches retain one repository/feed and Cubits without navigation reads',
+    'patient legacy branches plus Information retain one repository/feed without navigation reads',
     (tester) async {
       final (_, backend, router) = await launch(tester, 'USER');
       final host = tester.state(find.byType(PatientPage));
@@ -187,13 +187,17 @@ void main() {
       final repository = overview.repository;
       final feed = repository.updates;
       final initialOwners = [...owners.created];
-      for (final path in RoutePolicy.patientPaths.take(4)) {
+      final contentPaths = [
+        ...RoutePolicy.patientPaths.take(4),
+        '/patient/information',
+      ];
+      for (final path in contentPaths) {
         router.go(path);
         await tester.pumpAndSettle();
       }
       final reads = backend.requests.length;
       for (var i = 0; i < 3; i++) {
-        for (final path in RoutePolicy.patientPaths.take(4)) {
+        for (final path in contentPaths) {
           router.go(path);
           await tester.pumpAndSettle();
           expect(tester.state(find.byType(PatientPage)), same(host));
@@ -209,7 +213,7 @@ void main() {
         'createdBeforeProfile': initialOwners.length,
         'createdAfterNavigation': owners.created.length,
         'closedAfterNavigation': owners.closed.length,
-        'navigationLoops': 12,
+        'navigationLoops': contentPaths.length * 3,
         'readsBefore': reads,
         'readsAfter': backend.requests.length,
       });
@@ -438,7 +442,7 @@ void main() {
       expect(router.routeInformationProvider.value.uri.path, '/patient');
       router.go('/patient/reservations/new');
       await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(NavigationDestination, 'Reservasi'));
+      await tester.tap(find.widgetWithText(NavigationDestination, 'Riwayat'));
       await tester.pumpAndSettle();
       expect(
         router.routeInformationProvider.value.uri.path,
@@ -471,15 +475,22 @@ void main() {
     );
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     final (_, _, router) = await launch(tester, 'USER');
-    for (final label in [
-      'Beranda',
-      'Reservasi',
-      'Tiket Saya',
-      'Janji Temu',
-      'Profil',
-    ]) {
+    final destinations = ['Beranda', 'Riwayat', 'Informasi', 'Profil'];
+    final paths = [
+      '/patient',
+      '/patient/reservations',
+      '/patient/information',
+      '/patient/profile',
+    ];
+    for (var i = 0; i < destinations.length; i++) {
+      final label = destinations[i];
       await tester.tap(find.widgetWithText(NavigationDestination, label));
       await tester.pumpAndSettle();
+      expect(router.routeInformationProvider.value.uri.path, paths[i]);
+      expect(
+        tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
+        i,
+      );
     }
     expect(router.routeInformationProvider.value.uri.path, '/patient/profile');
     expect(notifications, isNotEmpty);
@@ -509,6 +520,31 @@ void main() {
       isNot(same(firstProfile)),
     );
     expect(firstOwners.every((owner) => owner.isClosed), isTrue);
+    expect(owners.created.whereType<PatientOverviewCubit>(), hasLength(2));
+    await tester.pumpWidget(const SizedBox());
+    api.dispose();
+  });
+  testWidgets('Information account switch evicts its retained catalog scope', (
+    tester,
+  ) async {
+    final api = RoutingApi()..change(id: 'first', role: 'USER');
+    await tester.pumpWidget(QueueBApp(api: api));
+    await tester.pumpAndSettle();
+    final router =
+        tester.widget<MaterialApp>(find.byType(MaterialApp)).routerConfig!
+            as GoRouter;
+    router.go('/patient/information');
+    await tester.pumpAndSettle();
+    final first = tester.state(find.byType(PatientPage)),
+        oldOwners = [...owners.created];
+    api.change(id: 'second', role: 'USER');
+    await tester.pumpAndSettle();
+    expect(
+      router.routeInformationProvider.value.uri.path,
+      '/patient/information',
+    );
+    expect(tester.state(find.byType(PatientPage)), isNot(same(first)));
+    expect(oldOwners.every((owner) => owner.isClosed), isTrue);
     expect(owners.created.whereType<PatientOverviewCubit>(), hasLength(2));
     await tester.pumpWidget(const SizedBox());
     api.dispose();

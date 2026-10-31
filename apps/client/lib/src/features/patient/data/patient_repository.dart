@@ -8,7 +8,12 @@ import '../../../patient_sync.dart';
 import '../models/patient_models.dart';
 import '../models/patient_queue_models.dart';
 
-const patientCatalogPaths = {'/layanan', '/dokter', '/jadwal-praktik'};
+const patientCatalogPaths = {
+  '/layanan',
+  '/dokter',
+  '/jadwal-praktik',
+  '/jadwal-layanan',
+};
 const patientVisitPaths = {'/tiket/saya', '/janji-temu'};
 const patientOverviewPaths = {...patientCatalogPaths, ...patientVisitPaths};
 

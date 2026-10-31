@@ -395,12 +395,9 @@ void main() {
       );
       await press(
         tester,
-        find.widgetWithText(NavigationDestination, 'Reservasi'),
+        find.widgetWithText(NavigationDestination, 'Riwayat'),
       );
-      await press(
-        tester,
-        find.widgetWithText(NavigationDestination, 'Tiket Saya'),
-      );
+      await openPatientTickets(tester);
       expect(find.byType(Animate), findsNothing);
       expect(success, findsOneWidget);
     },
@@ -472,13 +469,10 @@ void main() {
         await tester.pump();
       }
       expect(find.byType(Animate), findsOneWidget);
-      await tester.tap(find.widgetWithText(NavigationDestination, 'Reservasi'));
+      await tester.tap(find.widgetWithText(NavigationDestination, 'Riwayat'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 250));
-      await press(
-        tester,
-        find.widgetWithText(NavigationDestination, 'Tiket Saya'),
-      );
+      await openPatientTickets(tester);
       expect(find.byType(Animate), findsNothing);
       expect(find.textContaining('Pendaftaran berhasil.'), findsOneWidget);
       expect(owners.created.length, count);

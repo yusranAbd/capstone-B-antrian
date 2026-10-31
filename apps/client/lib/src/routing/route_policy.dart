@@ -25,6 +25,7 @@ abstract final class RoutePolicy {
     '/patient/tickets',
     '/patient/appointments',
     '/patient/profile',
+    '/patient/information',
   ];
   static const systemPaths = [
     '/',

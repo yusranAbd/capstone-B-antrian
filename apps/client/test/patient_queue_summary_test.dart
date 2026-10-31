@@ -12,7 +12,7 @@ import 'package:queueb_client/src/features/patient/data/patient_repository.dart'
 import 'package:queueb_client/src/features/patient/models/patient_queue_models.dart';
 import 'package:queueb_client/src/patient_home_v7.dart';
 import 'package:queueb_client/src/patient.dart';
-import 'package:queueb_client/src/patient_home.dart';
+import 'package:queueb_client/src/patient_home_v8.dart';
 import 'package:queueb_client/src/patient_sync.dart';
 
 import 'patient_sync_test.dart' show FakePatientSocket;
@@ -515,7 +515,7 @@ void main() {
       await t.pump(const Duration(milliseconds: 20));
       await t.pumpAndSettle();
       final host = t.state(find.byType(PatientPage));
-      final welcome = t.widget(find.byType(PatientHomeWelcome));
+      final welcome = t.widget(find.byType(PatientHomeWelcomeV8));
       final before = queueReads;
       total = 43;
       socket.fire('patient:updated', {
@@ -529,7 +529,7 @@ void main() {
       await t.pumpAndSettle();
       expect(queueReads, before + 1);
       expect(find.text('43'), findsOneWidget);
-      expect(t.widget(find.byType(PatientHomeWelcome)), same(welcome));
+      expect(t.widget(find.byType(PatientHomeWelcomeV8)), same(welcome));
       expect(t.state(find.byType(PatientPage)), same(host));
       expect(backend.requests.where((r) => r.$1 == 'POST'), isEmpty);
       await t.pumpWidget(const SizedBox());

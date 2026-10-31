@@ -15,6 +15,7 @@ import 'package:queueb_client/src/patient.dart';
 import 'package:queueb_client/src/patient_design.dart';
 import 'package:queueb_client/src/patient_home_v6.dart';
 import 'package:queueb_client/src/patient_home_v7.dart';
+import 'package:queueb_client/src/patient_home_v8.dart';
 import 'package:queueb_client/src/user_profile.dart';
 
 import 'patient_home_v3_test.dart' show HomeBackend;
@@ -449,8 +450,8 @@ void main() {
       final top = find.byKey(const ValueKey('patient-chrome-top'));
       final bottom = find.byKey(const ValueKey('patient-chrome-bottom'));
       final list = find.byKey(const PageStorageKey('home-walk-in-list'));
-      final first = t.widget<PatientServiceCardV7>(
-        find.byType(PatientServiceCardV7).first,
+      final first = t.widget<PatientServiceTicketV8>(
+        find.byType(PatientServiceTicketV8).first,
       );
       expect(first.clinic['kode'], 'PENDAFTARAN');
       expect(t.getSize(top).height, greaterThan(0));
@@ -480,7 +481,7 @@ void main() {
       await t.pumpAndSettle();
       expect(
         find.text(
-          'Notifikasi belum tersedia. Periksa status terbaru melalui Tiket Saya.',
+          'Notifikasi belum tersedia. Periksa status terbaru melalui Riwayat.',
         ),
         findsOneWidget,
       );

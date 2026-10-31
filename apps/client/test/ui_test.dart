@@ -510,7 +510,7 @@ void main() {
   ) async {
     final server = FakeBackend('USER', mode: 'ANTREAN_HARIAN');
     await launch(tester, server, size: const Size(390, 844));
-    await press(tester, 'Reservasi');
+    await press(tester, 'Riwayat');
     await press(tester, 'Buat Reservasi');
     await press(tester, 'Pilih Poliklinik');
     await tester.tap(find.byType(ClinicCard).first);
@@ -542,7 +542,7 @@ void main() {
     (tester) async {
       final server = FakeBackend('USER');
       await launch(tester, server);
-      await press(tester, 'Reservasi');
+      await press(tester, 'Riwayat');
       await press(tester, 'Buat Reservasi');
       await press(tester, 'Pilih Poliklinik');
       await tester.tap(find.byType(ClinicCard).first);
@@ -560,7 +560,7 @@ void main() {
             .$3,
         {'slotPraktikId': uid},
       );
-      await press(tester, 'Reservasi');
+      await press(tester, 'Riwayat');
       await press(tester, 'Batalkan Reservasi');
       await press(tester, 'Ya, Batalkan');
       expect(
@@ -617,7 +617,11 @@ void main() {
     tester,
   ) async {
     await launch(tester, FakeBackend('USER'), size: const Size(375, 812));
-    expect(find.text('Selamat datang,'), findsOneWidget);
+    expect(
+      find.textContaining(RegExp(r'^Selamat (pagi|siang|sore|malam),$')),
+      findsOneWidget,
+    );
+    expect(find.text('Akun USER'), findsOneWidget);
     await openPatientCatalog(tester);
     expect(find.text('Buat Reservasi'), findsOneWidget);
     await tester.enterText(
@@ -629,7 +633,7 @@ void main() {
       find.text('Tidak ada poliklinik yang sesuai pencarian.'),
       findsOneWidget,
     );
-    await press(tester, 'Tiket Saya');
+    await openPatientTickets(tester);
     expect(
       find.text(
         'Belum ada tiket. Daftar janji temu atau walk-in terlebih dahulu.',
@@ -642,7 +646,7 @@ void main() {
     testWidgets('Mobile home layout at width $width', (tester) async {
       await launch(tester, FakeBackend('USER'), size: Size(width, 900));
       expect(tester.takeException(), isNull);
-      await press(tester, 'Reservasi');
+      await press(tester, 'Riwayat');
       expect(tester.takeException(), isNull);
       expect(find.byTooltip('Keluar akun'), findsNothing);
       await tester.tap(find.widgetWithText(NavigationDestination, 'Profil'));
@@ -699,7 +703,7 @@ void main() {
       final server = FakeBackend('USER')..status = status;
       server.tickets.add(server.ticket);
       await launch(tester, server, size: const Size(320, 900));
-      await press(tester, 'Tiket Saya');
+      await openPatientTickets(tester);
       expect(find.text(reservationStatus(status)), findsOneWidget);
       await press(tester, 'Lihat Tiket / QR');
       expect(

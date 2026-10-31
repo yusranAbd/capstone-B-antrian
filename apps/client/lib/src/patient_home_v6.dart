@@ -5,6 +5,7 @@ import 'config.dart';
 import 'patient_design.dart';
 import 'patient_home.dart';
 import 'patient_home_v7.dart';
+import 'patient_home_v8.dart';
 import 'queueb_motion.dart';
 import 'features/patient/models/patient_queue_models.dart';
 
@@ -150,10 +151,14 @@ class PatientHomeModes extends StatelessWidget {
         excluding: onChanged == null,
         child: TabBar(
           controller: controller,
-          labelColor: PatientDesign.primary,
+          labelColor: Colors.white,
           unselectedLabelColor: PatientDesign.muted,
-          dividerColor: PatientDesign.border,
-          indicatorColor: PatientDesign.primary,
+          dividerColor: Colors.transparent,
+          indicator: BoxDecoration(
+            color: PatientHomeV8Style.blue,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          indicatorPadding: const EdgeInsets.all(3),
           indicatorWeight: 3,
           indicatorSize: TabBarIndicatorSize.tab,
           labelPadding: const EdgeInsets.symmetric(horizontal: 4),
@@ -194,12 +199,23 @@ class PatientHomeModes extends StatelessWidget {
         ),
       ),
     );
+    final segmented = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: .9),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: PatientDesign.border),
+        ),
+        child: tabs,
+      ),
+    );
     return controller != null
-        ? tabs
+        ? segmented
         : DefaultTabController(
             length: 2,
             initialIndex: value.index,
-            child: tabs,
+            child: segmented,
           );
   }
 }
@@ -379,17 +395,20 @@ class PatientHomeService extends StatelessWidget {
     required this.clinic,
     this.ticket,
     this.queue,
+    this.hours = 'Jam belum tersedia',
     this.onTap,
   });
   final Json clinic;
   final Json? ticket;
   final PatientQueueView? queue;
+  final String hours;
   final VoidCallback? onTap;
   @override
-  Widget build(BuildContext context) => PatientServiceCardV7(
+  Widget build(BuildContext context) => PatientServiceTicketV8(
     clinic: clinic,
     ticket: ticket,
     queue: queue,
+    hours: hours,
     onTap: onTap,
   );
 }

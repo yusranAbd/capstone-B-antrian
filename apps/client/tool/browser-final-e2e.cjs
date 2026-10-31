@@ -257,9 +257,9 @@ module.exports = async function finalQa({ fixture: f, root }) {
       "ADMIN, PASIEN, DOKTER authenticated in distinct browser contexts",
     );
     phase = "patient-booking";
-    // Home V6's walk-in list is reserved for auxiliary service codes.
+    // Home V8's walk-in list is reserved for auxiliary service codes.
     // The unique HIBRIDA clinic is reached through the existing reservation catalog.
-    await patient.getByRole("tab", { name: "Reservasi", exact: true }).click();
+    await patient.getByRole("tab", { name: "Riwayat", exact: true }).click();
     await button(patient, "Buat Reservasi");
     await patient.getByRole("button", { name: /Pilih Poliklinik/ }).click();
     const clinic = patient
@@ -289,11 +289,36 @@ module.exports = async function finalQa({ fixture: f, root }) {
       await request("/tiket/" + walk.id, undefined, walkToken),
     );
     assert.equal(typeof walk.nomorAntrean, "string");
+    phase = "patient-ticket-qr";
+    let qrUiPosts = 0;
+    const qrPath = "/api/v1/tiket/" + walk.id + "/qr";
+    const countQr = (r) => {
+      if (r.method() === "POST" && new URL(r.url()).pathname === qrPath)
+        qrUiPosts++;
+    };
+    patient.on("request", countQr);
+    await button(patient, "Lihat Tiket / QR");
+    await expect(
+      patient.getByRole("button", { name: "Terbitkan QR", exact: true }),
+    ).toBeVisible();
+    assert.equal(qrUiPosts, 0, "Ticket detail must remain read-only on open");
+    const walkQr = await uiMutation(patient, "/tiket/" + walk.id + "/qr", () =>
+      button(patient, "Terbitkan QR"),
+    );
+    const qrLabel = "QR check-in tiket " + walk.nomorAntrean;
+    await expect(
+      patient
+        .getByText(qrLabel, { exact: true })
+        .or(patient.getByLabel(qrLabel, { exact: true }))
+        .first(),
+    ).toBeVisible();
+    assert.equal(qrUiPosts, 1, "One explicit QR action must issue one request");
+    patient.off("request", countQr);
+    await button(patient, "Tutup");
     pass(
       "patient-booking-ui",
-      "Reservasi → Pilih Poliklinik → HIBRIDA walk-in → confirmation → real ticket",
+      "Riwayat → catalog → HIBRIDA walk-in → confirmation → own ticket; read-only detail → one explicit QR POST → visible QR",
     );
-    const walkQr = await request("/tiket/" + walk.id + "/qr", {}, walkToken);
     cameraVideo(walkQr.qrPayload, video);
     phase = "display-pairing";
     const codeB = "QB" + f.unique;
@@ -750,7 +775,7 @@ module.exports = async function finalQa({ fixture: f, root }) {
       "web-session-policy",
       "Reload returns login; no bearer JWT in Web local/session storage; explicit re-login follows MemorySessionStore contract",
     );
-    await patient.getByRole("tab", { name: "Tiket Saya", exact: true }).click();
+    await patient.getByRole("tab", { name: "Riwayat", exact: true }).click();
     await expect(
       patient
         .getByText("Selesai", { exact: true })
@@ -818,7 +843,7 @@ module.exports = async function finalQa({ fixture: f, root }) {
       height: 844,
     });
     await appointmentPatient
-      .getByRole("tab", { name: "Tiket Saya", exact: true })
+      .getByRole("tab", { name: "Riwayat", exact: true })
       .click();
     await expect(
       appointmentPatient

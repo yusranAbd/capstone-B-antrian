@@ -54,6 +54,10 @@ void main() {
       TabController controller() =>
           t.widget<TabBar>(find.byType(TabBar)).controller!;
       expect(controller().index, 0);
+      // V8's greeting/compact visit can fill the short 320x568 viewport.
+      // Reveal the content with the existing scroll owner before swiping it.
+      await t.ensureVisible(pages);
+      await t.pumpAndSettle();
       await t.drag(pages, Offset(-size.width * .8, 0));
       await t.pumpAndSettle();
       expect(controller().index, 1);
@@ -82,7 +86,7 @@ void main() {
         1,
         reason: 'Dragging clinic chips must not change service tab',
       );
-      await t.tap(find.widgetWithText(NavigationDestination, 'Tiket Saya'));
+      await t.tap(find.widgetWithText(NavigationDestination, 'Riwayat'));
       await t.pumpAndSettle();
       await t.tap(find.widgetWithText(NavigationDestination, 'Beranda'));
       await t.pumpAndSettle();
@@ -111,6 +115,33 @@ void main() {
       expect(t.widget<TabBar>(find.byType(TabBar)).controller!.index, 1);
       await t.pumpWidget(const SizedBox());
       await t.pumpAndSettle();
+      expect(t.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'home mode switch restores chrome with the same native controller',
+    (t) async {
+      await launch(t, const Size(390, 844), many: true);
+      await t.drag(find.byType(TabBarView), const Offset(-320, 0));
+      await t.pumpAndSettle();
+      final controller = t.widget<TabBar>(find.byType(TabBar)).controller;
+      await t.drag(find.byType(TabBarView), const Offset(0, -550));
+      await t.pumpAndSettle();
+      final bottom = find.byKey(const ValueKey('patient-chrome-bottom'));
+      expect(t.getSize(bottom).height, 0);
+      await t.tap(find.byKey(const ValueKey('home-mode-walkIn')));
+      await t.pumpAndSettle();
+      expect(
+        t.widget<TabBar>(find.byType(TabBar)).controller,
+        same(controller),
+      );
+      expect(controller!.index, 0);
+      expect(t.getSize(bottom).height, greaterThan(0));
+      expect(
+        t.getSize(find.byKey(const ValueKey('patient-chrome-top'))).height,
+        greaterThan(0),
+      );
       expect(t.takeException(), isNull);
     },
   );

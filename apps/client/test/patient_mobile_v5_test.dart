@@ -6,6 +6,7 @@ import 'package:queueb_client/src/api.dart';
 import 'package:queueb_client/src/app.dart';
 import 'package:queueb_client/src/config.dart';
 import 'package:queueb_client/src/patient_home.dart';
+import 'package:queueb_client/src/patient_home_v8.dart';
 import 'package:queueb_client/src/patient_mobile_v5.dart';
 import 'package:queueb_client/src/patient_reservations.dart';
 import 'package:queueb_client/src/user_profile.dart';
@@ -13,6 +14,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:timezone/data/latest.dart' as tz;
 
 import 'patient_home_v3_test.dart' show HomeBackend;
+import 'patient_test_navigation.dart';
 
 class V5Backend extends HomeBackend {
   @override
@@ -76,30 +78,31 @@ void main() {
   ]) {
     for (final scale in [1.0, 1.5]) {
       testWidgets(
-        'V5 five tabs, solid visit, floating actions and profile fit $size scale $scale',
+        'V8 four menus, compact visit and retained ticket/agenda fit $size scale $scale',
         (t) async {
           final b = V5Backend();
           b.tickets.add(b.ticket);
           b.appointments.add(b.appointmentFixture);
           await launch(t, b, size, scale: scale);
-          expect(find.byType(NavigationDestination), findsNWidgets(5));
+          expect(find.byType(NavigationDestination), findsNWidgets(4));
           expect(find.byTooltip('Profil akun'), findsNothing);
           expect(find.byType(PatientHomeIdentity), findsNothing);
           expect(
             t
-                .widget<Text>(find.text('Bagaimana kabar Anda hari ini?'))
+                .widget<Text>(find.text('Semoga harimu sehat dan lancar'))
                 .style!
                 .fontSize,
             lessThanOrEqualTo(20),
           );
-          final visit = find.byType(PatientHomeVisit);
+          final visit = find.byType(PatientHomeVisitV8);
           expect(visit, findsOneWidget);
-          final surface = t.widget<Container>(
+          final surface = t.widget<Material>(
             find.byKey(const ValueKey('patient-nearest-visit')),
           );
-          expect((surface.decoration as BoxDecoration).gradient, isNull);
+          expect(surface.color, Colors.white.withValues(alpha: .88));
+          expect(surface.shape, isA<RoundedRectangleBorder>());
           expect(t.takeException(), isNull);
-          await nav(t, 'Reservasi');
+          await nav(t, 'Riwayat');
           final fab = find.byType(FloatingActionButton);
           expect(fab, findsOneWidget);
           expect(
@@ -121,7 +124,7 @@ void main() {
           }
           await t.tap(find.byTooltip('Tutup pilihan reservasi'));
           await t.pumpAndSettle();
-          await nav(t, 'Tiket Saya');
+          await openPatientTickets(t);
           expect(find.byType(PatientTicketCard), findsOneWidget);
           await t.ensureVisible(find.text('Lihat Tiket / QR'));
           await t.pumpAndSettle();
@@ -134,17 +137,17 @@ void main() {
           expect(find.byType(QrImageView), findsOneWidget);
           await t.tap(find.text('Tutup'));
           await t.pumpAndSettle();
-          await nav(t, 'Janji Temu');
+          await openPatientAgenda(t);
           expect(find.text('Janji temu saya'), findsOneWidget);
           await nav(t, 'Profil');
           expect(find.byType(UserProfilePage), findsOneWidget);
           expect(find.text('Profil Saya'), findsOneWidget);
           expect(
             t.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
-            4,
+            3,
           );
           await nav(t, 'Beranda');
-          expect(find.byType(PatientHomeWelcome), findsOneWidget);
+          expect(find.byType(PatientHomeWelcomeV8), findsOneWidget);
           expect(t.takeException(), isNull);
         },
       );
@@ -164,15 +167,15 @@ void main() {
         });
       }
       await launch(t, b, const Size(320, 568));
-      expect(find.text('Kunjungan Terdekat'), findsNothing);
-      await nav(t, 'Tiket Saya');
+      expect(find.text('Belum ada kunjungan mendatang.'), findsOneWidget);
+      await openPatientTickets(t);
       expect(find.byType(PatientTicketCard).evaluate().length, lessThan(31));
       // Search the reservation projection so the cancelled ticket is selected explicitly.
-      await nav(t, 'Reservasi');
+      await nav(t, 'Riwayat');
       await t.enterText(find.byType(TextField), 'UM-001');
       await t.pumpAndSettle();
       await nav(t, 'Profil');
-      await nav(t, 'Reservasi');
+      await nav(t, 'Riwayat');
       expect(
         t.widget<TextField>(find.byType(TextField)).controller!.text,
         'UM-001',
@@ -208,60 +211,72 @@ void main() {
     },
   );
   for (final size in [const Size(320, 568), const Size(390, 844)]) {
-    testWidgets('Patient chrome hides and returns on all five pages at $size', (
-      t,
-    ) async {
-      final b = V5Backend();
-      for (var i = 0; i < 15; i++) {
-        final ticket = {
-          ...b.ticket,
-          'id': 'ticket-$i',
-          'nomorAntrean': 'QA-$i',
-        };
-        b.tickets.add(ticket);
-        b.appointments.add({
-          ...b.appointmentFixture,
-          'id': 'visit-$i',
-          'tiket': ticket,
-        });
-      }
-      await launch(t, b, size);
-      for (final label in [
-        'Beranda',
-        'Reservasi',
-        'Tiket Saya',
-        'Janji Temu',
-        'Profil',
-      ]) {
-        await nav(t, label);
-        expect(find.byType(PatientHomeIdentity), findsNothing);
-        expect(find.byTooltip('Aktivitas tiket'), findsNothing);
-        expect(find.byType(AppBar), findsNothing);
-        final scroll = find
-            .byWidgetPredicate(
-              (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
-            )
-            .hitTestable()
-            .first;
-        final canCollapse =
-            t.state<ScrollableState>(scroll).position.maxScrollExtent > 60;
-        await t.drag(scroll, const Offset(0, -180));
-        await t.pumpAndSettle();
-        expect(
-          t.getSize(find.byKey(const ValueKey('patient-chrome-bottom'))).height,
-          canCollapse ? 0 : greaterThanOrEqualTo(60),
-        );
+    testWidgets(
+      'Patient chrome hides/returns on four public and two legacy pages at $size',
+      (t) async {
+        final b = V5Backend();
+        for (var i = 0; i < 15; i++) {
+          final ticket = {
+            ...b.ticket,
+            'id': 'ticket-$i',
+            'nomorAntrean': 'QA-$i',
+          };
+          b.tickets.add(ticket);
+          b.appointments.add({
+            ...b.appointmentFixture,
+            'id': 'visit-$i',
+            'tiket': ticket,
+          });
+        }
+        await launch(t, b, size);
+        for (final label in [
+          'Beranda',
+          'Riwayat',
+          'Informasi',
+          'Profil',
+          'legacy-tickets',
+          'legacy-appointments',
+        ]) {
+          if (label == 'legacy-tickets') {
+            await openPatientTickets(t);
+          } else if (label == 'legacy-appointments') {
+            await openPatientAgenda(t);
+          } else {
+            await nav(t, label);
+          }
+          expect(find.byType(PatientHomeIdentity), findsNothing);
+          expect(find.byTooltip('Aktivitas tiket'), findsNothing);
+          expect(find.byType(AppBar), findsNothing);
+          final scroll = find
+              .byWidgetPredicate(
+                (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
+              )
+              .hitTestable()
+              .first;
+          final canCollapse =
+              t.state<ScrollableState>(scroll).position.maxScrollExtent > 60;
+          await t.drag(scroll, const Offset(0, -180));
+          await t.pumpAndSettle();
+          expect(
+            t
+                .getSize(find.byKey(const ValueKey('patient-chrome-bottom')))
+                .height,
+            canCollapse ? 0 : greaterThanOrEqualTo(60),
+          );
 
-        await t.drag(scroll, const Offset(0, 100));
-        await t.pumpAndSettle();
-        expect(
-          t.getSize(find.byKey(const ValueKey('patient-chrome-bottom'))).height,
-          greaterThanOrEqualTo(60),
-        );
+          await t.drag(scroll, const Offset(0, 100));
+          await t.pumpAndSettle();
+          expect(
+            t
+                .getSize(find.byKey(const ValueKey('patient-chrome-bottom')))
+                .height,
+            greaterThanOrEqualTo(60),
+          );
 
-        expect(t.takeException(), isNull);
-      }
-    });
+          expect(t.takeException(), isNull);
+        }
+      },
+    );
   }
   testWidgets('Profile name input stays above keyboard at 320x568', (t) async {
     await launch(t, V5Backend(), const Size(320, 568));

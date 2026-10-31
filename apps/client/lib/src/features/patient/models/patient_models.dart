@@ -30,6 +30,7 @@ class PatientSnapshot {
   List<Json> get services => rows('/layanan');
   List<Json> get doctors => rows('/dokter');
   List<Json> get schedules => rows('/jadwal-praktik');
+  List<Json> get serviceHours => rows('/jadwal-layanan');
   List<Json> get tickets => rows('/tiket/saya');
   List<Json> get appointments => rows('/janji-temu');
   Json? ticket(String id) => tickets.where((t) => t['id'] == id).firstOrNull;

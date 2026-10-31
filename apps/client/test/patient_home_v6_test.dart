@@ -207,7 +207,7 @@ void main() {
       await t.enterText(find.byType(TextField).first, 'Sindi');
       await t.pumpAndSettle();
       expect(find.byType(PatientHomeDoctorV6), findsOneWidget);
-      await t.tap(find.widgetWithText(NavigationDestination, 'Tiket Saya'));
+      await t.tap(find.widgetWithText(NavigationDestination, 'Riwayat'));
       await t.pumpAndSettle();
       await t.tap(find.widgetWithText(NavigationDestination, 'Beranda'));
       await t.pumpAndSettle();

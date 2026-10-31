@@ -94,7 +94,9 @@ void main() {
             expect(find.text('Pelayanan ruang ini'), findsOneWidget);
           }
           if (role == 'USER') {
-            await tester.tap(find.text('Tiket Saya').last);
+            await tester.tap(
+              find.widgetWithText(NavigationDestination, 'Riwayat'),
+            );
             await tester.pumpAndSettle();
             expect(find.text('UM-001'), findsOneWidget);
           }

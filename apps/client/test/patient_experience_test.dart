@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'patient_test_navigation.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -114,7 +116,7 @@ void main() {
       await t.pumpWidget(const SizedBox());
       api.dispose();
     });
-    await t.tap(find.widgetWithText(NavigationDestination, 'Reservasi'));
+    await t.tap(find.widgetWithText(NavigationDestination, 'Riwayat'));
     await t.pumpAndSettle();
     await t.tap(find.byType(FloatingActionButton));
     await t.pumpAndSettle();
@@ -126,8 +128,7 @@ void main() {
     );
     await t.tap(find.byTooltip('Tutup pilihan reservasi'));
     await t.pumpAndSettle();
-    await t.tap(find.widgetWithText(NavigationDestination, 'Tiket Saya'));
-    await t.pumpAndSettle();
+    await openPatientTickets(t);
     await t.tap(find.text('Lihat Tiket / QR'));
     await t.pumpAndSettle();
     expect(
@@ -158,11 +159,11 @@ void main() {
       });
       final search = find.widgetWithText(
         TextField,
-        'Cari dokter, poliklinik, atau layanan...',
+        'Cari layanan, poli, atau informasi...',
       );
       await t.enterText(search, 'tidak-ada-dokter');
       await t.pumpAndSettle();
-      await t.tap(find.widgetWithText(NavigationDestination, 'Tiket Saya'));
+      await t.tap(find.widgetWithText(NavigationDestination, 'Riwayat'));
       await t.pumpAndSettle();
       await t.tap(find.widgetWithText(NavigationDestination, 'Beranda'));
       await t.pumpAndSettle();

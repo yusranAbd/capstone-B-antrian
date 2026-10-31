@@ -104,6 +104,8 @@ Jadwal Praktik memakai agenda per tanggal dan ruang, dengan 6 sesi per halaman, 
 
 ## Skala mobile — PASIEN
 
+Arahan Patient Home V8 (31 Oktober 2026) menggantikan komposisi Beranda V6/V7 dan lima menu publik yang dicatat sebagai riwayat di atas: gunakan header/logo existing, sapaan, asset gedung existing, kunjungan compact, segmented control dan kartu tiket kertas native berdasarkan referensi pengguna. Navigasi publik kini **Beranda, Riwayat, Informasi, Profil**. Route lama reservasi, tiket/detail/QR dan agenda tetap tersedia; Informasi memakai katalog/jadwal USER existing. Perubahan ini khusus PASIEN, tanpa mengganti tema global atau portal lain. [Spesifikasi implementasi dan QA V8](PATIENT_HOME_V8_REALISTIC_TICKET_REDESIGN.md).
+
 | Elemen | Baseline |
 |---|---|
 | Heading | 18–22 |
@@ -148,7 +150,7 @@ Public Display **tidak memakai skala dashboard desktop**. Pertahankan skala resp
 | Loading | Indikator sesuai area data; pertahankan data valid terakhir bila kontrak mengizinkan. Hindari spinner yang mengunci seluruh layar pada refresh ringan. |
 | Error/reconnect | Pesan spesifik + retry, teks membungkus, jangan hanya warna. Loading/kosong/akses ditolak dibedakan; jangan bocorkan credential/detail internal. |
 | FAB | Hanya bila ada aksi primer nyata; jangan menutup baris terakhir, tombol batal, atau bottom navigation. Beri bottom inset konten yang cukup. |
-| Bottom Navigation | Gunakan `PatientBottomNavigation` existing (60 ditambah SafeArea), lima tujuan pasien: Beranda, Reservasi, Tiket Saya, Janji Temu, Profil, label terbaca/ikon jelas. Jangan menaikkan navbar dasar global yang berdampak pada semua role. |
+| Bottom Navigation | Gunakan `PatientBottomNavigation` khusus PASIEN, empat tujuan V8: Beranda, Riwayat, Informasi, Profil. Tinggi mengikuti label/text scaling dan SafeArea; mapping menu ke branch eksplisit, bukan menghapus indeks route lama. Booking appointment tetap melalui segmented control Beranda dan route legacy. Jangan mengubah navbar/tema portal lain. |
 
 ## Perbedaan lima portal
 
