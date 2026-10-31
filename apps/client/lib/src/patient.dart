@@ -29,7 +29,6 @@ import 'patient_sync.dart';
 import 'doctor_schedule_ui.dart';
 import 'doctor_professional.dart';
 import 'patient_ui.dart';
-import 'patient_motion.dart';
 import 'queueb_motion.dart';
 import 'queueb_interaction_motion.dart';
 import 'queueb_content_motion.dart';
@@ -73,9 +72,6 @@ class _PatientPageState extends State<PatientPage> {
   PatientUpdates get updates => repository.updates;
   late final PatientBookingCubit booking;
   late final PatientReservationsCubit reservations;
-  PatientMotionOnce _bookingPanelMotion = PatientMotionOnce();
-  PatientMotionOnce? _bookingSuccessMotion;
-  String? _bookingSuccessText;
   int _tab = 0;
   int get tab => widget.navigationShell == null
       ? _tab
@@ -256,12 +252,6 @@ class _PatientPageState extends State<PatientPage> {
     await loadSchedules();
   }
 
-  void chooseDate(String value) {
-    if (busy || loading || value == date.text) return;
-    date.text = value;
-    loadSchedules();
-  }
-
   @override
   void initState() {
     super.initState();
@@ -344,6 +334,10 @@ class _PatientPageState extends State<PatientPage> {
         setState(() {
           doctorId = id;
           doctorDetail = true;
+          final dates = practiceDates;
+          if (!dates.contains(date.text) && dates.isNotEmpty) {
+            date.text = dates.first;
+          }
         });
         await loadSchedules();
       } else {
@@ -412,9 +406,29 @@ class _PatientPageState extends State<PatientPage> {
   }
 
   Future<void> loadSchedules() async {
-    booking.change({'date': date.text.trim()});
+    final requestedDate = date.text.trim();
+    final requestedDoctor = doctorId;
+    booking.change({'date': requestedDate});
     setState(() => bookingStage = true);
     await booking.loadSchedules();
+    // One available session needs no second selection step. Load its slots
+    // through the existing Cubit, never from a preview or a mock value.
+    if (!mounted ||
+        !repository.active ||
+        !doctorDetail ||
+        !appointment ||
+        doctorId != requestedDoctor ||
+        date.text.trim() != requestedDate ||
+        booking.state.error != null) {
+      return;
+    }
+    final validSessions = schedules
+        .where((s) => dateOnly(s['tanggal']) == requestedDate)
+        .toList();
+    if (validSessions.length == 1 &&
+        sessionId != '${validSessions.single['id']}') {
+      await loadSlots('${validSessions.single['id']}');
+    }
   }
 
   Future<void> loadSlots(String id) => booking.loadSlots(id);
@@ -459,11 +473,18 @@ class _PatientPageState extends State<PatientPage> {
       if (!mounted || !repository.active) return;
       setState(() {
         message =
-            'Pendaftaran berhasil.${issued['nomorAntrean'] == null ? '' : ' Tiket ${issued['nomorAntrean']}.'} Tiket tersedia di Tiket Saya.';
-        _bookingSuccessText = message;
-        _bookingSuccessMotion = PatientMotionOnce();
-        tab = 1;
+            '${request.appointment ? 'Janji temu berhasil dibuat.' : 'Pendaftaran berhasil.'}${issued['nomorAntrean'] == null ? '' : ' Tiket ${issued['nomorAntrean']}.'} Tiket dapat dilihat di Riwayat.';
+        // Legacy non-routed patient view uses its own tab state.
+        if (widget.navigationShell == null) {
+          tab = 2;
+          reservationCreating = false;
+        }
       });
+      // The routed app keeps booking, QR and ticket detail routes intact,
+      // but uses Riwayat as the single visible ticket/reservation list.
+      if (widget.navigationShell != null) {
+        context.go('/patient/reservations');
+      }
     } catch (e) {
       if (mounted && repository.active) {
         setState(() => error = booking.state.error == null ? '$e' : null);
@@ -582,7 +603,6 @@ class _PatientPageState extends State<PatientPage> {
 
   void startRegistration(bool isAppointment) {
     setState(() {
-      _bookingPanelMotion = PatientMotionOnce();
       reservationCreating = true;
       reservationMode = 'legacy';
       booking.invalidateNearest();
@@ -619,7 +639,6 @@ class _PatientPageState extends State<PatientPage> {
     final method = await chooseReservationMethod(context);
     if (!mounted || method == null || busy) return;
     setState(() {
-      _bookingPanelMotion = PatientMotionOnce();
       tab = 2;
       reservationCreating = true;
       reservationMode = method;
@@ -662,9 +681,12 @@ class _PatientPageState extends State<PatientPage> {
     if (session != null) date.text = dateOnly(session['tanggal']);
     await chooseDoctor(doctor);
     if (!mounted || version != reservationFlowVersion || tab != 2) return;
-    setState(() => doctorDetail = false);
+    // Keep the nearest booking on the doctor detail route. A single session
+    // may already have been loaded automatically by loadSchedules().
     if (session != null && schedules.any((s) => s['id'] == session['id'])) {
-      await loadSlots('${session['id']}');
+      if (sessionId != '${session['id']}') {
+        await loadSlots('${session['id']}');
+      }
       if (mounted &&
           version == reservationFlowVersion &&
           slot != null &&
@@ -1069,7 +1091,17 @@ class _PatientPageState extends State<PatientPage> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Text(
+                    'Dokter hari ini',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: PatientDesign.navy,
+                    ),
+                  ),
+                ),
                 if (homeScheduleError != null)
                   PatientHomeEmpty(
                     text: homeScheduleError!,
@@ -1271,30 +1303,11 @@ class _PatientPageState extends State<PatientPage> {
                                 ? 0
                                 : 1,
                             children: [
-                              ReservationList(
-                                items: patientReservations(
-                                  tickets,
-                                  appointments,
-                                  doctors,
-                                  widget.api.config.today,
-                                ),
-                                config: widget.api.config,
-                                loading: loading,
-                                busy: busy,
-                                error: error,
-                                message: message,
-                                onRefresh: load,
-                                onCreate: createReservation,
-                                onTicket: (r) => openTicket(
-                                  r.ticket,
-                                  issueQrOnOpen: !r.terminal,
-                                ),
-                                onCancel: (r) => cancel(r.appointment!),
-                              ),
+                              _reservationHistory(),
                               tab == 0
                                   ? _home(context)
                                   : tab == 1
-                                  ? _tickets(context)
+                                  ? _reservationHistory()
                                   : tab == 3
                                   ? PatientAgenda(
                                       appointments: appointments,
@@ -1384,25 +1397,9 @@ class _PatientPageState extends State<PatientPage> {
                     _registration(context),
                 ],
               )
-            : ReservationList(
-                items: patientReservations(
-                  tickets,
-                  appointments,
-                  doctors,
-                  widget.api.config.today,
-                ),
-                config: widget.api.config,
-                loading: loading,
-                busy: busy,
-                error: error,
-                message: message,
-                onRefresh: load,
-                onCreate: createReservation,
-                onTicket: (r) =>
-                    openTicket(r.ticket, issueQrOnOpen: !r.terminal),
-                onCancel: (r) => cancel(r.appointment!),
-              ),
-      2 => _tickets(context),
+            : _reservationHistory(),
+      // Kept for legacy branch identity and ticket-detail deep links only.
+      2 => _reservationHistory(),
       3 => PatientAgenda(
         appointments: appointments,
         config: widget.api.config,
@@ -1436,6 +1433,138 @@ class _PatientPageState extends State<PatientPage> {
     onRefresh: busy || loading ? null : load,
   );
 
+  /// Booking controls live inside the *same* schedule card as the month/day
+  /// picker. The Cubit remains authoritative for sessions, slots and mutation.
+  Widget _doctorScheduleBooking(BuildContext context) {
+    final day = date.text.trim();
+    final availableSessions =
+        schedules.where((s) => dateOnly(s['tanggal']) == day).toList()..sort(
+          (a, b) =>
+              '${a['mulaiPada'] ?? ''}'.compareTo('${b['mulaiPada'] ?? ''}'),
+        );
+    final sessionIds = availableSessions.map((s) => '${s['id']}').toSet();
+    final selected = sessionId != null && sessionIds.contains(sessionId);
+    final availableSlots = selected ? slots : <Json>[];
+    final hasChosenAvailableSlot =
+        selected &&
+        slotId != null &&
+        availableSlots.any((s) => s['id'] == slotId && s['tersedia'] == true);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (loading)
+          const LinearProgressIndicator(
+            semanticsLabel: 'Memuat jadwal dan slot konsultasi',
+          ),
+        if (!loading && availableSessions.isEmpty && error == null)
+          const Text('Tidak ada sesi konsultasi pada tanggal ini.'),
+        if (availableSessions.length > 1) ...[
+          const Text(
+            'Pilih sesi praktik',
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              color: PatientDesign.navy,
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+        // A session is represented exactly once: time, room and its selection.
+        for (final session in availableSessions) ...[
+          OutlinedButton(
+            onPressed: busy || loading
+                ? null
+                : () => loadSlots('${session['id']}'),
+            style: OutlinedButton.styleFrom(
+              alignment: Alignment.centerLeft,
+              backgroundColor: sessionId == '${session['id']}'
+                  ? PatientDesign.mint
+                  : Colors.white,
+              padding: const EdgeInsets.all(12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                PatientInfoRow(
+                  icon: Icons.schedule_outlined,
+                  title: 'Waktu praktik',
+                  value: patientTime(session, widget.api.config),
+                ),
+                const Divider(height: 18),
+                PatientInfoRow(
+                  icon: Icons.room_outlined,
+                  title: 'Ruang / Loket',
+                  value: _doctorRoomLabel(object(session['loket'])),
+                ),
+                if (availableSessions.length > 1) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    sessionId == '${session['id']}'
+                        ? 'Sesi terpilih'
+                        : 'Ketuk untuk melihat slot',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+        if (selected && !loading && availableSlots.isEmpty)
+          const EmptyState(text: 'Belum ada slot konsultasi pada sesi ini.'),
+        if (selected && availableSlots.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          const Text(
+            'Pilih slot konsultasi',
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              color: PatientDesign.navy,
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Ketersediaan mengikuti data terbaru dari server.',
+            style: TextStyle(fontSize: 12, color: PatientDesign.muted),
+          ),
+          const SizedBox(height: 10),
+          if (!availableSlots.any((s) => s['tersedia'] == true))
+            EmptyState(
+              text:
+                  availableSlots.every(
+                    (s) => consultationSlotStatus(s) == 'Penuh',
+                  )
+                  ? 'Seluruh slot penuh. Pilih tanggal atau sesi lain.'
+                  : 'Tidak ada slot yang dapat dipesan pada sesi ini.',
+            ),
+          ConsultationSlotGrid(
+            slots: availableSlots,
+            config: widget.api.config,
+            value: slotId,
+            enabled: !busy && !loading,
+            onChanged: (value) => setState(() => slotId = value),
+          ),
+        ],
+        const SizedBox(height: 12),
+        FilledButton.icon(
+          onPressed: busy || loading || !hasChosenAvailableSlot ? null : book,
+          icon: const Icon(Icons.arrow_forward),
+          label: Text(busy ? 'Memproses…' : 'Lanjutkan Reservasi'),
+        ),
+      ],
+    );
+  }
+
+  String _doctorRoomLabel(Json room) {
+    if (room.isEmpty) return 'Belum ditentukan';
+    final code = '${room['kode'] ?? ''}'.trim();
+    final name = label(room).trim();
+    if (code.isEmpty) return name.isEmpty ? 'Belum ditentukan' : name;
+    return name.isEmpty || name == code ? code : '$code · $name';
+  }
+
   Widget _registration(BuildContext context) {
     if (serviceId == null && ['doctors', 'nearest'].contains(reservationMode)) {
       return reservationDoctors(context);
@@ -1459,7 +1588,7 @@ class _PatientPageState extends State<PatientPage> {
       children: [
         PatientHeading(
           title: bookingStage
-              ? (doctorDetail ? 'Detail Dokter' : 'Pilih Jadwal Praktik')
+              ? 'Detail Dokter'
               : serviceId == null
               ? (reservationMode == 'clinics'
                     ? 'Buat Reservasi'
@@ -1491,10 +1620,7 @@ class _PatientPageState extends State<PatientPage> {
                   }
                   setState(() {
                     booking.invalidate();
-                    if (bookingStage && !doctorDetail) {
-                      doctorDetail = true;
-                      slotId = null;
-                    } else if (bookingStage) {
+                    if (bookingStage) {
                       bookingStage = false;
                       doctorDetail = false;
                       doctorId = sessionId = slotId = null;
@@ -1563,56 +1689,49 @@ class _PatientPageState extends State<PatientPage> {
             clinics: clinicName,
             detail: true,
           ),
-          DoctorBiography(text: doctor['tentangDokter']),
+          _ExpandablePatientDoctorBiography(
+            key: ValueKey(('doctor-biography', doctorId)),
+            text: doctor['tentangDokter'],
+          ),
           const SizedBox(height: 16),
-          Text(
-            'Jadwal praktik mendatang',
-            style: Theme.of(context).textTheme.titleMedium
-                ?.copyWith(fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 8),
-          for (final session in clinicSchedules.where(
-            (s) =>
-                s['aktif'] != false &&
-                dateOnly(s['tanggal']).compareTo(widget.api.config.today) >=
-                    0 &&
-                (object(s['dokterLayanan'])['dokterId'] == doctorId ||
-                    object(object(s['dokterLayanan'])['dokter'])['id'] ==
-                        doctorId),
-          ))
-            AppCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    patientDate('${session['tanggal']}'),
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  Text(patientTime(session, widget.api.config)),
-                  PatientInfoRow(
-                    icon: Icons.room_outlined,
-                    title: 'Ruang / Loket',
-                    value:
-                        '${object(session['loket'])['kode'] ?? ''} · ${label(object(session['loket']))}',
-                  ),
-                ],
-              ),
-            ),
-          if (dates.isEmpty && !loading)
-            const EmptyState(
-              text: 'Dokter belum memiliki jadwal praktik mendatang.',
-            ),
-          const SizedBox(height: 12),
-          FilledButton(
-            onPressed:
-                busy ||
-                    loading ||
-                    dates.isEmpty ||
-                    selectedService?['modeReservasi'] == 'ANTREAN_HARIAN'
+          _PatientDoctorSchedulePicker(
+            key: ValueKey(('doctor-schedule', doctorId)),
+            dates: dates,
+            sessions: clinicSchedules
+                .where(
+                  (s) =>
+                      s['aktif'] != false &&
+                      dateOnly(s['tanggal'])
+                              .compareTo(widget.api.config.today) >=
+                          0 &&
+                      (object(s['dokterLayanan'])['dokterId'] == doctorId ||
+                          object(object(s['dokterLayanan'])['dokter'])['id'] ==
+                              doctorId),
+                )
+                .toList(),
+            value: date.text,
+            config: widget.api.config,
+            enabled: !busy && !loading,
+            loading: loading,
+            showSessionDetails:
+                selectedService?['modeReservasi'] == 'ANTREAN_HARIAN',
+            footer: selectedService?['modeReservasi'] == 'ANTREAN_HARIAN'
                 ? null
-                : () => setState(() => doctorDetail = false),
-            child: const Text('Buat Janji Temu'),
+                : _doctorScheduleBooking(context),
+            onChanged: (day) {
+              if (busy || loading || day == date.text) return;
+              // Clear old selections immediately. Never render a slot from
+              // another day as a selection for the newly displayed date.
+              setState(() {
+                date.text = day;
+                sessionId = slotId = null;
+                schedules = [];
+                slots = [];
+              });
+              unawaited(loadSchedules());
+            },
           ),
+          const SizedBox(height: 12),
           if (selectedService?['modeReservasi'] == 'ANTREAN_HARIAN') ...[
             const MobileNotice(
               'Poliklinik ini menggunakan antrean harian, bukan booking slot dokter.',
@@ -1627,120 +1746,6 @@ class _PatientPageState extends State<PatientPage> {
               icon: const Icon(Icons.confirmation_number_outlined),
               label: const Text('Daftar antrean poliklinik'),
             ),
-          ],
-          OutlinedButton.icon(
-            onPressed: busy || loading ? null : load,
-            icon: const Icon(Icons.refresh),
-            label: const Text('Muat ulang jadwal'),
-          ),
-        ],
-        if (bookingStage && !doctorDetail) ...[
-          PatientInfoRow(
-            icon: Icons.person_outline,
-            title: clinicName,
-            value: label(doctor),
-          ),
-          const SizedBox(height: 8),
-          Text(clinicName, style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 12),
-          PatientMicroEntrance(
-            once: _bookingPanelMotion,
-            child: const Text(
-              'Tanggal praktik',
-              style: TextStyle(fontWeight: FontWeight.w700),
-            ),
-          ),
-          const SizedBox(height: 8),
-          if (dates.isNotEmpty) ...[
-            PracticeDateStrip(
-              dates: dates,
-              value: date.text,
-              enabled: !busy && !loading,
-              onChanged: chooseDate,
-            ),
-            const SizedBox(height: 8),
-            OutlinedButton.icon(
-              onPressed: busy || loading
-                  ? null
-                  : () async {
-                      final chosen = await showDatePicker(
-                        context: context,
-                        initialDate: DateTime.parse(
-                          dates.contains(date.text) ? date.text : dates.first,
-                        ),
-                        firstDate: DateTime.parse(dates.first),
-                        lastDate: DateTime.parse(dates.last),
-                        selectableDayPredicate: (day) =>
-                            dates.contains(calendarDate(day)),
-                      );
-                      if (chosen != null && mounted) {
-                        chooseDate(calendarDate(chosen));
-                      }
-                    },
-              icon: const Icon(Icons.calendar_month_outlined),
-              label: Text('Kalender · ${date.text}'),
-            ),
-          ],
-          if (!loading && (dates.isEmpty || schedules.isEmpty))
-            const EmptyState(
-              text: 'Dokter belum memiliki jadwal pada tanggal ini. Pilih tanggal lain atau muat ulang.',
-            ),
-          const SizedBox(height: 16),
-          const Text(
-            'Sesi & ruang praktik',
-            style: TextStyle(fontWeight: FontWeight.w700),
-          ),
-          for (final s in schedules)
-            AppCard(
-              color: sessionId == s['id'] ? PatientDesign.mint : null,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    '${widget.api.config.localInput(s['mulaiPada']).split('T').last} – ${widget.api.config.localInput(s['selesaiPada']).split('T').last}',
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  Text('Ruang: ${label(object(s['loket']))}'),
-                  const SizedBox(height: 8),
-                  OutlinedButton(
-                    onPressed: busy || loading
-                        ? null
-                        : () => loadSlots('${s['id']}'),
-                    child: Text(
-                      sessionId == s['id'] ? 'Muat ulang slot' : 'Lihat slot',
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          if (sessionId != null && !loading && slots.isEmpty)
-            const EmptyState(text: 'Belum ada slot konsultasi pada sesi ini.'),
-          if (slots.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            const Text(
-              'Slot konsultasi',
-              style: TextStyle(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              'Pilih jam tersedia. Kapasitas mengikuti data terbaru dari server.',
-              style: TextStyle(fontSize: 12, color: PatientDesign.muted),
-            ),
-            const SizedBox(height: 12),
-            if (!slots.any((s) => s['tersedia'] == true))
-              EmptyState(
-                text: slots.every((s) => consultationSlotStatus(s) == 'Penuh')
-                    ? 'Seluruh slot penuh. Pilih sesi atau tanggal lain.'
-                    : 'Tidak ada slot tersedia untuk dipesan. Pilih sesi atau tanggal lain.',
-              ),
-            ConsultationSlotGrid(
-              slots: slots,
-              config: widget.api.config,
-              value: slotId,
-              enabled: !busy && !loading,
-              onChanged: (v) => setState(() => slotId = v),
-            ),
-            const SizedBox(height: 12),
           ],
           OutlinedButton.icon(
             onPressed: busy || loading ? null : load,
@@ -1783,9 +1788,7 @@ class _PatientPageState extends State<PatientPage> {
             'Walk-in mengikuti kuota harian poli. Bawa tiket QR pada tanggal pelayanan.',
           ),
         ],
-        if (selectedService != null &&
-            ((!appointment && !bookingStage) ||
-                (appointment && bookingStage && !doctorDetail))) ...[
+        if (selectedService != null && !appointment && !bookingStage) ...[
           const SizedBox(height: 16),
           if (slotId != null)
             Text(
@@ -1849,71 +1852,395 @@ class _PatientPageState extends State<PatientPage> {
     ],
   );
 
-  Widget _tickets(BuildContext context) {
-    final items = patientReservations(
+  Widget _reservationHistory() => ReservationList(
+    items: patientReservations(
       tickets,
       appointments,
       doctors,
       widget.api.config.today,
-    );
-    return ListView.builder(
-      key: const PageStorageKey('patient-tickets'),
-      padding: const EdgeInsets.all(16),
-      itemCount: 1 + (items.isEmpty ? 1 : items.length),
-      itemBuilder: (context, index) {
-        if (index == 0) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    const Expanded(
-                      child: Text(
-                        'Tiket Saya',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
+    ),
+    config: widget.api.config,
+    loading: loading,
+    busy: busy,
+    error: error,
+    message: message,
+    onRefresh: load,
+    onCreate: createReservation,
+    onTicket: (r) => openTicket(r.ticket, issueQrOnOpen: !r.terminal),
+    onCancel: (r) => cancel(r.appointment!),
+  );
+}
+
+/// Compact doctor biography. The existing DoctorBiography retains all of its
+/// copy and fallback logic; only visibility is controlled locally.
+class _ExpandablePatientDoctorBiography extends StatefulWidget {
+  const _ExpandablePatientDoctorBiography({super.key, required this.text});
+
+  final dynamic text;
+
+  @override
+  State<_ExpandablePatientDoctorBiography> createState() =>
+      _ExpandablePatientDoctorBiographyState();
+}
+
+class _ExpandablePatientDoctorBiographyState
+    extends State<_ExpandablePatientDoctorBiography> {
+  bool expanded = true;
+
+  @override
+  Widget build(BuildContext context) => AnimatedSize(
+    duration: QueueBMotion.duration(context, QueueBMotion.component),
+    alignment: Alignment.topCenter,
+    curve: Curves.easeOutCubic,
+    child: expanded
+        ? Stack(
+            children: [
+              DoctorBiography(text: widget.text),
+              Positioned(
+                top: 0,
+                right: 4,
+                child: IconButton(
+                  tooltip: 'Sembunyikan tentang dokter',
+                  onPressed: () => setState(() => expanded = false),
+                  icon: const Icon(Icons.keyboard_arrow_up_rounded),
+                ),
+              ),
+            ],
+          )
+        : AppCard(
+            child: InkWell(
+              onTap: () => setState(() => expanded = true),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Tentang Dokter',
+                      style: Theme.of(context).textTheme.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                  const Icon(Icons.keyboard_arrow_down_rounded),
+                ],
+              ),
+            ),
+          ),
+  );
+}
+
+/// Read-only preview of upcoming practice sessions. The selected date is
+/// owned by PatientPage; this widget owns only the visible month.
+class _PatientDoctorSchedulePicker extends StatefulWidget {
+  const _PatientDoctorSchedulePicker({
+    super.key,
+    required this.dates,
+    required this.sessions,
+    required this.value,
+    required this.config,
+    required this.enabled,
+    required this.loading,
+    this.showSessionDetails = true,
+    this.footer,
+    required this.onChanged,
+  });
+
+  final List<String> dates;
+  final List<Json> sessions;
+  final String value;
+  final AppConfig config;
+  final bool enabled, loading;
+  final bool showSessionDetails;
+  final Widget? footer;
+  final ValueChanged<String> onChanged;
+
+  @override
+  State<_PatientDoctorSchedulePicker> createState() =>
+      _PatientDoctorSchedulePickerState();
+}
+
+class _PatientDoctorSchedulePickerState
+    extends State<_PatientDoctorSchedulePicker> {
+  static const _months = <String>[
+    'Januari',
+    'Februari',
+    'Maret',
+    'April',
+    'Mei',
+    'Juni',
+    'Juli',
+    'Agustus',
+    'September',
+    'Oktober',
+    'November',
+    'Desember',
+  ];
+  static const _weekdays = <String>[
+    'Sen',
+    'Sel',
+    'Rab',
+    'Kam',
+    'Jum',
+    'Sab',
+    'Min',
+  ];
+
+  String? month;
+
+  String _monthOf(String day) => day.substring(0, 7);
+
+  String _monthLabel(String value) {
+    final parsed = DateTime.parse('$value-01');
+    return '${_months[parsed.month - 1]} ${parsed.year}';
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    month = widget.value.length >= 7 ? _monthOf(widget.value) : null;
+  }
+
+  @override
+  void didUpdateWidget(covariant _PatientDoctorSchedulePicker oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.value != oldWidget.value && widget.value.length >= 7) {
+      month = _monthOf(widget.value);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final days = widget.dates.toSet().toList()..sort();
+    final months = days.map(_monthOf).toSet().toList()..sort();
+    if (months.isEmpty) {
+      return AppCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Jadwal praktik',
+              style: Theme.of(context).textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 12),
+            if (widget.loading)
+              const LinearProgressIndicator()
+            else
+              const Text('Dokter belum memiliki jadwal praktik mendatang.'),
+          ],
+        ),
+      );
+    }
+
+    final chosenMonth = months.contains(month)
+        ? month!
+        : months.contains(
+            widget.value.length >= 7 ? _monthOf(widget.value) : '',
+          )
+        ? _monthOf(widget.value)
+        : months.first;
+    final monthDays = days.where((d) => _monthOf(d) == chosenMonth).toList();
+    final selectedDay = monthDays.contains(widget.value)
+        ? widget.value
+        : monthDays.first;
+    final visibleSessions =
+        widget.sessions
+            .where((s) => dateOnly(s['tanggal']) == selectedDay)
+            .toList()
+          ..sort(
+            (a, b) =>
+                '${a['mulaiPada'] ?? ''}'.compareTo('${b['mulaiPada'] ?? ''}'),
+          );
+    final animation = QueueBMotion.duration(context, QueueBMotion.component);
+
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Wrap(
+            spacing: 10,
+            runSpacing: 8,
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text(
+                'Jadwal praktik',
+                style: Theme.of(context).textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w800),
+              ),
+              Semantics(
+                label: 'Pilih bulan jadwal praktik',
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border.all(color: PatientDesign.border),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: chosenMonth,
+                      isDense: true,
+                      icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                      items: [
+                        for (final entry in months)
+                          DropdownMenuItem(
+                            value: entry,
+                            child: Text(
+                              _monthLabel(entry),
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                          ),
+                      ],
+                      onChanged: !widget.enabled
+                          ? null
+                          : (next) {
+                              if (next == null || next == chosenMonth) return;
+                              final first = days.firstWhere(
+                                (day) => _monthOf(day) == next,
+                              );
+                              setState(() => month = next);
+                              widget.onChanged(first);
+                            },
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 92,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: monthDays.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                final day = monthDays[index];
+                final parsed = DateTime.parse(day);
+                final selected = day == selectedDay;
+                return Semantics(
+                  button: true,
+                  selected: selected,
+                  label:
+                      '${_weekdays[parsed.weekday - 1]}, ${patientDate(day)}',
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(14),
+                    onTap: !widget.enabled || selected
+                        ? null
+                        : () => widget.onChanged(day),
+                    child: AnimatedContainer(
+                      duration: animation,
+                      curve: Curves.easeOutCubic,
+                      width: 68,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        color: selected
+                            ? PatientDesign.primary
+                            : PatientDesign.background,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: selected
+                              ? PatientDesign.primary
+                              : PatientDesign.border,
                         ),
                       ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            _weekdays[parsed.weekday - 1],
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: selected
+                                  ? Colors.white
+                                  : PatientDesign.muted,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${parsed.day}',
+                            style: TextStyle(
+                              fontSize: 23,
+                              fontWeight: FontWeight.w800,
+                              color: selected
+                                  ? Colors.white
+                                  : PatientDesign.navy,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    IconButton(
-                      tooltip: 'Muat ulang tiket',
-                      onPressed: busy || loading ? null : load,
-                      icon: const Icon(Icons.refresh),
-                    ),
-                  ],
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 14),
+          AnimatedSwitcher(
+            duration: animation,
+            switchInCurve: Curves.easeOutCubic,
+            child: Column(
+              key: ValueKey(('practice-date', selectedDay)),
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  patientDate(selectedDay),
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: PatientDesign.navy,
+                  ),
                 ),
-                if (error != null) MobileNotice(error!, error: true),
-                if (message != null)
-                  if (message == _bookingSuccessText &&
-                      _bookingSuccessMotion != null)
-                    PatientMicroEntrance(
-                      once: _bookingSuccessMotion!,
-                      child: MobileNotice(message!),
-                    )
+                if (widget.showSessionDetails) ...[
+                  const SizedBox(height: 10),
+                  if (visibleSessions.isEmpty)
+                    const Text('Belum ada sesi pada tanggal ini.')
                   else
-                    MobileNotice(message!),
-                if (loading) const LinearProgressIndicator(),
+                    for (final session in visibleSessions) ...[
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: PatientDesign.border),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            PatientInfoRow(
+                              icon: Icons.schedule_outlined,
+                              title: 'Waktu praktik',
+                              value: patientTime(session, widget.config),
+                            ),
+                            const Divider(height: 20),
+                            PatientInfoRow(
+                              icon: Icons.room_outlined,
+                              title: 'Ruang / Loket',
+                              value: _roomLabel(object(session['loket'])),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                ],
               ],
             ),
-          );
-        }
-        if (items.isEmpty) {
-          return const EmptyState(
-            text: 'Belum ada tiket. Daftar janji temu atau walk-in terlebih dahulu.',
-            icon: Icons.confirmation_number_outlined,
-          );
-        }
-        final item = items[index - 1];
-        return PatientTicketCard(
-          item: item,
-          config: widget.api.config,
-          onOpen: busy ? null : () => openTicket(item.ticket),
-        );
-      },
+          ),
+          if (widget.footer != null) ...[
+            const SizedBox(height: 12),
+            widget.footer!,
+          ],
+        ],
+      ),
     );
+  }
+
+  String _roomLabel(Json room) {
+    if (room.isEmpty) return 'Belum ditentukan';
+    final code = '${room['kode'] ?? ''}'.trim();
+    final name = label(room).trim();
+    if (code.isEmpty) return name.isEmpty ? 'Belum ditentukan' : name;
+    return name.isEmpty || name == code ? code : '$code · $name';
   }
 }
 

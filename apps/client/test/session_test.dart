@@ -597,14 +597,42 @@ void main() {
       await tester.pumpWidget(QueueBApp(api: api));
       await tester.pumpAndSettle();
       await openPatientTickets(tester);
-      await tester.tap(find.text('Lihat Tiket / QR'));
+      // Tiket Saya was consolidated into Riwayat. Keep the check scoped
+      // to the owned reservation card instead of an obsolete button label.
+      final ticketCard = find.byKey(
+        const ValueKey('reservation-ticket-fixture'),
+      );
+      expect(ticketCard, findsOneWidget);
+      final openTicket = find.descendant(
+        of: ticketCard,
+        matching: find.widgetWithText(FilledButton, 'Buka Tiket'),
+      );
+      expect(openTicket, findsOneWidget);
+      await tester.ensureVisible(openTicket);
+      await tester.tap(openTicket);
       await tester.pumpAndSettle();
       expect(find.byType(AlertDialog), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.text('Tiket QA-001'),
+        ),
+        findsOneWidget,
+      );
       final exiting = api.logout();
       await tester.pumpAndSettle();
       await exiting;
+      await tester.pumpAndSettle();
+      // Security assertions must remain strict after the route is evicted.
+      expect(store.value, isNull);
+      expect(api.user, isNull);
+      expect(api.accessToken, isNull);
       expect(find.byType(AlertDialog), findsNothing);
-      expect(find.text('QA-001'), findsNothing);
+      expect(
+        find.byKey(const ValueKey('reservation-ticket-fixture')),
+        findsNothing,
+      );
+      expect(find.textContaining('QA-001'), findsNothing);
       expect(find.widgetWithText(TextFormField, 'Email'), findsOneWidget);
       await tester.pumpWidget(const SizedBox());
       api.dispose();

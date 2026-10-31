@@ -517,9 +517,10 @@ void main() {
     await tester.pumpAndSettle();
     await press(tester, 'Reservasi walk-in');
     await press(tester, 'Lanjutkan');
+    // Successful walk-in opens Riwayat, the single ticket list.
     expect(find.text('UM-001'), findsOneWidget);
-    await press(tester, 'Lihat Tiket / QR');
-    await press(tester, 'Terbitkan QR');
+    await press(tester, 'Buka Tiket');
+    // An eligible same-day ticket issues the QR when opened.
     expect(find.byType(QrImageView), findsOneWidget);
     expect(find.text('SQ1.fixture'), findsNothing);
     expect(
@@ -548,10 +549,11 @@ void main() {
       await tester.tap(find.byType(ClinicCard).first);
       await tester.pumpAndSettle();
       await press(tester, 'Lihat Detail Dokter');
-      await press(tester, 'Buat Janji Temu');
-      await press(tester, 'Lihat slot');
+      // The single available session automatically loads slots in Detail Dokter.
+      expect(find.text('Buat Janji Temu'), findsNothing);
+      expect(find.text('Lanjutkan Reservasi'), findsOneWidget);
       await press(tester, 'Sisa slot 2');
-      await press(tester, 'Lanjutkan');
+      await press(tester, 'Lanjutkan Reservasi');
       await press(tester, 'Konfirmasi Janji Temu');
       expect(
         server.requests
@@ -633,13 +635,8 @@ void main() {
       find.text('Tidak ada poliklinik yang sesuai pencarian.'),
       findsOneWidget,
     );
-    await openPatientTickets(tester);
-    expect(
-      find.text(
-        'Belum ada tiket. Daftar janji temu atau walk-in terlebih dahulu.',
-      ),
-      findsOneWidget,
-    );
+    await press(tester, 'Riwayat');
+    expect(find.text('Belum ada reservasi yang sesuai.'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
   for (final width in [320.0, 375.0, 414.0, 768.0]) {
@@ -703,9 +700,24 @@ void main() {
       final server = FakeBackend('USER')..status = status;
       server.tickets.add(server.ticket);
       await launch(tester, server, size: const Size(320, 900));
-      await openPatientTickets(tester);
-      expect(find.text(reservationStatus(status)), findsOneWidget);
-      await press(tester, 'Lihat Tiket / QR');
+      await press(tester, 'Riwayat');
+      // Riwayat also contains a status filter chip labelled Dipesan/Selesai.
+      // Verify the authoritative ticket badge inside the owned card instead.
+      final card = find.byKey(ValueKey('reservation-$uid'));
+      expect(card, findsOneWidget);
+      expect(
+        find.descendant(
+          of: card,
+          matching: find.text(reservationStatus(status)),
+        ),
+        findsOneWidget,
+      );
+      await press(
+        tester,
+        ['SELESAI', 'DIBATALKAN'].contains(status)
+            ? 'Lihat Detail'
+            : 'Buka Tiket',
+      );
       expect(
         find.descendant(
           of: find.byType(AlertDialog),
@@ -741,15 +753,15 @@ void main() {
       await tester.tap(find.byType(ClinicCard).first);
       await tester.pumpAndSettle();
       await press(tester, 'Lihat Detail Dokter');
-      await press(tester, 'Buat Janji Temu');
       expect(find.byTooltip('Kembali'), findsOneWidget);
-      await press(tester, 'Lihat slot');
+      expect(find.text('Buat Janji Temu'), findsNothing);
+      // Slot retrieval is automatic for a day with one practice session.
       final unavailable = tester.widget<OutlinedButton>(
         find.widgetWithText(OutlinedButton, 'Sisa slot 0'),
       );
       expect(unavailable.onPressed, isNull);
       final book = tester.widget<FilledButton>(
-        find.widgetWithText(FilledButton, 'Lanjutkan'),
+        find.widgetWithText(FilledButton, 'Lanjutkan Reservasi'),
       );
       expect(book.onPressed, isNull);
       expect(

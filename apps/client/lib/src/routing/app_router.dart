@@ -204,6 +204,10 @@ class AppRouting {
                 GoRoute(
                   path: '/patient/tickets',
                   name: 'patient-tickets',
+                  // Retire the duplicate list URL, preserve ticket detail links.
+                  redirect: (_, state) => state.uri.path == '/patient/tickets'
+                      ? '/patient/reservations'
+                      : null,
                   builder: (_, _) => const PatientBranchView(index: 2),
                   routes: [
                     GoRoute(
