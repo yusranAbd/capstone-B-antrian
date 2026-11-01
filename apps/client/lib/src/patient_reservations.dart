@@ -411,7 +411,7 @@ class _ReservationListState extends State<ReservationList> {
                 children: [
                   const Expanded(
                     child: Text(
-                      'Riwayat',
+                      'Reservasi',
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w800,
@@ -429,7 +429,7 @@ class _ReservationListState extends State<ReservationList> {
                 ],
               ),
               const Text(
-                'Kelola dan lihat riwayat reservasi Anda',
+                'Kelola dan lihat reservasi Anda',
                 style: TextStyle(fontSize: 13, color: PatientDesign.muted),
               ),
               if (widget.error != null) ...[

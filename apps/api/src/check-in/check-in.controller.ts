@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Header,
   HttpCode,
   HttpStatus,
   Post,
@@ -20,6 +21,7 @@ import { PeranPengguna } from '../generated/prisma/client';
 import { AutoCheckInService } from './auto-check-in.service';
 import { CheckInService } from './check-in.service';
 import { ProsesCheckInDto } from './dto/proses-check-in.dto';
+import { VerifikasiBuktiReservasiDto } from './dto/verifikasi-bukti-reservasi.dto';
 
 @Controller('check-in')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -35,6 +37,17 @@ export class CheckInController {
   ) {
     return this.checkInService.proses(dto, user.id);
   }
+  /** Read-only. Tidak pernah melakukan check-in atau menulis ke database. */
+  @Post('verifikasi-reservasi')
+  @HttpCode(HttpStatus.OK)
+  @Header('Cache-Control', 'no-store')
+  verifikasiReservasi(
+    @Body() dto: VerifikasiBuktiReservasiDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.checkInService.verifikasiBuktiReservasi(dto, user.id);
+  }
+
   @Post('auto-antrean')
   @HttpCode(HttpStatus.OK)
   otomatis(@Body() dto: ProsesCheckInDto, @CurrentUser() user: AuthenticatedUser) {

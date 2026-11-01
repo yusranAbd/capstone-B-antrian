@@ -40,6 +40,7 @@ import 'patient_information.dart';
 import 'patient_navigation.dart';
 import 'user_profile.dart';
 import 'patient_reservations.dart';
+import 'patient_ticket_pdf.dart';
 import 'patient_mobile_v5.dart';
 import 'patient_scroll_shell.dart';
 
@@ -473,7 +474,7 @@ class _PatientPageState extends State<PatientPage> {
       if (!mounted || !repository.active) return;
       setState(() {
         message =
-            '${request.appointment ? 'Janji temu berhasil dibuat.' : 'Pendaftaran berhasil.'}${issued['nomorAntrean'] == null ? '' : ' Tiket ${issued['nomorAntrean']}.'} Tiket dapat dilihat di Riwayat.';
+            '${request.appointment ? 'Janji temu berhasil dibuat.' : 'Pendaftaran berhasil.'}${issued['nomorAntrean'] == null ? '' : ' Tiket ${issued['nomorAntrean']}.'} Tiket dapat dilihat di Reservasi.';
         // Legacy non-routed patient view uses its own tab state.
         if (widget.navigationShell == null) {
           tab = 2;
@@ -481,7 +482,7 @@ class _PatientPageState extends State<PatientPage> {
         }
       });
       // The routed app keeps booking, QR and ticket detail routes intact,
-      // but uses Riwayat as the single visible ticket/reservation list.
+      // but uses Reservasi as the single visible ticket/reservation list.
       if (widget.navigationShell != null) {
         context.go('/patient/reservations');
       }
@@ -1231,7 +1232,7 @@ class _PatientPageState extends State<PatientPage> {
                           builder: (c) => AlertDialog(
                             title: const Text('Notifikasi'),
                             content: const Text(
-                              'Notifikasi belum tersedia. Periksa status terbaru melalui Riwayat.',
+                              'Notifikasi belum tersedia. Periksa status terbaru melalui Reservasi.',
                             ),
                             actions: [
                               TextButton(
@@ -2499,121 +2500,476 @@ class _TicketDialogState extends State<_TicketDialog> {
       builder: (context, _) => content(context),
     ),
   );
-  Widget content(BuildContext context) {
+  // QR issuance, expiry, and session cleanup remain owned by the existing
+  // PatientTicketCubit. Only the visual presentation changes in V3.
+  Widget _ticketFact(String title, String value) => Column(
+    mainAxisSize: MainAxisSize.min,
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        title,
+        style: const TextStyle(fontSize: 10, color: PatientDesign.muted),
+      ),
+      const SizedBox(height: 3),
+      Text(
+        value,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          fontSize: 12,
+          height: 1.25,
+          fontWeight: FontWeight.w700,
+          color: PatientDesign.ink,
+        ),
+      ),
+    ],
+  );
+
+  Widget _qrNotice(IconData icon, String title, {String? detail}) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+    decoration: BoxDecoration(
+      color: PatientDesign.soft.withValues(alpha: .65),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 20, color: PatientDesign.primary),
+        const SizedBox(width: 9),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: PatientDesign.ink,
+                ),
+              ),
+              if (detail != null) ...[
+                const SizedBox(height: 2),
+                Text(
+                  detail,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    height: 1.3,
+                    color: PatientDesign.muted,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+
+  bool exportingPdf = false;
+
+  PatientTicketPdfData _pdfData(Json ticket) {
     final slot = object(widget.appointment?['slotPraktik']);
     final session = object(slot['jadwalPraktik']);
     final doctor = object(object(session['dokterLayanan'])['dokter']);
-    final room = object(session['loket']);
+    final sessionRoom = object(session['loket']);
+    final room = sessionRoom.isNotEmpty
+        ? sessionRoom
+        : object(ticket['ruang']);
+    final code = '${room['kode'] ?? ''}'.trim();
+    final name = label(room).trim();
+    final roomLabel = code.isEmpty || code == name ? name : '$code · $name';
+    final day = dateOnly(ticket['tanggalPelayanan'] ?? ticket['tanggalAntrean']);
+    return PatientTicketPdfData(
+      queueNumber: '${ticket['nomorAntrean'] ?? '—'}',
+      serviceName: label(object(ticket['layanan'])),
+      status: reservationStatus('${ticket['status'] ?? ''}'),
+      serviceDate: day.isEmpty ? 'Belum ditentukan' : patientDate(day),
+      patientName: '${widget.api.user?['nama'] ?? ''}'.trim(),
+      consultationTime: slot['mulaiPada'] == null
+          ? null
+          : '${patientTime(slot, widget.api.config)} · ${widget.api.config.serviceTimeZone}',
+      doctorName: doctor['nama'] == null ? null : label(doctor),
+      roomName: room.isEmpty || roomLabel.isEmpty ? null : roomLabel,
+      // A deep link can omit appointment details; do not infer walk-in then.
+      reservationCode: '${ticket['kodeTiket'] ?? ''}',
+      reservationType: widget.appointment != null
+          ? 'Janji temu dokter'
+          : object(ticket['layanan'])['modeReservasi'] == 'ANTREAN_HARIAN'
+              ? 'Antrean harian / Walk-in'
+              : null,
+    );
+  }
+
+  Future<void> _exportPdf({required bool print}) async {
+    if (exportingPdf || busy || loading || error != null ||
+        !widget.repository.active ||
+        controller.state.load != PatientLoad.loaded ||
+        controller.ticket == null) {
+      return;
+    }
+    // Only the successfully refreshed, owned ticket is exported. Never rely
+    // on the potentially stale snapshot supplied to this dialog.
+    final selected = _pdfData(controller.ticket!);
+    setState(() => exportingPdf = true);
+    try {
+      if (print) {
+        await PatientTicketPdf.print(selected);
+      } else {
+        await PatientTicketPdf.save(selected);
+      }
+      // A system dialog can be dismissed. Do not claim printing succeeded.
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(print
+              ? 'Dialog cetak tidak dapat dibuka. Coba kembali.'
+              : 'PDF belum dapat disimpan. Coba kembali.'),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => exportingPdf = false);
+    }
+  }
+
+  // No rescheduling/deletion mutation contract is exposed by the supplied
+  // repository. This menu is a safe UI entry point, not a fake mutation.
+  Future<void> _showManagementUnavailable(String action) async {
+    if (!mounted) return;
+    final reschedule = action == 'reschedule';
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(reschedule ? 'Jadwalkan ulang' : 'Hapus dari Riwayat'),
+        content: Text(
+          reschedule
+              ? 'Penjadwalan ulang memerlukan dukungan backend untuk '
+                    'memindahkan reservasi dan memvalidasi slot pengganti '
+                    'secara aman. Jadwal dan tiket saat ini tidak berubah.'
+              : 'Menyembunyikan tiket dari Riwayat memerlukan dukungan '
+                    'backend per akun. Tiket dan catatan operasional '
+                    'tidak boleh dihapus langsung. Tidak ada data yang diubah.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Mengerti'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _manageTicketMenu(String status) => PopupMenuButton<String>(
+    tooltip: 'Kelola tiket',
+    onSelected: _showManagementUnavailable,
+    itemBuilder: (_) => [
+      if (status == 'DIPESAN')
+        const PopupMenuItem(
+          value: 'reschedule',
+          child: Row(
+            children: [
+              Icon(Icons.calendar_month_outlined, size: 18),
+              SizedBox(width: 10),
+              Expanded(child: Text('Jadwalkan ulang')),
+            ],
+          ),
+        ),
+      const PopupMenuItem(
+        value: 'hide',
+        child: Row(
+          children: [
+            Icon(Icons.archive_outlined, size: 18),
+            SizedBox(width: 10),
+            Expanded(child: Text('Hapus dari Riwayat')),
+          ],
+        ),
+      ),
+    ],
+    child: const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.more_horiz, size: 18),
+          SizedBox(width: 4),
+          Text('Kelola', style: TextStyle(fontSize: 12)),
+        ],
+      ),
+    ),
+  );
+
+  Widget content(BuildContext context) {
+    final currentTicket = data;
+    final status = '${currentTicket['status'] ?? '—'}';
+    final day = dateOnly(
+      currentTicket['tanggalPelayanan'] ?? currentTicket['tanggalAntrean'],
+    );
+    final today = widget.api.config.today;
+    final dayLabel = day.isEmpty ? 'Belum ditentukan' : patientDate(day);
+    final slot = object(widget.appointment?['slotPraktik']);
+    final session = object(slot['jadwalPraktik']);
+    final doctor = object(object(session['dokterLayanan'])['dokter']);
+    final roomFromSession = object(session['loket']);
+    final room = roomFromSession.isNotEmpty
+        ? roomFromSession
+        : object(currentTicket['ruang']);
+    final roomCode = '${room['kode'] ?? ''}'.trim();
+    final roomName = label(room).trim();
+    final roomText = roomCode.isEmpty || roomCode == roomName
+        ? roomName
+        : '$roomCode · $roomName';
+    final patientName = '${widget.api.user?['nama'] ?? ''}'.trim();
+    final service = label(object(currentTicket['layanan']));
+    final info = <(String, String)>[
+      ('Tanggal pelayanan', dayLabel),
+      if (slot['mulaiPada'] != null)
+        (
+          'Jam konsultasi',
+          '${patientTime(slot, widget.api.config)} · ${widget.api.config.serviceTimeZone}',
+        ),
+      if (room.isNotEmpty && roomText.isNotEmpty) ('Ruang / Loket', roomText),
+      if (doctor['nama'] != null) ('Dokter', label(doctor)),
+      if (patientName.isNotEmpty) ('Pasien', patientName),
+    ];
+
     return PopScope(
       canPop: !busy,
       child: AlertDialog(
-        insetPadding: const EdgeInsets.all(16),
-        contentPadding: const EdgeInsets.all(16),
-        title: Text(
-          'Tiket ${data['nomorAntrean']}',
-          style: const TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -.4,
-          ),
+        backgroundColor: PatientDesign.paper,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        titlePadding: const EdgeInsets.fromLTRB(16, 13, 16, 6),
+        contentPadding: const EdgeInsets.fromLTRB(16, 0, 16, 2),
+        actionsPadding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(
+              Icons.confirmation_number_outlined,
+              color: PatientDesign.primary,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            const Expanded(
+              child: Text(
+                'Detail Tiket',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  color: PatientDesign.ink,
+                ),
+              ),
+            ),
+          ],
         ),
         content: SizedBox(
           width: 420,
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  '${label(object(data['layanan']))} · ${patientDate('${data['tanggalPelayanan'] ?? data['tanggalAntrean']}')}',
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${currentTicket['nomorAntrean'] ?? '—'}',
+                            style: const TextStyle(
+                              fontSize: 27,
+                              fontWeight: FontWeight.w800,
+                              height: 1.1,
+                              color: PatientDesign.ink,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            service,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: PatientDesign.muted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    ReservationStatus(status),
+                  ],
                 ),
-                ReservationStatus('${data['status'] ?? '—'}'),
-                if (doctor['nama'] != null)
-                  Text(
-                    label(doctor),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                if (room.isNotEmpty)
-                  Text(
-                    label(room),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: PatientDesign.muted,
-                    ),
-                  ),
-                if (slot['mulaiPada'] != null)
-                  Text(
-                    '${patientTime(slot, widget.api.config)} · ${widget.api.config.serviceTimeZone}',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: PatientDesign.muted,
-                    ),
-                  ),
-                const SizedBox(height: 8),
-                if (error != null) MobileNotice(error!, error: true),
-                if (loading || busy)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    child: LinearProgressIndicator(
-                      semanticsLabel: widget.issueQrOnOpen || busy
-                          ? 'Memuat QR check-in'
-                          : 'Memuat tiket',
-                    ),
-                  ),
-                if (qr != null && remaining > 0) ...[
-                  LayoutBuilder(
-                    builder: (context, box) => QrImageView(
-                      data: qr!.payload ?? '',
-                      size: box.maxWidth.clamp(0, 240),
-                      backgroundColor: Colors.white,
-                      semanticsLabel:
-                          'QR check-in tiket ${data['nomorAntrean']}',
-                    ),
-                  ),
-                  Text('Berlaku $remaining detik · sekali pakai'),
-                  ExpansionTile(
-                    title: const Text(
-                      'Detail teknis tiket',
-                      style: TextStyle(fontSize: 12),
-                    ),
-                    children: [
-                      SelectableText('ID tiket: ${data['id']}'),
-                      SelectableText(
-                        qr!.payload ?? '',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: PatientDesign.muted,
+                const SizedBox(height: 10),
+                const Divider(height: 1, color: PatientDesign.border),
+                const SizedBox(height: 10),
+                LayoutBuilder(
+                  builder: (context, box) {
+                    final singleColumn = box.maxWidth < 250 ||
+                        MediaQuery.textScalerOf(context).scale(12) > 17;
+                    final width = singleColumn
+                        ? box.maxWidth
+                        : (box.maxWidth - 10) / 2;
+                    return Wrap(
+                      spacing: 10,
+                      runSpacing: 9,
+                      children: [
+                        for (final fact in info)
+                          SizedBox(
+                            width: width,
+                            child: _ticketFact(fact.$1, fact.$2),
+                          ),
+                      ],
+                    );
+                  },
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: exportingPdf || busy || loading ||
+                                error != null ||
+                                controller.state.load != PatientLoad.loaded ||
+                                controller.ticket == null
+                            ? null
+                            : () => _exportPdf(print: false),
+                        icon: const Icon(Icons.download_outlined, size: 17),
+                        label: const Text(
+                          'Unduh PDF',
+                          style: TextStyle(fontSize: 12),
                         ),
                       ),
-                    ],
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: exportingPdf || busy || loading ||
+                                error != null ||
+                                controller.state.load != PatientLoad.loaded ||
+                                controller.ticket == null
+                            ? null
+                            : () => _exportPdf(print: true),
+                        icon: const Icon(Icons.print_outlined, size: 17),
+                        label: const Text(
+                          'Cetak Tiket',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                if (exportingPdf) ...[
+                  const SizedBox(height: 4),
+                  const LinearProgressIndicator(
+                    semanticsLabel: 'Menyiapkan PDF bukti reservasi',
+                  ),
+                ],
+                const SizedBox(height: 10),
+                if (error != null) ...[
+                  MobileNotice(error!, error: true),
+                  const SizedBox(height: 6),
+                ],
+                if (loading || busy) ...[
+                  LinearProgressIndicator(
+                    semanticsLabel: widget.issueQrOnOpen || busy
+                        ? 'Memuat QR check-in'
+                        : 'Memuat tiket',
+                  ),
+                  const SizedBox(height: 6),
+                ],
+                if (qr != null && remaining > 0) ...[
+                  Container(
+                    alignment: Alignment.center,
+                    padding: const EdgeInsets.symmetric(vertical: 7),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: PatientDesign.border),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          'Kode QR Check-in',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: PatientDesign.ink,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        LayoutBuilder(
+                          builder: (context, box) => QrImageView(
+                            data: qr!.payload ?? '',
+                            size: box.maxWidth.clamp(0.0, 208.0),
+                            backgroundColor: Colors.white,
+                            semanticsLabel:
+                                'QR check-in tiket ${currentTicket['nomorAntrean']}',
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          'Berlaku $remaining detik · sekali pakai',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: PatientDesign.success,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ] else if (status == 'DIPESAN' && day.compareTo(today) > 0) ...[
+                  _qrNotice(
+                    Icons.event_available_outlined,
+                    'Kode QR diterbitkan pada $dayLabel',
+                    detail: 'Buka kembali tiket pada tanggal pelayanan.',
+                  ),
+                ] else if (canIssue) ...[
+                  _qrNotice(
+                    Icons.qr_code_2_rounded,
+                    'Kode QR siap diterbitkan',
+                    detail: 'Berlaku 10 menit dan hanya sekali pakai.',
+                  ),
+                ] else if (status == 'DIPESAN' && day.compareTo(today) < 0) ...[
+                  _qrNotice(
+                    Icons.event_busy_outlined,
+                    'Tanggal pelayanan telah berlalu',
+                    detail: 'Muat ulang status atau hubungi petugas.',
+                  ),
+                ] else ...[
+                  _qrNotice(
+                    Icons.qr_code_2_rounded,
+                    'Kode QR tidak tersedia',
+                    detail: 'Status tiket: ${reservationStatus(status)}.',
                   ),
                 ],
                 if (canIssue) ...[
-                  const MobileNotice(
-                    'QR diterbitkan pada hari pelayanan, berlaku 10 menit. QR baru menggantikan QR sebelumnya.',
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: busy || loading ? null : issue,
+                      icon: const Icon(Icons.qr_code_rounded, size: 18),
+                      label: Text(qr == null ? 'Terbitkan QR' : 'Perbarui QR'),
+                    ),
                   ),
-                  FilledButton(
-                    onPressed: busy || loading ? null : issue,
-                    child: Text(qr == null ? 'Terbitkan QR' : 'Perbarui QR'),
-                  ),
-                ] else
-                  MobileNotice(
-                    'QR tersedia untuk tiket DIPESAN pada tanggal pelayanan (${dateOnly(data['tanggalPelayanan'] ?? data['tanggalAntrean'])}). Status disinkronkan secara berkala.',
-                  ),
+                ],
+                // Technical ID, raw QR payload and repetitive helper text are
+                // intentionally omitted from the patient-facing UI.
               ],
             ),
           ),
         ),
         actions: [
-          TextButton(
+          TextButton.icon(
             onPressed: busy || loading ? null : refresh,
-            child: const Text('Muat ulang status'),
+            icon: const Icon(Icons.refresh, size: 17),
+            label: const Text('Perbarui'),
           ),
+          _manageTicketMenu(status),
           TextButton(
             onPressed: busy ? null : () => Navigator.pop(context),
             child: const Text('Tutup'),
@@ -2622,4 +2978,5 @@ class _TicketDialogState extends State<_TicketDialog> {
       ),
     );
   }
+
 }

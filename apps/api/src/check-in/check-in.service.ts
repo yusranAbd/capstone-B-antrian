@@ -6,12 +6,14 @@ import {
   ForbiddenException,
   GoneException,
   Injectable,
+  NotFoundException,
 } from '@nestjs/common';
 
 import { HariLayanan, Prisma, StatusTiket } from '../generated/prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { ProsesCheckInDto } from './dto/proses-check-in.dto';
+import { VerifikasiBuktiReservasiDto } from './dto/verifikasi-bukti-reservasi.dto';
 import {
   alasanPenerimaanHospital,
   PILIH_JANJI_TEMU_HOSPITAL,
@@ -30,6 +32,88 @@ const DAFTAR_HARI: HariLayanan[] = [
 @Injectable()
 export class CheckInService {
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Pembacaan bukti reservasi QBR1 untuk loket petugas yang ditugaskan.
+   * TIDAK menerbitkan SQ1, mengubah status tiket, ataupun melakukan check-in.
+   */
+  async verifikasiBuktiReservasi(dto: VerifikasiBuktiReservasiDto, petugasId: string) {
+    const match = /^QBR1\.(TK[A-F0-9]{24})$/.exec(dto.qrPayload ?? '');
+    if (!match ||
+        !/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(dto.loketId ?? '')) {
+      throw new BadRequestException('Format QR bukti reservasi atau loket tidak valid');
+    }
+
+    const waktu = this.dapatkanWaktuPelayanan(new Date());
+    const tiket = await this.prisma.tiketAntrean.findUnique({
+      where: { kodeTiket: match[1] },
+      select: {
+        id: true,
+        layananId: true,
+        tanggalAntrean: true,
+        nomorUrut: true,
+        status: true,
+        layanan: {
+          select: { id: true, nama: true, prefixAntrean: true, aktif: true },
+        },
+      },
+    });
+    if (!tiket) throw new NotFoundException('Bukti reservasi tidak ditemukan');
+
+    // Petugas hanya dapat memverifikasi bukti untuk layanan di loket aktif
+    // yang sedang ditugaskan kepadanya. Identitas pasien tidak dikembalikan.
+    const penugasan = await this.prisma.penugasanPetugas.findFirst({
+      where: {
+        petugasId,
+        loketId: dto.loketId,
+        aktif: true,
+        tanggalMulai: { lte: waktu.tanggalDb },
+        OR: [
+          { tanggalSelesai: null },
+          { tanggalSelesai: { gte: waktu.tanggalDb } },
+        ],
+      },
+      select: {
+        loket: {
+          select: {
+            aktif: true,
+            layananId: true,
+            layanan: { select: { aktif: true } },
+          },
+        },
+      },
+    });
+    if (!penugasan ||
+        !penugasan.loket.aktif ||
+        !penugasan.loket.layanan.aktif ||
+        penugasan.loket.layananId !== tiket.layananId) {
+      throw new ForbiddenException('Tidak berwenang memverifikasi tiket untuk layanan ini');
+    }
+
+    const tanggal = tiket.tanggalAntrean.toISOString().slice(0, 10);
+    const dapatDiverifikasi = tiket.status === StatusTiket.DIPESAN &&
+      tiket.layanan.aktif && tanggal >= waktu.tanggal;
+    const hariPelayanan = tanggal === waktu.tanggal;
+    return {
+      jenis: 'BUKTI_RESERVASI',
+      tiketId: tiket.id,
+      nomorAntrean: `${tiket.layanan.prefixAntrean.trim()}-${String(tiket.nomorUrut).padStart(3, '0')}`,
+      layanan: { id: tiket.layanan.id, nama: tiket.layanan.nama },
+      tanggalPelayanan: tanggal,
+      status: tiket.status,
+      buktiBerlaku: dapatDiverifikasi,
+      hariPelayanan,
+      // Ini bukan keputusan final boleh-check-in. Jam operasional,
+      // ruang janji temu, status, dan atomic check-in tetap diperiksa
+      // oleh alur SQ1 yang sudah ada.
+      checkInDilakukan: false,
+      pesan: !dapatDiverifikasi
+        ? 'Reservasi tidak aktif atau tanggal pelayanan sudah berlalu'
+        : hariPelayanan
+          ? 'Bukti sesuai tanggal pelayanan. Check-in tetap memerlukan QR aktif SQ1'
+          : 'Bukti reservasi terverifikasi. Check-in baru dapat dilakukan pada hari pelayanan',
+    };
+  }
 
   // ==========================================
   // PROSES CHECK-IN BERBASIS QR
